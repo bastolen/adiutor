@@ -9,20 +9,15 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
 
-import Button, { type ButtonProps } from './button';
+import { noSubscription } from '@/lib/in-browser';
 
-/**
- * The tab's history never changes while this page is shown, so there's
- * nothing to subscribe to.
- *
- * @returns A function that unsubscribes (does nothing).
- */
-const subscribe = () => () => {};
+import Button, { type ButtonProps } from './button';
 
 /**
  * Whether this tab has a previous page to go back to. Uses the Navigation
  * API where the browser has it (it knows the current position in the
- * history), otherwise any earlier entry counts.
+ * history), otherwise any earlier entry counts. The history never changes
+ * while this page is shown, so there's nothing to subscribe to.
  *
  * @returns Whether going back is possible.
  */
@@ -50,7 +45,7 @@ const canGoBackOnServer = () => false;
 export default function BackButton(props: Omit<ButtonProps, 'onClick' | 'children' | 'asChild'>) {
   const t = useTranslations('common.actions');
   const router = useRouter();
-  const visible = useSyncExternalStore(subscribe, canGoBack, canGoBackOnServer);
+  const visible = useSyncExternalStore(noSubscription, canGoBack, canGoBackOnServer);
 
   if (!visible) {
     return null;

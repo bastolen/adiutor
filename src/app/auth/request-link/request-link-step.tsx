@@ -14,6 +14,7 @@ import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
+import { signInPath } from '@/lib/redirect';
 import { requestPathWithEntry } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { REQUEST_LINK_DAYS, REQUEST_LINK_RETRY_PARAM } from '@/lib/sign-in/request-link';
@@ -59,7 +60,7 @@ function signInHref(view: RequestLinkView | null, entry: string | null = null): 
   if (view === null || view.state === 'unknown') {
     return '/auth';
   }
-  return `/auth?${new URLSearchParams({ callbackURL: requestPathWithEntry(view.number, entry) })}`;
+  return signInPath(requestPathWithEntry(view.number, entry));
 }
 
 /**

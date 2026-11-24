@@ -11,10 +11,11 @@ import { Activity, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SignedInAccount } from '@/components/auth/account-summary';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
-import RequestLinkForm, { type SignedInAccount } from './request-link-form';
+import RequestLinkForm from './request-link-form';
 
 /** The account the test link signs in to. */
 const JANE = { name: 'Jane Tester', email: 'jane@adiutor.test' };

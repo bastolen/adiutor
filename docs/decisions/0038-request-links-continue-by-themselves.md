@@ -3,6 +3,8 @@
 - **Status:** Accepted. One consequence is replaced by
   [0040](0040-older-browsers-continue-by-origin.md): browsers that send none of the
   `Sec-Fetch-*` headers (Safari before 16.4) have their Continue checked by its `Origin`.
+  [0041](0041-email-links-continue-by-post.md) makes a sign-in email's Continue a `POST` taken the
+  same way (now `isOwnPagePost`).
 - **Date:** 2026-11-22
 
 ## Context

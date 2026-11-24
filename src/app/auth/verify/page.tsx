@@ -38,7 +38,7 @@ import { Suspense } from 'react';
 import { FormSkeleton } from '@/components/ui/skeleton';
 import { isMfaConfirmedRecently, needsRecentConfirmation } from '@/lib/authz/mfa';
 import ClientMessages from '@/lib/i18n/client-messages';
-import { DEFAULT_SIGNED_IN_PATH, getSafeRedirectPath } from '@/lib/redirect';
+import { DEFAULT_SIGNED_IN_PATH, getSafeRedirectPath, signInPath } from '@/lib/redirect';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import { reverifyErrorText } from '@/lib/sign-in/auth-error-messages';
 import { getStepUpMethods } from '@/server/auth/security';
@@ -72,7 +72,7 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
   const callbackURL = getSafeRedirectPath(searchParam(params.callbackURL));
   const actor = await getOptionalActor();
   if (!actor) {
-    redirect(`/auth?callbackURL=${encodeURIComponent(callbackURL)}`);
+    redirect(signInPath(callbackURL));
   }
   // Signed in as someone: there's nothing to confirm, and nothing changes from their view.
   if (actor.signedInAs) {

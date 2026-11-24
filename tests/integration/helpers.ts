@@ -1,7 +1,8 @@
 /**
  * @file Helpers for integration tests: a service context on the test
  * database that captures emails, a reset between tests, a switch for GitHub
- * sign-in, factories, and reading an email's language.
+ * sign-in, factories (sign-in links among them), and reading an email's
+ * language.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -23,14 +24,17 @@ import {
   session,
   twoFactor,
   user,
+  verification,
 } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import type { Email } from '@/lib/email';
 import { type Locale, LOCALES } from '@/lib/i18n/locales';
+import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
 import { MFA_PROVIDERS, type OAuthProvider } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
+import { emailLinkVerificationIdentifier, generateToken } from '@/lib/sign-in/tokens';
 import { type Actor, loadActor } from '@/server/actor';
 import type { ServiceContext } from '@/server/context';
 import { type JobRunResult, runQueue } from '@/server/jobs';
@@ -121,6 +125,24 @@ export async function createUser(db: Database, email: string): Promise<string> {
     'the new user',
   );
   return created.id;
+}
+
+/**
+ * Stores a sign-in link the way Better Auth's magic-link plugin does, without
+ * sending an email (like `storeSignInLink` in `e2e/support/db.ts`).
+ *
+ * @param db - Test database.
+ * @param email - The address it's for.
+ * @returns The link's token.
+ */
+export async function storeSignInLink(db: Database, email: string): Promise<string> {
+  const token = generateToken();
+  await db.insert(verification).values({
+    identifier: emailLinkVerificationIdentifier(token),
+    value: JSON.stringify({ type: 'magic-link', email }),
+    expiresAt: new Date(Date.now() + EMAIL_LINK_MINUTES * 60_000),
+  });
+  return token;
 }
 
 /**

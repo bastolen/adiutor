@@ -1,6 +1,7 @@
 # 0040. Older browsers' Continue is checked by its Origin
 
-- **Status:** Accepted
+- **Status:** Accepted. [0041](0041-email-links-continue-by-post.md) applies the same check (now
+  `isOwnPagePost`) to the Continue of a sign-in email's page.
 - **Date:** 2026-11-22
 
 ## Context

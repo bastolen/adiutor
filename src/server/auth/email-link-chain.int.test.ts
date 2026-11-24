@@ -12,9 +12,10 @@
  *   account gets a session (`refuseUnsafeReturnAddresses` in
  *   `src/server/auth/auth-guards/`); a normal link still signs in.
  *
- * The verify requests carry the `Sec-Fetch-*` headers of the "Continue
- * signing in" click, set by hand, so the guard lets them past the
- * confirmation page (`confirmSignInLinkFirst`) to the return address check.
+ * The links are used as the confirmation page's "Continue signing in" does:
+ * a form `POST` with the headers of a page load the site's page started, set
+ * by hand, so the guard lets it past the confirmation page
+ * (`confirmSignInLinkFirst`) to the return address check.
  */
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,13 +24,13 @@ import { session, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { sendEmail } from '@/lib/email';
 import { env } from '@/lib/env';
-import { emailLinkVerificationIdentifier, generateToken } from '@/lib/sign-in/tokens';
 
 import {
   createUser,
   emailLanguage,
   setUserLocale,
   setupTestContext,
+  storeSignInLink,
 } from '../../../tests/integration/helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
@@ -54,30 +55,17 @@ const ATTACKER = 'attacker@adiutor.test';
 /** The return addresses of a sign-in link. */
 const RETURN_FIELDS = ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL'] as const;
 
-/** The headers of the "Continue signing in" click: a same-origin navigation the user made. */
-const CLICK = {
+/**
+ * The headers of the "Continue signing in" on the confirmation page: a form
+ * `POST`, as a page load the site's own page started, with its origin.
+ */
+const CONTINUE = {
   'sec-fetch-site': 'same-origin',
   'sec-fetch-user': '?1',
   'sec-fetch-mode': 'navigate',
   'sec-fetch-dest': 'document',
+  origin: new URL(env.BETTER_AUTH_URL).origin,
 };
-
-/**
- * Stores a sign-in link the way Better Auth's magic-link plugin does, without
- * sending an email (like `storeSignInLink` in `e2e/support/db.ts`).
- *
- * @param email - The address it's for.
- * @returns The link's token.
- */
-async function storeSignInLink(email: string): Promise<string> {
-  const token = generateToken();
-  await db.insert(verification).values({
-    identifier: emailLinkVerificationIdentifier(token),
-    value: JSON.stringify({ type: 'magic-link', email }),
-    expiresAt: new Date(Date.now() + 5 * 60_000),
-  });
-  return token;
-}
 
 /**
  * A return address that goes on to a second sign-in link.
@@ -110,15 +98,18 @@ function askForLink(
 }
 
 /**
- * Opens Better Auth's verify endpoint, as the "Continue signing in" click does.
+ * Uses a sign-in link as the confirmation page's "Continue signing in" does:
+ * its form, posted to Better Auth's verify endpoint.
  *
- * @param query - The link's token and return addresses.
+ * @param fields - The link's token and return addresses.
  * @returns The response.
  */
-function openLink(query: Record<string, string>): Promise<Response> {
+function openLink(fields: Record<string, string>): Promise<Response> {
   return auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/magic-link/verify?${new URLSearchParams(query)}`, {
-      headers: CLICK,
+    new Request(`${env.BETTER_AUTH_URL}/api/auth/magic-link/verify`, {
+      method: 'POST',
+      headers: { ...CONTINUE, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(fields),
     }),
   );
 }
@@ -206,7 +197,7 @@ describe('a sign-in link that goes on to a second one', () => {
     async (field) => {
       await createUser(db, VICTIM);
       await createUser(db, ATTACKER);
-      const attackerLink = await storeSignInLink(ATTACKER);
+      const attackerLink = await storeSignInLink(db, ATTACKER);
 
       const response = await askForLink({ email: VICTIM, [field]: chainedTo(attackerLink) });
 
@@ -223,8 +214,8 @@ describe('a sign-in link that goes on to a second one', () => {
     async (field) => {
       const victim = await createUser(db, VICTIM);
       const attacker = await createUser(db, ATTACKER);
-      const victimLink = await storeSignInLink(VICTIM);
-      const attackerLink = await storeSignInLink(ATTACKER);
+      const victimLink = await storeSignInLink(db, VICTIM);
+      const attackerLink = await storeSignInLink(db, ATTACKER);
 
       const response = await openLink({
         token: victimLink,
@@ -233,7 +224,7 @@ describe('a sign-in link that goes on to a second one', () => {
       });
 
       // The sign-in error page explains it; the browser never gets to the second link.
-      expect(response.status).toBe(302);
+      expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe('/sign-in-error?error=UNSAFE_RETURN_ADDRESS');
       expect(setsSessionCookie(response)).toBe(false);
       expect(await sessionCount(victim)).toBe(0);
@@ -244,7 +235,7 @@ describe('a sign-in link that goes on to a second one', () => {
 
   it('leaves a normal link working', async () => {
     const victim = await createUser(db, VICTIM);
-    const victimLink = await storeSignInLink(VICTIM);
+    const victimLink = await storeSignInLink(db, VICTIM);
 
     const response = await openLink({
       token: victimLink,
@@ -252,7 +243,8 @@ describe('a sign-in link that goes on to a second one', () => {
       errorCallbackURL: '/auth?callbackURL=%2Fdashboard',
     });
 
-    expect(response.status).toBe(302);
+    // A 303, so the browser opens the page with a GET.
+    expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe(
       new URL('/dashboard', env.BETTER_AUTH_URL).toString(),
     );

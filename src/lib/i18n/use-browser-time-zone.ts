@@ -8,17 +8,9 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { browserTimeZone } from './time-zones';
+import { noSubscription } from '@/lib/in-browser';
 
-/**
- * Nothing to subscribe to: the browser's zone doesn't change while the page
- * is open (a change shows on the next page load).
- *
- * @returns A function that unsubscribes from nothing.
- */
-function subscribeToNothing() {
-  return () => undefined;
-}
+import { browserTimeZone } from './time-zones';
 
 /**
  * The browser's zone on the server and while hydrating: unknown.
@@ -31,10 +23,12 @@ function unknownZone(): string | null {
 
 /**
  * Reads the browser's zone (`browserTimeZone`) once the page has hydrated.
+ * It doesn't change while the page is open (a change shows on the next page
+ * load), so there's nothing to subscribe to.
  *
  * @returns The zone, e.g. `Europe/Amsterdam`, or `null` before hydration and
  *   when the browser reports none Adiutor accepts.
  */
 export default function useBrowserTimeZone(): string | null {
-  return useSyncExternalStore(subscribeToNothing, browserTimeZone, unknownZone);
+  return useSyncExternalStore(noSubscription, browserTimeZone, unknownZone);
 }

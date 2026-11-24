@@ -17,11 +17,13 @@
  *   without a second step instead need a sign-in from the last hour for any
  *   such change (`needsFreshSignIn`; Better Auth's own `freshAge` is off,
  *   since a step-up doesn't renew it).
- * - A sign-in link (`/magic-link/verify`) only signs in from the "Continue
- *   signing in" click on the app's own page (`src/lib/sign-in/email-link.ts`);
- *   opened any other way in a browser (from an email, another site or a
- *   script), it goes to that page first, unused. So a mail scanner can't use
- *   it up, and a crafted link can't sign someone in without a click.
+ * - A sign-in link (`/magic-link/verify`) only signs in with the "Continue
+ *   signing in" on its own page (`src/lib/sign-in/email-link.ts`), a form
+ *   `POST` that only that page makes (`isOwnPagePost`, decision 0041); every
+ *   `GET` of it, whatever its headers, and any other `POST` go to that page
+ *   first, unused. So a mail scanner can't use it up, and a crafted link,
+ *   even one written in a request's text, can't sign someone in without the
+ *   page that names the account.
  * - Return addresses (where Better Auth sends the browser afterwards, or
  *   what it puts into an emailed link) must be pages of the app
  *   (`isSafeAppRedirect`): never another site, and never an endpoint under

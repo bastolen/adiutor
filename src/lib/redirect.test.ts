@@ -1,6 +1,7 @@
 /**
  * @file Tests for the safe redirect helpers: paths that stay on the site and
- * out of `/api`, as redirects and as return addresses sent to Better Auth.
+ * out of `/api`, as redirects and as return addresses sent to Better Auth,
+ * and the sign-in page's address that goes on to one.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +12,7 @@ import {
   isSectionId,
   sectionFromHash,
   signedInPath,
+  signInPath,
   withSection,
 } from './redirect';
 
@@ -290,4 +292,19 @@ describe('signedInPath', () => {
       expect(signedInPath(value)).toBe(DEFAULT_SIGNED_IN_PATH);
     },
   );
+});
+
+describe('signInPath', () => {
+  it('goes on to the page, encoded so it stays one parameter', () => {
+    expect(signInPath('/dashboard')).toBe('/auth?callbackURL=%2Fdashboard');
+    expect(signInPath('/requests/142?entry=019a1b2c&x=1#entry-019a1b2c')).toBe(
+      '/auth?callbackURL=%2Frequests%2F142%3Fentry%3D019a1b2c%26x%3D1%23entry-019a1b2c',
+    );
+  });
+
+  it('puts a notice first', () => {
+    expect(signInPath('/companies/x', { notice: 'joined-mfa-required' })).toBe(
+      '/auth?notice=joined-mfa-required&callbackURL=%2Fcompanies%2Fx',
+    );
+  });
 });

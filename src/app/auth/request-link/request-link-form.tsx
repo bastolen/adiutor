@@ -15,22 +15,22 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-import AccountSummary, { accountLabel, type NamedAccount } from '@/components/auth/account-summary';
+import AccountSummary, {
+  accountLabel,
+  type NamedAccount,
+  sameName,
+  type SignedInAccount,
+} from '@/components/auth/account-summary';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
+import useInBrowser, { noSubscription } from '@/lib/in-browser';
 import { sectionFromHash } from '@/lib/redirect';
 import { ENTRY_PARAM, isEntryId } from '@/lib/requests';
 import { REQUEST_LINK_URL_PATH } from '@/lib/sign-in/request-link';
-
-/** Whoever is signed in in this browser, as the page names them. */
-export interface SignedInAccount extends NamedAccount {
-  /** Whether it's the account the link signs in to. */
-  same: boolean;
-}
 
 /** Props for {@link RequestLinkForm}. */
 interface RequestLinkFormProps {
@@ -48,14 +48,6 @@ interface RequestLinkFormProps {
   /** Whoever is signed in in this browser, or `null`. */
   signedIn: SignedInAccount | null;
 }
-
-/**
- * Nothing to subscribe to: the page's fragment and whether it runs in the
- * browser don't change while it's open.
- *
- * @returns A no-op unsubscribe function.
- */
-const noSubscription = () => () => {};
 
 /**
  * Whether Continue went by itself in this page load. It lives outside React,
@@ -88,19 +80,6 @@ function openedFresh(): boolean {
  */
 function prerendering(): boolean {
   return 'prerendering' in document && document.prerendering === true;
-}
-
-/**
- * Checks whether two accounts have the same name (anyone can give themselves
- * someone else's), ignoring case and surrounding spaces.
- *
- * @param first - One account.
- * @param second - The other.
- * @returns Whether both have a name, and it's the same.
- */
-function sameName(first: NamedAccount, second: NamedAccount): boolean {
-  const name = first.name.trim().toLowerCase();
-  return name !== '' && name === second.name.trim().toLowerCase();
 }
 
 /**
@@ -146,11 +125,8 @@ export default function RequestLinkForm({
   const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
-  const inBrowser = useSyncExternalStore(
-    noSubscription,
-    () => true,
-    () => false,
-  );
+  const inBrowser = useInBrowser();
+  // The page's fragment doesn't change while it's open.
   const section = useSyncExternalStore(
     noSubscription,
     () => sectionFromHash(window.location.hash),

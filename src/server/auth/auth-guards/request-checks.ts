@@ -1,11 +1,12 @@
 /**
  * @file Checks on the request itself, without the database: sign-in links only
- * from the app's own page, return addresses that are pages of the app, and
- * passkey names.
+ * from their own page's Continue, return addresses that are pages of the
+ * app, and passkey names.
  */
 import { APIError } from 'better-auth/api';
 
 import { isSafeAppRedirect } from '@/lib/redirect';
+import isOwnPagePost from '@/lib/request/own-page-post';
 import { EMAIL_LINK_PARAMS, EMAIL_LINK_PATH } from '@/lib/sign-in/email-link';
 import { INVALID_PASSKEY_NAME, UNSAFE_RETURN_ADDRESS } from '@/lib/sign-in/sign-in-refusals';
 import { passkeyNameSchema } from '@/lib/validation';
@@ -14,29 +15,45 @@ import type { AuthGuardContext } from './paths';
 import { refusalBody } from './refusal-messages';
 
 /**
- * Sends a sign-in link that wasn't opened through the "Continue signing in"
- * click on the app's own page to that page instead, before it's used.
- * Browsers say where a request comes from (`Sec-Fetch-Site`) and whether the
- * user caused it (`Sec-Fetch-User`); the click is a same-origin, user-made
- * navigation. Requests without these headers don't come from a browser, so
- * there's nobody to sign in by surprise; they're left to Better Auth.
+ * Lets a sign-in link (`/magic-link/verify`) sign in only with the "Continue
+ * signing in" on its own page (`/auth/email-link`, decision 0041): that
+ * page's form `POST`, as a page load a page of this site started
+ * (`isOwnPagePost`: by the browser's `Sec-Fetch-*` headers, or by an `Origin`
+ * that's exactly the site's where the browser sends none of them), which
+ * needn't say a person clicked (Safari never does). Anything else goes to
+ * that page instead, with the link's fields and unused, so the page names
+ * the account first and waits for its Continue:
+ *
+ * - every `GET` of the link, whatever its headers: one opened from an email,
+ *   another site or a script, by a program that isn't a browser, by a
+ *   browser that says nothing about where it came from (Safari before 16.4,
+ *   or any browser on plain `http` away from `localhost`), and a link written
+ *   in a request's text, which is a same-origin click on the request's page;
+ * - any other `POST`: another site's form, or one without the headers or
+ *   the site's `Origin` (answered with a 303, so the browser opens the page
+ *   with a `GET`).
  *
  * @param ctx - The endpoint context.
  * @throws {APIError} A redirect to the confirmation page.
  */
 export function confirmSignInLinkFirst(ctx: AuthGuardContext): void {
-  const site = ctx.headers?.get('sec-fetch-site');
-  if (!site || (site === 'same-origin' && ctx.headers?.get('sec-fetch-user') === '?1')) {
+  const posted = ctx.method === 'POST';
+  if (isOwnPagePost(ctx.headers ?? new Headers(), posted)) {
     return;
   }
+  const sent = posted ? ctx.body : ctx.query;
   const link = new URLSearchParams();
   EMAIL_LINK_PARAMS.forEach((name) => {
-    const value = ctx.query?.[name];
+    const value = sent?.[name];
     if (typeof value === 'string') {
       link.set(name, value);
     }
   });
-  throw new APIError('FOUND', undefined, new Headers({ location: `${EMAIL_LINK_PATH}?${link}` }));
+  throw new APIError(
+    posted ? 'SEE_OTHER' : 'FOUND',
+    undefined,
+    new Headers({ location: `${EMAIL_LINK_PATH}?${link}` }),
+  );
 }
 
 /** The return addresses of a sign-in, a social sign-in or an emailed link. */
@@ -44,8 +61,14 @@ const CALLBACK_FIELDS = ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL'
 
 /** Where an endpoint takes its return addresses, and which ones. */
 export interface ReturnAddressFields {
-  /** The JSON body, or the query of a link the browser opens (`GET`). */
+  /** The body (JSON, or a form's), or the query of a link the browser opens (`GET`). */
   readonly in: 'body' | 'query';
+  /**
+   * Whether the body is a form the browser posts as a page load (a sign-in
+   * link's Continue), so a refusal goes to the sign-in error page, as for a
+   * link, rather than coming back as an error.
+   */
+  readonly form?: boolean;
   /** The fields that hold return addresses. */
   readonly fields: readonly string[];
 }
@@ -61,13 +84,18 @@ export interface ReturnAddressFields {
  * with the token, or with `error=INVALID_TOKEN`, having only checked that
  * it's on this site.
  *
+ * `/magic-link/verify` is listed with its confirmation page's Continue (a
+ * form `POST`): every `GET` of it goes to that page before anything else
+ * ({@link confirmSignInLinkFirst}), and the page passes only safe addresses
+ * on.
+ *
  * `request-checks.test.ts` fails when an endpoint the browser can reach takes
  * a return address that isn't listed here: add it, or say there why Better
  * Auth never sends the browser to it.
  */
 export const RETURN_ADDRESS_FIELDS: ReadonlyMap<string, ReturnAddressFields> = new Map([
   ['/sign-in/magic-link', { in: 'body', fields: CALLBACK_FIELDS }],
-  ['/magic-link/verify', { in: 'query', fields: CALLBACK_FIELDS }],
+  ['/magic-link/verify', { in: 'body', form: true, fields: CALLBACK_FIELDS }],
   ['/sign-in/social', { in: 'body', fields: CALLBACK_FIELDS }],
   ['/link-social', { in: 'body', fields: ['callbackURL', 'errorCallbackURL'] }],
   ['/request-password-reset', { in: 'body', fields: ['redirectTo'] }],
@@ -83,13 +111,14 @@ const SIGN_IN_ERROR_PATH = '/sign-in-error';
  * Refuses a request with a return address that isn't a page of the app
  * (`isSafeAppRedirect`): another site, or an endpoint under `/api` such as
  * a second sign-in link. Fields that aren't sent are fine. A link the
- * browser opened goes to the sign-in error page, which explains it; other
- * requests get the refusal as an error.
+ * browser opened, or a form it posted as a page load, goes to the sign-in
+ * error page, which explains it (a form's with a 303, so the browser opens
+ * it with a `GET`); other requests get the refusal as an error.
  *
  * @param ctx - The endpoint context.
  * @param path - The endpoint path.
- * @throws {APIError} A redirect to the sign-in error page for links, or
- *   `BAD_REQUEST`, both with code `UNSAFE_RETURN_ADDRESS`.
+ * @throws {APIError} A redirect to the sign-in error page for links and forms,
+ *   or `BAD_REQUEST`, both with code `UNSAFE_RETURN_ADDRESS`.
  */
 export function refuseUnsafeReturnAddresses(ctx: AuthGuardContext, path: string): void {
   const rule = RETURN_ADDRESS_FIELDS.get(path);
@@ -104,9 +133,9 @@ export function refuseUnsafeReturnAddresses(ctx: AuthGuardContext, path: string)
   if (!unsafe) {
     return;
   }
-  if (rule.in === 'query') {
+  if (rule.in === 'query' || rule.form) {
     const location = `${SIGN_IN_ERROR_PATH}?${new URLSearchParams({ error: UNSAFE_RETURN_ADDRESS.code })}`;
-    throw new APIError('FOUND', undefined, new Headers({ location }));
+    throw new APIError(rule.form ? 'SEE_OTHER' : 'FOUND', undefined, new Headers({ location }));
   }
   throw new APIError('BAD_REQUEST', refusalBody(ctx, UNSAFE_RETURN_ADDRESS.code));
 }

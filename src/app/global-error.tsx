@@ -26,6 +26,7 @@ import {
   localeForLanguages,
 } from '@/lib/i18n/locales';
 import { browserTimeZone, DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
+import { noSubscription } from '@/lib/in-browser';
 import { applyStoredTheme, THEME_STORAGE_KEY } from '@/lib/theme';
 import enUsCommon from '@/messages/en-US/common.json';
 import esEsCommon from '@/messages/es-ES/common.json';
@@ -57,16 +58,6 @@ function savedLocale(): Locale {
     return value;
   }
   return localeForLanguages(navigator.languages) ?? DEFAULT_LOCALE;
-}
-
-/**
- * Subscribes to changes of the language cookie, which don't happen while
- * this page is shown.
- *
- * @returns A function that unsubscribes.
- */
-function subscribeToNothing(): () => void {
-  return () => {};
 }
 
 /**
@@ -116,10 +107,11 @@ function ErrorTitle() {
  * @returns The error document.
  */
 export default function GlobalError({ error, retry }: ErrorPageProps) {
-  // English while hydrating (what the server rendered), then the cookie's language.
-  const locale = useSyncExternalStore(subscribeToNothing, savedLocale, serverLocale);
+  // English while hydrating (what the server rendered), then the cookie's language (which doesn't
+  // change while this page is shown).
+  const locale = useSyncExternalStore(noSubscription, savedLocale, serverLocale);
   // UTC while hydrating, then the browser's own zone.
-  const timeZone = useSyncExternalStore(subscribeToNothing, savedTimeZone, serverTimeZone);
+  const timeZone = useSyncExternalStore(noSubscription, savedTimeZone, serverTimeZone);
 
   useEffect(() => {
     applyStoredTheme(THEME_STORAGE_KEY);

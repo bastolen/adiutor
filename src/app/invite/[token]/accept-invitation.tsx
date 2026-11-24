@@ -14,6 +14,7 @@ import ResultAlert from '@/components/ui/result-alert';
 import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, NAME_MAX_LENGTH } from '@/lib/input-rules';
+import { signInPath } from '@/lib/redirect';
 
 import { acceptAction, createAccountAction } from './actions';
 
@@ -65,7 +66,7 @@ function SignInOrCreateAccount({ token }: { token: string }) {
     createAccountAction,
     null,
   );
-  const signInHref = `/auth?callbackURL=${encodeURIComponent(`/invite/${token}`)}`;
+  const signInHref = signInPath(`/invite/${token}`);
 
   return (
     <div className="flex flex-col gap-6">

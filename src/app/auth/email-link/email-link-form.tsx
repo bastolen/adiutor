@@ -1,7 +1,8 @@
 /**
  * @file The "Continue signing in" step of a sign-in email (see
- * `src/lib/sign-in/email-link.ts`): it names the account the link signs in to, and
- * only its click uses the link, so a mail scanner that opens it can't.
+ * `src/lib/sign-in/email-link.ts`): it names the account the link signs in
+ * to, and only its Continue, a form `POST`, uses the link, so a mail scanner
+ * that opens it can't (decision 0041).
  */
 'use client';
 
@@ -9,23 +10,22 @@ import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useSyncExternalStore } from 'react';
 
-import AccountSummary, { accountLabel, type NamedAccount } from '@/components/auth/account-summary';
+import AccountSummary, {
+  accountLabel,
+  type NamedAccount,
+  sameName,
+  type SignedInAccount,
+} from '@/components/auth/account-summary';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
 import IconTile from '@/components/ui/icon-tile';
 import { usePageRestored } from '@/components/ui/use-page-restored';
 import { useTransientState } from '@/components/ui/use-transient-state';
-import { getSafeRedirectPath } from '@/lib/redirect';
+import useInBrowser from '@/lib/in-browser';
+import { getSafeRedirectPath, signInPath } from '@/lib/redirect';
 import { MAGIC_LINK_VERIFY_PATH } from '@/lib/sign-in/email-link';
-
-/** Whoever is signed in in this browser, as the page names them. */
-export interface SignedInAccount extends NamedAccount {
-  /** Whether it's the account the link signs in to. */
-  same: boolean;
-}
 
 /**
  * Props for {@link EmailLinkForm}.
@@ -38,30 +38,12 @@ interface EmailLinkFormProps {
 }
 
 /**
- * Nothing to subscribe to: whether the page runs in the browser never
- * changes after hydration.
- *
- * @returns A no-op unsubscribe function.
- */
-const noSubscription = () => () => {};
-
-/**
- * Checks whether two accounts have the same name (anyone can give themselves
- * someone else's), ignoring case and surrounding spaces.
- *
- * @param first - One account.
- * @param second - The other.
- * @returns Whether both have a name, and it's the same.
- */
-function sameName(first: NamedAccount, second: NamedAccount): boolean {
-  const name = first.name.trim().toLowerCase();
-  return name !== '' && name === second.name.trim().toLowerCase();
-}
-
-/**
- * Sends the link on to Better Auth with a plain form submit (a same-origin
- * navigation the user made, which the guards require), which signs in and
- * returns to the page the user came for. The form only gets the link's
+ * Posts the link to Better Auth's endpoint with a plain form `POST`, a
+ * same-origin page load that only this page makes (a link, even one on a
+ * page of this site, is always a `GET`), which the guards require: Safari
+ * never says a person clicked, so they don't ask for that (decision 0041).
+ * Better Auth signs in and returns to the page the user came for, with a
+ * full page load. The form only gets the link's
  * token once it runs in the browser, so tools that only fetch the page find
  * no form that would use it. The return addresses get safe defaults: Better
  * Auth answers a link without one with JSON instead of a redirect. Better
@@ -85,16 +67,12 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
   const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
-  const inBrowser = useSyncExternalStore(
-    noSubscription,
-    () => true,
-    () => false,
-  );
+  const inBrowser = useInBrowser();
   const token = searchParams.get('token') ?? '';
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
   const errorCallbackURL = searchParams.get('errorCallbackURL');
   const newUserCallbackURL = searchParams.get('newUserCallbackURL');
-  let errorPage = `/auth?callbackURL=${encodeURIComponent(callbackURL)}`;
+  let errorPage = signInPath(callbackURL);
   if (signedIn && !signedIn.same) {
     // The sign-in page would send the browser on to the account that's still signed in.
     errorPage = `/auth/email-link?${new URLSearchParams({ token, callbackURL })}`;
@@ -146,7 +124,7 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
           })}
         </Alert>
       )}
-      <form method="get" action={MAGIC_LINK_VERIFY_PATH} onSubmit={() => setPending(true)}>
+      <form method="post" action={MAGIC_LINK_VERIFY_PATH} onSubmit={() => setPending(true)}>
         {inBrowser &&
           fields.map(({ name, value }) => (
             <input key={name} type="hidden" name={name} value={value} />

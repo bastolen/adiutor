@@ -67,7 +67,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
   `not-found-metadata.ts`; `src/client-imports.test.ts` keeps them out of the browser.
   - `src/lib/sign-in/`: the auth client (`load-auth-client.ts` loads it when first needed, outside
     the sign-in pages), the URLs of the code and step-up pages, the code check (`verify-code.ts`),
-    cookies, endpoints, secrets, OAuth providers, sign-in refusals, tokens and email links. It
+    cookies, endpoints, secrets, OAuth providers, sign-in refusals, tokens, email links and the
+    app's Better Auth plugins for the links' Continue (`email-link-plugin.ts`,
+    `request-link-plugin.ts`). It
     isn't called `auth/` because `src/lib/auth.ts` is the Better Auth configuration.
   - `src/lib/authz/`: roles, permissions, guards and who may sign in as whom (`impersonation.ts`),
     all pure functions. `mfa/` holds the MFA rules,
@@ -77,8 +79,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
   - `src/lib/i18n/`: the languages and the request's language, the catalogue loader, next-intl's
     request configuration, the translator for code outside React, and the providers that pass
     messages to client components (see [Languages](i18n.md)).
-  - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header:
-    HTTP requests, not the requests companies raise.
+  - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header,
+    and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
+    Continue, `own-page-post.ts`): HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
     values, the rules of working on one, the board's lanes, their numbers and their text, free of
     zod and server code, so the database schema, the services and client components can all import it.
