@@ -11,6 +11,7 @@ import { defined } from '@/lib/defined';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
 import renderInLocale from '../../../../../tests/i18n/render';
+import nextFrames from '../../../../../tests/ui/next-frames';
 import { replyAction } from './actions';
 import ReplyForm from './reply-form';
 
@@ -29,18 +30,6 @@ afterEach(() => {
  */
 const sent = () =>
   Object.fromEntries(defined(vi.mocked(replyAction).mock.calls.at(-1), 'the last call')[1]);
-
-/**
- * Waits two frames, as long as the form watches where focus went.
- *
- * @returns When they've passed.
- */
-const nextFrames = () =>
-  act(async () => {
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-  });
 
 describe('ReplyForm', () => {
   it('sends the reply for its request, and is empty again once it is sent', async () => {

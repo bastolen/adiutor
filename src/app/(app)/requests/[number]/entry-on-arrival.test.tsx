@@ -4,24 +4,14 @@
  * it, focus that's in use is left alone, and an address that names no entry
  * on the page changes nothing.
  */
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import nextFrames from '../../../../../tests/ui/next-frames';
 import EntryOnArrival from './entry-on-arrival';
 
 /** An entry's ID, as the database gives it. */
 const ENTRY_ID = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
-
-/**
- * Runs the frame the component waits for before it lands.
- */
-async function nextFrame() {
-  await act(async () => {
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-  });
-}
 
 /**
  * An activity with a button above it and two entries.
@@ -70,7 +60,7 @@ describe('EntryOnArrival', () => {
     window.history.replaceState(null, '', `/requests/142#entry-${ENTRY_ID}`);
     render(<Page />);
 
-    await nextFrame();
+    await nextFrames();
 
     const entry = screen.getByText('The new reply');
     expect(scrolled).toEqual([entry]);
@@ -82,7 +72,7 @@ describe('EntryOnArrival', () => {
     render(<Page />);
     screen.getByRole('button', { name: 'Above' }).focus();
 
-    await nextFrame();
+    await nextFrames();
 
     expect(scrolled).toEqual([]);
     expect(screen.getByRole('button', { name: 'Above' })).toHaveFocus();
@@ -91,7 +81,7 @@ describe('EntryOnArrival', () => {
   it('does nothing for an anchor that isn’t an entry, or an entry that isn’t on the page', async () => {
     window.history.replaceState(null, '', '/requests/142#request-description');
     const { unmount } = render(<Page />);
-    await nextFrame();
+    await nextFrames();
     unmount();
 
     window.history.replaceState(
@@ -100,7 +90,7 @@ describe('EntryOnArrival', () => {
       '/requests/142#entry-019a1b2c-ffff-7fff-8fff-ffffffffffff',
     );
     render(<Page />);
-    await nextFrame();
+    await nextFrames();
 
     expect(scrolled).toEqual([]);
     expect(document.body).toHaveFocus();

@@ -4,7 +4,7 @@
  * and as a toast, and focus moves to the card's heading when the row goes.
  * With `confirmFirst`, nothing starts until the user has confirmed it's them.
  */
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ import type { ActionResult } from '@/lib/action-result';
 import { defined } from '@/lib/defined';
 
 import ConfirmationWindow from '../../../tests/ui/confirmation-window';
+import nextFrames from '../../../tests/ui/next-frames';
 import Card from './card';
 import RowAction from './row-action';
 import { SignedInAsMarker } from './signed-in-as';
@@ -419,11 +420,7 @@ describe('RowAction', () => {
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
       await waitFor(() => expect(toasts()).toHaveTextContent('Invite link revoked.'));
-      await act(async () => {
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(resolve));
-        });
-      });
+      await nextFrames();
       expect(screen.getByRole('heading', { name: 'Invite links' })).toHaveFocus();
       expect(within(toasts()).getByText('Invite link revoked.')).toBeInTheDocument();
     });

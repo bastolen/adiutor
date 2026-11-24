@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import nextFrames from '../../../tests/ui/next-frames';
 import Alert from './alert';
 import { InsideDialog } from './inside-dialog';
 import { Toaster } from './toast';
@@ -94,11 +95,7 @@ describe('Alert', () => {
     render(<Page />);
 
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
-    await act(async () => {
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(resolve));
-      });
-    });
+    await nextFrames();
 
     expect(screen.getByRole('main')).toHaveFocus();
   });

@@ -9,6 +9,7 @@ import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import nextFrames from '../../../tests/ui/next-frames';
 import Card from './card';
 import restoreFocusIfLost, { focusMainContent, keepFocus } from './focus-fallback';
 
@@ -28,17 +29,6 @@ afterEach(() => {
   hidden.clear();
   vi.restoreAllMocks();
 });
-
-/**
- * Runs the frames `restoreFocusIfLost` waits for.
- */
-async function nextFrames() {
-  await act(async () => {
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-  });
-}
 
 /**
  * A card with a button that removes itself, as a row action's row does.
