@@ -9,6 +9,8 @@ The interface aims to feel calm and trustworthy, and to meet
 [WCAG 2.2](https://www.w3.org/TR/WCAG22/) level AA everywhere, in light and dark mode, with full
 keyboard support.
 
+### Components
+
 - **Components:** build UI from `src/components/ui/` (`Button`, `TextField`, `SelectField`,
   `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
   dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
@@ -36,6 +38,9 @@ keyboard support.
   `{t('deactivated')}`, as its English text). Icons come from
   [Lucide](https://lucide.dev) and are hidden from screen readers; icon-only buttons have an
   `aria-label`. Join classes with `cn()` (`src/lib/cn.ts`).
+
+### Tables
+
 - **Tables** of records sort and paginate (`src/lib/tables/table-state.ts`, with their links built
   in `src/lib/tables/page-url.ts` and each table defined in `src/lib/tables/tables.ts`):
   - **Sorting:** every table sorts from its Sort menu (`SortMenu`) in the card header or next to
@@ -105,14 +110,15 @@ keyboard support.
       own waiting for the company on the first page of the lists of requests.
   - **List services** take the table's state and return one page with the total
     (`Paged<T>`); each sort ends with the row's ID, so pages don't overlap and reversing is exact.
-- **The board** of requests (`/requests/board`, and a company's at `/companies/<URL name>/board`,
-  see [The board](requests.md#the-board)) is the one
-  view of records that isn't a table: a lane per status, each card a list item, in five columns,
-  two of which (Waiting, Closed) hold two lanes as an upper and a lower half, each half with its
-  own heading (`h3` under the column's `h2`), count, "See all" and empty text. Lanes have no
-  pagination footer (an open lane shows 25, 50 or 100 cards, chosen like rows per page with
-  `PageSizeLinks`; a closed one its latest 5; a lane with more links to the list), but they keep
-  the list's sort, from its Sort menu. The pattern:
+
+### The board
+
+- **The board** of requests is the one view of records that isn't a table: a lane per status, each
+  card a list item, in columns, two of which (Waiting, Closed) hold two lanes as an upper and a
+  lower half, each half with its own heading (`h3` under the column's `h2`). What it shows, who may
+  move what and how the lanes are laid out is in [The board](requests.md#the-board); this is the
+  pattern, for any board of cards. Lanes have no pagination footer but keep the list's sort, from
+  its Sort menu.
   - **Moving without dragging:** every card the reader may move has a Move menu (a Radix menu)
     listing the lanes it may go to, which works with a single click or tap, the keyboard and
     screen readers alike. That's WCAG 2.5.7 Dragging Movements: whatever can be dragged can also
@@ -122,15 +128,13 @@ keyboard support.
   - **Dragging:** a decorative grip (`aria-hidden`, `cursor-grab`) in the card's corner drags it,
     never its title link (`draggable={false}`). The drag and drop library loads with `import()`
     once the page is there, from tablet width only (`board-drag.ts`, the one file that imports
-    it). Each lane is a drop target, each half of a grouped column too. While a card is dragged,
-    the lanes say whether it can go there by more than colour: a lane it may go to has a border in
-    the highlight colour, and under the pointer a ring and what letting go does ("Let go to move it
-    here", "Let go to mark it as done", "Let go to cancel it"); a lane it can't go to has a dashed
-    border, the not-allowed cursor and "Can't move here", and doesn't take the card (so the browser
-    shows it can't be dropped). The
-    card left behind is dashed and flat, its text as it was (never lighter through opacity). A
-    drop that's refused sends nothing and says why, inline and as a toast. A live region of the
-    board's own announces the drag in the reader's language (never a library's English).
+    it). While a card is dragged, the lanes say whether it can go there by more than colour: a
+    lane it may go to has a border in the highlight colour, and under the pointer a ring and what
+    letting go does; a lane it can't go to has a dashed border, the not-allowed cursor and "Can't
+    move here", and doesn't take the card. The card left behind is dashed and flat, its text as it
+    was (never lighter through opacity). A drop that's refused sends nothing and says why, inline
+    and as a toast. A live region of the board's own announces the drag in the reader's language
+    (never a library's English).
   - **A busy card, not a busy board:** a moved card shows in its new lane at once
     (`useOptimistic`), and only its Move button is busy (a spinner in its icon's place, its word
     and name kept, focusable, presses ignored); every other card stays usable.
@@ -140,30 +144,22 @@ keyboard support.
   - **Screen readers:** the columns and their halves are named groups (`role="group"` with
     `aria-labelledby` on their heading), not sections: a named section is a landmark, and a board
     of landmarks would bury the page's own. A lane's list of cards is named when it shows fewer
-    than the lane holds ("First 25 of 80", "Latest 5 of 132"). What happens to a card ("Moving
-    AD-142 to In progress…", and while dragging) goes through one live region the board keeps on the page from
-    the start, since a status inserted with its text already in it is often not read out; it
-    empties before the toast or the error says the outcome, so nothing is said twice. These are
-    checked with axe and with snapshots of the board's accessibility tree
-    (`e2e/board-a11y.spec.ts`); a pass with VoiceOver is manual.
-  - **Width:** the columns, at least 14rem each, sit in a row that scrolls sideways inside a
-    named group the keyboard reaches while it overflows (`tabIndex={0}`, like a wide code block),
-    so the page never scrolls sideways. While it overflows, a navigation above it ("Jump to a
-    lane", named by its visible label) has a small secondary button per column with its name and
-    count (`LaneCount`, a number in the reader's language, hidden from screen readers, which hear
-    the heading's sentence); a press scrolls only the row to the column, without smooth scrolling
-    under reduced motion, and focuses the column's heading, so a column out of sight is one press
-    away. A container query on the board's width shows it (`@container` on the board,
-    `@min-[73rem]:hidden` on the row: five 14rem columns and their gaps), never a measurement after
-    the page runs, so nothing shifts; focus on it when it hides goes to the main content. On a
-    wide screen the board is as wide as a request's page (`WidePage`; a company's board through
-    the company's layout, with its header and tabs), so from about 1500px of screen all five
-    columns fit side by side, the row doesn't scroll and the navigation isn't there. Below tablet
-    width the columns are stacked, each folding away with its count (`aria-expanded` on its
-    heading's button), a grouped column with both its halves.
+    than the lane holds ("First 25 of 80", "Latest 5 of 132"). What happens to a card goes
+    through one live region the board keeps on the page from the start, since a status inserted
+    with its text already in it is often not read out; it empties before the toast or the error
+    says the outcome, so nothing is said twice. These are checked with axe and with snapshots of
+    the board's accessibility tree (`e2e/board-a11y.spec.ts`); a pass with VoiceOver is manual.
+  - **Width:** the columns sit in a row that scrolls sideways inside a named group the keyboard
+    reaches while it overflows (`tabIndex={0}`, like a wide code block), so the page never
+    scrolls sideways. A row of "Jump to a lane" buttons above it, shown by a container query
+    (never a measurement after the page runs, so nothing shifts), brings a column out of sight
+    one press away; the sizes are in [The board](requests.md#the-board).
   - **Colours:** a lane is a step back from its cards in both modes (`muted` behind `surface`
     cards in light mode, `surface` behind `raised` ones in dark mode, where `surface` is the darker
     of the two); the count, the empty lane and the card's details use `muted-foreground`.
+
+### Cards and pages kept alive
+
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
@@ -217,6 +213,9 @@ keyboard support.
   when someone goes back to them (from the code step to the sign-in page, say), and whoever does
   mustn't find the last user's details or a button still busy. They also reset a busy button when the browser restores them from its
   back/forward cache (`pageshow`, through `usePageRestored`).
+
+### Avatars, buttons and menus
+
 - **Avatars** (`Avatar`) show initials, or a person's picture over them (`src`, from
   `/avatars/<account>`, see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). The
   picture (`AvatarPicture`) takes itself away when it can't load, also when it failed before the
@@ -251,6 +250,9 @@ keyboard support.
   it keeps its content as its name, and its menu is labelled by the part of it that names it
   (`aria-labelledby` on `MenuContent`). `e2e/board-a11y.spec.ts` and `e2e/keyboard.spec.ts` check
   those menus' names.
+
+### Selects and navigation
+
 - **Long selects can be searched.** A `SelectField` with more options than `SEARCH_THRESHOLD`
   (10, in `src/components/ui/select-field.tsx`) opens
   a panel with a search field above its list (`SearchableSelect`, on Radix Popover): the list shows
@@ -294,6 +296,9 @@ keyboard support.
   mode it gets the same inset 2px outline as a menu's highlighted item instead (`currentItem` in
   `src/components/ui/styles.ts`), except while it has keyboard focus, when the focus ring shows. A
   component that marks a current item adds `currentItem` to every item, next to `focusRing`.
+
+### Colours and font
+
 - **Colours:** semantic tokens in `src/styles/theme.css`, each checked for contrast (at least 4.5:1
   for text, 3:1 for input borders) in both modes:
 
@@ -326,6 +331,9 @@ keyboard support.
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
   every device and in CI; line height = font size + 8px. Emails use the device's own font, since
   email clients often block web fonts. See [decision 0016](decisions/0016-ship-inter-and-jetbrains-mono.md).
+
+### Layout and error pages
+
 - **Layout:** signed-in pages have a sidebar that becomes a menu button and slide-over panel
   (`Sheet`) on small screens, which opens with focus on the link to the current page; signed-out
   pages use `AuthLayout`, with a decorative brand panel on wide screens.
@@ -364,6 +372,9 @@ keyboard support.
   The reference appears once it's known: worked out from Next's digest for errors from the server,
   or returned by the report the page sends for errors in the browser; when that report fails, the
   page simply shows no reference.
+
+### Interaction and results
+
 - **Interaction:** every control has hover, pressed, focus-visible (a 2px ring), disabled and busy
   states. Clickable things show a pointer cursor, disabled ones a not-allowed cursor and busy ones
   a wait cursor (base rules in `src/app/globals.css`). While its action runs a button is busy
@@ -522,6 +533,9 @@ keyboard support.
   link that stands on its own takes `standalone` and is underlined on hover only: a name in a
   table, a value in a list of details, "Forgot password?" under its field, a link with a line to
   itself. When you add a `TextLink`, decide which of the two it is.
+
+### Text, forms and titles
+
 - **Markdown** is shown with `MarkdownText` (on the server only) and written in `MarkdownField`,
   both in `src/components/ui/markdown/`; see [Requests](requests.md#text). The field's editor
   loads after the page, in place of a plain text field under the same toolbar, so nothing moves.
@@ -562,6 +576,9 @@ keyboard support.
 - **Page headers:** `PageHeader` keeps its actions to the right of the title while the title has
   room to read (10rem), and moves them below it on narrower screens, rather than squeezing the
   title into a column.
+
+### Motion
+
 - **Motion:** short transitions only, and none at all when the device asks for reduced motion.
 
 Two end-to-end specs keep this true: `e2e/a11y.spec.ts` scans every page (and open menus, selects,
@@ -618,7 +635,7 @@ has a palette icon, apart from the options.
   there too.
 - **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
   `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
-- **Styling:** use the semantic colours (see [Design and accessibility](#design-and-accessibility))
+- **Styling:** use the semantic colours (see [Design and accessibility](#colours-and-font))
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
   switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
 - **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
@@ -643,7 +660,7 @@ the `.ico` again from the SVG.
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
 `brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
 text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
-described under [Design and accessibility](#design-and-accessibility). Use the brand colours for
+described under [Design and accessibility](#colours-and-font). Use the brand colours for
 brand moments only; UI uses the semantic colours.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).

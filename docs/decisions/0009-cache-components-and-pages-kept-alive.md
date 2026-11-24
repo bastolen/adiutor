@@ -34,7 +34,7 @@ Adiutor keeps Cache Components on and builds for pages that stay alive:
   [0006](0006-nonce-based-content-security-policy.md).
 
 Details: "Messages don't outlive the page" under
-[Design and accessibility](../design.md#design-and-accessibility), and
+[Design and accessibility](../design.md#cards-and-pages-kept-alive), and
 [Dark mode](../design.md#dark-mode).
 
 ## Alternatives considered

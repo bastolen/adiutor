@@ -79,7 +79,7 @@ configurations in VS Code, which turn the time limit off (see
   helpers (`e2e/support/outbox.ts`) start the [background jobs](jobs.md)' tick on that server
   (`/api/jobs`, with the test `CRON_SECRET`), so emails waiting in the queue go out first. They include the
   accessibility and keyboard checks described under
-  [Design and accessibility](design.md#design-and-accessibility).
+  [Design and accessibility](design.md#interaction-and-results).
   - **Running and build reuse:** install the browser once with
     `pnpm exec playwright install chromium`, then run them with `pnpm test:e2e`. Locally they reuse
     the last build when nothing it reads (`src/` apart from unit tests, `public/`, `drizzle/`,

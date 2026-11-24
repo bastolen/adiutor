@@ -23,7 +23,7 @@ A choice that the code and its comments already explain doesn't need one.
    a few words of title in lowercase, joined by hyphens.
 2. Set the status to "Accepted" and the date to the day of the decision. If you record a decision
    some time after it was made, add "(recorded after the decision was made)" after the date.
-3. Keep it short, about 150 to 300 words: the reasoning and the trade-off, not the mechanics. Link to
+3. Keep it short, about 200 to 450 words: the reasoning and the trade-off, not the mechanics. Link to
    the docs page and section that hold the detail instead of repeating it, and name the key code
    in backticks.
 4. Add it to the [index](#index).
