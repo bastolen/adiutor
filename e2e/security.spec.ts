@@ -50,8 +50,9 @@ import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
 // The tests use up state (step-up attempts, a password, a lockout), so a retry of the file could
-// only fail at an earlier test: no retries, and a trace of the first failure instead.
-test.describe.configure({ mode: 'serial', retries: 0 });
+// only fail at an earlier test: no retries, and a trace of the first failure instead. The file
+// still runs top to bottom on one worker, but a failure doesn't hide the tests after it.
+test.describe.configure({ retries: 0 });
 test.use({ trace: 'retain-on-failure' });
 
 /**
