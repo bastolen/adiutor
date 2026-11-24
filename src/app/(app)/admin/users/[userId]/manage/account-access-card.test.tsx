@@ -4,7 +4,9 @@
  * GitHub and Google only when accounts are connected and offers to remove
  * the passkeys, and the account can be deactivated or reactivated by its
  * state. A reset needs a recent confirmation, so without one Reset sends
- * the Admin to the step-up page instead of opening its dialog.
+ * the Admin to the step-up page instead of opening its dialog, and so does
+ * Reactivate for an account that gets a staff role or a company's Admin
+ * role back.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -77,6 +79,7 @@ function renderCard({
       mfa={mfa}
       connectedAccounts={connectedAccounts}
       deactivatedAt={deactivatedAt}
+      reactivationNeedsConfirmation={false}
     />,
   );
 }
@@ -139,10 +142,53 @@ describe('AccountAccessCard', () => {
             mfa={{ ...PASSWORD_ONLY, twoFactorEnabled: true, passkeyCount: 1 }}
             connectedAccounts={0}
             deactivatedAt={null}
+            reactivationNeedsConfirmation={false}
           />
         </ConfirmationWindow>,
       );
     }
+
+    /**
+     * Renders the card of a deactivated user, for an Admin whose window has
+     * run out.
+     *
+     * @param needsConfirmation - Whether reactivating gives back a role that needs it.
+     */
+    function renderDeactivated(needsConfirmation: boolean) {
+      render(
+        <ConfirmationWindow windowOpen={false} returnTo="/admin/users/user-1">
+          <AccountAccessCard
+            userId="user-1"
+            userName="Ada Tester"
+            mfa={PASSWORD_ONLY}
+            connectedAccounts={0}
+            deactivatedAt={new Date('2026-10-20T09:00:00Z')}
+            reactivationNeedsConfirmation={needsConfirmation}
+          />
+        </ConfirmationWindow>,
+      );
+    }
+
+    it('sends the Admin to confirm it’s them before reactivating an account that gets a role back that needs it', async () => {
+      const user = userEvent.setup();
+      renderDeactivated(true);
+
+      await user.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+      expect(push).toHaveBeenCalledWith(CONFIRM_URL);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(reactivateUserAction).not.toHaveBeenCalled();
+    });
+
+    it('asks only to confirm the reactivation of an account without such a role', async () => {
+      const user = userEvent.setup();
+      renderDeactivated(false);
+
+      await user.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+      expect(screen.getByRole('alertdialog', { name: 'Reactivate Ada Tester?' })).toBeVisible();
+      expect(push).not.toHaveBeenCalled();
+    });
 
     it('sends the Admin to confirm it’s them before the reset dialog opens', async () => {
       const user = userEvent.setup();

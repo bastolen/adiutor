@@ -59,6 +59,7 @@ import {
   RECENT_MFA_CLIENT,
   REQUESTS_CLIENT,
   RESET_CLIENT,
+  RETURNING_FINANCE,
   ROLE_KEYS_WATCHER,
   SEEDED_REQUESTS,
   STEP_UP_MANAGER,
@@ -168,6 +169,12 @@ export default async function seedTestDatabase(): Promise<void> {
       accountImage: SUPPORT_STAFF_PICTURE,
     });
     await addPerson(FINANCE_STAFF, { platformRole: 'finance' });
+    // Deactivated, keeping its staff role, for the Admin to reactivate.
+    const returning = await addPerson(RETURNING_FINANCE, { platformRole: 'finance' });
+    await db
+      .update(schema.user)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(schema.user.id, returning));
     await addPerson(NAMELESS_SUPPORT, { platformRole: 'support' });
     await addPerson(ACTIVITY_SUPPORT, { platformRole: 'support' });
 

@@ -36,9 +36,15 @@ export const staffAdminAddedJob = defineQueuedKind({
     recipientId: z.uuid(),
     /** The new staff Admin. */
     newAdminId: z.uuid(),
-    /** Given the role by a staff Admin (`role`), or joined from an invitation or link (`invitation`). */
-    how: z.enum(['role', 'invitation']),
-    /** Who gave the role, sent the invitation or created the link, if their account still existed. */
+    /**
+     * Given the role by a staff Admin (`role`), joined from an invitation or
+     * link (`invitation`), or reactivated with the role it kept (`reactivation`).
+     */
+    how: z.enum(['role', 'invitation', 'reactivation']),
+    /**
+     * Who gave the role, sent the invitation, created the link or reactivated
+     * the account, if their account still existed.
+     */
     byUserId: z.uuid().nullable(),
   }),
 });

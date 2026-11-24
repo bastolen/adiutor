@@ -2,6 +2,7 @@
  * @file Tests for the row action button: without toasts its result shows next
  * to it; in the signed-in app a success is a toast, an error shows next to it
  * and as a toast, and focus moves to the card's heading when the row goes.
+ * With `confirmFirst`, nothing starts until the user has confirmed it's them.
  */
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -302,6 +303,55 @@ describe('RowAction', () => {
 
       expect(onClick).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('alertdialog', { name: 'Disconnect GitHub?' })).toBeInTheDocument();
+    });
+  });
+
+  describe('confirmFirst', () => {
+    /**
+     * Renders a "Reactivate" row action with a confirmation dialog that asks
+     * to confirm it's them first, on a page whose window is open or has run out.
+     *
+     * @param windowOpen - Whether the user confirmed it's them in the last 15 minutes.
+     * @returns The action.
+     */
+    function renderAsking(windowOpen: boolean) {
+      const action = vi.fn().mockResolvedValue({ ok: true });
+      const serverTime = Date.now();
+      render(
+        <RecentConfirmationProvider
+          required
+          confirmedUntil={windowOpen ? serverTime + 10 * 60_000 : null}
+          serverTime={serverTime}
+          returnTo="/admin/users/user-1/manage"
+        >
+          <RowAction
+            action={action}
+            label="Reactivate"
+            confirmFirst
+            confirm={{ title: 'Reactivate Ada?', description: 'They can sign in again.' }}
+          />
+        </RecentConfirmationProvider>,
+      );
+      return action;
+    }
+
+    it('keeps the confirmation dialog closed when the user must confirm it’s them first', async () => {
+      const user = userEvent.setup();
+      const action = renderAsking(false);
+
+      await user.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(action).not.toHaveBeenCalled();
+    });
+
+    it('opens the confirmation dialog within the confirmation window', async () => {
+      const user = userEvent.setup();
+      renderAsking(true);
+
+      await user.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+      expect(screen.getByRole('alertdialog', { name: 'Reactivate Ada?' })).toBeInTheDocument();
     });
   });
 

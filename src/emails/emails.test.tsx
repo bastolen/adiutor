@@ -513,6 +513,20 @@ describe('staff-made changes', () => {
       'sam@adiutor.test accepted an invitation to the staff and is now a staff Admin',
     );
     expect(invited.text).not.toContain('(sam@adiutor.test)');
+
+    const reactivated = await staffAdminAddedEmail('alex@adiutor.test', {
+      ...english,
+      newAdminName: 'Sam Tester',
+      newAdminEmail: 'sam@adiutor.test',
+      how: 'reactivation',
+      byName: 'Jane Admin',
+      url,
+    });
+    expect(reactivated.subject).toBe('Sam Tester is now a staff Admin on Adiutor');
+    expect(reactivated.text).toContain(
+      'Jane Admin reactivated the account of Sam Tester (sam@adiutor.test), which is a staff Admin',
+    );
+    expectBasics(reactivated, url);
   });
 });
 

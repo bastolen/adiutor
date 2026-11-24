@@ -2,9 +2,10 @@
  * @file Tests for the MFA reset action on a user's page (without the
  * Admin's recent confirmation it sends them to the step-up page, which
  * returns to the user's page, and otherwise it resets through the service),
- * its sign-in as the user (the same, with a strong second step) and its
- * deletion (which refreshes before it goes to the users list, so the pages
- * Next kept alive are dropped).
+ * its reactivation (sent to confirm when the service refuses for lack of a
+ * recent confirmation), its sign-in as the user (the same, with a strong
+ * second step) and its deletion (which refreshes before it goes to the users
+ * list, so the pages Next kept alive are dropped).
  */
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -13,10 +14,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { startImpersonation } from '@/server/auth/impersonation';
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
-import { deleteUser, resetUserMfa } from '@/server/people/user-admin';
+import { deleteUser, reactivateUser, resetUserMfa } from '@/server/people/user-admin';
 
 import form from '../../../../../../tests/ui/form';
-import { deleteUserAction, resetMfaAction, signInAsAction } from './actions';
+import { deleteUserAction, reactivateUserAction, resetMfaAction, signInAsAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -165,6 +166,60 @@ describe('resetMfaAction', () => {
       removePasskeys: false,
     });
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('reactivateUserAction', () => {
+  beforeEach(() => {
+    vi.mocked(reactivateUser).mockReset();
+  });
+
+  it('reactivates through the service, and says so', async () => {
+    expect(await reactivateUserAction(null, form({ userId: USER_ID }))).toEqual({
+      ok: true,
+      message: 'Account reactivated.',
+    });
+
+    expect(reactivateUser).toHaveBeenCalledWith({ name: 'app context' }, confirmedAdmin, USER_ID);
+    expect(refresh).toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("sends the Admin to confirm it's them when the account gets a role back that needs it", async () => {
+    vi.mocked(reactivateUser).mockRejectedValue(
+      new ServiceError('confirmation_required', 'errors.grantConfirmationRequired'),
+    );
+    const returnTo = `/admin/users/${USER_ID}/manage#account-access`;
+
+    await expect(reactivateUserAction(null, form({ userId: USER_ID, returnTo }))).rejects.toThrow(
+      'NEXT_REDIRECT',
+    );
+    await expect(reactivateUserAction(null, form({ userId: USER_ID }))).rejects.toThrow(
+      'NEXT_REDIRECT',
+    );
+
+    // Back to the card the button is in; without one, to the user's Manage tab.
+    expect(redirect).toHaveBeenNthCalledWith(
+      1,
+      `/auth/verify?callbackURL=${encodeURIComponent(returnTo)}&for=change`,
+    );
+    expect(redirect).toHaveBeenNthCalledWith(
+      2,
+      `/auth/verify?callbackURL=%2Fadmin%2Fusers%2F${USER_ID}%2Fmanage&for=change`,
+    );
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('says why another refusal happened, and stays on the page', async () => {
+    vi.mocked(reactivateUser).mockRejectedValue(
+      new ServiceError('conflict', 'errors.users.alreadyActive'),
+    );
+
+    expect(await reactivateUserAction(null, form({ userId: USER_ID }))).toMatchObject({
+      ok: false,
+    });
+    expect(redirect).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
 

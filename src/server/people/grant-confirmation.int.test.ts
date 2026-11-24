@@ -3,13 +3,15 @@
  * higher one) and a company's Admin role need the giver's confirmation with
  * their second step from the last 15 minutes, in every service that gives
  * one, and nothing counts or changes when it's missing; stepping down,
- * removing someone, and the Client and Watcher roles need nothing. Also:
- * a new staff Admin is emailed to the other staff Admins.
+ * removing someone, and the Client and Watcher roles need nothing.
+ * Reactivating an account gives back the roles it kept, so it needs the
+ * same for a staff role or a company Admin role. Also: a new staff Admin,
+ * reactivated ones included, is emailed to the other staff Admins.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/schema';
+import { auditEvent, invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -37,6 +39,7 @@ import {
 import { createInviteLink, joinWithInviteLink } from './invite-links';
 import { addMember, changeMemberRole } from './members';
 import { changeStaffRole, removeFromStaff } from './staff';
+import { reactivateUser } from './user-admin';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -312,6 +315,107 @@ describe('company Admin grants', () => {
       slug: 'adiutor-tests-new',
       adminEmail: 'first.admin@adiutor.test',
     });
+  });
+});
+
+describe('reactivating an account', () => {
+  /**
+   * Deactivates an account straight in the database: deactivating keeps its
+   * staff role and memberships.
+   *
+   * @param userId - The account.
+   */
+  const deactivated = async (userId: string) => {
+    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, userId));
+  };
+
+  /**
+   * Reads when an account was deactivated.
+   *
+   * @param userId - The account.
+   * @returns When, or `null` while it's active.
+   */
+  const deactivatedAt = async (userId: string) =>
+    firstRow(
+      await db.select({ at: user.deactivatedAt }).from(user).where(eq(user.id, userId)),
+      'the account',
+    ).at;
+
+  it('is refused for a staff role or a company Admin role it kept, without a recent confirmation', async () => {
+    const stale = await staleAdmin();
+    const staffAdmin = await staffMember('platform_admin', 'returning.admin@adiutor.test');
+    const support = await staffMember('support', 'returning.support@adiutor.test');
+    const companyAdmin = await createUser(db, 'returning.boss@adiutor.test');
+    await addMemberRow(db, testCompany.id, companyAdmin, 'admin');
+    await inSequence([staffAdmin, support, companyAdmin], deactivated);
+
+    await inSequence([staffAdmin, support, companyAdmin], (userId) =>
+      expect(reactivateUser(ctx, stale, userId)).rejects.toMatchObject(NEEDS_CONFIRMATION),
+    );
+
+    // Still deactivated, nothing recorded, and nobody told.
+    await inSequence([staffAdmin, support, companyAdmin], async (userId) =>
+      expect(await deactivatedAt(userId)).toBeInstanceOf(Date),
+    );
+    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await queuedJobKinds(db)).toEqual([]);
+  });
+
+  it('is refused for a session the link in an email about a request started', async () => {
+    const actor = await linkSignedInAdmin();
+    const staffAdmin = await staffMember('platform_admin', 'returning.admin@adiutor.test');
+    await deactivated(staffAdmin);
+
+    await expect(reactivateUser(ctx, actor, staffAdmin)).rejects.toMatchObject(NEEDS_CONFIRMATION);
+    expect(await deactivatedAt(staffAdmin)).toBeInstanceOf(Date);
+  });
+
+  it('needs nothing for an account that kept only Client or Watcher roles', async () => {
+    const stale = await staleAdmin();
+    const client = await createUser(db, 'returning.client@adiutor.test');
+    await addMemberRow(db, testCompany.id, client, 'client');
+    const otherCompany = await createCompany(db, { name: 'Adiutor Tests Other' });
+    await addMemberRow(db, otherCompany.id, client, 'watcher');
+    await deactivated(client);
+
+    await reactivateUser(ctx, stale, client);
+
+    expect(await deactivatedAt(client)).toBeNull();
+  });
+
+  it('gives a company Admin back with a recent confirmation', async () => {
+    const fresh = await freshAdmin();
+    const companyAdmin = await createUser(db, 'returning.boss@adiutor.test');
+    await addMemberRow(db, testCompany.id, companyAdmin, 'admin');
+    await deactivated(companyAdmin);
+
+    await reactivateUser(ctx, fresh, companyAdmin);
+
+    expect(await deactivatedAt(companyAdmin)).toBeNull();
+    // Only the account itself hears of it: it isn't a staff Admin.
+    expect(await queuedJobKinds(db)).toEqual(['security-notice']);
+  });
+
+  it('gives a staff Admin back with a recent confirmation, and emails the other staff Admins', async () => {
+    const fresh = await freshAdmin();
+    await staffMember('platform_admin', 'other.admin@adiutor.test');
+    const staffAdmin = await staffMember('platform_admin', 'returning.admin@adiutor.test');
+    await deactivated(staffAdmin);
+
+    await reactivateUser(ctx, fresh, staffAdmin);
+
+    expect(await deactivatedAt(staffAdmin)).toBeNull();
+    await sendQueuedEmails(ctx);
+    // Not the actor, who reactivated it; the account itself gets its own security email.
+    const told = sent.filter((email) => email.subject.endsWith('is now a staff Admin on Adiutor'));
+    expect(told.map((email) => email.to)).toEqual(['other.admin@adiutor.test']);
+    expect(told[0]?.text).toContain(
+      'fresh.admin reactivated the account of returning.admin (returning.admin@adiutor.test)',
+    );
+    expect(sent.map((email) => email.to).sort()).toEqual([
+      'other.admin@adiutor.test',
+      'returning.admin@adiutor.test',
+    ]);
   });
 });
 

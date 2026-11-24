@@ -1,6 +1,6 @@
 /**
  * @file Server actions for the account actions on a user's page
- * (two-step verification, sign-out, deactivating and deleting) and for
+ * (two-step verification, sign-out, deactivating, reactivating and deleting) and for
  * signing in as the user; memberships
  * use `src/app/(app)/_people/member-actions.ts` and the staff role
  * `src/app/(app)/_people/staff-actions.ts`. Each one checks the session and
@@ -29,6 +29,8 @@ import {
   resetUserMfa,
   signOutUserEverywhere,
 } from '@/server/people/user-admin';
+
+import confirmFirstIfNeeded from '../../../_people/confirm-grant';
 
 /**
  * Turns off a user's two-step verification, optionally removing passkeys,
@@ -104,10 +106,15 @@ export async function deactivateUserAction(
 }
 
 /**
- * Reactivates a user's account.
+ * Reactivates a user's account (`reactivateUser`). One that kept a staff
+ * role or a company's Admin role gets it back, which needs a confirmation
+ * with the Admin's own second step from the last 15 minutes, like giving the
+ * role anew: when the service refuses for lack of one, the Admin is sent to
+ * confirm first and comes back to the user's page, to the card the button is
+ * in (its `returnTo` field). The card asks before that, when it can tell.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Field `userId`.
+ * @param formData - Fields `userId` and `returnTo`.
  * @returns A confirmation, or why it failed.
  */
 export async function reactivateUserAction(
@@ -116,7 +123,11 @@ export async function reactivateUserAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await reactivateUser(appContext, actor, field(formData, 'userId'));
+    const userId = field(formData, 'userId');
+    // Without a `returnTo`, back to the user's Manage tab (only an ID goes in).
+    await confirmFirstIfNeeded(formData, `/admin/users/${parseId(userId)}/manage`, () =>
+      reactivateUser(appContext, actor, userId),
+    );
     refresh();
     const t = await getTranslations('admin.user.actions');
     return { ok: true, message: t('reactivated') };

@@ -108,6 +108,8 @@
       "made": "{who} is beheerder van de medewerkers gemaakt op Adiutor.",
       "acceptedFrom": "{who} heeft de uitnodiging van {by} geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
       "accepted": "{who} heeft een uitnodiging voor de medewerkers geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
+      "reactivatedBy": "{by} heeft het account van {who} opnieuw geactiveerd, dat weer beheerder van de medewerkers is op Adiutor.",
+      "reactivated": "Het account van {who} is opnieuw geactiveerd en is weer beheerder van de medewerkers op Adiutor.",
       "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
       "button": "Instellingen voor medewerkers openen"
     },

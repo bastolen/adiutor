@@ -1,21 +1,26 @@
 /**
  * @file End-to-end tests for registering users and managing them from the
  * user detail page: their company memberships, staff access, two-step
- * verification (reset) and account (delete), and what an Admin's own page
- * offers (their companies, but no staff access or account actions), and who
- * sees which provider account a user has.
+ * verification (reset) and account (reactivate, which asks the Admin to
+ * confirm it's them first for an account that gets its staff role back, and
+ * delete), and what an Admin's own page offers (their companies, but no
+ * staff access or account actions), and who sees which provider account a
+ * user has.
  */
 import { type Page } from '@playwright/test';
 
+import { backdateMfaConfirmation, deactivateAccount, findUserId } from './support/db';
 import {
   DELETE_CLIENT,
   GITHUB_ONLY_MANAGER,
   PLATFORM_ADMIN,
   RESET_CLIENT,
+  RETURNING_FINANCE,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
   chooseUserTab,
+  confirmWithAuthenticator,
   freshAddress,
   openUser,
   openUserTab,
@@ -26,6 +31,7 @@ import {
 } from './support/helpers';
 import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
 import { expect, test } from './support/test';
+import { codeForSecret } from './support/totp';
 
 /**
  * Registers a user from the add-user page, as a signed-in Admin.
@@ -226,6 +232,45 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
   await page.goto('/admin/users');
   await signOut(page);
   await signIn(page, RESET_CLIENT);
+});
+
+test('an Admin who confirmed long ago confirms it’s them before reactivating a staff member', async ({
+  page,
+}) => {
+  // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
+  test.setTimeout(120_000);
+  // The seed deactivated them, keeping their staff role; again here, so a retry starts the same.
+  await deactivateAccount(RETURNING_FINANCE.email);
+  await signIn(page, PLATFORM_ADMIN);
+  // The code just used to sign in (or an earlier one); confirming again needs a later one.
+  const signInCode = codeForSecret(PLATFORM_ADMIN.totpSecret);
+  // Signed in 20 minutes ago, as far as the confirmation window goes.
+  await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
+
+  // They get their staff role back, so Reactivate asks first, before its confirmation opens, and
+  // the step-up page comes back to the card.
+  const manage = `/admin/users/${await findUserId(RETURNING_FINANCE.email)}/manage`;
+  await page.goto(manage);
+  await page.getByRole('button', { name: 'Reactivate' }).click();
+  await expect(page).toHaveURL(
+    `/auth/verify?callbackURL=${encodeURIComponent(`${manage}#account-access`)}&for=change`,
+  );
+  await expect(page.getByRole('heading', { name: /^Confirm it.s you$/ })).toBeVisible();
+  // An authenticator code can't be used twice, so wait for the next one.
+  await expect
+    .poll(() => codeForSecret(PLATFORM_ADMIN.totpSecret), { timeout: 35_000, intervals: [1_000] })
+    .not.toBe(signInCode);
+  await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
+
+  // Back on the card, where it goes ahead now.
+  await expect(page).toHaveURL(`${manage}#account-access`, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Reactivate' }).click();
+  await page
+    .getByRole('alertdialog', { name: `Reactivate ${RETURNING_FINANCE.name}?` })
+    .getByRole('button', { name: 'Reactivate' })
+    .click();
+  await expect(toasts(page)).toContainText('Account reactivated.');
+  await expect(page.getByRole('button', { name: 'Deactivate' })).toBeVisible();
 });
 
 test('only staff Admins see which GitHub account a user signs in with', async ({

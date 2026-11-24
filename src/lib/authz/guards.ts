@@ -2,7 +2,8 @@
  * @file Rules that guard role changes: a company, or the staff, is never left
  * without an admin, nobody gives themselves a higher staff or company role,
  * and giving a lasting way in (a staff role or a higher one, or the company
- * Admin role) needs a recent confirmation with the giver's second step.
+ * Admin role, also by reactivating an account that kept one) needs a recent
+ * confirmation with the giver's second step.
  */
 import {
   COMPANY_ADMIN_ROLE,
@@ -159,4 +160,42 @@ export function grantNeedsConfirmation({ target, role, from = null }: RoleGrant)
     return isPlatformRole(role) && isStaffRoleRaise(isPlatformRole(from) ? from : null, role);
   }
   return role === COMPANY_ADMIN_ROLE && from !== COMPANY_ADMIN_ROLE;
+}
+
+/** The roles a deactivated account kept, which reactivating it gives back. */
+export interface KeptRoles {
+  /** Its staff role, or `null` when it isn't on the staff. */
+  staffRole: PlatformRole | null;
+  /** Its role in each company it's a member of. */
+  companyRoles: readonly CompanyRole[];
+}
+
+/**
+ * The role grants that reactivating an account amounts to. Deactivating
+ * keeps an account's staff role and memberships, so reactivating gives every
+ * one of them back, as if given anew: a deactivated account can't use them,
+ * so it has none of them until then (no `from`).
+ *
+ * @param kept - The roles the account kept.
+ * @param kept.staffRole - Its staff role, if any.
+ * @param kept.companyRoles - Its roles in companies.
+ * @returns One grant per role.
+ */
+export function reactivationGrants({ staffRole, companyRoles }: KeptRoles): RoleGrant[] {
+  const grants: RoleGrant[] = companyRoles.map((role) => ({ target: { type: 'company' }, role }));
+  return staffRole ? [{ target: { type: 'staff' }, role: staffRole }, ...grants] : grants;
+}
+
+/**
+ * Checks whether reactivating an account needs the Admin's confirmation with
+ * their second step from the last 15 minutes, like giving its roles anew
+ * ({@link grantNeedsConfirmation}): it does when the account kept a staff
+ * role or a company's Admin role. An account that only kept Client or
+ * Watcher memberships, or none, needs nothing.
+ *
+ * @param kept - The roles the account kept.
+ * @returns Whether the Admin must have confirmed recently.
+ */
+export function reactivationNeedsConfirmation(kept: KeptRoles): boolean {
+  return reactivationGrants(kept).some((grant) => grantNeedsConfirmation(grant));
 }

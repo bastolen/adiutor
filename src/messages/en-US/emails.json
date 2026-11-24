@@ -108,6 +108,8 @@
       "made": "{who} was made a staff Admin on Adiutor.",
       "acceptedFrom": "{who} accepted {by}’s invitation and is now a staff Admin on Adiutor.",
       "accepted": "{who} accepted an invitation to the staff and is now a staff Admin on Adiutor.",
+      "reactivatedBy": "{by} reactivated the account of {who}, which is a staff Admin on Adiutor again.",
+      "reactivated": "The account of {who} was reactivated and is a staff Admin on Adiutor again.",
       "advice": "Staff Admins can manage everything on Adiutor, the staff included. If you don't recognise this, remove their staff access in the staff settings and check the audit log.",
       "button": "Open the staff settings"
     },

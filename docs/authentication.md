@@ -335,7 +335,11 @@ re-verify check so a refused "Confirm with GitHub" says nothing about another us
 account can't be planted while the account is deactivated, to sign in once an Admin reactivates
 it. They get no sign-in or reset emails. The invitations and invite links they sent are revoked, as
 for anyone who loses the right to manage (see
-[Rights checked when the change is made](companies-and-roles.md#staff-screens)).
+[Rights checked when the change is made](companies-and-roles.md#staff-screens)). Their staff role
+and memberships stay, so reactivating an account that kept a staff role or a company's Admin role
+gives a lasting way in back and needs the Admin's recent confirmation, like giving that role anew
+(`reactivateUser`; see [Invitations](companies-and-roles.md#invitations)). Reactivating ends no
+sessions: deactivating ended them, and none start while the account is deactivated.
 
 ## Signing in as a user
 
