@@ -1,5 +1,5 @@
 /**
- * @file Icons and labels of the theme options, shared by the floating theme
+ * @file Icons of the theme options, shared by the floating theme
  * and language button and the theme row in the account menu.
  */
 import { type LucideIcon, Moon, Sun, SunMoon } from 'lucide-react';
