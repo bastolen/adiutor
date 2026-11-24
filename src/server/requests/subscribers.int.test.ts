@@ -42,7 +42,15 @@ import {
   subscribe,
   unsubscribe,
 } from './subscribers';
-import { assigneesOf, ctx, db, storedRequest, storeRequest } from './test-helpers';
+import {
+  assigneesOf,
+  storeAssignees,
+  ctx,
+  db,
+  storedRequest,
+  storeRequest,
+  storeSubscribers,
+} from './test-helpers';
 
 /**
  * Who is subscribed to a request.
@@ -58,18 +66,6 @@ async function subscribersOf(requestId: string): Promise<string[]> {
       and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'subscriber')),
     );
   return rows.map(({ userId }) => userId).sort();
-}
-
-/**
- * Subscribes people to a request without going through a service.
- *
- * @param requestId - The request.
- * @param userIds - The people.
- */
-async function storeSubscribers(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db
-    .insert(requestParticipant)
-    .values(userIds.map((userId) => ({ requestId, userId, role: 'subscriber' as const })));
 }
 
 /**
@@ -717,9 +713,7 @@ describe('the subscribers of the requests there were', () => {
     await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, deactivated.id));
     await db.delete(membership).where(eq(membership.userId, leftCompany.id));
     // Someone the request is assigned to keeps that row, and gets one as a subscriber for replying.
-    await db
-      .insert(requestParticipant)
-      .values({ requestId: raised.id, userId: replier.id, role: 'assignee' });
+    await storeAssignees(raised.id, [replier.id]);
 
     expect(backfill).toContain('INSERT INTO "request_participant"');
     await db.execute(sql.raw(backfill));

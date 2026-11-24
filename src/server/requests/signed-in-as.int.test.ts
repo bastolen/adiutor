@@ -37,7 +37,7 @@ import raiseRequest from './raise';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
 import { subscribe, unsubscribe } from './subscribers';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, storeRequest, entriesOf } from './test-helpers';
 import { addRequestType } from './types';
 
 /**
@@ -76,16 +76,13 @@ async function signInAs(staff: Actor, target: Actor): Promise<Actor> {
  * @returns Each entry.
  */
 async function entries(requestId: string) {
-  return db
-    .select({
-      kind: requestEntry.kind,
-      authorId: requestEntry.authorId,
-      signedInAs: requestEntry.signedInAs,
-      signedInAsStaffId: requestEntry.signedInAsStaffId,
-    })
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
+  const rows = await entriesOf(requestId);
+  return rows.map(({ kind, authorId, signedInAs, signedInAsStaffId }) => ({
+    kind,
+    authorId,
+    signedInAs,
+    signedInAsStaffId,
+  }));
 }
 
 describe('request work while a staff member is signed in as a user', () => {

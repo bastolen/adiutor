@@ -9,7 +9,6 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { impersonation, queuedJob, request, requestEntry } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 import { appUrl } from '@/lib/env';
 
 import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
@@ -17,7 +16,7 @@ import type { Actor } from '../actor';
 import replyToRequest from './reply';
 import answerSolution from './solutions';
 import changeRequestStatus from './status';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, storeRequest, storedRequest, entriesOf } from './test-helpers';
 
 /**
  * A request a client raised, and the support member who sent its solution.
@@ -39,38 +38,23 @@ async function aProposedSolution() {
 }
 
 /**
- * The request's status now.
- *
- * @param requestId - The request.
- * @returns Its status.
- */
-async function statusOf(requestId: string) {
-  return firstRow(
-    await db.select({ status: request.status }).from(request).where(eq(request.id, requestId)),
-    'the request',
-  ).status;
-}
-
-/**
  * The request's history, oldest first, as `kind` or `kind:from>to`.
  *
  * @param requestId - The request.
  * @returns Its entries.
  */
 async function historyOf(requestId: string) {
-  const rows = await db
-    .select({ kind: requestEntry.kind, from: requestEntry.fromValue, to: requestEntry.toValue })
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
-  return rows.map(({ kind, from, to }) => (kind === 'status' ? `${kind}:${from}>${to}` : kind));
+  const rows = await entriesOf(requestId);
+  return rows.map(({ kind, fromValue, toValue }) =>
+    kind === 'status' ? `${kind}:${fromValue}>${toValue}` : kind,
+  );
 }
 
 describe('sending a solution', () => {
   it('makes the request wait for the company’s approval, with the reply that holds it', async () => {
     const { raised } = await aProposedSolution();
 
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
     expect(await historyOf(raised.id)).toEqual(['comment', 'status:in_progress>proposed']);
   });
 
@@ -90,7 +74,7 @@ describe('sending a solution', () => {
     ).rejects.toMatchObject({ code: 'forbidden' });
     // On a closed request, the reply counts and the status stays.
     await replyToRequest(ctx, support, { request: raised.id, body: 'Fixed.', status: 'proposed' });
-    expect(await statusOf(raised.id)).toBe('done');
+    expect((await storedRequest(raised.id))?.status).toBe('done');
   });
 });
 
@@ -103,7 +87,7 @@ describe('answering a solution', () => {
       answerSolution(ctx, client, { request: raised.id, answer: 'approve' }),
     ).resolves.toEqual({ status: 'done' });
 
-    expect(await statusOf(raised.id)).toBe('done');
+    expect((await storedRequest(raised.id))?.status).toBe('done');
     expect((await historyOf(raised.id)).at(-1)).toBe('status:proposed>done');
     const jobs = await db.select({ payload: queuedJob.payload }).from(queuedJob);
     expect(jobs.map(({ payload }) => payload)).toEqual([
@@ -171,7 +155,7 @@ describe('answering a solution', () => {
     await expect(
       answerSolution(ctx, support, { request: raised.id, answer: 'approve' }),
     ).rejects.toMatchObject({ code: 'forbidden' });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('says the status changed when the request no longer waits for an approval', async () => {
@@ -181,7 +165,7 @@ describe('answering a solution', () => {
     await expect(
       answerSolution(ctx, client, { request: raised.id, answer: 'approve' }),
     ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.statusChanged' });
-    expect(await statusOf(raised.id)).toBe('in_progress');
+    expect((await storedRequest(raised.id))?.status).toBe('in_progress');
   });
 
   it('refuses an answer that isn’t one', async () => {

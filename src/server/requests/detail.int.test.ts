@@ -10,7 +10,6 @@ import { defined } from '@/lib/defined';
 
 import {
   actorFor,
-  addMember,
   createCompany,
   createStaffSettings,
   createUser,
@@ -29,7 +28,15 @@ import {
   MAX_EARLIER_CHUNKS,
   THREAD_CHUNK,
 } from './detail';
-import { ctx, db, storeAssignees, storeEntry, storeRequest } from './test-helpers';
+import {
+  ctx,
+  db,
+  storeAssignees,
+  storeEntry,
+  storeRequest,
+  REQUEST_READERS,
+  requestReader,
+} from './test-helpers';
 
 describe('getRequest', () => {
   it('gives a request with its company, who raised it and how its number is shown', async () => {
@@ -120,25 +127,14 @@ describe('getRequest', () => {
     });
   });
 
-  it.each([
-    ['a Client', 'client', null, 'contributor', true, false],
-    ['a Watcher', 'watcher', null, 'follower', false, false],
-    ['Support', null, 'support', 'staff', true, true],
-    ['Finance', null, 'finance', 'staff', false, false],
-    ['Finance who is also a Client', 'client', 'finance', 'contributor', true, false],
-  ] as const)(
+  it.each(REQUEST_READERS)(
     'tells %s how they are addressed and what they may do',
     async (_who, companyRole, staffRole, audience, contributes, manages) => {
       const company = await createCompany(db);
       await storeRequest(company.id);
-      const base = staffRole
-        ? await staffActor(db, staffRole)
-        : await memberActor(db, company.id, companyRole);
-      if (staffRole && companyRole) {
-        await addMember(db, company.id, base.id, companyRole);
-      }
+      const reader = await requestReader(company.id, companyRole, staffRole);
 
-      const detail = await getRequest(ctx, await actorFor(db, base.id), '1');
+      const detail = await getRequest(ctx, reader, '1');
 
       expect(detail.audience).toBe(audience);
       expect(detail.permissions.has('requests:contribute')).toBe(contributes);
