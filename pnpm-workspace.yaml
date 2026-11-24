@@ -22,8 +22,3 @@ auditConfig:
     # Renovate will propose.
     - GHSA-3g3m-2fjr-6pw4
     - GHSA-g3hv-75wg-m249
-    # picomatch <= 4.0.7 (a crafted glob pattern takes very long): only @parcel/watcher loads it,
-    # the file watcher that sass and next-intl's message extractor use, with the patterns of their
-    # own configuration, never text from a request. No fixed picomatch exists yet; drops out when
-    # one does and @parcel/watcher takes it, which Renovate will propose.
-    - GHSA-fc5q-39xc-vjpf
