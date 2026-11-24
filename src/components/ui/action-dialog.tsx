@@ -112,7 +112,6 @@ interface ActionDialogProps {
  * @param props.onCancel - Called when Cancel is pressed.
  * @param props.leaving - Whether a page is loading afresh after the action, which keeps it busy.
  * @param props.children - Form fields.
- * @returns The form.
  */
 function ActionDialogForm({
   action,
@@ -173,8 +172,6 @@ function ActionDialogForm({
  * returns to the button; if the action removed the button (e.g. "Make staff"
  * becoming "Remove staff access"), focus moves to its card's heading. With
  * `loadOnSuccess`, a successful result loads that page afresh instead.
- *
- * @returns The button and dialog.
  */
 export default function ActionDialog({
   action,

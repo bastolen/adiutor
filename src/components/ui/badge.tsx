@@ -47,8 +47,6 @@ interface BadgeProps {
 
 /**
  * A small rounded label.
- *
- * @returns The badge.
  */
 export default function Badge({ tone = 'neutral', children, wrap = false }: BadgeProps) {
   return (

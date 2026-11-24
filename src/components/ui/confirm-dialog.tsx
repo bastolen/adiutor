@@ -57,8 +57,6 @@ interface ConfirmDialogProps {
  * inside while it's open, Escape cancels, and focus returns to the trigger
  * when it closes. Without a trigger, the caller controls it with `open` and
  * `onOpenChange`, and returns focus itself (`onCloseAutoFocus`).
- *
- * @returns The dialog with its trigger.
  */
 export default function ConfirmDialog({
   trigger = undefined,

@@ -15,8 +15,6 @@ interface AuthDividerProps {
 /**
  * A line, the label and another line. The lines are decorative; the label is
  * read as text.
- *
- * @returns The divider.
  */
 export default function AuthDivider({ children }: AuthDividerProps) {
   return (

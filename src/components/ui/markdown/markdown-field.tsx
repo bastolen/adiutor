@@ -69,8 +69,6 @@ interface MarkdownFieldProps {
  * - **The editor can be opened large** from its toolbar, in a dialog named
  *   by the label. What the field says about a text that's too long shows
  *   there as well.
- *
- * @returns The field.
  */
 export default function MarkdownField({
   label,

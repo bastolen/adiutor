@@ -28,8 +28,6 @@ type CheckboxFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * is 20px, level with the label's first line, and the label reaches 2px above
  * and below its text, so box and label together are at least 24px to tap
  * (WCAG 2.5.8) without moving anything.
- *
- * @returns The labelled checkbox.
  */
 export default function CheckboxField({
   label,

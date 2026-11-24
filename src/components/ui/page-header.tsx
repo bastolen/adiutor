@@ -29,8 +29,6 @@ interface PageHeaderProps {
  * The page title (the page's only `h1`), with optional description, actions
  * and back link. The actions sit to the right of the title while it keeps
  * room to read (10rem), and below it on narrower screens.
- *
- * @returns The header.
  */
 export default function PageHeader({
   title,

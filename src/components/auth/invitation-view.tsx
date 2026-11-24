@@ -36,8 +36,6 @@ interface InvitationViewProps {
  * The heading and the step: Finance and Support can't use what an invite link
  * sent (`InviteLinksNotAllowed`); a role that needs MFA sets it up first
  * (`SetUpMfaFirst`); otherwise the form.
- *
- * @returns The page content.
  */
 export default function InvitationView({
   preview,

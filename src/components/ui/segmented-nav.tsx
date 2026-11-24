@@ -37,8 +37,6 @@ interface SegmentedNavProps {
  * menu and pagination, they keep the page where it is (no scroll to the top),
  * and the followed link shows a spinner in its label's place until the list
  * arrives.
- *
- * @returns The navigation.
  */
 export default function SegmentedNav({ label, items }: SegmentedNavProps) {
   return (

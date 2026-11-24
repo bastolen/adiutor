@@ -53,8 +53,6 @@ interface CardProps {
  * and scrolling to it leaves room for the sticky header on small screens and
  * for the signed-in-as banner (the page's `scroll-padding-top` in
  * `globals.css`, plus a little room of the card's own).
- *
- * @returns The card.
  */
 export default function Card({
   id = undefined,

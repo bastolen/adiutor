@@ -127,8 +127,6 @@ export interface MarkdownEditorProps {
  * With a loader of people (`mentions`), typing "@" opens a list of them at
  * the cursor (`MentionPopover`). The focus stays in the text, which says it
  * has a list and points at the option the arrow keys are on.
- *
- * @returns The editor.
  */
 export default function MarkdownEditor({
   markdown,
@@ -176,7 +174,6 @@ export default function MarkdownEditor({
            * Labels an image by its description.
            *
            * @param description - The description, or nothing.
-           * @returns The label.
            */
           image: (description) => (description ? t('imageNamed', { description }) : t('image')),
           /**
@@ -184,7 +181,6 @@ export default function MarkdownEditor({
            *
            * @param task - The task's text.
            * @param done - Whether it's ticked.
-           * @returns The name.
            */
           task: (task, done) => t('taskCheckbox', { done: done ? 'yes' : 'no', task }),
           code: t('code'),

@@ -22,7 +22,6 @@ import Spinner from './spinner';
  *
  * @param props - Component props.
  * @param props.children - The icon or label shown when nothing is loading.
- * @returns The indicator.
  */
 export default function LinkPendingIndicator({ children }: { children: ReactNode }) {
   const { pending } = useLinkStatus();

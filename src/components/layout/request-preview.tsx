@@ -35,7 +35,6 @@ const DAYS = {
  *
  * @param name - The name.
  * @param locale - The reader's language, for upper-casing.
- * @returns The initial.
  */
 function firstLetter(name: string, locale: string): string {
   const [first = ''] = Array.from(name.normalize('NFC'));
@@ -49,8 +48,6 @@ function firstLetter(name: string, locale: string): string {
  * technology, and it's `inert`, so nothing in it can be focused, clicked,
  * hovered or selected. The buttons are decorative look-alikes without hover,
  * focus or press effects.
- *
- * @returns The example request.
  */
 export default function RequestPreview() {
   const t = useTranslations('common');

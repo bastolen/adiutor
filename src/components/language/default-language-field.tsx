@@ -33,8 +33,6 @@ interface DefaultLanguageFieldProps {
  * A select named `defaultLocale` with the languages, each with its flag and
  * named in itself: every language at setup, the offered ones on the staff
  * page.
- *
- * @returns The field.
  */
 export default function DefaultLanguageField({
   defaultValue = undefined,

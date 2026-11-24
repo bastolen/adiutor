@@ -40,7 +40,6 @@ interface LinkRadioMenuProps {
    * What the button says after its icon.
    *
    * @param current - The current choice, if any.
-   * @returns The button's content.
    */
   renderTrigger: (current: SortOption | undefined) => ReactNode;
   /**
@@ -52,7 +51,6 @@ interface LinkRadioMenuProps {
    * instead: the open menu would read it along with what the button shows.
    *
    * @param current - The current choice, if any.
-   * @returns The button's name.
    */
   triggerLabel?: (current: SortOption | undefined) => string;
 }

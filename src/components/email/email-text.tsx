@@ -15,7 +15,6 @@ import { colors, paragraph, small } from './theme';
  *
  * @param props - Heading props.
  * @param props.children - Heading text.
- * @returns The heading.
  */
 export function EmailHeading({ children }: { children: ReactNode }) {
   return (
@@ -40,7 +39,6 @@ export function EmailHeading({ children }: { children: ReactNode }) {
  *
  * @param props - Paragraph props.
  * @param props.children - The text.
- * @returns The paragraph.
  */
 export function EmailParagraph({ children }: { children: ReactNode }) {
   return <Text style={paragraph}>{children}</Text>;
@@ -51,7 +49,6 @@ export function EmailParagraph({ children }: { children: ReactNode }) {
  *
  * @param props - Note props.
  * @param props.children - The text.
- * @returns The paragraph.
  */
 export function EmailNote({ children }: { children: ReactNode }) {
   return <Text style={{ ...small, marginBottom: '16px' }}>{children}</Text>;
@@ -61,7 +58,6 @@ export function EmailNote({ children }: { children: ReactNode }) {
  * The button's link, for the `<link>` tag of `emails.linkFallback`.
  *
  * @param href - The link.
- * @returns The tag's renderer.
  */
 function fallbackLinkTag(href: string) {
   return function linkTag(chunks: ReactNode) {
@@ -79,7 +75,6 @@ function fallbackLinkTag(href: string) {
  * @param props - Fallback props.
  * @param props.url - The button's link.
  * @param props.locale - The recipient's language.
- * @returns The paragraph.
  */
 export function LinkFallback({ url, locale }: { url: string; locale: Locale }) {
   return (

@@ -34,8 +34,6 @@ type RadioFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * button is 20px, level with the label's first line, at least 24px to tap
  * with its label (WCAG 2.5.8). A disabled option's label is muted, not
  * faded, so it stays readable.
- *
- * @returns The labelled radio button.
  */
 export default function RadioField({
   label,

@@ -14,8 +14,6 @@ import RequestPreview from './request-preview';
  * The panel on the right of the public pages on large screens, hidden from
  * assistive technology (it only shows what Adiutor is for). The pitch speaks
  * to companies, the people who raise requests.
- *
- * @returns The panel.
  */
 export default function BrandPanel() {
   const t = useTranslations('common');

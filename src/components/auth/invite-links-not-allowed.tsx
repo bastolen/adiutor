@@ -12,8 +12,6 @@ import Button from '@/components/ui/button';
 /**
  * Explains that the signed-in account can't use invite links, with a way back
  * to the dashboard.
- *
- * @returns The explanation.
  */
 export default function InviteLinksNotAllowed() {
   const t = useTranslations('errors');

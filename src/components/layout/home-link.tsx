@@ -19,8 +19,6 @@ interface HomeLinkProps {
 
 /**
  * A link to `/` named "Adiutor home" for screen readers.
- *
- * @returns The link.
  */
 export default function HomeLink({ className, children }: HomeLinkProps) {
   const t = useTranslations('common');

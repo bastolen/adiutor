@@ -204,8 +204,6 @@ function ShortSelect({
  * heading. The option the keyboard or pointer is on is filled and outlined
  * (`highlightedItem`). While `busy`, it stays focusable but doesn't open.
  * The value is submitted under `name`, also before JavaScript has loaded.
- *
- * @returns The labelled select.
  */
 export default function SelectField({
   label,

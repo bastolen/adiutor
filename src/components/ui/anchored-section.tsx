@@ -53,8 +53,6 @@ interface AnchoredSectionProps {
  *   only scrolls into view;
  * - with focus anywhere else, it leaves the page alone, so it never takes
  *   focus from a control the user is using.
- *
- * @returns The section.
  */
 export default function AnchoredSection({
   id,

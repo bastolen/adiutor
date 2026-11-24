@@ -23,8 +23,6 @@ interface InsideDialogProps {
 /**
  * Marks a dialog's content as being inside a dialog, for
  * {@link useInsideDialog}.
- *
- * @returns The content.
  */
 export function InsideDialog({ children }: InsideDialogProps) {
   return <InsideDialogContext value>{children}</InsideDialogContext>;

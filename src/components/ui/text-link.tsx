@@ -34,8 +34,6 @@ interface TextLinkProps extends ComponentProps<typeof Link> {
  * `-my-0.5` so nothing around it moves), so a link on its own line is at
  * least 24px tall to tap (WCAG 2.5.8); inside a sentence the padding leaves
  * the line as it is.
- *
- * @returns The link.
  */
 export default function TextLink({ standalone = false, className = '', ...props }: TextLinkProps) {
   return (

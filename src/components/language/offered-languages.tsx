@@ -20,7 +20,6 @@ const OfferedLocalesContext = createContext<readonly Locale[]>(LOCALES);
  * @param props - Provider props.
  * @param props.offered - The languages that are on, in the order of `LOCALES`.
  * @param props.children - The page.
- * @returns The provider.
  */
 export function OfferedLanguagesProvider({
   offered,
@@ -35,8 +34,6 @@ export function OfferedLanguagesProvider({
 /**
  * The languages Adiutor offers, in menu order. With only one, there's
  * nothing to choose, and the language choices don't show.
- *
- * @returns The languages that are on.
  */
 export function useOfferedLocales(): readonly Locale[] {
   return use(OfferedLocalesContext);

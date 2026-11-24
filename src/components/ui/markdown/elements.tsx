@@ -112,8 +112,6 @@ function MarkdownImage({ src, alt, appUrl }: ComponentProps<'img'> & { appUrl: s
  * The checkbox of a task ("- [x] done"), as a mark with its meaning in
  * words for screen readers. It isn't a form control: nobody ticks a task in
  * a text that was sent.
- *
- * @returns The mark.
  */
 function TaskMark({ checked }: ComponentProps<'input'>) {
   const t = useTranslations('common.markdown');
@@ -130,8 +128,6 @@ function TaskMark({ checked }: ComponentProps<'input'>) {
  * A table, in a box that scrolls sideways when the table is wider than the
  * text. The box can be reached and scrolled with the keyboard, and says
  * what it holds.
- *
- * @returns The table.
  */
 function MarkdownTable({ children = null }: ComponentProps<'table'>) {
   const t = useTranslations('common.markdown');
@@ -150,8 +146,6 @@ function MarkdownTable({ children = null }: ComponentProps<'table'>) {
 
 /**
  * A paragraph, in its own writing direction.
- *
- * @returns The paragraph.
  */
 function MarkdownParagraph({ children = null }: ComponentProps<'p'>) {
   return <p dir="auto">{children}</p>;
@@ -160,8 +154,6 @@ function MarkdownParagraph({ children = null }: ComponentProps<'p'>) {
 /**
  * A list with bullets, or a list of things to do (which the parser marks
  * with a class).
- *
- * @returns The list.
  */
 function MarkdownBulletList({ className, children = null }: ComponentProps<'ul'>) {
   return (
@@ -171,8 +163,6 @@ function MarkdownBulletList({ className, children = null }: ComponentProps<'ul'>
 
 /**
  * A numbered list, starting at the number it was written with.
- *
- * @returns The list.
  */
 function MarkdownOrderedList({ start, children = null }: ComponentProps<'ol'>) {
   return (
@@ -185,8 +175,6 @@ function MarkdownOrderedList({ start, children = null }: ComponentProps<'ol'>) {
 /**
  * A list item. A footnote keeps the ID its reference points at, and a thing
  * to do (which the parser marks with a class) leaves room for its mark.
- *
- * @returns The item.
  */
 function MarkdownListItem({ id, className, children = null }: ComponentProps<'li'>) {
   return (
@@ -202,8 +190,6 @@ function MarkdownListItem({ id, className, children = null }: ComponentProps<'li
 
 /**
  * A quotation.
- *
- * @returns The quotation.
  */
 function MarkdownQuote({ children = null }: ComponentProps<'blockquote'>) {
   return <blockquote className={markdownStyles.quote}>{children}</blockquote>;
@@ -211,8 +197,6 @@ function MarkdownQuote({ children = null }: ComponentProps<'blockquote'>) {
 
 /**
  * A line between two parts of a text.
- *
- * @returns The line.
  */
 function MarkdownRule() {
   return <hr className={markdownStyles.rule} />;
@@ -220,8 +204,6 @@ function MarkdownRule() {
 
 /**
  * Code: in a sentence, or the content of a block (which drops this look).
- *
- * @returns The code.
  */
 function MarkdownCode({ className, children = null }: ComponentProps<'code'>) {
   return <code className={cn(markdownStyles.inlineCode, className)}>{children}</code>;
@@ -263,7 +245,6 @@ function namedLanguage(block: Element | undefined): string | null {
  * @param props.node - The block's node in the text's tree, for its language and its code.
  * @param props.note - What to say above the code when it's copied, a line each.
  * @param props.children - Its code element.
- * @returns The block.
  */
 function MarkdownCodeBlock({
   node,
@@ -318,7 +299,6 @@ function MarkdownCodeBlock({
  *
  * @param props - Component props.
  * @param props.mention - Who is mentioned, as the page names them.
- * @returns The mention.
  */
 function MarkdownMention({ mention }: { mention: ShownMention }) {
   const classes = mention.isViewer ? markdownStyles.mentionOfViewer : markdownStyles.mention;
@@ -344,8 +324,6 @@ function MarkdownMention({ mention }: { mention: ShownMention }) {
 
 /**
  * A table's row.
- *
- * @returns The row.
  */
 function MarkdownRow({ children = null }: ComponentProps<'tr'>) {
   return <Tr>{children}</Tr>;
@@ -353,8 +331,6 @@ function MarkdownRow({ children = null }: ComponentProps<'tr'>) {
 
 /**
  * A table's header cell.
- *
- * @returns The cell.
  */
 function MarkdownHeaderCell({ align, children = null }: ComponentProps<'th'>) {
   return (
@@ -366,8 +342,6 @@ function MarkdownHeaderCell({ align, children = null }: ComponentProps<'th'>) {
 
 /**
  * A table's cell.
- *
- * @returns The cell.
  */
 function MarkdownCell({ align, children = null }: ComponentProps<'td'>) {
   return (
@@ -379,8 +353,6 @@ function MarkdownCell({ align, children = null }: ComponentProps<'td'>) {
 
 /**
  * The notes at the end of a text.
- *
- * @returns The section.
  */
 function MarkdownFootnotes({ children = null }: ComponentProps<'section'>) {
   return <section className={markdownStyles.footnotes}>{children}</section>;
@@ -415,13 +387,10 @@ export default function markdownElements({
    * and its ID gets the text's name.
    *
    * @param depth - How many `#` the heading was written with.
-   * @returns The heading's component.
    */
   const heading = (depth: number) =>
     /**
      * A heading of the text.
-     *
-     * @returns The heading.
      */
     function MarkdownHeading({ id: headingId, children = null }: ComponentProps<'h1'>) {
       if (headingId === FOOTNOTE_LABEL_ID) {
@@ -492,8 +461,6 @@ export default function markdownElements({
 
   /**
    * A block of code in this text, copied below the text's note.
-   *
-   * @returns The block.
    */
   function NotedCodeBlock({ node, children = null }: ComponentProps<'pre'> & ExtraProps) {
     return (

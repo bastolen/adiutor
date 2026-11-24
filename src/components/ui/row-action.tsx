@@ -90,8 +90,6 @@ interface RowActionProps {
  * row; an error is shown next to the button and as a toast. If the action
  * removed the button while it had focus, focus moves to its card's heading
  * (`restoreFocusIfLost`). Elsewhere, the result is shown next to the button.
- *
- * @returns The form.
  */
 export default function RowAction({
   action,

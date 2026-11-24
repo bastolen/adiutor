@@ -44,8 +44,6 @@ interface TabsProps {
  * (a draft) is still there when they come back to it. Which tab is open is
  * kept while the page is (pages stay alive across navigation), like the
  * drafts in it.
- *
- * @returns The tabs and their panels.
  */
 export default function Tabs({ label, items }: TabsProps) {
   const [open, setOpen] = useState(items[0]?.value);

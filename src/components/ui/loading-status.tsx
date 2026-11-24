@@ -9,8 +9,6 @@ import { useTranslations } from 'next-intl';
 
 /**
  * A visually hidden status saying the content is loading.
- *
- * @returns The status.
  */
 export default function LoadingStatus() {
   const t = useTranslations('common');

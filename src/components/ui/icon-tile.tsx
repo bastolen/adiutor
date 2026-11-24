@@ -41,8 +41,6 @@ interface IconTileProps {
 /**
  * A 20px icon centred on a tinted square. It's decorative: the text next to
  * it says what it means.
- *
- * @returns The tile.
  */
 export default function IconTile({ icon: Icon, tone = 'muted', size = 'md' }: IconTileProps) {
   return (

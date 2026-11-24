@@ -9,7 +9,6 @@ import type { ReactNode } from 'react';
  *
  * @param props - Component props.
  * @param props.children - The rows.
- * @returns The list.
  */
 export function DescriptionList({ children }: { children: ReactNode }) {
   return <dl className="divide-y divide-border">{children}</dl>;
@@ -25,7 +24,6 @@ export function DescriptionList({ children }: { children: ReactNode }) {
  * @param props - Component props.
  * @param props.term - The label.
  * @param props.children - The value.
- * @returns The row.
  */
 export function DescriptionRow({ term, children }: { term: string; children: ReactNode }) {
   return (

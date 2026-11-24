@@ -16,7 +16,6 @@ import { colors } from './theme';
  * @param props - Component props.
  * @param props.role - The role.
  * @param props.locale - The recipient's language.
- * @returns The panel.
  */
 export default function RoleSummary({ role, locale }: { role: Role; locale: Locale }) {
   const t = translator(locale, 'roles');

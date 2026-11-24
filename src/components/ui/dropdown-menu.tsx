@@ -35,8 +35,6 @@ const itemClasses = cn(
 
 /**
  * The menu panel, rendered in a portal above the page.
- *
- * @returns The panel.
  */
 export function MenuContent({
   className = '',
@@ -61,8 +59,6 @@ export function MenuContent({
 
 /**
  * A menu item. Use `asChild` with a link for navigation.
- *
- * @returns The item.
  */
 export function MenuItem({ className = '', ...props }: ComponentProps<typeof DropdownMenu.Item>) {
   return <DropdownMenu.Item className={cn(itemClasses, className)} {...props} />;
@@ -70,8 +66,6 @@ export function MenuItem({ className = '', ...props }: ComponentProps<typeof Dro
 
 /**
  * The check shown at the right of the selected radio item.
- *
- * @returns The indicator.
  */
 function RadioIndicator() {
   return (
@@ -84,8 +78,6 @@ function RadioIndicator() {
 /**
  * A radio item, showing a check when selected. For a choice that navigates,
  * use {@link MenuRadioLinkItem}.
- *
- * @returns The radio item.
  */
 export function MenuRadioItem({
   className = '',
@@ -116,8 +108,6 @@ type MenuRadioLinkItemProps = Omit<ComponentProps<typeof Link>, 'children'> & {
  * rows sorted that way. It looks like {@link MenuRadioItem}, check included,
  * and keeps the menu's keyboard behaviour; choosing it follows the link and
  * closes the menu.
- *
- * @returns The radio item.
  */
 export function MenuRadioLinkItem({
   value,
@@ -165,8 +155,6 @@ interface MenuCheckboxItemProps extends Omit<
  * and keeps the menu open, so several can be ticked in a row; Escape or Tab
  * closes the menu. The item's name is its label alone, and the hint
  * describes it.
- *
- * @returns The checkbox item.
  */
 export function MenuCheckboxItem({
   label,
@@ -276,8 +264,6 @@ interface MenuRadioRowProps {
  * segmented row of icons on the right (styled like `SegmentedNav`). ArrowUp
  * and ArrowDown go through the icons in order like any other items;
  * ArrowLeft and ArrowRight also move between them.
- *
- * @returns The row.
  */
 export function MenuRadioRow({
   label,
@@ -323,8 +309,6 @@ interface MenuIconRadioItemProps extends Omit<
  * An icon-only radio item for a {@link MenuRadioRow}. The checked one is
  * raised and its icon coloured; choosing one keeps the menu open, so the
  * result can be seen and another option tried.
- *
- * @returns The item.
  */
 export function MenuIconRadioItem({
   label,
@@ -352,8 +336,6 @@ export function MenuIconRadioItem({
 
 /**
  * A small heading inside the menu.
- *
- * @returns The label.
  */
 export function MenuLabel({ className = '', ...props }: ComponentProps<typeof DropdownMenu.Label>) {
   return (
@@ -366,8 +348,6 @@ export function MenuLabel({ className = '', ...props }: ComponentProps<typeof Dr
 
 /**
  * A divider between groups of items.
- *
- * @returns The separator.
  */
 export function MenuSeparator() {
   return <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />;

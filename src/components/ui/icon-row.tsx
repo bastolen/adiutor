@@ -44,8 +44,6 @@ interface IconRowProps {
  * remaining width, at least 10rem, so on narrow screens the control wraps
  * below it (staying on the right) rather than squeezing it. Rows are
  * separated by the list's `divide-y divide-border`.
- *
- * @returns The list item.
  */
 export default function IconRow({
   icon,

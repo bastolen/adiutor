@@ -18,8 +18,6 @@ interface TableProps {
 /**
  * A full-width table that scrolls sideways on narrow screens instead of
  * breaking the layout. The caption names it for screen readers.
- *
- * @returns The table.
  */
 export function Table({ caption, children }: TableProps) {
   return (
@@ -36,8 +34,6 @@ export function Table({ caption, children }: TableProps) {
 
 /**
  * A column header cell.
- *
- * @returns The header cell.
  */
 export function Th({ className = '', ...props }: ComponentProps<'th'>) {
   return (
@@ -57,8 +53,6 @@ export function Th({ className = '', ...props }: ComponentProps<'th'>) {
  * column only the width its content needs at least, so a button that may
  * wrap (as buttons do elsewhere when they run out of room) would be squeezed
  * onto two lines in a row that has room for one.
- *
- * @returns The cell.
  */
 export function Td({ className = '', ...props }: ComponentProps<'td'>) {
   return (
@@ -81,8 +75,6 @@ export const ownRowCell = 'shadow-[inset_3px_0_0_0_var(--color-highlight)]';
 
 /**
  * A body row with a divider below it and a subtle hover.
- *
- * @returns The row.
  */
 export function Tr({ className = '', ...props }: ComponentProps<'tr'>) {
   return (

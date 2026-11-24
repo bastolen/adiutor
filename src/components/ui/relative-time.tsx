@@ -25,8 +25,6 @@ interface RelativeTimeProps {
 /**
  * A `<time>` element with relative wording. Render it where the request has
  * already been read (any signed-in page), so "now" is the request time.
- *
- * @returns The time.
  */
 export default function RelativeTime({ date, spokenExact = false }: RelativeTimeProps) {
   const t = useTranslations('common.relativeTime');

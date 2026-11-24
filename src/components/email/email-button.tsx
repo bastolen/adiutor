@@ -23,8 +23,6 @@ interface EmailButtonProps {
  * A brand-teal button with white text, or for a second choice a white one
  * with brand-teal text and border. React Email's `Button` adds the
  * workarounds that keep its padding in Outlook.
- *
- * @returns The button.
  */
 export default function EmailButton({ href, children, variant = 'primary' }: EmailButtonProps) {
   const primary = variant === 'primary';

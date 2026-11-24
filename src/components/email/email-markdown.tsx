@@ -151,7 +151,6 @@ const footnotes: CSSProperties = {
  * The size of a heading, by how far it is below the text's highest one.
  *
  * @param below - 0 for the text's highest heading, 1 for the next, and so on.
- * @returns The heading's style.
  */
 function headingStyle(below: number): CSSProperties {
   return {
@@ -205,13 +204,10 @@ function emailElements({
    * was written with. The footnotes' label is small, like the notes.
    *
    * @param depth - How many `#` the heading was written with.
-   * @returns The heading's component.
    */
   const heading = (depth: number) =>
     /**
      * A heading of the text.
-     *
-     * @returns The heading.
      */
     function EmailTextHeading({ id, children = null }: ComponentProps<'h1'>) {
       if (id === FOOTNOTE_LABEL_ID) {
@@ -288,8 +284,6 @@ function emailElements({
     img: EmailTextImage,
     /**
      * A paragraph, in its own writing direction.
-     *
-     * @returns The paragraph.
      */
     p: ({ children = null }: ComponentProps<'p'>) => (
       <p dir="auto" style={paragraph}>
@@ -298,16 +292,12 @@ function emailElements({
     ),
     /**
      * A list with bullets, or a list of things to do (which the parser marks with a class).
-     *
-     * @returns The list.
      */
     ul: ({ className, children = null }: ComponentProps<'ul'>) => (
       <ul style={className ? taskList : list}>{children}</ul>
     ),
     /**
      * A numbered list, starting at the number it was written with.
-     *
-     * @returns The list.
      */
     ol: ({ start, children = null }: ComponentProps<'ol'>) => (
       <ol start={start} style={list}>
@@ -316,8 +306,6 @@ function emailElements({
     ),
     /**
      * A list item.
-     *
-     * @returns The item.
      */
     li: ({ children = null }: ComponentProps<'li'>) => (
       <li dir="auto" style={{ margin: '0 0 4px' }}>
@@ -327,32 +315,24 @@ function emailElements({
     /**
      * The checkbox of a task ("- [x] done"), as a mark: nobody ticks a task in an
      * email. The parser puts the space between it and the task's text.
-     *
-     * @returns The mark.
      */
     input: ({ checked }: ComponentProps<'input'>) => (
       <span>{checked ? TASK_DONE_MARK : TASK_OPEN_MARK}</span>
     ),
     /**
      * A quotation.
-     *
-     * @returns The quotation.
      */
     blockquote: ({ children = null }: ComponentProps<'blockquote'>) => (
       <blockquote style={quote}>{children}</blockquote>
     ),
     /**
      * A line between two parts of a text.
-     *
-     * @returns The line.
      */
     hr: () => (
       <hr style={{ border: 'none', borderTop: `1px solid ${colors.border}`, margin: '16px 0' }} />
     ),
     /**
      * Code in a sentence.
-     *
-     * @returns The code.
      */
     code: ({ children = null }: ComponentProps<'code'>) => (
       <code style={inlineCode}>{children}</code>
@@ -360,8 +340,6 @@ function emailElements({
     /**
      * A block of code, as it was written and always left to right. The
      * highlighter's parts are dropped: an email has no colours for them.
-     *
-     * @returns The block.
      */
     pre: ({ node }: ComponentProps<'pre'> & ExtraProps) => (
       <pre dir="ltr" style={codeBlock}>
@@ -370,8 +348,6 @@ function emailElements({
     ),
     /**
      * A table.
-     *
-     * @returns The table.
      */
     table: ({ children = null }: ComponentProps<'table'>) => (
       // Marked as a table of data, so the plain-text version lays it out in columns.
@@ -381,8 +357,6 @@ function emailElements({
     ),
     /**
      * A table's header cell.
-     *
-     * @returns The cell.
      */
     th: ({ align, children = null }: ComponentProps<'th'>) => (
       <th
@@ -399,8 +373,6 @@ function emailElements({
     ),
     /**
      * A table's cell.
-     *
-     * @returns The cell.
      */
     td: ({ align, children = null }: ComponentProps<'td'>) => (
       <td dir="auto" style={{ ...cell, textAlign: alignment(align) }}>
@@ -409,8 +381,6 @@ function emailElements({
     ),
     /**
      * The notes at the end of a text.
-     *
-     * @returns The notes.
      */
     section: ({ children = null }: ComponentProps<'section'>) => (
       <div style={footnotes}>{children}</div>
@@ -428,7 +398,6 @@ interface PlacedPart extends TextPart {
  * Notes where each piece of a text starts.
  *
  * @param parts - The pieces, in order.
- * @returns The pieces with their offsets.
  */
 function placed(parts: readonly TextPart[]): PlacedPart[] {
   return parts.reduce<PlacedPart[]>((done, part) => {
@@ -446,7 +415,6 @@ function placed(parts: readonly TextPart[]): PlacedPart[] {
  *
  * @param text - The text as it's stored.
  * @param appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
- * @returns The text to show.
  */
 function asWritten(text: string, appUrl: string | null): string {
   return appUrl === null ? text : staffLinksAsLabels(text, appUrl);
@@ -461,7 +429,6 @@ function asWritten(text: string, appUrl: string | null): string {
  * @param props - Component props.
  * @param props.text - The text, as {@link asWritten} gives it.
  * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
- * @returns The text.
  */
 function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null }) {
   return (
@@ -494,7 +461,6 @@ function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null 
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address (the email's `appUrl`), for a text the company
  *   reads; `null` for an internal note, which links to the staff's pages.
- * @returns The text.
  */
 export default function EmailMarkdown({
   value,
@@ -522,7 +488,6 @@ export default function EmailMarkdown({
      * Names the link from a footnote back to the text, which an email doesn't show.
      *
      * @param number - The footnote's number.
-     * @returns The link's name.
      */
     footnoteBackLabel: (number) => t('backToReference', { number }),
   });

@@ -34,8 +34,6 @@ interface EmptyStateProps {
 
 /**
  * A centred icon, title, description and optional action.
- *
- * @returns The empty state.
  */
 export default function EmptyState({
   icon,

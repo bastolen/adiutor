@@ -67,8 +67,6 @@ interface AvatarProps {
  * name is shown next to it, or (in a row of avatars) on hover and as text
  * for screen readers. A picture that can't load takes itself away
  * (`AvatarPicture`), so the initials behind it show.
- *
- * @returns The avatar.
  */
 export default function Avatar({
   name,

@@ -15,7 +15,6 @@ import { colors, fontFamily, small } from './theme';
  * `emails.layout.sentBy` ("Sent by <link>Adiutor</link>").
  *
  * @param href - The app's URL.
- * @returns The tag's renderer.
  */
 function appLinkTag(href: string) {
   return function linkTag(chunks: ReactNode) {
@@ -53,8 +52,6 @@ interface EmailLayoutProps {
  * The logo is linked, not attached. Clients that block remote images show
  * its alt text instead, styled as the wordmark, and the fixed size keeps the
  * layout in place.
- *
- * @returns The email document.
  */
 export default function EmailLayout({
   preview,

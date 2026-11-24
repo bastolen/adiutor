@@ -26,8 +26,6 @@ type TextFieldProps = ComponentProps<'input'> & {
 /**
  * A text input with a visible label. The description is linked with
  * `aria-describedby`, so screen readers announce it with the field.
- *
- * @returns The labelled input.
  */
 export default function TextField({
   label,

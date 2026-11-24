@@ -48,8 +48,6 @@ interface CopyButtonProps {
  * way, and as an error toast where the page has toasts (the signed-in app):
  * the value stays on screen next to the button, to select and copy by hand.
  * What it shows is forgotten when the page is hidden or the button goes.
- *
- * @returns The button.
  */
 export default function CopyButton({
   value,

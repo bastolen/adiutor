@@ -34,8 +34,6 @@ interface CodeFieldProps {
  * A required code field: "Backup code" for a backup code (any characters,
  * nothing to fill in), otherwise "Code" with the numeric keyboard and the
  * browser's one-time code suggestion.
- *
- * @returns The field.
  */
 export default function CodeField({
   kind,

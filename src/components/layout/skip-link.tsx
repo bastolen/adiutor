@@ -15,8 +15,6 @@ import { focusMainContent } from '@/components/ui/focus-fallback';
  * the main content from script (`focusMainContent`, which makes it focusable
  * just then) and leaves the address as it is; before the script has loaded,
  * the link still jumps there, and Tab carries on from it.
- *
- * @returns The skip link.
  */
 export default function SkipLink() {
   const t = useTranslations('common');

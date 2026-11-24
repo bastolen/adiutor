@@ -31,8 +31,6 @@ interface ThemeMenuRowProps {
  * The menu's owner calls `useThemePreference` itself, outside the menu's
  * content, which only exists while the menu is open: that way the theme
  * keeps following the system while it's closed.
- *
- * @returns The theme row.
  */
 export default function ThemeMenuRow({ preference, onChange }: ThemeMenuRowProps) {
   const t = useTranslations('common.theme');

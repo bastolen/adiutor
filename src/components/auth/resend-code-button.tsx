@@ -38,8 +38,6 @@ export function formatCountdown(seconds: number): string {
  * recent for a new one: then it can't be pressed, yet stays focusable, so
  * pressing it doesn't drop keyboard focus to the top of the page once the
  * new code is sent.
- *
- * @returns The button.
  */
 export default function ResendCodeButton({ onClick, sending, waitSeconds }: ResendCodeButtonProps) {
   const t = useTranslations('common');

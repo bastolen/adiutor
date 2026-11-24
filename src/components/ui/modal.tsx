@@ -73,8 +73,6 @@ interface ModalProps {
  * A caller can say what gets the focus instead, when it opens
  * (`initialFocus`) and when it closes (`finalFocus`); focus never stays
  * behind on the page, or on nothing.
- *
- * @returns The dialog.
  */
 export default function Modal({
   open,

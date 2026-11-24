@@ -12,7 +12,6 @@ import LoadingStatus from './loading-status';
  *
  * @param props - Skeleton props.
  * @param props.className - Size and shape classes.
- * @returns The block.
  */
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
@@ -30,7 +29,6 @@ export function Skeleton({ className = '' }: { className?: string }) {
  * @param props - Skeleton props.
  * @param props.header - Whether to include the heading placeholder; off for a page whose layout
  *   shows the header (with {@link PageHeaderSkeleton} while it loads).
- * @returns The loading state.
  */
 export function PageSkeleton({ header = true }: { header?: boolean } = {}) {
   return (
@@ -56,8 +54,6 @@ export function PageSkeleton({ header = true }: { header?: boolean } = {}) {
  * can't get narrower than its content, and `max-w-full` on the placeholders
  * doesn't count toward that minimum, so without it the column stays 320px
  * wide and the page scrolls sideways on a narrow screen while it loads.
- *
- * @returns The loading header.
  */
 export function PageHeaderSkeleton() {
   return (
@@ -77,8 +73,6 @@ export function PageHeaderSkeleton() {
 /**
  * A loading form: a heading and a few field placeholders. Screen readers hear
  * "Loading…" and the region is marked busy.
- *
- * @returns The loading state.
  */
 export function FormSkeleton() {
   return (
@@ -105,7 +99,6 @@ export function FormSkeleton() {
  * @param props - Component props.
  * @param props.header - Whether to show the heading's placeholders: not on
  *   a company's board, whose header the company's layout shows.
- * @returns The loading state.
  */
 export function BoardSkeleton({ header = true }: { header?: boolean } = {}) {
   return (

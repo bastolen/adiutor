@@ -42,7 +42,6 @@ const listeners = new Set<() => void>();
  * Subscribes a component to changes of {@link mountedMarkers}.
  *
  * @param listener - Called on every change.
- * @returns The unsubscribe function.
  */
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
@@ -173,7 +172,6 @@ export function useChangeButtonState({
  *
  * @param props - Component props.
  * @param props.children - The form's contents.
- * @returns The fieldset.
  */
 export function ChangesFieldset({ children }: { children: ReactNode }) {
   const changesOff = useSignedInAs();

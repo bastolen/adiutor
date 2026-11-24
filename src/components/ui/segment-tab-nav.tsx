@@ -40,8 +40,6 @@ interface SegmentTabNavProps {
  * their pages. Tabs that don't fit the width (long names on a phone, in some
  * languages) wrap onto another row, so every tab stays in sight and the page
  * never scrolls sideways.
- *
- * @returns The navigation.
  */
 export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {
   const current = useSelectedLayoutSegment();

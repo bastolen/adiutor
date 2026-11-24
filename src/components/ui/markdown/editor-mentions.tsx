@@ -159,7 +159,6 @@ export function matchingChoices(people: readonly MentionChoice[], query: string)
  * the list opens, and kept until another loader takes the first one's place.
  *
  * @param firstLoader - Gives the people who can be mentioned.
- * @returns The list.
  */
 export function createMentionList(firstLoader: MentionLoader): MentionList {
   const listeners = new Set<() => void>();
@@ -346,7 +345,6 @@ export function createMentionList(firstLoader: MentionLoader): MentionList {
  *
  * @param listId - The list's ID.
  * @param index - The option's place in the list.
- * @returns The option's ID.
  */
 export function mentionOptionId(listId: string, index: number): string {
   return `${listId}-${index}`;

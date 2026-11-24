@@ -54,8 +54,6 @@ interface BannerProps {
  *
  * It doesn't need the browser itself, so a server component can render it
  * (without `onDismiss`, which only a client component can pass).
- *
- * @returns The banner.
  */
 export default function Banner({
   label,

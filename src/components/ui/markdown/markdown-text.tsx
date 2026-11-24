@@ -91,7 +91,6 @@ export default function MarkdownText({
      * Names the link from a footnote back to the text.
      *
      * @param number - The footnote's number.
-     * @returns The link's name.
      */
     footnoteBackLabel: (number) => t('backToReference', { number }),
   });

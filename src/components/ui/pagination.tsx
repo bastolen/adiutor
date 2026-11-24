@@ -49,8 +49,6 @@ interface PageSizeLinksProps {
  * a spinner while the new size loads. It's part of {@link Pagination}, and a
  * view with a number of rows but no pages (the board's cards per lane) uses
  * it alone.
- *
- * @returns The group.
  */
 export function PageSizeLinks({ label, groupLabel, optionLabel, sizes }: PageSizeLinksProps) {
   return (
@@ -93,8 +91,6 @@ export function PageSizeLinks({ label, groupLabel, optionLabel, sizes }: PageSiz
  * `showsPagination`). The row count is a status message, so screen readers
  * hear it change after going to another page; the landmark and group names
  * include `label`, so several tables on one page can be told apart.
- *
- * @returns The pagination.
  */
 export default function Pagination({
   label,

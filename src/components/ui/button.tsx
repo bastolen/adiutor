@@ -140,8 +140,6 @@ function ignorePress(event: MouseEvent<HTMLButtonElement>): void {
  * its own use makes wait (`focusableWhenDisabled`) is `aria-disabled` while
  * it's disabled, and ignores presses, rather than disabled. With
  * `decorative`, it's only a picture of a button (see the prop).
- *
- * @returns The button.
  */
 export default function Button({
   variant = 'primary',

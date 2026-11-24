@@ -26,8 +26,6 @@ type TextAreaFieldProps = ComponentProps<'textarea'> & {
 /**
  * A textarea with a visible label. The description is linked with
  * `aria-describedby`, so screen readers announce it with the field.
- *
- * @returns The labelled textarea.
  */
 export default function TextAreaField({
   label,

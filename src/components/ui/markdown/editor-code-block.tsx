@@ -23,7 +23,6 @@ import { markdownStyles } from './styles';
  * @param props - What the editor passes a node's view, and the caption.
  * @param props.node - The block.
  * @param props.codeLabel - The caption of a block that names no language ("Code").
- * @returns The block.
  */
 function CodeBlockView({ node, codeLabel }: ReactNodeViewProps & { codeLabel: string }) {
   const languages = useCodeLanguages();
@@ -49,13 +48,10 @@ function CodeBlockView({ node, codeLabel }: ReactNodeViewProps & { codeLabel: st
  * (which never guesses a language), and shown by {@link CodeBlockView}.
  *
  * @param codeLabel - The caption of a block that names no language.
- * @returns The extension.
  */
 export default function editorCodeBlock(codeLabel: string) {
   /**
    * The block's view, with its caption.
-   *
-   * @returns The block.
    */
   function View(props: ReactNodeViewProps) {
     return <CodeBlockView {...props} codeLabel={codeLabel} />;
@@ -63,8 +59,6 @@ export default function editorCodeBlock(codeLabel: string) {
   return CodeBlockLowlight.extend({
     /**
      * How a block is shown.
-     *
-     * @returns The React view.
      */
     addNodeView() {
       return ReactNodeViewRenderer(View);

@@ -35,8 +35,6 @@ type PaginationNavProps = Pick<
  * show a spinner while the next page loads. After going to another page from
  * here, focus stays in the navigation: when the control used is gone (Next
  * on the last page), the current page's link (or another link here) gets it.
- *
- * @returns The navigation.
  */
 export default function PaginationNav({
   label,

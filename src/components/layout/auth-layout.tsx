@@ -32,8 +32,6 @@ interface AuthLayoutProps {
  * The layout is in each page's static shell, so its text comes from client
  * components that read the root provider (`HomeLink`, `BrandPanel`), never
  * from the request (docs/i18n.md).
- *
- * @returns The layout.
  */
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (

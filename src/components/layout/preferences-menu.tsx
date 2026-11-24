@@ -68,7 +68,6 @@ import setLanguageAction from './language-action';
  * @param props - Component props.
  * @param props.className - Where it sits below tablet width, in the page's flow (from tablet
  *   width it's fixed in the bottom-right corner).
- * @returns The theme and language button.
  */
 export default function PreferencesMenu({ className = '' }: { className?: string }) {
   const t = useTranslations('common');
