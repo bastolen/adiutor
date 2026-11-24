@@ -86,17 +86,18 @@ keyboard support.
       1536px, where the page (a wide one) has its full 1200px; the address from 768px in its own
       column.
     - **Staff and members:** the address always shows under the name (unless it is the name),
-      and the role from 768px in its own column.
+      and the role from 768px in its own column. On their wide pages (Settings, a company's
+      pages) they keep these columns: their rows are already as tall as the role select.
     - **Companies:** the URL name always shows under the name, and the status and when it was
       added from 768px in their own columns, so on a phone the name keeps the room.
     - **Requests:** the number and type always show under the title, and the status, priority,
       assignees and last activity from 768px in their own columns. Across companies, the company
       shows under the title too, and in its own column from 1536px, where the page (a wide one)
-      has its full 1200px. A long status ("Waiting for the company", `StatusBadge`'s `wrap`, as on the board)
-      and a long row of avatars (`PeopleAvatars`' `wrap`: side by side with a gap rather than
-      overlapping, so the rows line up) wrap in their columns, and so do the
-      Assigned to heading and the last activity ("59 minuten geleden") below 1280px, so the table
-      fits in every language at 768px and at 1024px, where the sidebar takes its room.
+      has its full 1200px. A long status ("Waiting for the company", `StatusBadge`'s `wrap`, as
+      on the board) and a long row of avatars (`PeopleAvatars`' `wrap`: side by side with a gap
+      rather than overlapping, so the rows line up) wrap in their columns, and so do the Assigned
+      to heading and the last activity ("59 minuten geleden") below 1280px, so the table fits in
+      every language at 768px and at 1024px, where the sidebar takes its room.
     - **Long values:** names, addresses and company names wrap (`wrap-anywhere`) rather than
       widening the table.
     - **Check:** `e2e/tables.spec.ts` checks every table at 640, 768, 1024, 1280, 1536 and
@@ -343,12 +344,13 @@ keyboard support.
   width it grows with the room next to the menu, up to 1200px of content, which it always has
   from 1536px of screen. A request's page grows, so the conversation and the editor of a reply
   get the room, with the details still beside them; so do the boards of requests, so more of
-  their lanes show side by side, the lists of requests, whose titles and statuses stop
-  wrapping, and the list of users, whose companies and MFA get columns of their own. A company's pages are wide on every tab, through the company's layout, so its list
-  and board get the room and its header and tabs stay in one place from tab to tab. It measures
-  that room in the content column (a container in the app layout), not the screen, so a
-  scrollbar never makes it scroll sideways. Other pages keep the content's usual width: a short
-  table (the companies, the logs), a form or a page of details gains only empty space.
+  their lanes show side by side, the lists of requests, whose titles and statuses stop wrapping,
+  and the list of users, whose companies and MFA get columns of their own. A company's pages and
+  Settings are wide on every tab, through their layout, so a company's list and board and the
+  staff get the room, and the header and tabs stay in one place from tab to tab. It measures that
+  room in the content column (a container in the app layout), not the screen, so a scrollbar
+  never makes it scroll sideways. Other pages keep the content's usual width: a short table (the
+  companies, the logs), a form or a page of details gains only empty space.
 - **Errors:** when a page or server action fails unexpectedly, an error page takes the page's
   place, built like the 404 pages: "Something went wrong", "This page couldn't load. Try again, or
   go to your dashboard.", **Try again** (busy while the page loads again), **Go to your dashboard**
@@ -462,8 +464,9 @@ keyboard support.
   Settings' General, Staff and Requests) get their header and tabs from a layout
   (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/users/[userId]/layout.tsx`,
   `admin/logs/layout.tsx`, `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
-  keeps focus and the header doesn't reload. A company's layout makes every one of its tabs wide
-  (`WidePage`, see "Layout"), so the header and tabs don't move when the tab changes. `SegmentTabNav` marks the current tab from the URL
+  keeps focus and the header doesn't reload. The layouts of a company's pages and of Settings
+  make every one of their tabs wide (`WidePage`, see "Layout"), so the header and tabs don't move
+  when the tab changes. `SegmentTabNav` marks the current tab from the URL
   (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than
   widen the page.
