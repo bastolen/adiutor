@@ -24,6 +24,7 @@ import type { RequestStatus } from '../src/lib/requests';
 import { storeRequest } from './support/db';
 import { COMPANY_NAME, COMPANY_SLUG, REQUESTS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
 import { type StorageState, storageStateFor, toasts } from './support/helpers';
+import { repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /** Sign-in cookies of the staff member the board is read as. */
@@ -72,10 +73,9 @@ async function storeBoard(): Promise<OwnBoard> {
   await storeOwn(board.openTitle);
   await storeOwn(board.waitingTitle, 'waiting');
   // One after another: each request gets the next number.
-  await Array.from({ length: 6 }, (_, index) => index + 1).reduce(async (previous, index) => {
-    await previous;
-    await storeOwn(`${search}, done ${index}`, 'done');
-  }, Promise.resolve());
+  await repeatInOrder(6, async (index) => {
+    await storeOwn(`${search}, done ${index + 1}`, 'done');
+  });
   return board;
 }
 

@@ -27,6 +27,7 @@ import {
 } from './support/fixtures';
 import { clickLinkInEmail, signIn, signOut, toasts } from './support/helpers';
 import { linkIn, waitForEmailAbout } from './support/outbox';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /**
@@ -337,12 +338,11 @@ test('a Continue from a browser that never says where it came from counts by its
     });
 
   // Another site's origin, or none it will name (`null`): Better Auth's form check refuses it.
-  for (const other of ['https://mail.adiutor.test', 'null']) {
-    // eslint-disable-next-line no-await-in-loop -- one request at a time, each checked in turn
+  await inOrder(['https://mail.adiutor.test', 'null'], async (other) => {
     const forbidden = await postContinue({ origin: other });
     expect(forbidden.status()).toBe(403);
     expect(forbidden.headers()['set-cookie'] ?? '').not.toMatch(/session_token=/);
-  }
+  });
 
   // Without its origin it's no Continue: back to the page, which then waits for a click.
   const refused = await postContinue({});

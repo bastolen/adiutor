@@ -24,6 +24,7 @@ import {
   REQUESTS_CLIENT,
 } from './support/fixtures';
 import { adminStorageState, type StorageState } from './support/helpers';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /** Sign-in cookies of the staff Admin. */
@@ -290,11 +291,9 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
 
   // From 1280px the content stops getting wider, so wider screens must fit the same columns, and
   // a wide page (the requests, the users, a company's pages) its more columns from 1536px.
-  await [640, 768, 1024, 1280, 1536, 1920].reduce(async (previousWidth, width) => {
-    await previousWidth;
+  await inOrder([640, 768, 1024, 1280, 1536, 1920], async (width) => {
     await page.setViewportSize({ width, height: 900 });
-    await paths.reduce(async (previousPath, path) => {
-      await previousPath;
+    await inOrder(paths, async (path) => {
       await page.goto(path);
       await expect(page.getByRole('main').getByRole('table').first()).toBeVisible();
       const overflowing = await page.evaluate(() =>
@@ -307,6 +306,6 @@ test('no table scrolls sideways from tablet to desktop widths', async ({ page })
           .map((table) => table.querySelector('caption')?.textContent),
       );
       expect(overflowing, `${path} at ${width}px`).toEqual([]);
-    }, Promise.resolve());
-  }, Promise.resolve());
+    });
+  });
 });

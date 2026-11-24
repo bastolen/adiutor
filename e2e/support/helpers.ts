@@ -525,3 +525,81 @@ export async function sendInvitation(page: Page, email: string, role: string): P
   await page.getByRole('option', { name: new RegExp(`^${role}\\b`) }).click();
   await inviteForm.getByRole('button', { name: 'Send invitations' }).click();
 }
+
+/**
+ * Waits until the page has hydrated, so a key pressed or a client-side link
+ * clicked next isn't ignored: opening the account menu only works once React
+ * took the page over. Closes the menu again and waits for its button to get
+ * the focus back (it does a moment after Escape).
+ *
+ * @param page - The browser page, on an app page.
+ */
+export async function whenHydrated(page: Page): Promise<void> {
+  const accountMenu = page.getByRole('button', { name: /^Account menu/ });
+  await accountMenu.click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(accountMenu).toBeFocused();
+}
+
+/**
+ * Opens a menu or a select with Enter. Retries, because right after a
+ * (re)load the page may still be hydrating and ignore the first key press, but
+ * presses Enter again only while it's still closed: on a list that's opening,
+ * a second Enter would act on the item it lands on. For a select
+ * (`listbox`), it also waits until an option has focus, so the next key
+ * presses go to the list.
+ *
+ * @param trigger - The button or combobox that opens it (with `aria-expanded`).
+ * @param popup - What opens: a `listbox` (a select, the default) or a `menu`.
+ */
+export async function openWithEnter(
+  trigger: Locator,
+  popup: 'menu' | 'listbox' = 'listbox',
+): Promise<void> {
+  const page = trigger.page();
+  await expect(async () => {
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+      await trigger.press('Enter');
+    }
+    await expect(page.getByRole(popup)).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
+  if (popup === 'listbox') {
+    await expect(page.locator('[role="option"]:focus')).toHaveCount(1);
+  }
+}
+
+/**
+ * Presses a key until an element has the focus, up to a number of times: the
+ * first press may be ignored while the page is still hydrating, but one that
+ * overshoots (a list that doesn't wrap) fails at once instead of spinning
+ * until the test's time runs out.
+ *
+ * @param page - The browser page.
+ * @param key - The key, e.g. `ArrowDown` or `Tab`.
+ * @param target - The element that should get the focus.
+ * @param options - Options.
+ * @param options.presses - The most times to press the key.
+ */
+export async function pressUntilFocused(
+  page: Page,
+  key: string,
+  target: Locator,
+  { presses = 5 }: { presses?: number } = {},
+): Promise<void> {
+  let lastError: unknown;
+  for (let press = 1; press <= presses; press += 1) {
+    // eslint-disable-next-line no-await-in-loop -- Each press moves on from where the last one went.
+    await page.keyboard.press(key);
+    try {
+      // eslint-disable-next-line no-await-in-loop -- Checked before the next press.
+      await expect(target).toBeFocused({ timeout: 250 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`${key} pressed ${presses} times never reached ${String(target)}.`, {
+    cause: lastError,
+  });
+}

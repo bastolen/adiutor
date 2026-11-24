@@ -72,6 +72,7 @@ import {
   toasts,
 } from './support/helpers';
 import { emailsAbout, linkIn, waitForEmailAbout } from './support/outbox';
+import { inOrder, repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /**
@@ -296,27 +297,20 @@ test('the number as people see it, and the short links, open the request', async
   await signIn(page, REQUESTS_CLIENT);
   const { number, title } = SEEDED_REQUESTS.waiting;
 
-  for (const address of [
-    `/requests/AD-${number}`,
-    `/requests/ad-${number}`,
-    `/r/AD-${number}`,
-    `/r/${number}`,
-  ]) {
-    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
-    await page.goto(address);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
-    await expect(page).toHaveURL(`/requests/${number}`);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
-    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-  }
+  await inOrder(
+    [`/requests/AD-${number}`, `/requests/ad-${number}`, `/r/AD-${number}`, `/r/${number}`],
+    async (address) => {
+      await page.goto(address);
+      await expect(page).toHaveURL(`/requests/${number}`);
+      await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    },
+  );
 
   // Another prefix, or anything that isn't a request number, names no request.
-  for (const address of [`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`]) {
-    // eslint-disable-next-line no-await-in-loop -- One address after another, in one browser.
+  await inOrder([`/r/XY-${number}`, '/r/abc', `/requests/XY-${number}`], async (address) => {
     await page.goto(address);
-    // eslint-disable-next-line no-await-in-loop -- Checked for each address.
     await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  }
+  });
 });
 
 test('someone at a company sees its requests only, without priorities', async ({ page }) => {
@@ -2493,15 +2487,14 @@ test('a lane of the board with more requests than it shows opens the list of the
 }) => {
   const prefix = `Closed for the board ${randomUUID().slice(0, 8)}`;
   // Six done requests: one more than the Done half of the Closed column shows.
-  await Array.from({ length: 6 }, (_, index) => index).reduce(async (previous, index) => {
-    await previous;
+  await repeatInOrder(6, async (index) => {
     await storeRequest({
       companySlug: COMPANY_SLUG,
       raisedBy: REQUESTS_CLIENT.email,
       title: `${prefix} ${index + 1}`,
       status: 'done',
     });
-  }, Promise.resolve());
+  });
 
   await signIn(page, SUPPORT_STAFF);
   await openBoard(page, prefix);

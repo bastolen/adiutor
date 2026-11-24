@@ -36,6 +36,7 @@ import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
 import { E2E_AUTH_SECRET } from './fixtures';
+import { inOrder } from './sequence';
 
 /** How long the invite links stored here stay valid (any of the lifetimes a link can have). */
 const INVITE_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
@@ -968,16 +969,14 @@ export async function storeEntries(number: number, entries: readonly StoredEntry
       'the request',
     );
     // One after another: IDs are time-ordered, and a request's entries are read in ID order.
-    for (const entry of entries) {
+    await inOrder(entries, async (entry) => {
       const author = firstRow(
-        // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
         await db
           .select({ id: schema.user.id })
           .from(schema.user)
           .where(eq(schema.user.email, entry.by)),
         'the entry’s author',
       );
-      // eslint-disable-next-line no-await-in-loop -- Each entry must be stored after the one before it.
       await db.insert(schema.requestEntry).values({
         requestId: found.id,
         authorId: author.id,
@@ -987,7 +986,7 @@ export async function storeEntries(number: number, entries: readonly StoredEntry
           ? { fromValue: entry.from, toValue: entry.to }
           : { body: entry.text }),
       });
-    }
+    });
   });
 }
 

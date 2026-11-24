@@ -45,6 +45,7 @@ import {
   submitPassword,
 } from './support/helpers';
 import { countEmails, linkIn, waitForNewEmail } from './support/outbox';
+import { inOrder, repeatInOrder } from './support/sequence';
 import { expect, test } from './support/test';
 import { codeForSecret } from './support/totp';
 
@@ -230,12 +231,11 @@ test('an email-link session gets only a few guesses at the authenticator code', 
   await expect(page).toHaveURL(/\/auth\/verify/);
   const right = codeForSecret(STEP_UP_CLIENT.totpSecret);
   const wrong = right === '000000' ? '111111' : '000000';
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
+  await repeatInOrder(5, async () => {
     expect((await callAuth(page, 'POST', '/two-factor/verify-totp', { code: wrong })).status).toBe(
       401,
     );
-  }
+  });
   // Even the right code is refused now, for a while.
   expect(await callAuth(page, 'POST', '/two-factor/verify-totp', { code: right })).toEqual({
     status: 429,
@@ -478,12 +478,11 @@ test("sign-in, reset and magic-link don't reveal whether an email has an account
     ['/request-password-reset', { redirectTo: '/dashboard' }],
     ['/sign-in/magic-link', { callbackURL: '/dashboard' }],
   ];
-  await probes.reduce(async (previous, [path, data]) => {
-    await previous;
+  await inOrder(probes, async ([path, data]) => {
     const real = await callAuth(page, 'POST', path, { ...data, email: CLIENT_WATCHER.email });
     const fake = await callAuth(page, 'POST', path, { ...data, email: absent });
     expect(real, path).toEqual(fake);
-  }, Promise.resolve());
+  });
 });
 
 test("a role that requires MFA can't turn off its only method", async ({ page }) => {
@@ -524,13 +523,12 @@ test('wrong passwords pause password sign-in for an address, and a password rese
    * @returns How the last try was answered.
    */
   const pauseAndTry = async (address: string, password: string) => {
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    await repeatInOrder(10, async () => {
       expect(
-        // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
         (await callAuth(page, 'POST', '/sign-in/email', { email: address, password: 'wrong-1234' }))
           .status,
       ).toBe(401);
-    }
+    });
     return callAuth(page, 'POST', '/sign-in/email', { email: address, password });
   };
   const emailsBefore = await countEmails(email);
@@ -574,19 +572,17 @@ test('authenticator-code guessing at sign-in locks the account, across fresh att
   const wrong = right === '000000' ? '111111' : '000000';
   const emailsBefore = await countEmails(STEP_UP_CLIENT.email);
   let lockedAt: number | null = null;
-  for (let attempt = 1; attempt <= 11; attempt += 1) {
+  await repeatInOrder(11, async (index) => {
     // Each pass starts a fresh password sign-in, so a new two-factor cookie can't reset the count.
-    // eslint-disable-next-line no-await-in-loop -- Attempts must happen one after another.
     await page.request.post('/api/auth/sign-in/email', {
       headers: apiHeaders(),
       data: { email: STEP_UP_CLIENT.email, password: STEP_UP_CLIENT.password },
     });
-    // eslint-disable-next-line no-await-in-loop -- Same.
     const r = await callAuth(page, 'POST', '/two-factor/verify-totp', { code: wrong });
     if (r.status !== 401 && lockedAt === null) {
-      lockedAt = attempt;
+      lockedAt = index + 1;
     }
-  }
+  });
   expect(lockedAt).not.toBeNull();
   // The owner is told, without the device or IP address that typed the codes (someone else's).
   const notice = await waitForNewEmail(STEP_UP_CLIENT.email, emailsBefore);

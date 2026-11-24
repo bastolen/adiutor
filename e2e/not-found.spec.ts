@@ -19,6 +19,7 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import { adminStorageState, openUser, signIn, type StorageState } from './support/helpers';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 /** The 404 page's title, which pages someone may not see have too. */
@@ -48,19 +49,6 @@ const UNKNOWN_USER_ID = '01890a5d-ac96-774b-bcce-b302099a8057';
  * @returns Its path.
  */
 const companyPage = (tab: string) => `/companies/${COMPANY_SLUG}/${tab}`;
-
-/**
- * Runs a check on each item, one after another (they share the tab).
- *
- * @param items - The items.
- * @param check - The check.
- */
-async function eachInTurn<T>(items: readonly T[], check: (item: T) => Promise<void>) {
-  await items.reduce(async (previous, item) => {
-    await previous;
-    await check(item);
-  }, Promise.resolve());
-}
 
 /**
  * Opens a page and checks it's the 404 page, with the 404 page's title.
@@ -133,7 +121,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     page,
   }) => {
     await signIn(page, CLIENT_WATCHER);
-    await eachInTurn(
+    await inOrder(
       [
         ...STAFF_PAGES.map(({ path }) => path),
         `/admin/users/${UNKNOWN_USER_ID}`,
@@ -162,7 +150,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
       page.getByRole('heading', { level: 1, name: SEEDED_REQUESTS.waiting.title }),
     ).toBeVisible();
 
-    await eachInTurn(
+    await inOrder(
       [
         // The paging company's, the deactivated company's, numbers no request has, and a number
         // with another prefix than the current one (with "AD" it redirects to the number).
@@ -185,7 +173,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     page,
   }) => {
     await signIn(page, SUPPORT_STAFF);
-    await eachInTurn(
+    await inOrder(
       [
         '/admin/users/new',
         '/admin/companies/new',
@@ -213,13 +201,13 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     page,
   }) => {
     await context.addCookies(adminState.cookies);
-    await eachInTurn(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
+    await inOrder(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
 
     await openUser(page, PLATFORM_ADMIN.name);
     await expect(page).toHaveTitle('User · Adiutor');
     // Every tab of someone else's page, each with its title; your own page has no Manage tab.
     const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
-    await eachInTurn(
+    await inOrder(
       [
         { path: `${watcher}/companies`, title: 'Companies · User · Adiutor' },
         { path: `${watcher}/activity`, title: 'Activity · User · Adiutor' },
