@@ -6,7 +6,6 @@
 import { and, count, eq, ilike, inArray, isNull, like, not, or, type SQL, sql } from 'drizzle-orm';
 
 import { company, request, requestParticipant, requestType, user } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
@@ -37,12 +36,14 @@ import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import containsPattern from '../search';
 import {
+  permissionsIn,
   requestAudienceIn,
   type RequestPerson,
   requestPerson,
   requestScope,
   visibleRequests,
 } from './access';
+import { ASSIGNED } from './participants';
 
 /** A company whose requests someone sees. */
 export interface RequestCompany {
@@ -87,19 +88,13 @@ export async function listRequestCompanies(
         : and(inArray(company.id, scope.memberOf), isNull(company.deactivatedAt)),
     )
     .orderBy(...orderTerms('asc', textOrder(company.name), company.id));
-  return rows.map(({ deactivatedAt, ...row }) => {
-    const deactivated = deactivatedAt !== null;
-    const permissions = getPermissions({
-      platformRole: actor.platformRole,
-      companyRole: actor.memberships[row.id] ?? null,
-      company: { deactivated },
-    });
+  return rows.map(({ deactivatedAt, ...row }) => ({
+    ...row,
     // The staff keep their rights in a deactivated company, but its requests are read-only.
-    return {
-      ...row,
-      canRaise: !deactivated && permissions.has('requests:contribute'),
-    };
-  });
+    canRaise:
+      deactivatedAt === null &&
+      permissionsIn(actor, { id: row.id, deactivatedAt }).has('requests:contribute'),
+  }));
 }
 
 /** What {@link listRequests} can be asked for: filters, a search, and the table's sort and page. */
@@ -242,12 +237,7 @@ async function assigneesOf(
     .select({ requestId: requestParticipant.requestId, id: user.id, name: user.name })
     .from(requestParticipant)
     .innerJoin(user, eq(requestParticipant.userId, user.id))
-    .where(
-      and(
-        inArray(requestParticipant.requestId, requestIds),
-        eq(requestParticipant.role, 'assignee'),
-      ),
-    )
+    .where(and(inArray(requestParticipant.requestId, requestIds), ASSIGNED))
     .orderBy(...orderTerms('asc', textOrder(user.name), user.id));
   const pictures = await loadPictures(
     ctx.db,

@@ -61,7 +61,7 @@ import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson 
 import { readActivityView } from './activity-view';
 import { editableText, type TextMention } from './edits';
 import mentionKey from './mention-key';
-import { loadSubscribers } from './participants';
+import { ASSIGNED, loadSubscribers } from './participants';
 import { withoutStaffPageLinksToEdit } from './staff-links';
 import { requestTypeNames } from './types';
 
@@ -459,9 +459,7 @@ export async function getRequest(
       .select({ id: user.id, name: user.name })
       .from(requestParticipant)
       .innerJoin(user, eq(requestParticipant.userId, user.id))
-      .where(
-        and(eq(requestParticipant.requestId, found.id), eq(requestParticipant.role, 'assignee')),
-      )
+      .where(and(eq(requestParticipant.requestId, found.id), ASSIGNED))
       .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
     loadSubscribers(ctx.db, found),
     ctx.db

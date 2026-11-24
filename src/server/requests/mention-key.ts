@@ -36,3 +36,23 @@ export default function mentionKey(companyId: string, userId: string): string {
     .digest('base64url')
     .slice(0, MENTION_KEY_LENGTH);
 }
+
+/**
+ * The order lists of people named by their key are shown in (who may be
+ * mentioned, who may be subscribed): by name, ignoring case and accents,
+ * then by key, so two people with one name keep their places.
+ *
+ * @param a - One person.
+ * @param a.name - Their name.
+ * @param a.key - Their key ({@link mentionKey}).
+ * @param b - The other.
+ * @param b.name - Their name.
+ * @param b.key - Their key.
+ * @returns A negative number when `a` comes first, a positive one when `b` does.
+ */
+export function byNameThenKey(
+  a: { name: string; key: string },
+  b: { name: string; key: string },
+): number {
+  return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.key.localeCompare(b.key);
+}

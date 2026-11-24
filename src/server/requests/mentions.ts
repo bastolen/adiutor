@@ -17,7 +17,7 @@
  */
 import { and, eq, inArray, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 
-import type { Database, DatabaseTransaction } from '@/db';
+import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import {
   membership,
   request,
@@ -40,7 +40,8 @@ import { assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
-import mentionKey from './mention-key';
+import mentionKey, { byNameThenKey } from './mention-key';
+import { ASSIGNED } from './participants';
 import { subscribeAutomatically } from './subscribers';
 
 /** Someone who can be mentioned, as the list at "@" shows them. */
@@ -85,7 +86,7 @@ interface TextPlace {
  * @returns The people, in no order.
  */
 async function mentionable(
-  db: Database | DatabaseTransaction,
+  db: DatabaseOrTransaction,
   actor: Actor,
   place: TextPlace,
 ): Promise<Mentionable[]> {
@@ -139,12 +140,7 @@ async function mentionable(
               db
                 .select({ id: requestParticipant.userId })
                 .from(requestParticipant)
-                .where(
-                  and(
-                    eq(requestParticipant.requestId, place.requestId),
-                    eq(requestParticipant.role, 'assignee'),
-                  ),
-                ),
+                .where(and(eq(requestParticipant.requestId, place.requestId), ASSIGNED)),
             ),
             inArray(
               user.id,
@@ -220,10 +216,7 @@ export async function listMentionable(
       name,
       staff: side === 'staff',
     }))
-    .sort(
-      (a, b) =>
-        a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.key.localeCompare(b.key),
-    );
+    .sort(byNameThenKey);
 }
 
 /**

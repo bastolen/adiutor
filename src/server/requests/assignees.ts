@@ -25,6 +25,7 @@ import { orderTerms, textOrder } from '../pagination';
 import { signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { ASSIGNED } from './participants';
 import { tellAssigned } from './updates';
 
 /**
@@ -35,9 +36,6 @@ export const MAX_ASSIGNEE_CHANGES = 50;
 
 /** The people a change adds or removes: user IDs, at most {@link MAX_ASSIGNEE_CHANGES}. */
 const assigneeIdsSchema = z.array(idSchema).max(MAX_ASSIGNEE_CHANGES);
-
-/** The rows of the people a request is assigned to, among everyone on it. */
-const ASSIGNED = eq(requestParticipant.role, 'assignee');
 
 /** The staff roles whose members can be assigned: those who work on requests. */
 const ASSIGNABLE_ROLES = PLATFORM_ROLES.filter((platformRole) =>

@@ -7,7 +7,7 @@
  */
 import { and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 
-import type { Database, DatabaseTransaction } from '@/db';
+import type { DatabaseOrTransaction } from '@/db';
 import { membership, requestParticipant, user } from '@/db/schema';
 import type { PlatformRole } from '@/lib/authz/roles';
 
@@ -16,6 +16,9 @@ import { READING_STAFF_ROLES } from './access';
 
 /** The rows of the people subscribed to a request, among everyone on it. */
 export const SUBSCRIBED = eq(requestParticipant.role, 'subscriber');
+
+/** The rows of the people a request is assigned to, among everyone on it. */
+export const ASSIGNED = eq(requestParticipant.role, 'assignee');
 
 /** Someone who can be subscribed in a company, as the services know them. */
 export interface Subscribable {
@@ -81,7 +84,7 @@ const SUBSCRIBABLE_COLUMNS = {
  * @returns The people, in no order.
  */
 export async function subscribable(
-  db: Database | DatabaseTransaction,
+  db: DatabaseOrTransaction,
   companyId: string,
   among?: readonly string[],
 ): Promise<Subscribable[]> {
@@ -111,7 +114,7 @@ export async function subscribable(
  * @returns The subscribers, by name.
  */
 export async function loadSubscribers(
-  db: Database | DatabaseTransaction,
+  db: DatabaseOrTransaction,
   found: { id: string; companyId: string },
 ): Promise<Subscribable[]> {
   const rows = await db
@@ -139,20 +142,14 @@ export async function loadSubscribers(
  * @returns Their user IDs, each once.
  */
 export async function loadPeopleOn(
-  db: Database | DatabaseTransaction,
+  db: DatabaseOrTransaction,
   found: { id: string; companyId: string },
 ): Promise<string[]> {
   const assignees = await db
     .select({ id: user.id })
     .from(requestParticipant)
     .innerJoin(user, eq(requestParticipant.userId, user.id))
-    .where(
-      and(
-        eq(requestParticipant.requestId, found.id),
-        eq(requestParticipant.role, 'assignee'),
-        isNull(user.deactivatedAt),
-      ),
-    );
+    .where(and(eq(requestParticipant.requestId, found.id), ASSIGNED, isNull(user.deactivatedAt)));
   const subscribers = await loadSubscribers(db, found);
   return [...new Set([...assignees, ...subscribers].map(({ id }) => id))];
 }

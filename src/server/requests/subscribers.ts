@@ -39,7 +39,7 @@ import type { ServiceContext } from '../context';
 import { forbiddenError, ServiceError } from '../errors';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
-import mentionKey from './mention-key';
+import mentionKey, { byNameThenKey } from './mention-key';
 import { subscribable, type Subscribable, SUBSCRIBED } from './participants';
 import { tellSubscribed } from './updates';
 
@@ -382,10 +382,7 @@ export async function listSubscribable(
             },
           ];
     })
-    .sort(
-      (a, b) =>
-        a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.key.localeCompare(b.key),
-    );
+    .sort(byNameThenKey);
 }
 
 /**
