@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { company, membership, user } from '@/db/schema';
+import type { MfaMethod } from '@/lib/authz/mfa';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { firstRow } from '@/lib/defined';
 import type { Locale } from '@/lib/i18n/locales';
@@ -86,14 +87,45 @@ export async function addMember(
 }
 
 /**
- * Loads a user as an actor.
+ * Loads a user as an actor, as the actor of a session when it's given one.
  *
  * @param db - Test database.
  * @param userId - The user.
+ * @param session - The session they're signed in with; none by default, as for a user read
+ *   without one.
+ * @param session.confirmedAt - When the session was confirmed with a second step; `null` (default)
+ *   when it wasn't.
+ * @param session.method - What it was confirmed with; defaults to the authenticator app.
+ * @param session.signedInAt - When it signed in (Better Auth's `createdAt`, for the one-hour
+ *   rule); now by default, `null` for unknown.
+ * @param session.fromRequestLink - Whether the link in an email about a request started it.
+ * @param session.sessionId - Its ID; `adiutor-tests-session` by default.
  * @returns The actor.
  */
-export async function actorFor(db: Database, userId: string): Promise<Actor> {
-  const actor = await loadActor(db, userId);
+export async function actorFor(
+  db: Database,
+  userId: string,
+  session?: {
+    confirmedAt?: Date | null;
+    method?: MfaMethod;
+    signedInAt?: Date | null;
+    fromRequestLink?: boolean;
+    sessionId?: string;
+  },
+): Promise<Actor> {
+  const confirmedAt = session?.confirmedAt ?? null;
+  const actor = await loadActor(
+    db,
+    userId,
+    session && {
+      id: session.sessionId ?? 'adiutor-tests-session',
+      mfaVerified: confirmedAt !== null,
+      mfaMethod: confirmedAt ? (session.method ?? 'authenticator') : null,
+      mfaVerifiedAt: confirmedAt,
+      fromRequestLink: session.fromRequestLink,
+      createdAt: session.signedInAt === undefined ? new Date() : session.signedInAt,
+    },
+  );
   if (!actor) {
     throw new Error(`No user ${userId}`);
   }

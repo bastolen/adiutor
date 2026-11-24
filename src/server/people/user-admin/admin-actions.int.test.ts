@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   account,
-  auditEvent,
   invitation,
   inviteLink,
   passkey,
@@ -43,6 +42,7 @@ import {
   storeAssignedRequest,
   tokenFrom,
   minutesAgo,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity, recordEvent } from '../../audit';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../../auth/sign-in-change-lock';
@@ -132,10 +132,10 @@ describe('admin actions', () => {
     expect(await providersOf(jane)).toEqual(['credential']);
     // Nobody else's.
     expect(await providersOf(john)).toEqual(['github']);
-    const [event] = await db
-      .select({ actorUserId: auditEvent.actorUserId, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'mfa_reset'));
+    const [event] = await auditEvents(db, {
+      action: 'mfa_reset',
+      fields: ['actorUserId', 'details'],
+    });
     expect(event).toEqual({
       actorUserId: admin.id,
       details: { removePasskeys: false, disconnectedProviders: ['github', 'google'] },
@@ -152,10 +152,7 @@ describe('admin actions', () => {
     await resetUserMfa(ctx, await adminConfirmedAt(), jane);
 
     const event = firstRow(
-      await db
-        .select({ details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.action, 'mfa_reset')),
+      await auditEvents(db, { action: 'mfa_reset', fields: ['details'] }),
       'the audit event',
     );
     expect(event.details).toEqual({ removePasskeys: false, disconnectedProviders: [] });
@@ -385,10 +382,7 @@ describe('admin actions', () => {
     await deleteUser(ctx, admin, jane, ' Jane@Adiutor.test ');
 
     expect(await db.select().from(user).where(eq(user.id, jane))).toEqual([]);
-    const [entry] = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'account_deleted'));
+    const [entry] = await auditEvents(db, { action: 'account_deleted' });
     expect(entry).toMatchObject({
       actorUserId: admin.id,
       details: { email: 'jane@adiutor.test' },
@@ -495,10 +489,10 @@ describe('invitations of people who lose access', () => {
         password: 'jane-again-password',
       }),
     ).toEqual({ status: 'invalid' });
-    const [revoked] = await db
-      .select({ companyId: auditEvent.companyId, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'invitation_revoked'));
+    const [revoked] = await auditEvents(db, {
+      action: 'invitation_revoked',
+      fields: ['companyId', 'details'],
+    });
     expect(revoked).toEqual({
       companyId: null,
       details: {

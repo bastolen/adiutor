@@ -11,10 +11,11 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/schema';
+import { invitation, inviteLink, membership, rateLimitBucket, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
   queuedJobKinds,
   addMember as addMemberRow,
   createCompany,
@@ -26,9 +27,11 @@ import {
   sendQueuedEmails,
   setupTestContext,
   setUserLocale,
+  staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
-import { type Actor, loadActor } from '../actor';
+import type { Actor } from '../actor';
 import { registerCompany } from './companies';
 import {
   acceptInvitationWithNewAccount,
@@ -62,17 +65,8 @@ beforeEach(async () => {
  */
 async function confirmedAgo(userId: string, minutesAgo: number): Promise<Actor> {
   await enableTwoFactor(db, userId);
-  const actor = await loadActor(db, userId, {
-    id: 'adiutor-tests-session',
-    mfaVerified: true,
-    mfaMethod: 'authenticator',
-    mfaVerifiedAt: new Date(Date.now() - minutesAgo * 60_000),
-    createdAt: new Date(Date.now() - minutesAgo * 60_000),
-  });
-  if (!actor) {
-    throw new Error(`No user ${userId}`);
-  }
-  return actor;
+  const at = new Date(Date.now() - minutesAgo * 60_000);
+  return actorFor(db, userId, { confirmedAt: at, signedInAt: at });
 }
 
 /**
@@ -83,9 +77,7 @@ async function confirmedAgo(userId: string, minutesAgo: number): Promise<Actor> 
  * @returns Their ID.
  */
 async function staffMember(role: 'platform_admin' | 'manager' | 'support', email: string) {
-  const id = await createUser(db, email);
-  await db.update(user).set({ platformRole: role }).where(eq(user.id, id));
-  return id;
+  return (await staffActor(db, role, email)).id;
 }
 
 /**
@@ -113,15 +105,7 @@ const freshAdmin = async () =>
 async function linkSignedInAdmin(): Promise<Actor> {
   const userId = await staffMember('platform_admin', 'link.admin@adiutor.test');
   await enableTwoFactor(db, userId);
-  return defined(
-    await loadActor(db, userId, {
-      id: 'adiutor-tests-session',
-      mfaVerified: false,
-      fromRequestLink: true,
-      createdAt: new Date(),
-    }),
-    'the actor',
-  );
+  return actorFor(db, userId, { fromRequestLink: true });
 }
 
 /**
@@ -357,7 +341,7 @@ describe('reactivating an account', () => {
     await inSequence([staffAdmin, support, companyAdmin], async (userId) =>
       expect(await deactivatedAt(userId)).toBeInstanceOf(Date),
     );
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
     expect(await queuedJobKinds(db)).toEqual([]);
   });
 
