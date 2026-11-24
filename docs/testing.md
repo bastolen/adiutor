@@ -46,7 +46,8 @@ configurations in VS Code, which turn the time limit off (see
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file
   calls `setupTestContext()` once, and sets up the fixtures every test file needs in one
-  `beforeEach` after it, exported as live bindings (`user-admin/` and `invitations/` do); every
+  `beforeEach` after it, exported as live bindings (`user-admin/`, `invitations/` and
+  `invite-links/` do); every
   test file still declares its own `vi.mock` calls, since Vitest hoists those per file, and the
   hooks only it needs. The one mock every integration file needs, `@/db` pointing
   at the test database, is declared once in `tests/integration/setup.ts` (a `setupFiles` entry of
