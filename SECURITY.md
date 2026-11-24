@@ -11,6 +11,9 @@ Please include what you found, how to reproduce it, and what impact you think it
 reply as soon as possible. Once a fix is ready, it's released and the advisory is published, with
 credit to you if you'd like.
 
+No GitHub account? Email **adiutor@bastolen.nl** instead, the address of the
+[Code of Conduct](CODE_OF_CONDUCT.md#reporting). Please keep the details out of the subject line.
+
 ## Supported versions
 
 Only the latest release receives security fixes.

@@ -167,15 +167,15 @@ the code style and how to get a change merged. Please follow the
 ## Security
 
 Please don't report security issues in public issues or pull requests. Report them privately as
-described in [SECURITY.md](SECURITY.md).
+described in [SECURITY.md](SECURITY.md) (by email too, if you have no GitHub account).
 
 ## License
 
 The code is released under the [MIT License](LICENSE).
 
 The MIT License covers the source code only. The Adiutor name, logo and other brand assets (including
-the files in `public/brand/`) are not covered by it and may not be used to represent other projects
-or products without permission.
+the files listed in [NOTICE](NOTICE)) are not covered by it and may not be used to represent other
+projects or products without permission.
 
 The fonts Adiutor ships, [Inter](https://github.com/rsms/inter) and
 [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), are under the SIL Open Font License

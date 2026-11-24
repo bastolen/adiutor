@@ -667,4 +667,4 @@ text sizes with line height = font size + 8px, short entrance animations, and th
 described under [Design and accessibility](#colours-and-font). Use the brand colours for
 brand moments only; UI uses the semantic colours.
 
-The brand assets aren't covered by the code's MIT License; see [License](../README.md#license).
+The brand assets aren't covered by the code's MIT License; see [License](../README.md#license) and the list of files in [NOTICE](../NOTICE).

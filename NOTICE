@@ -1,0 +1,19 @@
+Adiutor brand assets
+
+The MIT License (see LICENSE) covers Adiutor's source code only. The Adiutor name, logo and
+other brand assets are not covered by it. Running or forking Adiutor may show them as they are,
+but other products and projects may not use them to represent themselves without permission.
+
+The brand files are:
+
+- public/brand/icon-white.svg
+- public/brand/icon.svg
+- public/brand/logo-on-dark.svg
+- public/brand/logo-white.svg
+- public/brand/logo.png
+- public/brand/logo.svg
+- src/app/favicon.ico
+- src/app/icon.svg
+- src/emails/static/logo.png
+
+The fonts Adiutor ships are licensed separately (see LICENSES/).
