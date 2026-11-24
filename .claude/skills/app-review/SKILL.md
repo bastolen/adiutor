@@ -19,8 +19,7 @@ Run it as a workflow (the Workflow tool): one reviewer per lens below, each look
 repository, then one skeptic per lens who tries to disprove each of that reviewer's findings.
 Everyone stays read-only: no edits, moves or deletions, and no tests, builds, dev servers,
 Playwright or `pnpm install`/`dlx` while reviewing. Reading files, grep and one-off read-only
-scripts are fine. Most files may be untracked, so reviewers use the filesystem rather than
-`git diff`.
+scripts are fine.
 
 What's reviewed is the same as for `/placement-check`: every path in the repository, so
 everything under `src/` (including `messages/` and the root files), `drizzle/`, `scripts/`,

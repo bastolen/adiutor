@@ -459,7 +459,7 @@ does, to check what isn't working for them. The reasons are in
 - **Ending:**
   - It ends after its 30 minutes, when the staff member's session ends (signing out included), or
     when either person's rights change.
-  - The hourly job ends and records those nobody came back to (see
+  - The `finished-sign-ins-as-users` job (every 5 minutes) ends and records those nobody came back to (see
     [Background jobs](deploying.md#background-jobs)).
   - Once its 30 minutes are up, the tab loads the page it's on afresh, as the staff member, with a
     toast (`ReloadWhenSignedInAsEnds`, mounted by the banner). Without that, the banner and the

@@ -164,7 +164,7 @@ keyboard support.
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
 - **Ids stay unique across pages kept alive:** components that make ids with `useId` (`Card`,
-  `TextField`, `TextareaField`, `CheckboxField`, `RadioField`) are client components. In a
+  `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client components. In a
   server component `useId` starts again in every request, so a page kept alive and the tab
   loaded next would share ids, and a label or a card's name would point at the wrong element.
   A new component that calls `useId` gets `'use client'` too.
@@ -336,7 +336,7 @@ keyboard support.
   cursor in the field.
   The content of every page stops growing at 1280px of screen. A request's page may be wider
   (`WidePage` in `src/components/layout/wide-page.tsx`): from that width it grows with the room
-  next to the menu, up to 1280px of content, so the
+  next to the menu, up to 1200px of content, so the
   conversation and the editor of a reply get the room, with the details still beside them. The
   board of requests across companies grows the same way, so more of its lanes show side by side;
   a company's board doesn't, so it lines up with the company's header and tabs. It
