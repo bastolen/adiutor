@@ -35,6 +35,7 @@ import {
   mockGitHubApi,
   connectGitHubWithToken,
   githubCallback,
+  gitHubAccountIdOf,
   storedGitHubMfa,
   addPasskey,
   signedInHeaders,
@@ -225,10 +226,18 @@ describe('signing in with GitHub', () => {
     const johnSession = await createSession(db, john);
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: janeSession, userId: jane }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: janeSession, userId: jane },
+        gitHubAccountIdOf('jane-token'),
+      ).ctx,
     );
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: johnSession, userId: john }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: johnSession, userId: john },
+        gitHubAccountIdOf('john-token'),
+      ).ctx,
     );
 
     expect(await sessionMfa(janeSession)).toEqual({ mfaVerified: false, mfaMethod: null });
@@ -245,7 +254,11 @@ describe('signing in with GitHub', () => {
     const start = new Date();
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: johnSession, userId: john }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: johnSession, userId: john },
+        gitHubAccountIdOf('john-token'),
+      ).ctx,
     );
 
     expect(await sessionMfa(johnSession)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
@@ -261,7 +274,11 @@ describe('signing in with GitHub', () => {
     const start = new Date();
 
     await afterAuthRequest(
-      githubCallback(new Headers(), { sessionId: johnSession, userId: john }).ctx,
+      githubCallback(
+        new Headers(),
+        { sessionId: johnSession, userId: john },
+        gitHubAccountIdOf('john-token'),
+      ).ctx,
     );
 
     expect(await sessionMfa(johnSession)).toEqual({ mfaVerified: true, mfaMethod: 'github' });

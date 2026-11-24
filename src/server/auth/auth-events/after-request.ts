@@ -44,7 +44,11 @@ import {
 } from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
 import rememberLanguage from './language';
-import { refreshProviderMfa, stepUpOutcomeOf, forgetProviderTokens } from './provider-accounts';
+import {
+  refreshSignedInProviderMfa,
+  stepUpOutcomeOf,
+  forgetProviderTokens,
+} from './provider-accounts';
 import { reactToFailure } from './refused-attempts';
 import { recordRefusedReverify } from './reverify';
 import { type ProviderCheckResult, recordProviderSession } from './session-hooks';
@@ -290,8 +294,9 @@ async function reactToSuccess(
     if (!isMfaProvider(provider)) {
       return;
     }
-    // The account that signed in counts only with 2FA, and once the user confirmed it.
-    const checked = await refreshProviderMfa(provider, userId);
+    // The account that signed in counts only with 2FA, and once the user confirmed it: that
+    // account, by its ID at the provider, never another of the user's that holds a token.
+    const checked = await refreshSignedInProviderMfa(ctx, provider, userId);
     if (newSession && checked?.enabled && checked.confirmed) {
       await markSessionVerified(newSession.session.id, provider);
       // eslint-disable-next-line no-param-reassign -- The caller reads the outcome from it.
@@ -331,7 +336,7 @@ async function finishProviderCallback(
     // refused re-verify updated nothing.)
     const provider = ctx.params?.id;
     if (!userId && !failed && !refusedReverify && isMfaProvider(provider)) {
-      await refreshProviderMfa(provider, owner);
+      await refreshSignedInProviderMfa(ctx, provider, owner);
     }
     // The request stored tokens for the provider's MFA check; nothing needs them now.
     await forgetProviderTokens(owner);
