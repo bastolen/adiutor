@@ -74,7 +74,14 @@ import {
 } from './support/helpers';
 import { emailsAbout, linkIn, waitForEmailAbout } from './support/outbox';
 import { inOrder, repeatInOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
+
+/** Gives the Support member's sign-in cookies, for the tests that act as them throughout. */
+const supportCookies = signedInOnce(SUPPORT_STAFF);
+
+/** Gives the Client's sign-in cookies, for the tests that act as them throughout. */
+const clientCookies = signedInOnce(REQUESTS_CLIENT);
 
 /**
  * The conversation of the request on the page.
@@ -130,8 +137,8 @@ async function expectReadOnly(page: Page) {
  */
 const requestRows = (page: Page) => main(page).getByRole('table').locator('tbody tr');
 
-test('the staff find every company’s requests, and narrow them down', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('the staff find every company’s requests, and narrow them down', async ({ context, page }) => {
+  await context.addCookies(supportCookies());
   await page.goto('/requests');
   await expect(page).toHaveTitle('Requests · Adiutor');
   await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
@@ -241,9 +248,10 @@ test('the staff find every company’s requests, and narrow them down', async ({
 });
 
 test('a changed prefix shows on every number, and the old one still finds a request', async ({
+  context,
   page,
 }) => {
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // Changed straight in the database (the field in Settings is tested in `settings.spec.ts`), and
   // put back whatever happens: every other test reads "AD".
   await setRequestPrefix('HELP');
@@ -294,8 +302,11 @@ test('a changed prefix shows on every number, and the old one still finds a requ
   await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
 });
 
-test('the number as people see it, and the short links, open the request', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the number as people see it, and the short links, open the request', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
   const { number, title } = SEEDED_REQUESTS.waiting;
 
   await inOrder(
@@ -314,8 +325,11 @@ test('the number as people see it, and the short links, open the request', async
   });
 });
 
-test('someone at a company sees its requests only, without priorities', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('someone at a company sees its requests only, without priorities', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
   // The seeded requests, found by their titles: other specs store newer ones in this company.
   await page.goto(`/requests?status=all&q=${encodeURIComponent(SEEDED_REQUESTS.waiting.title)}`);
   await expect(requestRows(page).filter({ hasText: SEEDED_REQUESTS.waiting.title })).toContainText(
@@ -409,8 +423,11 @@ test('someone at a company raises a request, which the staff then find', async (
   await expect(detail(page, 'Raised by')).toContainText(REQUESTS_CLIENT.name);
 });
 
-test('the staff raise a request for a company and choose its priority', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('the staff raise a request for a company and choose its priority', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(supportCookies());
   // Without a company it's a field to fill in, not a page that doesn't exist.
   await page.goto('/requests/new');
   await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Choose a company');
@@ -463,11 +480,14 @@ test('the staff raise a request for a company and choose its priority', async ({
   await expect(toasts(page).getByText('Request raised.')).toHaveCount(0);
 });
 
-test('a company without requests invites its first one, under All too', async ({ page }) => {
+test('a company without requests invites its first one, under All too', async ({
+  context,
+  page,
+}) => {
   // A company of this test's own, so no other spec raises a request in it.
   const slug = `adiutor-tests-first-${randomUUID().slice(0, 8)}`;
   await createCompany({ name: 'Adiutor Tests First', slug });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
 
   await page.goto(`/companies/${slug}`);
   await expect(main(page).getByText('No active requests')).toBeVisible();
@@ -1231,10 +1251,11 @@ test('the staff reach a person’s page from a request, and nobody at the compan
 });
 
 test('a reply formats itself while it’s typed, and reads the same once it’s sent', async ({
+  context,
   page,
 }) => {
   const number = await storeOwnRequest({ title: 'A reply typed as Markdown' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1272,8 +1293,11 @@ test('a reply formats itself while it’s typed, and reads the same once it’s 
   await expect(await markdownEditor(page, 'Your reply')).toHaveText('');
 });
 
-test('the editor is tall enough to write in, and can be dragged taller', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the editor is tall enough to write in, and can be dragged taller', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
 
   // A reply starts at eight lines, a description at fourteen; both grow with their text.
   await page.goto(`/requests/${SEEDED_REQUESTS.open.number}`);
@@ -1301,9 +1325,10 @@ test('the editor is tall enough to write in, and can be dragged taller', async (
 });
 
 test('a request uses the room of a wide screen, with its details still beside it', async ({
+  context,
   page,
 }) => {
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   /**
    * Whether the page scrolls sideways.
    *
@@ -1343,9 +1368,12 @@ test('a request uses the room of a wide screen, with its details still beside it
   expect(await scrollsSideways()).toBe(false);
 });
 
-test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({ page }) => {
+test('the toolbar formats a reply for someone who doesn’t type Markdown', async ({
+  context,
+  page,
+}) => {
   const number = await storeOwnRequest({ title: 'A reply formatted with the buttons' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
@@ -1402,10 +1430,11 @@ test('the toolbar formats a reply for someone who doesn’t type Markdown', asyn
 });
 
 test('a block of code is coloured while it’s written, in the language picked for it', async ({
+  context,
   page,
 }) => {
   const number = await storeOwnRequest({ title: 'A reply with a block of code' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
@@ -1434,9 +1463,12 @@ test('a block of code is coloured while it’s written, in the language picked f
   await expect(sent.locator('[class*="hljs-keyword"]')).toHaveText('const');
 });
 
-test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({ page }) => {
+test('Markdown that is pasted is formatted, and a tag stays the text it is', async ({
+  context,
+  page,
+}) => {
   const number = await storeOwnRequest({ title: 'A reply pasted as Markdown' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1469,14 +1501,14 @@ test('Markdown that is pasted is formatted, and a tag stays the text it is', asy
 });
 
 test('a mention that is copied and pasted is still a mention once it is sent', async ({
-  page,
   context,
+  page,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const number = await storeOwnRequest({ title: 'A mention copied and pasted' });
   const thread = page.getByRole('region', { name: 'Conversation' });
   const clientId = await findUserId(REQUESTS_CLIENT.email);
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
 
@@ -1606,8 +1638,8 @@ test('people are mentioned from the list at @, by what the writer may know', asy
   expect(await page.content()).not.toContain(clientId);
 });
 
-test('a new request’s description mentions a colleague', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('a new request’s description mentions a colleague', async ({ context, page }) => {
+  await context.addCookies(clientCookies());
   await page.goto('/requests/new');
   await page.getByRole('textbox', { name: 'Title' }).fill('A request that mentions a colleague');
   await page.getByRole('combobox', { name: 'Type' }).click();
@@ -1631,9 +1663,12 @@ test('a new request’s description mentions a colleague', async ({ page }) => {
   await expect(asked).toContainText(`@${CLIENT_WATCHER.name} saw it first, not @e2e sup`);
 });
 
-test('a reply is written on in the large view, and sent from the page', async ({ page }) => {
+test('a reply is written on in the large view, and sent from the page', async ({
+  context,
+  page,
+}) => {
   const number = await storeOwnRequest({ title: 'A reply written in the large view' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   await editor.click();
@@ -1688,10 +1723,11 @@ test('a reply is written on in the large view, and sent from the page', async ({
 });
 
 test('a reply that isn’t sent yet is still there after leaving the page and coming back', async ({
+  context,
   page,
 }) => {
   const number = await storeOwnRequest({ title: 'A reply left half written' });
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${number}`);
   const editor = await markdownEditor(page, 'Your reply');
   await editor.click();
@@ -1715,8 +1751,11 @@ test('a reply that isn’t sent yet is still there after leaving the page and co
   );
 });
 
-test('the editor isn’t sent with the page: it loads once the page is there', async ({ page }) => {
-  await signIn(page, REQUESTS_CLIENT);
+test('the editor isn’t sent with the page: it loads once the page is there', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(clientCookies());
 
   // The scripts the page itself asks for, as its HTML names them.
   const response = await page.request.get('/requests/new');
@@ -1745,9 +1784,10 @@ test('the editor isn’t sent with the page: it loads once the page is there', a
 });
 
 test('a request written in Markdown is shown formatted, and nothing in it loads', async ({
+  context,
   page,
 }) => {
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
 
   // What was asked: a heading below the card's own, a list, a table, and an address that opens
@@ -1797,9 +1837,9 @@ test('a request written in Markdown is shown formatted, and nothing in it loads'
   await expect(page).toHaveURL(/-fnref-1$/);
 });
 
-test('a block of code is copied below a note of where it’s from', async ({ page, context }) => {
+test('a block of code is copied below a note of where it’s from', async ({ context, page }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.formatted.number}`);
   const thread = page.getByRole('region', { name: 'Conversation' });
   /**
@@ -1961,10 +2001,10 @@ test('the staff edit their own reply, which the company sees was edited', async 
   ).toBeVisible();
 });
 
-test('nothing is edited once a request is done', async ({ page }) => {
+test('nothing is edited once a request is done', async ({ context, page }) => {
   const number = await storeOwnRequest({ title: 'A printer that works again', status: 'done' });
 
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await page.goto(`/requests/${number}`);
   // A reply can still be sent, but neither it nor the description can be edited.
   await page.getByRole('textbox', { name: 'Your reply' }).fill('Thanks, it works now.');
@@ -2080,8 +2120,11 @@ test('Finance reads a request with its priority, and changes nothing', async ({ 
   await expect(subscribers.getByRole('button', { name: 'Change subscribers' })).toHaveCount(0);
 });
 
-test('a deactivated company’s request can only be read, also by the staff', async ({ page }) => {
-  await signIn(page, SUPPORT_STAFF);
+test('a deactivated company’s request can only be read, also by the staff', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies(supportCookies());
   await page.goto(`/requests/${SEEDED_REQUESTS.closedCompany.number}`);
 
   await expect(
@@ -2243,12 +2286,13 @@ test('the activity shows the groups and order its reader chose, on every visit',
 });
 
 test('the staff switch the requests to a board and move a card with its Move menu', async ({
+  context,
   page,
 }) => {
   const title = `A card for the board ${randomUUID().slice(0, 8)}`;
   const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // The List | Board toggle keeps the search.
   await page.goto(`/requests?q=${encodeURIComponent(title)}`);
   await page
@@ -2289,12 +2333,13 @@ test('the staff switch the requests to a board and move a card with its Move men
 });
 
 test('moving a card on the board to Done or Cancelled asks first, also for a Client', async ({
+  context,
   page,
 }) => {
   const title = `A card to close ${randomUUID().slice(0, 8)}`;
   const number = await storeOwnRequest({ title });
 
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await openBoard(page, title);
   // A Client's lanes are worded for them.
   await expect(boardLane(page, 'Waiting for your reply')).toBeVisible();
@@ -2326,12 +2371,13 @@ test('moving a card on the board to Done or Cancelled asks first, also for a Cli
 });
 
 test('a move from a board that’s out of date is refused, and the board shows the card as it is', async ({
+  context,
   page,
 }) => {
   const title = `A card someone else moved ${randomUUID().slice(0, 8)}`;
   const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, title);
   await expect(boardLane(page, 'Open').getByRole('link', { name: title })).toBeVisible();
   // A colleague moves it to To do meanwhile.
@@ -2351,6 +2397,7 @@ test('a move from a board that’s out of date is refused, and the board shows t
 });
 
 test('a lane of the board with more requests than it shows opens the list of them all', async ({
+  context,
   page,
 }) => {
   const prefix = `Closed for the board ${randomUUID().slice(0, 8)}`;
@@ -2359,7 +2406,7 @@ test('a lane of the board with more requests than it shows opens the list of the
     await storeOwnRequest({ title: `${prefix} ${index + 1}`, status: 'done' });
   });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, prefix);
   const done = boardLane(page, 'Done');
   await expect(done.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(5);
@@ -2372,11 +2419,14 @@ test('a lane of the board with more requests than it shows opens the list of the
   await expect(requestRows(page)).toHaveCount(6);
 });
 
-test('a card dragged on the board to a lane it may go to moves there', async ({ page }) => {
+test('a card dragged on the board to a lane it may go to moves there', async ({
+  context,
+  page,
+}) => {
   const title = `A card to drag ${randomUUID().slice(0, 8)}`;
   const number = await storeOwnRequest({ title });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   await openBoard(page, title);
   const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
   // The grip comes once the drag and drop has loaded.
@@ -2390,13 +2440,14 @@ test('a card dragged on the board to a lane it may go to moves there', async ({ 
 });
 
 test('a card dragged on the board to a lane it can’t go to stays, and the board says why', async ({
+  context,
   page,
 }) => {
   const title = `A card that can’t go there ${randomUUID().slice(0, 8)}`;
   const number = await storeOwnRequest({ title });
 
   // A Client closes or cancels a request; the other lanes are the staff's.
-  await signIn(page, REQUESTS_CLIENT);
+  await context.addCookies(clientCookies());
   await openBoard(page, title);
   const card = boardLane(page, 'Open').getByRole('listitem').filter({ hasText: title });
   const grip = card.locator('[data-drag-handle]');
@@ -2414,6 +2465,7 @@ test('a card dragged on the board to a lane it can’t go to stays, and the boar
 });
 
 test('a company’s page shows its requests as a board too, that company’s only', async ({
+  context,
   page,
 }) => {
   const prefix = `A card on a company board ${randomUUID().slice(0, 8)}`;
@@ -2425,7 +2477,7 @@ test('a company’s page shows its requests as a board too, that company’s onl
     title: `${prefix}, another company’s`,
   });
 
-  await signIn(page, SUPPORT_STAFF);
+  await context.addCookies(supportCookies());
   // Across companies, the board shows both.
   await openBoard(page, prefix);
   await expect(page.getByRole('link', { name: new RegExp(`^${prefix}`) })).toHaveCount(2);
@@ -2465,7 +2517,7 @@ test.describe('the board’s Waiting and Closed columns, on a wide screen', () =
 
   /**
    * Stores a request of the test's own and opens the board, signed in as
-   * the staff, narrowed down to it.
+   * the staff (by their stored cookies), narrowed down to it.
    *
    * @param page - The browser page.
    * @param title - The request's title.
@@ -2473,7 +2525,7 @@ test.describe('the board’s Waiting and Closed columns, on a wide screen', () =
    */
   async function boardWith(page: Page, title: string) {
     const number = await storeOwnRequest({ title, status: 'in_progress' });
-    await signIn(page, SUPPORT_STAFF);
+    await page.context().addCookies(supportCookies());
     await openBoard(page, title);
     const grip = boardLane(page, 'In progress')
       .getByRole('listitem')

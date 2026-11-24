@@ -17,16 +17,13 @@ import {
   storeFailedQueuedJob,
 } from './support/db';
 import { E2E_BASE_URL, PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
-import { adminStorageState, signIn, type StorageState, toasts } from './support/helpers';
+import { signIn, toasts } from './support/helpers';
 import { runJobs } from './support/outbox';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
-
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /**
  * Checks the Jobs page shows the jobs, and that the tick ran them.
@@ -52,7 +49,7 @@ test('a staff Admin finds the jobs under Logs, with how the tick ran them', asyn
   context,
   page,
 }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
   await runJobs();
 
   await page.goto('/admin/logs');
@@ -68,7 +65,7 @@ test('a staff Admin finds the jobs under Logs, with how the tick ran them', asyn
 test('a staff Admin elsewhere reads when jobs run in their own zone', async ({ context, page }) => {
   // The cookie that mirrors the account's zone, as if the Admin's were Tokyo's (no daylight saving).
   await context.addCookies([
-    ...adminState.cookies,
+    ...adminCookies(),
     { name: TIME_ZONE_COOKIE, value: 'Asia/Tokyo', url: E2E_BASE_URL },
   ]);
   await page.goto('/admin/logs/jobs');
@@ -92,7 +89,7 @@ test('a Manager sees the jobs too, without the controls', async ({ page }) => {
 
 test.describe('as a staff Admin', () => {
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('runs a job now, and the run names who started it', async ({ page }) => {
@@ -174,7 +171,7 @@ test('staff are warned on the dashboard and the Jobs page when the ticks stop', 
   context,
   page,
 }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
   const warning = page.getByRole('region', { name: 'Background jobs' });
 
   // Other tests tick all the time, which ends the warning: make the tick late again until it shows.

@@ -17,15 +17,12 @@ import {
   PLATFORM_ADMIN,
   STEP_UP_MANAGER,
 } from './support/fixtures';
-import { adminStorageState, signIn, type StorageState } from './support/helpers';
+import { signIn } from './support/helpers';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
-
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /**
  * The audit log's table (named by its caption).
@@ -39,7 +36,7 @@ function auditTable(page: Page) {
 
 test.describe('as a staff Admin', () => {
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the audit log narrows by search, group and days, keeping the other filters', async ({

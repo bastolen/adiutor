@@ -127,9 +127,12 @@ configurations in VS Code, which turn the time limit off (see
     dedicated seeded one such as `REQUESTS_CLIENT`, or a fresh one from an invitation) when it
     matters what else that account may do. A spec that passes alone can still fail in the full
     run, so run the specs a change touches together.
-  - **Signing in once:** specs that only read as one account (scans, keyboard checks, tables)
-    sign it in once (`storageStateFor(browser, account)`, or `adminStorageState` for the staff
-    Admin) and open each test with those cookies, which keeps them clear of the sign-in limits.
+  - **Signing in once:** specs, and the tests of a spec, that act as one account throughout (scans,
+    keyboard checks, tables, most of `e2e/requests.spec.ts`) sign it in once
+    (`signedInOnce(account)` in `e2e/support/stored-sign-in.ts`, or `storageStateFor(browser,
+account)` where a spec needs the state itself) and open each test with those cookies, which
+    keeps them clear of the sign-in limits. A test that signs out, ends sessions or switches
+    person signs in with `signIn` instead: signing out ends the session the cookies belong to.
   - **Shared steps:** the steps more than one spec needs live in `e2e/support/`, not in the specs:
     `helpers.ts` (signing in, `createFreshAccount` for an account of a test's own, the invitation
     form, the board's `openBoard` and `boardLane`, `openWithEnter`, `pressUntilFocused` and

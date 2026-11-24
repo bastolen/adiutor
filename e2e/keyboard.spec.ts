@@ -34,7 +34,6 @@ import {
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
-  adminStorageState,
   answerPictures,
   markdownEditor,
   openUserTab,
@@ -50,10 +49,11 @@ import {
   boardLane,
 } from './support/helpers';
 import { inOrder, repeatInOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** Sign-in cookies of a Client of the seeded company, for the company's side of a request. */
 let clientState: StorageState;
@@ -62,7 +62,6 @@ let clientState: StorageState;
 const pagingMembersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
 
 test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
 });
 
@@ -228,7 +227,7 @@ async function expectCardLandsBelowStickyLayers(page: Page): Promise<void> {
 test.describe('signed in', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the first Tab shows the skip link, which moves focus to the content', async ({ page }) => {
@@ -981,7 +980,7 @@ test.describe('on a phone, under the sticky layers', () => {
     context,
     page,
   }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
     await page.setViewportSize(PHONE);
     await page.goto('/account/security');
 
@@ -1086,7 +1085,7 @@ test.describe('the picture choice', () => {
 test.describe('tables', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('the Sort menu sorts with the keyboard and keeps focus on its button', async ({ page }) => {
@@ -1137,7 +1136,7 @@ test.describe('requests', () => {
 
   test.describe('as the staff', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('a filter menu filters with the keyboard and keeps focus on its button', async ({
@@ -1506,7 +1505,7 @@ test.describe('requests', () => {
 
   test.describe('as the staff, on a request’s subscribers', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('the subscribers dialog is worked with the keyboard, and returns focus', async ({
@@ -1678,7 +1677,7 @@ test.describe('requests', () => {
 test.describe('the board of requests', () => {
   test.use({ reducedMotion: 'reduce' });
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   test('a card moves with its Move menu from the keyboard, and focus follows it to its new lane', async ({

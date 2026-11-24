@@ -18,8 +18,9 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { adminStorageState, openUser, signIn, type StorageState } from './support/helpers';
+import { openUser, signIn } from './support/helpers';
 import { inOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
 /** The 404 page's title, which pages someone may not see have too. */
@@ -74,18 +75,14 @@ async function expectTitle(page: Page, path: string, title: string) {
   await expect(page, path).toHaveTitle(title);
 }
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
-
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 test('signed in, an unknown page offers the dashboard and going back', async ({
   context,
   page,
 }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
   await page.goto('/dashboard');
 
   const response = await page.goto('/does-not-exist');
@@ -200,7 +197,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     context,
     page,
   }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
     await inOrder(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
 
     await openUser(page, PLATFORM_ADMIN.name);

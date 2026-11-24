@@ -22,24 +22,20 @@ import {
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
 } from './support/fixtures';
-import { adminStorageState, type StorageState } from './support/helpers';
 import { inOrder } from './support/sequence';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** Sign-in cookies of the staff Admin. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** The paging company's members page, at the address the app links to (its URL name). */
 const membersPath = `/companies/${PAGING_COMPANY_SLUG}/members`;
 
-test.beforeAll(async ({ browser }) => {
-  adminState = await adminStorageState(browser);
-});
-
 test.use({ reducedMotion: 'reduce' });
 
 test.beforeEach(async ({ context }) => {
-  await context.addCookies(adminState.cookies);
+  await context.addCookies(adminCookies());
 });
 
 /**

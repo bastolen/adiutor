@@ -46,7 +46,6 @@ import {
   SEEDED_REQUESTS,
 } from './support/fixtures';
 import {
-  adminStorageState,
   freshAddress,
   markdownEditor,
   openSignInLink,
@@ -58,6 +57,7 @@ import {
   toasts,
   boardLane,
 } from './support/helpers';
+import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
 /** Pages that work signed out. */
@@ -163,8 +163,8 @@ const WATCHER_PATHS = [
   `/requests/${SEEDED_REQUESTS.waiting.number}`,
 ];
 
-/** Sign-in cookies of the staff Admin, shared by the signed-in scans. */
-let adminState: StorageState;
+/** Gives the staff Admin's sign-in cookies, signed in once for the spec. */
+const adminCookies = signedInOnce(PLATFORM_ADMIN);
 
 /** Sign-in cookies of a Client of the seeded company, for the scans as someone at a company. */
 let clientState: StorageState;
@@ -226,7 +226,6 @@ test.beforeAll(async ({ browser }) => {
     details: { from: 'client', to: 'watcher' },
   });
   userId = await findUserId(CLIENT_WATCHER.email);
-  adminState = await adminStorageState(browser);
   clientState = await storageStateFor(browser, REQUESTS_CLIENT);
   watcherState = await storageStateFor(browser, CLIENT_WATCHER);
 });
@@ -480,7 +479,7 @@ test.describe('on a 320px wide screen', () => {
 
   test.describe('signed in', () => {
     test.beforeEach(async ({ context }) => {
-      await context.addCookies(adminState.cookies);
+      await context.addCookies(adminCookies());
     });
 
     test('the companies list shows each status under the name', async ({ page }) => {
@@ -607,7 +606,7 @@ test.describe('in forced-colours mode', () => {
   test.use({ forcedColors: 'active' });
 
   test.beforeEach(async ({ context }) => {
-    await context.addCookies(adminState.cookies);
+    await context.addCookies(adminCookies());
   });
 
   /**
@@ -788,7 +787,7 @@ test.describe('in forced-colours mode', () => {
 
     test.describe('signed in', () => {
       test.beforeEach(async ({ context }) => {
-        await context.addCookies(adminState.cookies);
+        await context.addCookies(adminCookies());
       });
 
       APP_PATHS.forEach((path) => {
@@ -1192,7 +1191,7 @@ test.describe('in forced-colours mode', () => {
       test.beforeEach(async ({ context }) => {
         // The Admin is on Adiutor's default language, so their sign-in has no language cookie of its
         // own: this one is what the pages read.
-        await context.addCookies([...adminState.cookies, languageCookie]);
+        await context.addCookies([...adminCookies(), languageCookie]);
       });
 
       APP_PATHS.forEach((path) => {
