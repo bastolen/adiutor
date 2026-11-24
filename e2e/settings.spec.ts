@@ -31,7 +31,6 @@ import {
 } from './support/helpers';
 import { linkIn, waitForEmail } from './support/outbox';
 import { expect, test } from './support/test';
-import { codeForSecret } from './support/totp';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
@@ -407,11 +406,7 @@ test('an Admin creates a staff invite link that someone uses', async ({ page, br
 test('an Admin who confirmed long ago confirms it’s them before giving staff or Admin roles', async ({
   page,
 }) => {
-  // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
-  test.setTimeout(120_000);
   await signIn(page, PLATFORM_ADMIN);
-  // The code just used to sign in (or an earlier one); confirming again needs a later one.
-  const signInCode = codeForSecret(PLATFORM_ADMIN.totpSecret);
   const confirm = /^Confirm it.s you$/;
 
   // Confirmed just now: invite someone to the staff, to resend once the confirmation is old.
@@ -460,10 +455,6 @@ test('an Admin who confirmed long ago confirms it’s them before giving staff o
   await expect(page).toHaveURL(
     '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fstaff%23invitations&for=change',
   );
-  // An authenticator code can't be used twice, so wait for the next one.
-  await expect
-    .poll(() => codeForSecret(PLATFORM_ADMIN.totpSecret), { timeout: 35_000, intervals: [1_000] })
-    .not.toBe(signInCode);
   await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
   // Back on the card where they clicked: scrolled to, with focus on its heading.

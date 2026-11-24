@@ -299,11 +299,7 @@ async function clickUntil(button: Locator, reacted: () => Promise<void>): Promis
 }
 
 test('changing how you sign in needs a confirmation from the last 15 minutes', async ({ page }) => {
-  // Waits for the next authenticator code (up to 30 seconds) on top of the sign-in.
-  test.setTimeout(120_000);
   await signIn(page, RECENT_MFA_CLIENT);
-  // The code just used to sign in (or an earlier one); confirming again needs a later one.
-  const signInCode = codeForSecret(RECENT_MFA_CLIENT.totpSecret);
   await page.goto('/account/security');
   const newBackupCodes = page.getByRole('button', { name: 'New backup codes' });
   await expect(newBackupCodes).toBeVisible();
@@ -322,13 +318,6 @@ test('changing how you sign in needs a confirmation from the last 15 minutes', a
   );
   await expect(page.getByText('This needs a confirmation from the last 15 minutes.')).toBeVisible();
 
-  // An authenticator code can't be used twice, so wait for the next one.
-  await expect
-    .poll(() => codeForSecret(RECENT_MFA_CLIENT.totpSecret), {
-      timeout: 35_000,
-      intervals: [1_000],
-    })
-    .not.toBe(signInCode);
   await confirmWithAuthenticator(page, RECENT_MFA_CLIENT.totpSecret);
   // Checking the code and rendering the Security page again can take a while in a busy suite.
   // Back on the card where they started, with focus on its heading.
@@ -497,8 +486,6 @@ test("sign-in, reset and magic-link don't reveal whether an email has an account
   }, Promise.resolve());
 });
 
-// Runs after the 15-minute test, which waits for a new authenticator code: the Manager's code
-// from their email-link test can't be the one this sign-in uses.
 test("a role that requires MFA can't turn off its only method", async ({ page }) => {
   // The Manager's only method is the authenticator app (their earlier test asked for passkey
   // options but added none), and signing in with it confirms the session just now.

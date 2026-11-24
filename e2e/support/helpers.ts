@@ -222,8 +222,7 @@ export async function signIn(
 
 /**
  * Confirms it's the user on the "Confirm it's you" page: fills the current
- * authenticator code and presses Confirm. A caller that already used the
- * current code for something else waits for the next one first.
+ * authenticator code and presses Confirm.
  *
  * @param page - The browser page, on the confirmation page (`/auth/verify`).
  * @param totpSecret - The account's raw authenticator secret.
