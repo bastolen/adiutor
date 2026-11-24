@@ -7,7 +7,10 @@ import cn from '@/lib/cn';
 import AvatarPicture from './avatar-picture';
 
 /**
- * Takes up to two initials from a name (or an email address).
+ * Takes up to two initials from a name (or an email address). Letters are
+ * whole characters (code points of the name in its composed form), so a
+ * letter outside the Basic Multilingual Plane or one with an accent is never
+ * cut in half.
  *
  * @param name - The name or email address.
  * @returns The initials, upper-cased.
@@ -15,10 +18,14 @@ import AvatarPicture from './avatar-picture';
 export function initialsOf(name: string): string {
   const words = name
     .replace(/@.*/, '')
+    .normalize('NFC')
     .split(/[\s._-]+/)
     .filter(Boolean);
   const [first = '?', second] = words;
-  const letters = second === undefined ? first.slice(0, 2) : first.charAt(0) + second.charAt(0);
+  const [firstLetter = ''] = Array.from(first);
+  const [secondLetter = ''] = Array.from(second ?? '');
+  const letters =
+    second === undefined ? Array.from(first).slice(0, 2).join('') : firstLetter + secondLetter;
   return letters.toUpperCase();
 }
 
