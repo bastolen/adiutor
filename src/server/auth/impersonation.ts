@@ -283,7 +283,7 @@ export interface EndedImpersonation {
 /**
  * Ends the sign-in as someone of a session, and records `impersonation_ended`
  * with why, by the staff member, in one transaction. Ending one that has
- * ended already (two tabs at once, or the hourly job first) changes and
+ * ended already (two tabs at once, or the background job first) changes and
  * records nothing.
  *
  * @param ctx - Service context (database and request info).

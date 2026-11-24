@@ -204,7 +204,7 @@ describe('OAuth tokens', () => {
     ]);
   });
 
-  it('leaves the tokens to the hourly clean-up when the session cookie is forged', async () => {
+  it('leaves the tokens to the clean-up job when the session cookie is forged', async () => {
     const fetchSpy = mockGitHubApi({ 'jane-token': true });
     const jane = await createUser(db, 'jane@adiutor.test');
     const janeSession = await createSession(db, jane);
