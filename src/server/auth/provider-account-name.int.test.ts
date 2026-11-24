@@ -17,7 +17,6 @@
  * A deactivated account is refused there too, after that check, so nothing
  * gets connected to it, verified or stored (`checkIncomingUser`).
  */
-import { hashPassword } from 'better-auth/crypto';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -34,6 +33,8 @@ import {
   queuedJobKinds,
   setupTestContext,
   auditEvents,
+  addPassword,
+  connectProvider,
 } from '../../../tests/integration/helpers';
 import { authRequest, cookieJar } from './test-helpers';
 
@@ -95,6 +96,9 @@ function cookiesOf(response: Response): string {
   jar.keep(response);
   return jar.cookie();
 }
+
+/** The password of the users who sign in with one. */
+const PASSWORD = 'adiutor-tests-password';
 
 /** Where "Confirm with GitHub" on the step-up page comes back to when it fails. */
 const STEP_UP_ERROR_URL = '/auth/verify?callbackURL=%2Fdashboard&provider=github';
@@ -285,13 +289,8 @@ describe('signing in with GitHub to a deactivated account', () => {
 describe('connecting GitHub from the Security page', () => {
   it('stores the username of the account it connects, whatever its email address', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values({
-      userId: jane,
-      accountId: jane,
-      providerId: 'credential',
-      password: await hashPassword('adiutor-tests-password'),
-    });
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
 
     mockGitHub({ id: 5151, login: 'adiutor-tests-work', email: 'jane.work@adiutor.test' });
     expectSucceeded(await githubFlow('link-social', session));
@@ -303,17 +302,10 @@ describe('connecting GitHub from the Security page', () => {
 describe('confirming a session with GitHub on the step-up page', () => {
   it('records that the session was confirmed, not another sign-in', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      // Her GitHub account, connected and confirmed earlier.
-      { userId: jane, accountId: '4242', providerId: 'github' },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    // Her GitHub account, connected and confirmed earlier.
+    await connectProvider(db, jane, { accountId: '4242', mfaVerified: false });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
 
     // "Confirm with GitHub" signs in with GitHub on the signed-in browser; GitHub says it has 2FA.
     mockGitHub({ id: 4242, login: 'adiutor-tests', email: 'jane@adiutor.test' });
@@ -335,16 +327,9 @@ describe('confirming a session with GitHub on the step-up page', () => {
 
   it("keeps the session's earlier confirmation as it was when GitHub's 2FA is off", async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      { userId: jane, accountId: '4242', providerId: 'github' },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    await connectProvider(db, jane, { accountId: '4242', mfaVerified: false });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
     // Confirmed with a passkey 20 minutes ago: too long ago to change how she signs in.
     const confirmedAt = new Date(Date.now() - 20 * 60_000);
     await db
@@ -379,17 +364,10 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
   async function janeSignedIn(): Promise<{ jane: string; john: string; session: string }> {
     const jane = await createUser(db, 'jane@adiutor.test');
     const john = await createUser(db, 'john@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      { userId: jane, accountId: '4242', providerId: 'github', mfaVerified: true },
-      { userId: john, accountId: '7777', providerId: 'github', mfaVerified: true },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    await connectProvider(db, jane, { accountId: '4242' });
+    await connectProvider(db, john, { accountId: '7777' });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
     return { jane, john, session };
   }
 

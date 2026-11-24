@@ -29,11 +29,10 @@
  *   used for the new code step (`afterPasswordSignIn`), while the wait within
  *   one sign-in, other users' waits and the 5 codes per 15 minutes stay.
  */
-import { hashPassword } from 'better-auth/crypto';
 import { desc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { account, session, user } from '@/db/schema';
+import { session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { TWO_FACTOR_LOCK_ATTEMPTS } from '@/lib/authz/mfa';
 import { defined, firstRow } from '@/lib/defined';
@@ -53,6 +52,7 @@ import {
   setUserLocale,
   setupTestContext,
   auditEvents,
+  addPassword,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
 import { newBrowser, sentEmail } from './test-helpers';
@@ -130,12 +130,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  */
 async function createUserWithPassword(email: string): Promise<string> {
   const id = await createUser(db, email);
-  await db.insert(account).values({
-    userId: id,
-    accountId: id,
-    providerId: 'credential',
-    password: await hashPassword(PASSWORD),
-  });
+  await addPassword(db, id, PASSWORD);
   return id;
 }
 

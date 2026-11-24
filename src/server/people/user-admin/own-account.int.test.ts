@@ -4,11 +4,10 @@
  * refusal before the password, and the limit on wrong passwords, against the
  * test database.
  */
-import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, rateLimitBucket, session, user, verification } from '@/db/schema';
+import { rateLimitBucket, session, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import { deactivateOwnAccount } from '.';
@@ -22,6 +21,7 @@ import {
   sendQueuedEmails,
   minutesAgo,
   auditEvents,
+  addPassword,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
 import {
@@ -38,20 +38,6 @@ import {
 describe('deactivateOwnAccount', () => {
   /** Jane's password in these tests. */
   const PASSWORD = 'correct horse battery';
-
-  /**
-   * Gives a user a password, as Better Auth stores it.
-   *
-   * @param userId - The user.
-   */
-  async function givePassword(userId: string): Promise<void> {
-    await db.insert(account).values({
-      userId,
-      accountId: userId,
-      providerId: 'credential',
-      password: await hashPassword(PASSWORD),
-    });
-  }
 
   /**
    * Reads when a user was deactivated.
@@ -85,7 +71,7 @@ describe('deactivateOwnAccount', () => {
   }
 
   it('checks the password, then deactivates, signs out and forgets trusted devices', async () => {
-    await givePassword(jane);
+    await addPassword(db, jane, PASSWORD);
     await createSession(db, jane);
     await db.insert(verification).values([
       { identifier: 'trust-device-own', value: jane, expiresAt: new Date(Date.now() + 1e6) },
@@ -121,7 +107,7 @@ describe('deactivateOwnAccount', () => {
   });
 
   it('names the device and IP address in the email: it was their own change', async () => {
-    await givePassword(jane);
+    await addPassword(db, jane, PASSWORD);
     await deactivateOwnAccount(fromKnownDevice, await actorFor(db, jane, {}), PASSWORD);
 
     await sendQueuedEmails(ctx);
@@ -141,7 +127,7 @@ describe('deactivateOwnAccount', () => {
   it("refuses a company's only Admin the same way with a right or a wrong password", async () => {
     const owner = await createUser(db, 'owner@adiutor.test');
     await addMember(db, testCompany.id, owner, 'admin');
-    await givePassword(owner);
+    await addPassword(db, owner, PASSWORD);
     const actor = await actorFor(db, owner, {});
 
     const refusals = await inSequence([PASSWORD, 'wrong', PASSWORD], (password) =>
@@ -164,7 +150,7 @@ describe('deactivateOwnAccount', () => {
   });
 
   it('limits wrong passwords per user, refusing even a right one after five', async () => {
-    await givePassword(jane);
+    await addPassword(db, jane, PASSWORD);
     const actor = await actorFor(db, jane, {});
 
     expect(await attempts(5, actor, 'wrong')).toEqual(Array.from({ length: 5 }, () => 'invalid'));

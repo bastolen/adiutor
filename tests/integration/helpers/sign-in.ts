@@ -5,6 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '@/db';
@@ -178,11 +179,16 @@ export async function addPasskey(db: Database, userId: string): Promise<string> 
  *
  * @param db - Test database.
  * @param userId - The user.
+ * @param password - A password Better Auth can check, which it's hashed from; without one, a
+ *   fake hash is stored (fast, for tests that never sign in with it).
  */
-export async function addPassword(db: Database, userId: string): Promise<void> {
-  await db
-    .insert(account)
-    .values({ userId, accountId: userId, providerId: 'credential', password: 'hashed-password' });
+export async function addPassword(db: Database, userId: string, password?: string): Promise<void> {
+  await db.insert(account).values({
+    userId,
+    accountId: userId,
+    providerId: 'credential',
+    password: password === undefined ? 'hashed-password' : await hashPassword(password),
+  });
 }
 
 /**
