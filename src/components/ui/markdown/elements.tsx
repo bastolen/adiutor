@@ -94,7 +94,7 @@ function alignment(align: unknown): string {
  * @param props - The image's attributes.
  * @param props.src - The image's address.
  * @param props.alt - Its description.
- * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns A link to the image, or only its description when the address can't be linked.
  */
 function MarkdownImage({ src, alt, appUrl }: ComponentProps<'img'> & { appUrl: string | null }) {
@@ -395,7 +395,7 @@ function MarkdownFootnotes({ children = null }: ComponentProps<'section'>) {
  * @param options.highestHeading - How many `#` that heading was written with.
  * @param options.codeNote - What to say above a block's code when it's copied.
  * @param options.mentions - The people the text mentions.
- * @param options.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param options.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({

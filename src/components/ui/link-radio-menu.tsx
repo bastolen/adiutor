@@ -59,9 +59,10 @@ interface LinkRadioMenuProps {
 
 /**
  * A secondary small button that opens a menu with one link per choice, the
- * current one checked (Radix brings the keyboard behaviour). The menu closes
- * as soon as a choice is made, and until the new page arrives the button is
- * busy (a spinner and `aria-busy`). The menu is named by its button (Radix's
+ * current one checked (Radix brings the keyboard behaviour: arrow keys, Escape, focus back on the
+ * button; the page doesn't scroll). The menu closes as soon as a choice is
+ * made, and until the new page arrives the button is busy (a spinner and
+ * `aria-busy`). The menu is named by its button (Radix's
  * `aria-labelledby`): by `triggerLabel` when there is one, else by what the
  * button shows. The menu's open state is transient, so it isn't still open
  * when the user comes back to the page.

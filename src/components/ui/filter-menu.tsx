@@ -35,12 +35,9 @@ interface FilterMenuProps {
 /**
  * A button that says what a list is filtered by ("Type", or "Type: Bug" once
  * a choice is made) and opens a menu with every choice, the current one
- * checked. Each choice is a link (a `MenuRadioLinkItem`; the page doesn't
- * scroll), so a filtered list has its own address, and Radix's keyboard
- * behaviour (arrow keys, Escape, focus back on the button) comes with it.
- * The menu closes as soon as a choice is made; until the filtered rows
- * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
- * user navigates away. The shared part is {@link LinkRadioMenu}.
+ * checked. Each choice is a link, so a filtered list has its own address. How
+ * the menu behaves (keyboard, busy while the filtered rows arrive) is
+ * {@link LinkRadioMenu}'s.
  *
  * @returns The menu's button (the menu itself opens in a portal).
  */

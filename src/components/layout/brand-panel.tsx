@@ -1,9 +1,8 @@
 /**
  * @file The decorative brand panel of the public pages: an example request
  * and the product pitch, on the fixed ink background. A client component, so
- * its text comes from the root provider (`common.brandPanel`): the public
- * layout is in each page's static shell, which Partial Prefetching
- * prefetches without reading the request (docs/i18n.md).
+ * its text comes from the root provider (`common.brandPanel`), as it sits in
+ * a page's static shell (docs/i18n.md).
  */
 'use client';
 

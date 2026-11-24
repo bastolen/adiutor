@@ -1,10 +1,8 @@
 /**
  * @file Labelled checkbox with optional help text.
  *
- * A client component: its ids come from `useId`, and only the browser's one
- * React tree keeps them unique. Rendered on the server, they would start
- * again in every request, so a tab kept alive and the one loaded next could
- * share them (labels and card names would point at the wrong element).
+ * A client component because its ids come from `useId` (why: "Ids stay unique
+ * across pages kept alive" in docs/design.md).
  */
 'use client';
 

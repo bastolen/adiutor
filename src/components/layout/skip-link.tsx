@@ -1,8 +1,7 @@
 /**
  * @file "Skip to main content" link: the first thing keyboard users reach.
- * A client component, so its text comes from the root provider: layouts
- * are in each route's static shell, which Partial Prefetching prefetches
- * without reading the request (docs/i18n.md).
+ * A client component, so its text comes from the root provider: it sits in a
+ * route's static shell (docs/i18n.md).
  */
 'use client';
 

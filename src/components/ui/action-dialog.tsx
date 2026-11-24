@@ -165,7 +165,7 @@ function ActionDialogForm({
 /**
  * Opens a {@link Modal} with a form posting to a server action. A failed
  * result is shown in the dialog, which stays open: inline only, without a
- * toast (a toast above the dialog would take the first Escape), in a new
+ * toast (see `InsideDialog`), in a new
  * alert each time, so the same refusal twice is announced and takes focus
  * twice. A successful one closes it, and its message is a toast in
  * the signed-in app (shown as soon as the action returns) or else shown next

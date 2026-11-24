@@ -26,12 +26,8 @@ interface SortMenuProps {
  * A button that says how the table is sorted (just "Sort" on phones), named
  * in full at every width (`aria-label`, e.g. "Sort members: Name, A to Z",
  * which names its menu too), and opens a menu
- * with every way to sort it, the current one checked. Each choice is a link
- * (a `MenuRadioLinkItem`; the page doesn't scroll), and Radix's keyboard
- * behaviour (arrow keys, Escape, focus back on the button) comes with it.
- * The menu closes as soon as a choice is made; until the newly sorted rows
- * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
- * user navigates away. The shared part is {@link LinkRadioMenu}.
+ * with every way to sort it, the current one checked. How the menu behaves
+ * (links, keyboard, busy while the sorted rows arrive) is {@link LinkRadioMenu}'s.
  *
  * @returns The menu's button (the menu itself opens in a portal).
  */

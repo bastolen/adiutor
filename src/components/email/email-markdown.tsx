@@ -183,7 +183,7 @@ function alignment(align: unknown): CSSProperties['textAlign'] {
  * @param options.mentions - The names of the people the text mentions.
  * @param options.locale - The email's language, for what an image is called.
  * @param options.highest - How many `#` the text's highest heading was written with.
- * @param options.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param options.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns The components to render the text's tree with.
  */
 function emailElements({
@@ -445,7 +445,7 @@ function placed(parts: readonly TextPart[]): PlacedPart[] {
  * can change how its links read.
  *
  * @param text - The text as it's stored.
- * @param appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns The text to show.
  */
 function asWritten(text: string, appUrl: string | null): string {
@@ -460,7 +460,7 @@ function asWritten(text: string, appUrl: string | null): string {
  *
  * @param props - Component props.
  * @param props.text - The text, as {@link asWritten} gives it.
- * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns The text.
  */
 function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null }) {

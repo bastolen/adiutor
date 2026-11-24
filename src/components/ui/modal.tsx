@@ -67,8 +67,7 @@ interface ModalProps {
  * stays there, Escape or the close button closes it, and focus returns to
  * what opened it (also when it's opened from code rather than a trigger).
  * An error shown in it (`ResultAlert`, `Alert`'s `alsoToast`) stays inline,
- * without a toast: a toast would be a layer above the dialog and take the
- * first Escape, so one Escape always closes the dialog.
+ * without a toast (see `InsideDialog`), so one Escape always closes the dialog.
  * Use `ConfirmDialog` for yes/no questions instead.
  *
  * A caller can say what gets the focus instead, when it opens

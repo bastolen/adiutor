@@ -46,8 +46,7 @@ interface AlertProps {
    * Also show the message as a toast when it appears (in the signed-in app,
    * where a `Toaster` is mounted), e.g. for an error an action returned, which
    * the app shows inline and as a toast. Only text messages are toasted, and
-   * none inside a dialog (`Modal`), where the message stays inline: a toast
-   * above the dialog would take the first Escape.
+   * none inside a dialog (see `InsideDialog`), where the message stays inline.
    */
   alsoToast?: boolean;
 }
@@ -71,7 +70,7 @@ export default function Alert({
   const t = useTranslations('common.actions');
   const ref = useRef<HTMLDivElement>(null);
   const showToast = useToast();
-  // In a dialog the message stays inline: a toast above it would take the first Escape.
+  // In a dialog the message stays inline (see `InsideDialog`).
   const insideDialog = useInsideDialog();
   // The message last toasted; cleared when the message goes, so the same one shows again later.
   const toasted = useRef<string | null>(null);

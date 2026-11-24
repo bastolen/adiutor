@@ -133,7 +133,7 @@ const HEADING_CHOICES = [0, 1, 2, LOWEST_OFFERED_HEADING];
  *
  * @param props - Component props.
  * @param props.current - The address of the link at the cursor, or `null`.
- * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @param props.onSave - Called with the address to link to.
  * @param props.onRemove - Called to remove the link.
  * @returns The dialog's content.
