@@ -404,16 +404,14 @@ export type SignedInAsOutcome =
  * @param db - Database client (the pool).
  * @param staff - The staff member, as their request loaded them.
  * @param found - The session's sign-in as someone.
- * @param now - The current time.
  * @returns The user as the actor, or why it ends.
  */
 export async function actorSignedInAs(
   db: Database,
   staff: Actor,
   found: SessionImpersonation,
-  now: Date = new Date(),
 ): Promise<SignedInAsOutcome> {
-  if (found.expiresAt.getTime() <= now.getTime()) {
+  if (found.expiresAt.getTime() <= Date.now()) {
     return { end: 'expired' };
   }
   if (mustStepUp(staff) || mustSetUpMfa(staff)) {

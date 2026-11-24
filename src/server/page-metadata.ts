@@ -120,7 +120,7 @@ export function globalPermissionMetadata<Props = unknown>(
  */
 export function companyPermissionMetadata(
   permission: Permission,
-  title?: PageTitleKey,
+  title: PageTitleKey,
 ): (props: { params: Promise<{ companyId: string }> }) => Promise<Metadata> {
   return async ({ params }) => {
     const { companyId } = await params;
