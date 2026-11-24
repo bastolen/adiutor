@@ -20,7 +20,7 @@
  *
  * | Email | Name | Where and role | Sign-in | MFA |
  * | --- | --- | --- | --- | --- |
- * | your `--admin-mail` address (optional) | from the address, e.g. "Bas" for `bas@…` | Staff: Admin | email link, GitHub/Google (verified email) | none yet, so the Security page asks for it |
+ * | your `--admin-mail` address (optional) | from the address, e.g. "You" for `you@…` | Staff: Admin | email link, GitHub/Google (verified email) | none yet, so the Security page asks for it |
  * | `admin@adiutor.test` | Alex Admin | Staff: Admin | password | authenticator app (setup key and backup codes printed) |
  * | `manager@adiutor.test` | Morgan Manager | Staff: Manager | password | authenticator app (setup key printed) |
  * | `manager.email@adiutor.test` | Mel Manager | Staff: Manager | password | email codes only, which don't count for Managers, so the Security page asks for more |
@@ -115,8 +115,8 @@ const TEST_DOMAIN = '@adiutor.test';
 /**
  * Makes a display name from an email address: its local part, capitalised.
  *
- * @param email - The address, e.g. `bas@adiutor.dev`.
- * @returns The name, e.g. "Bas".
+ * @param email - The address, e.g. `you@adiutor.dev`.
+ * @returns The name, e.g. "You".
  */
 function nameFromEmail(email: string): string {
   const local = email.slice(0, email.indexOf('@'));
