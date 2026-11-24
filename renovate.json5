@@ -55,8 +55,9 @@
        * default (`timestamp-required`) keeps the check pending forever. Here a
        * missing date passes instead. Digest PRs still wait: Renovate only opens
        * or updates them 3 days after Docker Hub pushed the tag. Lockfile
-       * refreshes get no wait from Renovate; pnpm's built-in default still
-       * skips versions younger than a day when it resolves them.
+       * refreshes get no wait from Renovate, but pnpm's `minimumReleaseAge`
+       * (pnpm-workspace.yaml) skips versions younger than 3 days when it
+       * resolves them.
        */
       matchUpdateTypes: ['digest', 'pinDigest', 'lockFileMaintenance'],
       minimumReleaseAgeBehaviour: 'timestamp-optional',

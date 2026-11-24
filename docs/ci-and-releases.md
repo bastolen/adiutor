@@ -247,7 +247,10 @@ Weekly on Monday morning, a few days after a release at the earliest:
   date that check can read, so `renovate.json5` lets it pass for them instead of leaving it pending
   forever. Digest pull requests still wait: Renovate opens or updates them only 3 days after Docker
   Hub pushed the image. If the check stays pending on another kind of update, Renovate's job log
-  (developer.mend.io) says why.
+  (developer.mend.io) says why. pnpm waits the same 3 days (`minimumReleaseAge` in
+  `pnpm-workspace.yaml`) for everything it installs, both a local `pnpm add` or `pnpm update` and
+  Renovate's lockfile refreshes; a security fix that can't wait goes under
+  `minimumReleaseAgeExclude` until it's old enough.
 - Renovate's pull requests come in groups: all other minor and patch updates together, and
   Next.js, React and their types together, in a pull request of their own for every kind of
   update (decision 0042).
