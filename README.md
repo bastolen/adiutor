@@ -81,7 +81,7 @@ and solutions the company approves, are built; attachments come next.
   Profile. See
   [Time zones](docs/i18n.md#time-zones).
 
-**Coming next:** an approval step for finished work.
+**Coming next:** attachments.
 
 ## Tech stack
 
