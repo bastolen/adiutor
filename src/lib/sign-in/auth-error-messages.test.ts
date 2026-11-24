@@ -17,6 +17,7 @@ import {
   signInNoticeText,
 } from './auth-error-messages';
 import {
+  ACCOUNT_DEACTIVATED,
   EMAIL_CODE_SENT_RECENTLY,
   INVALID_PASSKEY_NAME,
   isServerWorded,
@@ -65,15 +66,18 @@ describe('knownAuthErrorText', () => {
       expect(isAuthErrorCode(code)).toBe(true);
       expect(knownAuthErrorText(en, code)).toBeTruthy();
     });
+    // The refusals have no text of their own, except the two Better Auth throws itself.
+    [ACCOUNT_DEACTIVATED, REVERIFY_WRONG_ACCOUNT].forEach(({ code, message }) =>
+      expect(knownAuthErrorText(en, code)).toBe(message),
+    );
     [
       EMAIL_CODE_SENT_RECENTLY,
       INVALID_PASSKEY_NAME,
       RESET_ENDS_PROVIDER_MFA,
-      REVERIFY_WRONG_ACCOUNT,
       TOO_MANY_ATTEMPTS,
       TWO_FACTOR_ALREADY_OFF,
       UNSAFE_RETURN_ADDRESS,
-    ].forEach(({ code, message }) => expect(knownAuthErrorText(en, code)).toBe(message));
+    ].forEach(({ code }) => expect(isAuthErrorCode(code)).toBe(true));
   });
 });
 
@@ -205,10 +209,10 @@ describe('authErrorText', () => {
 
   it("uses its own message when the server's is missing", () => {
     expect(authErrorText(en, { status: 429, code: TOO_MANY_ATTEMPTS.code })).toBe(
-      TOO_MANY_ATTEMPTS.message,
+      en('codes.errors.TOO_MANY_ATTEMPTS'),
     );
     expect(authErrorText(en, { status: 403, code: RESET_ENDS_PROVIDER_MFA.code })).toBe(
-      RESET_ENDS_PROVIDER_MFA.message,
+      en('codes.errors.RESET_ENDS_PROVIDER_MFA'),
     );
   });
 

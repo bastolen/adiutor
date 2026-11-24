@@ -34,7 +34,9 @@ describe('signInErrorMessage', () => {
   });
 
   it('explains a link the auth guards refused for where it would go', () => {
-    expect(signInErrorMessage(t, UNSAFE_RETURN_ADDRESS.code)).toBe(UNSAFE_RETURN_ADDRESS.message);
+    expect(signInErrorMessage(t, UNSAFE_RETURN_ADDRESS.code)).toBe(
+      t('codes.errors.UNSAFE_RETURN_ADDRESS'),
+    );
   });
 
   it('falls back to a general message for anything else', () => {

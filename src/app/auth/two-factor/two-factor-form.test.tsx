@@ -9,11 +9,15 @@ import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMAIL_CODE_RESEND_SECONDS } from '@/lib/authz/mfa';
+import translator from '@/lib/i18n/translator';
 import { EMAIL_CODE_SENT_RECENTLY } from '@/lib/sign-in/sign-in-refusals';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import Page from '../../../../tests/ui/page';
 import TwoFactorForm from './two-factor-form';
+
+/** What the form says for a code sent a moment ago, from the catalogue. */
+const SENT_RECENTLY_TEXT = translator('en-US', 'auth')('codes.errors.EMAIL_CODE_SENT_RECENTLY');
 
 /** Mocked Better Auth client methods and full page load. */
 const { verifyTotp, verifyOtp, verifyBackupCode, sendOtp, loadFresh } = vi.hoisted(() => ({
@@ -166,7 +170,7 @@ describe('TwoFactorForm', () => {
     });
     render(<TwoFactorForm />);
 
-    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(await screen.findByText(SENT_RECENTLY_TEXT)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Send a new code in/ })).toHaveAttribute(
       'aria-disabled',
@@ -294,7 +298,7 @@ describe('TwoFactorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     await user.click(screen.getByRole('button', { name: 'Return' }));
 
-    expect(await screen.findByText(EMAIL_CODE_SENT_RECENTLY.message)).toBeInTheDocument();
+    expect(await screen.findByText(SENT_RECENTLY_TEXT)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(sendOtp).toHaveBeenCalledTimes(2);
   });
