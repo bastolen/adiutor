@@ -9,12 +9,14 @@
  * badge whose tone or label is a variable (`tone={STATUS_TONES[status]}`)
  * isn't read: its tones come from one table, so they agree by construction.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { messagesFor } from '@/lib/i18n/messages';
+
+import sourceFiles from '../../../tests/source-files';
 
 /** The repository root, so paths in messages read like `src/app/...`. */
 const ROOT = path.resolve(import.meta.dirname, '../../..');
@@ -67,27 +69,10 @@ function badgesIn(source: string): { tone: string; label: string }[] {
   );
 }
 
-/**
- * Lists the TypeScript React files in a folder and its subfolders, leaving
- * out tests.
- *
- * @param dir - The folder.
- * @returns Their full paths.
- */
-function componentFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return componentFiles(full);
-    }
-    return entry.name.endsWith('.tsx') && !entry.name.endsWith('.test.tsx') ? [full] : [];
-  });
-}
-
 /** For each badge label, the files that use it under each tone. */
 const tonesByLabel = new Map<string, Map<string, Set<string>>>();
 
-componentFiles(path.join(ROOT, 'src')).forEach((file) => {
+sourceFiles(path.join(ROOT, 'src'), /\.tsx$/).forEach((file) => {
   const relative = path.relative(ROOT, file);
   badgesIn(readFileSync(file, 'utf8')).forEach(({ tone, label: text }) => {
     const label = text.replace(/\s+/g, ' ').trim();

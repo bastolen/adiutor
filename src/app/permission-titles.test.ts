@@ -8,12 +8,14 @@
  * files themselves are read, so the check stays in them, not in a component
  * they import.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { defined } from '@/lib/defined';
+
+import sourceFiles from '../../tests/source-files';
 
 /** The repository root, so paths in messages read like `src/app/...`. */
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -32,22 +34,6 @@ const RULES: CheckRule[] = [
   { check: /requireCompanyAccess\(\s*[^,()]+,\s*'([^']+)'/g, helper: 'companyPermissionMetadata' },
 ];
 
-/**
- * Lists the pages and layouts under a folder.
- *
- * @param dir - The folder.
- * @returns Their absolute paths.
- */
-function routeFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return routeFiles(full);
-    }
-    return /^(?:page|layout)\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
-
 /** A route file that requires a permission. */
 interface GuardedRoute {
   /** Its path from the root. */
@@ -59,7 +45,10 @@ interface GuardedRoute {
 }
 
 /** Every page and layout under `src/app` that requires a permission. */
-const guardedRoutes: GuardedRoute[] = routeFiles(path.join(ROOT, 'src', 'app'))
+const guardedRoutes: GuardedRoute[] = sourceFiles(
+  path.join(ROOT, 'src', 'app'),
+  /^(?:page|layout)\.tsx?$/,
+)
   .map((full) => {
     const source = readFileSync(full, 'utf8');
     const needs = RULES.flatMap(({ check, helper }) =>

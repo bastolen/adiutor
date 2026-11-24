@@ -4,13 +4,14 @@
  * collide, and that no two cards have the same anchor anywhere in the app,
  * whether it's a table's section or a `Card`'s fixed `id` in the source.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { isSectionId } from '@/lib/redirect';
 
+import sourceFiles from '../../../tests/source-files';
 import { type TableDefinition } from './table-state';
 import {
   COMPANY_INVITATIONS_TABLE,
@@ -38,22 +39,6 @@ const TABLES: { name: string; table: TableDefinition }[] = Object.entries(tableM
 
 /** The repository root, so paths in messages read like `src/app/...`. */
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-
-/**
- * Lists the TypeScript files below a folder, tests left out.
- *
- * @param dir - The folder.
- * @returns Their absolute paths.
- */
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return sourceFiles(full);
-    }
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 /**
  * A file's source without its comments (block and JSX comments, and lines
