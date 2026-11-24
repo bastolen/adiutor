@@ -346,8 +346,8 @@ export function passwordSignIn(
 /**
  * The cookies a request set to tell the next page something of its own: all
  * but the language and time zone cookies, which every sign-in sets from the
- * account or removes (`rememberLanguage`, `rememberTimeZone`), and the one that tells the other tabs, which
- * every provider sign-in sets when the browser acts as someone else now
+ * account or removes (`rememberLanguageAndTimeZone`), and the one that tells
+ * the other tabs, which every provider sign-in sets when the browser acts as someone else now
  * (`ACTING_AS_CHANGED_COOKIE`). For tests about the other cookies.
  *
  * @param setCookie - The request's `setCookie` mock.

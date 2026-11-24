@@ -21,9 +21,10 @@ the account page's Language card, or in the theme and language menu of a page th
 (`setLanguageAction`, through `setOwnLocale`). What staff give a new account, and what setup saves
 for the first Admin, stays as it was.
 
-Signing in saves nothing. It makes the browser mirror the account (`rememberLanguage` in
-`src/server/auth/auth-events/language.ts`): the cookie gets the account's saved language, and for an
-account on Default the cookie is removed, so the browser follows Adiutor's default language.
+Signing in saves nothing. It makes the browser mirror the account (`rememberLanguageAndTimeZone` in
+`src/server/auth/auth-events/language-and-time-zone.ts`): the cookie gets the account's saved
+language, and for an account on Default the cookie is removed, so the browser follows Adiutor's
+default language.
 
 This replaces one rule of 0014, "or in the signed-out menu before signing in". The rest of 0014
 stands. Details: [Languages](../i18n.md#how-the-language-is-chosen).

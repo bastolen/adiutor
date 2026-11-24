@@ -43,7 +43,7 @@ import {
   isWrongCurrentPassword,
 } from './finished-request';
 import { type AuthHookContext, safely, audit, auditAndNotify } from './hook-context';
-import rememberLanguage from './language';
+import rememberLanguageAndTimeZone from './language-and-time-zone';
 import {
   refreshSignedInProviderMfa,
   stepUpOutcomeOf,
@@ -53,7 +53,6 @@ import { reactToFailure } from './refused-attempts';
 import { recordRefusedReverify } from './reverify';
 import { type ProviderCheckResult, recordProviderSession } from './session-hooks';
 import { markSessionVerified } from './session-records';
-import rememberTimeZone from './time-zone';
 
 /**
  * First phase of {@link afterAuthRequest}: gives back the request's sign-in
@@ -280,8 +279,9 @@ async function reactToSuccess(
     // The browser gets the account's language and zone. A password sign-in's session may still be
     // deleted for the code step, so `afterPasswordSignIn` does it once the session stays.
     if (path !== '/sign-in/email') {
-      await safely('remember the language', () => rememberLanguage(ctx, newSession.user.id));
-      await safely('remember the time zone', () => rememberTimeZone(ctx, newSession.user.id));
+      await safely('remember the language and time zone', () =>
+        rememberLanguageAndTimeZone(ctx, newSession.user.id),
+      );
     }
   }
 
