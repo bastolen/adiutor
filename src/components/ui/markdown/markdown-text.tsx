@@ -72,14 +72,6 @@ interface MarkdownTextProps {
  * button that copies it, below the text's note where it has one. A mention
  * of a person shows their name after an "@".
  *
- * @param props - Component props.
- * @param props.text - The text.
- * @param props.id - The text's name on the page.
- * @param props.className - Extra classes.
- * @param props.codeNote - What to say above copied code.
- * @param props.mentions - The people the text mentions.
- * @param props.staffOnly - Whether only the staff read the text, which then links to their pages.
- * @param props.fallback - What to show when the text can't be formatted.
  * @returns The formatted text, or the fallback.
  */
 export default function MarkdownText({

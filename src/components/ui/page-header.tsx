@@ -30,13 +30,6 @@ interface PageHeaderProps {
  * and back link. The actions sit to the right of the title while it keeps
  * room to read (10rem), and below it on narrower screens.
  *
- * @param props - Header props.
- * @param props.title - The title.
- * @param props.description - Short explanation.
- * @param props.actions - Controls on the right.
- * @param props.back - Back link.
- * @param props.leading - Content before the title.
- * @param props.children - Content below the title row.
  * @returns The header.
  */
 export default function PageHeader({

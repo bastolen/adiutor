@@ -44,9 +44,6 @@ interface ResultAlertProps {
  * new alert in its place, which screen readers announce and which takes
  * focus, however alike the two messages are.
  *
- * @param props - Component props.
- * @param props.result - The action's result, or `null` for nothing.
- * @param props.errorsOnly - Show failures only.
  * @returns The inline alert, or nothing when there's no result or message,
  * or the result is a success that's a toast or `errorsOnly` leaves out.
  */

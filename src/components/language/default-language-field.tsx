@@ -34,13 +34,6 @@ interface DefaultLanguageFieldProps {
  * named in itself: every language at setup, the offered ones on the staff
  * page.
  *
- * @param props - Field props.
- * @param props.defaultValue - The language chosen to begin with (uncontrolled).
- * @param props.value - The language chosen (controlled).
- * @param props.onValueChange - Called when a language is chosen.
- * @param props.languages - The languages to choose from.
- * @param props.description - Help text under the field.
- * @param props.disabled - Turn the field off.
  * @returns The field.
  */
 export default function DefaultLanguageField({

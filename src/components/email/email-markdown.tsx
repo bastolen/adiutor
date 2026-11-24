@@ -211,9 +211,6 @@ function emailElements({
     /**
      * A heading of the text.
      *
-     * @param props - The heading's attributes.
-     * @param props.id - The parser's ID: set on the footnotes' label only.
-     * @param props.children - Its text.
      * @returns The heading.
      */
     function EmailTextHeading({ id, children = null }: ComponentProps<'h1'>) {
@@ -236,9 +233,6 @@ function emailElements({
    * `http` or `https` address, and plain text if it isn't, or if it's one of
    * the staff's pages in a text the company reads (`textLinkTarget`).
    *
-   * @param props - The link's attributes.
-   * @param props.href - Where it points.
-   * @param props.children - Its text.
    * @returns The link, or its text.
    */
   function EmailTextLink({ href, children = null, ...props }: MarkdownLinkProps) {
@@ -269,9 +263,6 @@ function emailElements({
    * becomes a link to the image, named by its description; an image of one
    * of the staff's pages, in a text the company reads, only its description.
    *
-   * @param props - The image's attributes.
-   * @param props.src - The image's address.
-   * @param props.alt - Its description.
    * @returns A link to the image, or only its description when the address can't be linked.
    */
   function EmailTextImage({ src, alt }: ComponentProps<'img'>) {
@@ -298,8 +289,6 @@ function emailElements({
     /**
      * A paragraph, in its own writing direction.
      *
-     * @param props - The paragraph's attributes.
-     * @param props.children - Its text.
      * @returns The paragraph.
      */
     p: ({ children = null }: ComponentProps<'p'>) => (
@@ -310,9 +299,6 @@ function emailElements({
     /**
      * A list with bullets, or a list of things to do (which the parser marks with a class).
      *
-     * @param props - The list's attributes.
-     * @param props.className - The parser's class: set on a list of things to do.
-     * @param props.children - Its items.
      * @returns The list.
      */
     ul: ({ className, children = null }: ComponentProps<'ul'>) => (
@@ -321,9 +307,6 @@ function emailElements({
     /**
      * A numbered list, starting at the number it was written with.
      *
-     * @param props - The list's attributes.
-     * @param props.start - The first item's number.
-     * @param props.children - Its items.
      * @returns The list.
      */
     ol: ({ start, children = null }: ComponentProps<'ol'>) => (
@@ -334,8 +317,6 @@ function emailElements({
     /**
      * A list item.
      *
-     * @param props - The item's attributes.
-     * @param props.children - What the item holds.
      * @returns The item.
      */
     li: ({ children = null }: ComponentProps<'li'>) => (
@@ -347,8 +328,6 @@ function emailElements({
      * The checkbox of a task ("- [x] done"), as a mark: nobody ticks a task in an
      * email. The parser puts the space between it and the task's text.
      *
-     * @param props - The checkbox's attributes.
-     * @param props.checked - Whether the task is done.
      * @returns The mark.
      */
     input: ({ checked }: ComponentProps<'input'>) => (
@@ -357,8 +336,6 @@ function emailElements({
     /**
      * A quotation.
      *
-     * @param props - The quotation's attributes.
-     * @param props.children - What's quoted.
      * @returns The quotation.
      */
     blockquote: ({ children = null }: ComponentProps<'blockquote'>) => (
@@ -375,8 +352,6 @@ function emailElements({
     /**
      * Code in a sentence.
      *
-     * @param props - The code's attributes.
-     * @param props.children - The code.
      * @returns The code.
      */
     code: ({ children = null }: ComponentProps<'code'>) => (
@@ -386,8 +361,6 @@ function emailElements({
      * A block of code, as it was written and always left to right. The
      * highlighter's parts are dropped: an email has no colours for them.
      *
-     * @param props - The block's attributes.
-     * @param props.node - The block's node in the text's tree, for its code.
      * @returns The block.
      */
     pre: ({ node }: ComponentProps<'pre'> & ExtraProps) => (
@@ -398,8 +371,6 @@ function emailElements({
     /**
      * A table.
      *
-     * @param props - The table's attributes.
-     * @param props.children - Its head and body.
      * @returns The table.
      */
     table: ({ children = null }: ComponentProps<'table'>) => (
@@ -411,9 +382,6 @@ function emailElements({
     /**
      * A table's header cell.
      *
-     * @param props - The cell's attributes.
-     * @param props.align - How its column is aligned.
-     * @param props.children - Its text.
      * @returns The cell.
      */
     th: ({ align, children = null }: ComponentProps<'th'>) => (
@@ -432,9 +400,6 @@ function emailElements({
     /**
      * A table's cell.
      *
-     * @param props - The cell's attributes.
-     * @param props.align - How its column is aligned.
-     * @param props.children - Its text.
      * @returns The cell.
      */
     td: ({ align, children = null }: ComponentProps<'td'>) => (
@@ -445,8 +410,6 @@ function emailElements({
     /**
      * The notes at the end of a text.
      *
-     * @param props - The section's attributes.
-     * @param props.children - The notes' heading and list.
      * @returns The notes.
      */
     section: ({ children = null }: ComponentProps<'section'>) => (

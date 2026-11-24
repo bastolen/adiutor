@@ -54,12 +54,6 @@ function ApplyButton() {
  * the `from` and `to` query parameters of the same page, which loads within
  * the app. Either may be left empty. Clear removes both.
  *
- * @param props - Form props.
- * @param props.label - The form's name.
- * @param props.from - The current first day.
- * @param props.to - The current last day.
- * @param props.hiddenFields - Query parameters to keep.
- * @param props.clearHref - The list without the dates.
  * @returns The form.
  */
 export default function DateRangeForm({

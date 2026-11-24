@@ -35,12 +35,6 @@ interface CodeFieldProps {
  * nothing to fill in), otherwise "Code" with the numeric keyboard and the
  * browser's one-time code suggestion.
  *
- * @param props - Field props.
- * @param props.kind - What the code is.
- * @param props.value - The code as typed.
- * @param props.onChange - Called as the user types.
- * @param props.autoFocus - Whether it takes focus when it appears.
- * @param props.hint - Whether an authenticator app code has help text.
  * @returns The field.
  */
 export default function CodeField({

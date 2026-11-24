@@ -27,9 +27,6 @@ interface ErrorReferenceProps {
  * copies e.g. "Reference 7KQ2-M9XD (Oct 28, 2026, 6:40 PM CET)", in the reader's language
  * and zone. The box itself shows the time without the zone, like every page.
  *
- * @param props - Component props.
- * @param props.reference - The reference.
- * @param props.at - When the error happened.
  * @returns The box.
  */
 export default function ErrorReference({ reference, at }: ErrorReferenceProps) {

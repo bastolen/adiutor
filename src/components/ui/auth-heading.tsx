@@ -18,9 +18,6 @@ interface AuthHeadingProps {
  * The screen's only `h1`, with a short explanation below it. Pages with
  * actions, a back link or an avatar use {@link PageHeader} instead.
  *
- * @param props - Heading props.
- * @param props.title - The title.
- * @param props.description - Short explanation.
  * @returns The heading block.
  */
 export default function AuthHeading({ title, description }: AuthHeadingProps) {

@@ -68,13 +68,6 @@ interface AvatarProps {
  * for screen readers. A picture that can't load takes itself away
  * (`AvatarPicture`), so the initials behind it show.
  *
- * @param props - Avatar props.
- * @param props.name - The name.
- * @param props.size - Size.
- * @param props.brand - Use the brand colour.
- * @param props.title - The name to show on hover.
- * @param props.className - Extra classes.
- * @param props.src - A person's picture.
  * @returns The avatar.
  */
 export default function Avatar({

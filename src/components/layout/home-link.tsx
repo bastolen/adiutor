@@ -21,9 +21,6 @@ interface HomeLinkProps {
 /**
  * A link to `/` named "Adiutor home" for screen readers.
  *
- * @param props - The link's classes and content.
- * @param props.className - Classes for the link.
- * @param props.children - What the link shows.
  * @returns The link.
  */
 export default function HomeLink({ className, children }: HomeLinkProps) {

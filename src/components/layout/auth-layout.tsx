@@ -33,8 +33,6 @@ interface AuthLayoutProps {
  * components that read the root provider (`HomeLink`, `BrandPanel`), never
  * from the request (docs/i18n.md).
  *
- * @param props - Layout props.
- * @param props.children - The page content.
  * @returns The layout.
  */
 export default function AuthLayout({ children }: AuthLayoutProps) {

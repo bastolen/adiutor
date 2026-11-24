@@ -128,19 +128,6 @@ export interface MarkdownEditorProps {
  * the cursor (`MentionPopover`). The focus stays in the text, which says it
  * has a list and points at the option the arrow keys are on.
  *
- * @param props - Component props.
- * @param props.markdown - The Markdown to start with.
- * @param props.onChange - Called with the Markdown when the content changes.
- * @param props.label - The field's label.
- * @param props.labelledBy - The label's ID.
- * @param props.describedBy - The description's ID.
- * @param props.rows - The least height, in lines.
- * @param props.disabled - Whether the editor is switched off.
- * @param props.required - Whether a text is required.
- * @param props.focusOnStart - Whether to take focus once it's there.
- * @param props.below - What stands below the text while it's open large.
- * @param props.mentions - Gives the people the text can mention.
- * @param props.staffOnly - Whether only the staff read the text.
  * @returns The editor.
  */
 export default function MarkdownEditor({

@@ -45,9 +45,6 @@ interface TabsProps {
  * kept while the page is (pages stay alive across navigation), like the
  * drafts in it.
  *
- * @param props - Component props.
- * @param props.label - The name of the row of tabs.
- * @param props.items - The tabs.
  * @returns The tabs and their panels.
  */
 export default function Tabs({ label, items }: TabsProps) {

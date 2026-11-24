@@ -19,7 +19,6 @@ export type RowLinkProps = Omit<ComponentProps<typeof Link>, 'className'>;
  * On its own the link is 2px taller above and below too, like every text link
  * (at least 24px).
  *
- * @param props - The props of a `Link`, without `className`.
  * @returns The link.
  */
 export default function RowLink(props: RowLinkProps) {

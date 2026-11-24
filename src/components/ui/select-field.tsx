@@ -81,19 +81,6 @@ interface ShortSelectProps extends Omit<SelectFieldProps, 'label' | 'hideLabel' 
  * (`aria-labelledby`), as the searchable list is, so a screen reader says
  * which list it is in.
  *
- * @param props - Select props.
- * @param props.id - The trigger's ID.
- * @param props.labelId - The label's ID, which names the open list.
- * @param props.descriptionId - The help text's ID.
- * @param props.options - The choices.
- * @param props.name - Field name.
- * @param props.defaultValue - Initial value.
- * @param props.value - Current value.
- * @param props.placeholder - Text shown while nothing is chosen.
- * @param props.onValueChange - Called when a choice is committed.
- * @param props.disabled - Disabled state.
- * @param props.busy - Busy state: focusable, but doesn't open.
- * @param props.className - Extra trigger classes.
  * @returns The trigger and, while open, its list.
  */
 function ShortSelect({
@@ -218,19 +205,6 @@ function ShortSelect({
  * (`highlightedItem`). While `busy`, it stays focusable but doesn't open.
  * The value is submitted under `name`, also before JavaScript has loaded.
  *
- * @param props - Select props.
- * @param props.label - Label text.
- * @param props.options - The choices.
- * @param props.name - Field name.
- * @param props.defaultValue - Initial value.
- * @param props.value - Current value.
- * @param props.placeholder - Text shown while nothing is chosen.
- * @param props.onValueChange - Called when a choice is committed.
- * @param props.hideLabel - Hide the label visually.
- * @param props.disabled - Disabled state.
- * @param props.busy - Busy state: focusable, but doesn't open.
- * @param props.description - Help text under the field.
- * @param props.className - Extra trigger classes.
  * @returns The labelled select.
  */
 export default function SelectField({

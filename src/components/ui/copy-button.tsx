@@ -49,11 +49,6 @@ interface CopyButtonProps {
  * the value stays on screen next to the button, to select and copy by hand.
  * What it shows is forgotten when the page is hidden or the button goes.
  *
- * @param props - Button props.
- * @param props.value - The text to copy.
- * @param props.label - Button text.
- * @param props.size - Size.
- * @param props.variant - Look.
  * @returns The button.
  */
 export default function CopyButton({

@@ -75,15 +75,6 @@ interface ModalProps {
  * (`initialFocus`) and when it closes (`finalFocus`); focus never stays
  * behind on the page, or on nothing.
  *
- * @param props - Dialog props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.title - Title.
- * @param props.description - Explanation.
- * @param props.size - The panel's size.
- * @param props.initialFocus - What takes the focus when it opens.
- * @param props.finalFocus - What takes the focus when it closes.
- * @param props.children - Content.
  * @returns The dialog.
  */
 export default function Modal({

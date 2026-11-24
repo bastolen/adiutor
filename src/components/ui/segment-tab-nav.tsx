@@ -41,9 +41,6 @@ interface SegmentTabNavProps {
  * languages) wrap onto another row, so every tab stays in sight and the page
  * never scrolls sideways.
  *
- * @param props - Navigation props.
- * @param props.label - Landmark name.
- * @param props.items - The tabs.
  * @returns The navigation.
  */
 export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {

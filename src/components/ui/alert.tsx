@@ -58,15 +58,6 @@ interface AlertProps {
  * `onDismiss`, a dismiss button sits on the right, tinted in the message's
  * colour.
  *
- * @param props - Alert props.
- * @param props.tone - Kind of message.
- * @param props.children - The message.
- * @param props.focusOnShow - Focus the message when it appears.
- * @param props.onDismiss - Called when dismissed; adds the dismiss button. Focus then moves to
- *   the card's heading or the main content (`restoreFocusIfLost`), not to `<body>`.
- * @param props.dismissLabel - The dismiss button's name.
- * @param props.alsoToast - Also show the message as a toast when it appears, unless it's
- *   inside a dialog.
  * @returns The alert, or nothing when there's no message.
  */
 export default function Alert({

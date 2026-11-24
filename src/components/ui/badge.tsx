@@ -48,10 +48,6 @@ interface BadgeProps {
 /**
  * A small rounded label.
  *
- * @param props - Badge props.
- * @param props.tone - Colour meaning.
- * @param props.children - The label.
- * @param props.wrap - Let a long label wrap.
  * @returns The badge.
  */
 export default function Badge({ tone = 'neutral', children, wrap = false }: BadgeProps) {

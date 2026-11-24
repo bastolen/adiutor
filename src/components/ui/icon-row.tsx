@@ -45,14 +45,6 @@ interface IconRowProps {
  * below it (staying on the right) rather than squeezing it. Rows are
  * separated by the list's `divide-y divide-border`.
  *
- * @param props - Row props.
- * @param props.icon - Decorative icon.
- * @param props.iconClassName - Extra classes for the icon's box, e.g. its colour.
- * @param props.title - The row's name.
- * @param props.truncateTitle - Cut a long title off with an ellipsis.
- * @param props.subtitle - A line below the title, if any.
- * @param props.children - Explanation.
- * @param props.control - Badge or button(s) on the right.
  * @returns The list item.
  */
 export default function IconRow({

@@ -24,10 +24,6 @@ interface EmailButtonProps {
  * with brand-teal text and border. React Email's `Button` adds the
  * workarounds that keep its padding in Outlook.
  *
- * @param props - Button props.
- * @param props.href - Link target.
- * @param props.children - Button text.
- * @param props.variant - The main action, or a second choice.
  * @returns The button.
  */
 export default function EmailButton({ href, children, variant = 'primary' }: EmailButtonProps) {

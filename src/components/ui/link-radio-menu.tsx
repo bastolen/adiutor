@@ -66,13 +66,6 @@ interface LinkRadioMenuProps {
  * button shows. The menu's open state is transient, so it isn't still open
  * when the user comes back to the page.
  *
- * @param props - Menu props.
- * @param props.icon - The button's icon.
- * @param props.align - Which side the menu lines up with.
- * @param props.menuLabel - The menu's heading.
- * @param props.options - The choices.
- * @param props.renderTrigger - The button's content after the icon.
- * @param props.triggerLabel - The button's name, when it shows less than it says.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function LinkRadioMenu({

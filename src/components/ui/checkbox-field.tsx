@@ -31,11 +31,6 @@ type CheckboxFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * and below its text, so box and label together are at least 24px to tap
  * (WCAG 2.5.8) without moving anything.
  *
- * @param props - Checkbox props.
- * @param props.label - Label text.
- * @param props.description - Help text.
- * @param props.id - Checkbox ID. Generated when omitted.
- * @param props.className - Extra classes for the checkbox.
  * @returns The labelled checkbox.
  */
 export default function CheckboxField({

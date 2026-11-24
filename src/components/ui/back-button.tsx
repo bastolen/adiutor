@@ -39,7 +39,6 @@ const canGoBackOnServer = () => false;
  * nothing when the tab has no previous page (e.g. a link opened in a new
  * tab), so it never leads nowhere.
  *
- * @param props - Button props, except `onClick` and `children`.
  * @returns The button, or nothing.
  */
 export default function BackButton(props: Omit<ButtonProps, 'onClick' | 'children' | 'asChild'>) {

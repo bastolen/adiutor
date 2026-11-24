@@ -42,10 +42,6 @@ interface FilterMenuProps {
  * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
  * user navigates away. The shared part is {@link LinkRadioMenu}.
  *
- * @param props - Menu props.
- * @param props.label - What's filtered by.
- * @param props.menuLabel - The menu's heading.
- * @param props.options - The choices.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function FilterMenu({ label, menuLabel, options }: FilterMenuProps) {

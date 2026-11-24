@@ -56,15 +56,6 @@ interface CardProps {
  * for the signed-in-as banner (the page's `scroll-padding-top` in
  * `globals.css`, plus a little room of the card's own).
  *
- * @param props - Card props.
- * @param props.id - The card's anchor.
- * @param props.title - Heading text.
- * @param props.description - Short explanation.
- * @param props.actions - Controls next to the heading.
- * @param props.footer - Bottom content.
- * @param props.tone - Visual tone.
- * @param props.flush - Remove the content padding.
- * @param props.children - Content.
  * @returns The card.
  */
 export default function Card({

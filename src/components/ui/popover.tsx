@@ -43,11 +43,6 @@ interface PopoverProps {
  * Escape, on a click outside it and on its button. It's closed again when
  * the user comes back to the page (`useTransientState`).
  *
- * @param props - Popover props.
- * @param props.trigger - What the button shows.
- * @param props.triggerLabel - The button's name, for screen readers.
- * @param props.label - The panel's accessible name.
- * @param props.children - What the panel shows.
  * @returns The button, and the panel while it's open.
  */
 export default function Popover({ trigger, triggerLabel, label, children }: PopoverProps) {

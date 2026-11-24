@@ -35,14 +35,6 @@ interface EmptyStateProps {
 /**
  * A centred icon, title, description and optional action.
  *
- * @param props - Empty state props.
- * @param props.icon - Decorative icon.
- * @param props.title - Title.
- * @param props.description - Explanation.
- * @param props.action - Call to action.
- * @param props.titleAs - Element for the title.
- * @param props.titleRef - Ref to the title, which can then take focus.
- * @param props.children - More content below the action.
  * @returns The empty state.
  */
 export default function EmptyState({

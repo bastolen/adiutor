@@ -63,12 +63,6 @@ function SearchButton() {
  * JavaScript it's a normal GET request, so the results can be bookmarked
  * either way.
  *
- * @param props - Form props.
- * @param props.id - Field ID.
- * @param props.label - Label and landmark name.
- * @param props.placeholder - Placeholder text.
- * @param props.defaultValue - Current search text.
- * @param props.hiddenFields - Query parameters to keep.
  * @returns The form.
  */
 export default function SearchForm({

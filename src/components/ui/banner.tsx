@@ -55,15 +55,6 @@ interface BannerProps {
  * It doesn't need the browser itself, so a server component can render it
  * (without `onDismiss`, which only a client component can pass).
  *
- * @param props - Banner props.
- * @param props.label - Name for screen readers.
- * @param props.icon - Decorative icon.
- * @param props.tone - Colour of the icon's square.
- * @param props.title - The message in a few words.
- * @param props.description - What it means and what to do.
- * @param props.actions - Buttons or links on the right.
- * @param props.onDismiss - Called when dismissed; adds the dismiss button. Focus then moves to
- *   the card's heading or the main content (`restoreFocusIfLost`), not to `<body>`.
  * @returns The banner.
  */
 export default function Banner({

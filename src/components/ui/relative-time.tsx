@@ -26,9 +26,6 @@ interface RelativeTimeProps {
  * A `<time>` element with relative wording. Render it where the request has
  * already been read (any signed-in page), so "now" is the request time.
  *
- * @param props - Component props.
- * @param props.date - The moment.
- * @param props.spokenExact - Add the exact time for screen readers.
  * @returns The time.
  */
 export default function RelativeTime({ date, spokenExact = false }: RelativeTimeProps) {

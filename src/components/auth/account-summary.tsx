@@ -52,9 +52,6 @@ export function accountLabel({ name, email }: NamedAccount): string {
  * A bordered row with the account's avatar, name and address. Both wrap
  * instead of being cut off, so a long address always shows its domain.
  *
- * @param props - The account.
- * @param props.name - Its name; left out when empty.
- * @param props.email - Its address.
  * @returns The row.
  */
 export default function AccountSummary({ name, email }: NamedAccount) {

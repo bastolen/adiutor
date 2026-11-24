@@ -32,9 +32,6 @@ interface ThemeMenuRowProps {
  * content, which only exists while the menu is open: that way the theme
  * keeps following the system while it's closed.
  *
- * @param props - Row props.
- * @param props.preference - The stored choice.
- * @param props.onChange - Stores and applies a new choice.
  * @returns The theme row.
  */
 export default function ThemeMenuRow({ preference, onChange }: ThemeMenuRowProps) {

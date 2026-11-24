@@ -55,7 +55,6 @@ export default function editorCodeBlock(codeLabel: string) {
   /**
    * The block's view, with its caption.
    *
-   * @param props - What the editor passes a node's view.
    * @returns The block.
    */
   function View(props: ReactNodeViewProps) {

@@ -33,9 +33,6 @@ interface SortMenuProps {
  * arrive, the button is busy (a spinner and `aria-busy`). It closes when the
  * user navigates away. The shared part is {@link LinkRadioMenu}.
  *
- * @param props - Menu props.
- * @param props.label - What the rows are.
- * @param props.options - The ways to sort.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function SortMenu({ label, options }: SortMenuProps) {

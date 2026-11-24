@@ -141,19 +141,6 @@ function ignorePress(event: MouseEvent<HTMLButtonElement>): void {
  * it's disabled, and ignores presses, rather than disabled. With
  * `decorative`, it's only a picture of a button (see the prop).
  *
- * @param props - Button props.
- * @param props.variant - Visual style.
- * @param props.size - Size.
- * @param props.fullWidth - Stretch to the container's width.
- * @param props.loading - Busy state.
- * @param props.focusableWhenDisabled - Stay focusable while disabled.
- * @param props.asChild - Style the child element instead of rendering a button.
- * @param props.decorative - Render a non-interactive look-alike.
- * @param props.className - Extra classes.
- * @param props.type - Button type.
- * @param props.disabled - Disabled state.
- * @param props.onClick - Called when it's pressed, unless it's busy or disabled.
- * @param props.children - Content.
  * @returns The button.
  */
 export default function Button({

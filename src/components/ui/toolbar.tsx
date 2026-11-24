@@ -73,12 +73,6 @@ interface ToolbarButtonProps extends Omit<
  * A button of a toolbar: an icon, named by its label. A button that
  * switches something says whether it's on (`aria-pressed`).
  *
- * @param props - Button props.
- * @param props.label - What the button does.
- * @param props.icon - Its icon.
- * @param props.pressed - Whether what it switches is on.
- * @param props.className - Extra classes.
- * @param props.type - Button type.
  * @returns The button.
  */
 export function ToolbarButton({
@@ -108,10 +102,6 @@ export function ToolbarButton({
  * current choice. Its accessible name comes from `aria-label`, which says
  * what the value is of and includes the value.
  *
- * @param props - Button props.
- * @param props.className - Extra classes.
- * @param props.type - Button type.
- * @param props.children - The value shown.
  * @returns The button.
  */
 export function ToolbarTextButton({

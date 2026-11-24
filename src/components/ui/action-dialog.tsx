@@ -174,24 +174,6 @@ function ActionDialogForm({
  * becoming "Remove staff access"), focus moves to its card's heading. With
  * `loadOnSuccess`, a successful result loads that page afresh instead.
  *
- * @param props - Dialog props.
- * @param props.action - The server action.
- * @param props.fields - Hidden fields.
- * @param props.triggerLabel - Opening button text.
- * @param props.triggerAriaLabel - The opening button's name for screen readers, when it differs.
- * @param props.triggerVariant - Opening button style.
- * @param props.title - Title.
- * @param props.description - What will happen.
- * @param props.confirmLabel - Submit button text.
- * @param props.tone - Submit button style.
- * @param props.children - Form fields.
- * @param props.disabled - Disable the opening button.
- * @param props.focusableWhenDisabled - Keep the opening button focusable while disabled.
- * @param props.describedBy - ID of the text that explains the opening button.
- * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
- * @param props.confirmFirst - Send the user to confirm it's them first when needed.
- * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
- * @param props.loadOnSuccess - A page to load afresh after a successful result.
  * @returns The button and dialog.
  */
 export default function ActionDialog({

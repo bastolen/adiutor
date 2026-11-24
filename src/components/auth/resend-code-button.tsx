@@ -39,10 +39,6 @@ export function formatCountdown(seconds: number): string {
  * pressing it doesn't drop keyboard focus to the top of the page once the
  * new code is sent.
  *
- * @param props - Button props.
- * @param props.onClick - Sends a new code.
- * @param props.sending - Whether a code is being sent.
- * @param props.waitSeconds - Seconds until a new code may be asked for.
  * @returns The button.
  */
 export default function ResendCodeButton({ onClick, sending, waitSeconds }: ResendCodeButtonProps) {

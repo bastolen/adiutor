@@ -20,9 +20,6 @@ interface InvitationHeadingProps {
 /**
  * The company's avatar, the page's `h1` and what the invitation offers.
  *
- * @param props - Heading props.
- * @param props.companyName - The company.
- * @param props.roleId - The role.
  * @returns The heading block.
  */
 export default function InvitationHeading({ companyName, roleId }: InvitationHeadingProps) {
