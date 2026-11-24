@@ -4,9 +4,9 @@
  * that would take away the MFA a role requires, and turning two-step
  * verification and backup codes on or off.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
+import { getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { account } from '@/db/schema';
 
@@ -42,16 +42,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   // Better Auth's request state isn't there outside a request; the tests watch what's added.
   addOAuthServerContext: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
-});
 
 /**
  * Sends several requests with the current session, one after another.

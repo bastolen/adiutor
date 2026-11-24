@@ -2,8 +2,7 @@
  * @file Integration tests for the limits on attempts: wrong passwords, wrong
  * current passwords, wrong step-up codes and emailed codes.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 
@@ -46,16 +45,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   // Better Auth's request state isn't there outside a request; the tests watch what's added.
   addOAuthServerContext: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
-});
 
 describe('sign-in limits', () => {
   /**

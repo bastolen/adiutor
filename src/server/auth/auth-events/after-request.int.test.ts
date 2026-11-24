@@ -3,13 +3,12 @@
  * session with a code, changes to how the user signs in, and a first
  * passkey.
  */
-import { APIError, getOAuthState, getSessionFromCtx } from 'better-auth/api';
+import { APIError, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket, session, twoFactor, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 
 import {
   addPassword,
@@ -52,22 +51,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('confirming a session with a code', () => {
   it('records a wrong code and counts it towards the step-up limit', async () => {

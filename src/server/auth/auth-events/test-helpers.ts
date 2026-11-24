@@ -6,7 +6,7 @@ import { createHmac } from 'node:crypto';
 
 import { getOAuthState } from 'better-auth/api';
 import { and, eq, inArray } from 'drizzle-orm';
-import { expect, vi } from 'vitest';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 
 import { account, session, user, verification } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
@@ -27,11 +27,26 @@ import type { AuthHookContext } from './hook-context';
 import { noteProviderProfile } from './provider-accounts';
 
 /**
- * The test database context these tests share. Each test file imports this
- * module afresh (Vitest isolates test files), so each gets its own context
- * and hooks, as when it called `setupTestContext()` itself.
+ * The test database context these tests share, and the hooks that reset the mocks (the sent
+ * emails, the OAuth state) around each test. Each test file imports this module afresh (Vitest
+ * isolates test files), so each gets its own context and hooks, as when it called
+ * `setupTestContext()` itself. The `vi.mock` calls stay in the test files, which hoists them.
  */
 export const { ctx: services, db } = setupTestContext();
+
+beforeEach(() => {
+  // A test file that doesn't mock `@/lib/email` has no sent emails to forget.
+  if (vi.isMockFunction(sendEmail)) {
+    vi.mocked(sendEmail).mockClear();
+  }
+  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
+  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
+});
+
+afterEach(() => {
+  // Puts back the real `fetch` after tests that stand in for GitHub's API.
+  vi.restoreAllMocks();
+});
 
 /** The session cookie's name in these tests (the hooks read it from Better Auth's context). */
 export const SESSION_COOKIE = 'adiutor-tests.session_token';

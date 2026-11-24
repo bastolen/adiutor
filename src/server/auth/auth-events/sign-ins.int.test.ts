@@ -2,13 +2,12 @@
  * @file Integration tests for the reactions to a password sign-in and a sign-in
  * with GitHub.
  */
-import { APIError, getOAuthState } from 'better-auth/api';
+import { APIError } from 'better-auth/api';
 import { eq, inArray } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
@@ -56,22 +55,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('a password sign-in', () => {
   /** The browser that typed the password. */

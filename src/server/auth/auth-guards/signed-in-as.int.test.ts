@@ -5,7 +5,7 @@
  */
 import { APIError } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { impersonation, session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
@@ -15,11 +15,6 @@ import { createSession, createUser } from '../../../../tests/integration/helpers
 import { beforeAuthRequest } from './before-request';
 import type { AuthGuardContext } from './paths';
 import { db, refusedWith } from './test-helpers';
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
 
 /** The session cookie's name in these tests (Better Auth's context names it). */
 const SESSION_COOKIE = 'adiutor-tests.session_token';

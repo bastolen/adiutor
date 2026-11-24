@@ -6,9 +6,8 @@
  * browser is removed), and a password whose code step is still to come
  * changes nothing.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
@@ -30,15 +29,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
 
 /**
  * Reads a user's saved language.

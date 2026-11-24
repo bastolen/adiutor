@@ -1,10 +1,8 @@
 /**
  * @file Integration tests for forgetting trusted devices.
  */
-import { APIError, getOAuthState } from 'better-auth/api';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
-
-import { sendEmail } from '@/lib/email';
+import { APIError } from 'better-auth/api';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createSession, createUser } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
@@ -30,22 +28,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('forgetting trusted devices', () => {
   it('forgets the trusted device of a browser that signs out, and only that one', async () => {

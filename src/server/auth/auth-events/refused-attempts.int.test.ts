@@ -2,9 +2,9 @@
  * @file Integration tests for wrong passwords and wrong codes at a password
  * sign-in's code step.
  */
-import { APIError, getOAuthState, getSessionFromCtx } from 'better-auth/api';
+import { APIError, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { queuedJob, rateLimitBucket, twoFactor, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
@@ -46,22 +46,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('wrong passwords', () => {
   /**

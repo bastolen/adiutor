@@ -5,7 +5,7 @@
  */
 import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
@@ -31,14 +31,7 @@ vi.mock('@/server/settings', async (importOriginal) => {
   return { ...actual, readSettings: vi.fn(actual.readSettings) };
 });
 
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
 beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
   vi.mocked(readSettings).mockClear();
 });
 

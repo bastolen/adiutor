@@ -1,9 +1,8 @@
 /**
  * @file Integration tests for one change to how a user signs in at a time.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 import { defined } from '@/lib/defined';
@@ -30,16 +29,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
 vi.mock('../mfa-state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../mfa-state')>();
   return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
-});
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
 });
 
 describe('one change to how a user signs in at a time', () => {

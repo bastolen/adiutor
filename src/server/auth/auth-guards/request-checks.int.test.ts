@@ -3,9 +3,9 @@
  * (only their confirmation page's Continue signs in, also through Better
  * Auth's whole handler), return addresses and passkey names.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
+import { getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { session, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
@@ -41,16 +41,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
 vi.mock('../mfa-state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../mfa-state')>();
   return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
-});
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
 });
 
 /** The site's origin, which a form `POST` from its pages names (`Origin`). */
