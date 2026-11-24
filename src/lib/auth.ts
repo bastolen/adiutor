@@ -525,7 +525,7 @@ export const auth = betterAuth({
        * user turned it off on their Security page. Never set through Better
        * Auth's endpoints (`setStaffSignInAllowed`).
        */
-      allowStaffSignIn: { type: 'boolean', required: false, defaultValue: true, input: false },
+      allowStaffSignIn: { type: 'boolean', required: true, defaultValue: true, input: false },
       /**
        * Which picture the user shows: their initials, or the picture of
        * their account with a provider (`AVATAR_SOURCES`). Empty until they
@@ -539,7 +539,7 @@ export const auth = betterAuth({
        * unless they turned it off on their account's Profile page. Never set
        * through Better Auth's endpoints (`setOwnRequestEmails`).
        */
-      requestEmails: { type: 'boolean', required: false, defaultValue: true, input: false },
+      requestEmails: { type: 'boolean', required: true, defaultValue: true, input: false },
       /**
        * The order the user reads a request's activity in
        * (`ACTIVITY_ORDERS`); empty for the oldest entry first. Never set
@@ -586,7 +586,7 @@ export const auth = betterAuth({
     freshAge: 0,
     additionalFields: {
       /** Whether this sign-in, or a later step-up, had a second factor (code, passkey or provider MFA). */
-      mfaVerified: { type: 'boolean', required: false, defaultValue: false, input: false },
+      mfaVerified: { type: 'boolean', required: true, defaultValue: false, input: false },
       /**
        * Which second factor that was (`MfaMethod` in `src/lib/authz/mfa/session.ts`),
        * since not every one counts for every role.
@@ -604,7 +604,7 @@ export const auth = betterAuth({
        * window for changing sign-in methods and never counts as a fresh
        * sign-in (`SessionMfa.fromRequestLink`). Set by `beforeSessionCreate`.
        */
-      fromRequestLink: { type: 'boolean', required: false, defaultValue: false, input: false },
+      fromRequestLink: { type: 'boolean', required: true, defaultValue: false, input: false },
     },
   },
 
@@ -693,7 +693,7 @@ export const auth = betterAuth({
        * Whether the provider account itself is protected with MFA, as its provider said at its last
        * sign-in (only providers that can prove MFA, `MFA_PROVIDERS`; always false for others).
        */
-      mfaVerified: { type: 'boolean', required: false, defaultValue: false, input: false },
+      mfaVerified: { type: 'boolean', required: true, defaultValue: false, input: false },
       /**
        * Whether the user confirmed this provider account. One connected while
        * signing in with it, to an account that already had a second step,
@@ -701,7 +701,7 @@ export const auth = betterAuth({
        * that second step; until then it can sign in, but doesn't count as
        * MFA or for confirming sessions (see `beforeAccountCreate`).
        */
-      confirmed: { type: 'boolean', required: false, defaultValue: true, input: false },
+      confirmed: { type: 'boolean', required: true, defaultValue: true, input: false },
       /**
        * The account's name at its provider, the way its owner knows it (a
        * GitHub username, a Google email address; `PROVIDER_ACCOUNT_NAME_CLAIMS`),

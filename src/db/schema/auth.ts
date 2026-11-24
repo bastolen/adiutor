@@ -41,11 +41,11 @@ export const user = pgTable('user', {
   mfaRecommendationDismissedAt: timestamp('mfa_recommendation_dismissed_at', {
     withTimezone: true,
   }),
-  allowStaffSignIn: boolean('allow_staff_sign_in').default(true),
+  allowStaffSignIn: boolean('allow_staff_sign_in').default(true).notNull(),
   avatarSource: text('avatar_source', {
     enum: ['initials', 'github', 'google'],
   }),
-  requestEmails: boolean('request_emails').default(true),
+  requestEmails: boolean('request_emails').default(true).notNull(),
   activityOrder: text('activity_order', { enum: ['oldest', 'newest'] }),
   activityGroups: text('activity_groups').array(),
 });
@@ -68,10 +68,10 @@ export const session = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    mfaVerified: boolean('mfa_verified').default(false),
+    mfaVerified: boolean('mfa_verified').default(false).notNull(),
     mfaMethod: text('mfa_method'),
     mfaVerifiedAt: timestamp('mfa_verified_at', { withTimezone: true }),
-    fromRequestLink: boolean('from_request_link').default(false),
+    fromRequestLink: boolean('from_request_link').default(false).notNull(),
   },
   (table) => [index('session_userId_idx').on(table.userId)],
 );
@@ -99,8 +99,8 @@ export const account = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
-    mfaVerified: boolean('mfa_verified').default(false),
-    confirmed: boolean('confirmed').default(true),
+    mfaVerified: boolean('mfa_verified').default(false).notNull(),
+    confirmed: boolean('confirmed').default(true).notNull(),
     accountName: text('account_name'),
     accountImage: text('account_image'),
   },
