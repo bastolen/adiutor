@@ -13,8 +13,12 @@ import { emailLinkVerificationIdentifier } from '@/lib/sign-in/tokens';
 import type { ServiceContext } from '../context';
 import { assertRateLimit, ipRateLimitKey, RATE_LIMITS, releaseRateLimitHit } from '../rate-limit';
 
-/** The account a sign-in link signs in to, as the page shows it. */
-export interface EmailLinkPreview {
+/**
+ * The account a link in an email signs in to, as its confirmation page names
+ * it: a sign-in link's (`getEmailLinkPreview`) or a request link's
+ * (`RequestLinkView`).
+ */
+export interface LinkAccount {
   /** The account's ID, to compare with whoever is signed in (not for the page to show). */
   userId: string;
   /** Its name; may be empty. */
@@ -60,7 +64,7 @@ function linkEmail(value: string): string | null {
 export async function getEmailLinkPreview(
   ctx: ServiceContext,
   token: string,
-): Promise<EmailLinkPreview | null> {
+): Promise<LinkAccount | null> {
   const key = await ipRateLimitKey(ctx, 'email-link-miss');
   await assertRateLimit(ctx, key, RATE_LIMITS.emailLinkMissesPerIp);
 
