@@ -23,6 +23,7 @@ import {
   updateRequestDetails,
 } from '@/server/requests';
 
+import form from '../../../../../tests/ui/form';
 import {
   changeAssigneesAction,
   changeSubscribersAction,
@@ -49,24 +50,16 @@ vi.mock('@/server/requests', () => ({
 /** The staff member editing the details. */
 const support = { id: 'support-1' } as Awaited<ReturnType<typeof getActor>>;
 
-/**
- * Builds the dialog's form: a corrected title, the rest as it started.
- *
- * @returns The form data.
- */
-function form(): FormData {
-  const data = new FormData();
-  Object.entries({
-    request: '142',
-    title: 'The printer is broken',
-    type: 'bug',
-    priority: 'normal',
-    was_title: 'The printr is broken',
-    was_type: 'bug',
-    was_priority: 'normal',
-  }).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
+/** The fields of the details form, as the page sends it. */
+const DETAILS_FIELDS = {
+  request: '142',
+  title: 'The printer is broken',
+  type: 'bug',
+  priority: 'normal',
+  was_title: 'The printr is broken',
+  was_type: 'bug',
+  was_priority: 'normal',
+};
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
@@ -78,7 +71,7 @@ describe('updateDetailsAction', () => {
   it('saves the details with what the form started from, and refreshes the page', async () => {
     vi.mocked(updateRequestDetails).mockResolvedValue({ changed: 1 });
 
-    expect(await updateDetailsAction(null, form())).toEqual({
+    expect(await updateDetailsAction(null, form(DETAILS_FIELDS))).toEqual({
       ok: true,
       message: 'Details saved.',
     });
@@ -96,7 +89,7 @@ describe('updateDetailsAction', () => {
   it('says so when nothing was changed', async () => {
     vi.mocked(updateRequestDetails).mockResolvedValue({ changed: 0 });
 
-    expect(await updateDetailsAction(null, form())).toEqual({
+    expect(await updateDetailsAction(null, form(DETAILS_FIELDS))).toEqual({
       ok: true,
       message: 'Nothing changed.',
     });
@@ -107,7 +100,7 @@ describe('updateDetailsAction', () => {
       new ServiceError('conflict', 'errors.requests.detailsChanged'),
     );
 
-    expect(await updateDetailsAction(null, form())).toEqual({
+    expect(await updateDetailsAction(null, form(DETAILS_FIELDS))).toEqual({
       ok: false,
       message: 'This request’s details changed in the meantime. Check them and try again.',
     });
@@ -121,7 +114,7 @@ describe('updateDetailsAction', () => {
       new ServiceError('forbidden', 'errors.forbidden'),
     );
 
-    expect(await updateDetailsAction(null, form())).toMatchObject({ ok: false });
+    expect(await updateDetailsAction(null, form(DETAILS_FIELDS))).toMatchObject({ ok: false });
 
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -314,18 +307,8 @@ describe('saveActivityViewAction', () => {
 });
 
 describe('changeStatusAction', () => {
-  /**
-   * Builds the form of a status change.
-   *
-   * @returns The form data: done, from what the page showed.
-   */
-  function statusForm(): FormData {
-    const data = new FormData();
-    data.set('request', '142');
-    data.set('status', 'done');
-    data.set('from', 'in_progress');
-    return data;
-  }
+  /** The fields of a status change: done, from what the page showed. */
+  const STATUS_FIELDS = { request: '142', status: 'done', from: 'in_progress' };
 
   it('sends the status the page showed and refreshes the page', async () => {
     vi.mocked(changeRequestStatus).mockResolvedValue({
@@ -334,7 +317,7 @@ describe('changeStatusAction', () => {
       status: 'done',
     });
 
-    expect(await changeStatusAction(null, statusForm())).toMatchObject({ ok: true });
+    expect(await changeStatusAction(null, form(STATUS_FIELDS))).toMatchObject({ ok: true });
     expect(changeRequestStatus).toHaveBeenCalledWith({ name: 'app context' }, support, {
       request: '142',
       status: 'done',
@@ -348,7 +331,7 @@ describe('changeStatusAction', () => {
       new ServiceError('conflict', 'errors.requests.statusChanged'),
     );
 
-    expect(await changeStatusAction(null, statusForm())).toEqual({
+    expect(await changeStatusAction(null, form(STATUS_FIELDS))).toEqual({
       ok: false,
       message: 'This request’s status changed in the meantime. Check it and try again.',
     });
@@ -360,7 +343,7 @@ describe('changeStatusAction', () => {
       new ServiceError('forbidden', 'errors.forbidden'),
     );
 
-    expect(await changeStatusAction(null, statusForm())).toEqual({
+    expect(await changeStatusAction(null, form(STATUS_FIELDS))).toEqual({
       ok: false,
       message: "You don't have permission to do that.",
     });

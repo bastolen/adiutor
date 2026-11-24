@@ -11,6 +11,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { updateCompany } from '@/server/people/companies';
 
+import form from '../../../../../../tests/ui/form';
 import { updateCompanyAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -30,18 +31,12 @@ const admin = { id: 'admin-1' } as Awaited<ReturnType<typeof getActor>>;
 const COMPANY_ID = '01890a5d-ac96-774b-bcce-b302099a8057';
 
 /**
- * Builds the settings form.
+ * The settings form's fields.
  *
  * @param slug - The URL name typed into it.
- * @returns The form data.
+ * @returns The fields.
  */
-function form(slug: string): FormData {
-  const data = new FormData();
-  Object.entries({ companyId: COMPANY_ID, name: 'Adiutor Tests', slug }).forEach(([name, value]) =>
-    data.set(name, value),
-  );
-  return data;
-}
+const fields = (slug: string) => ({ companyId: COMPANY_ID, name: 'Adiutor Tests', slug });
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
@@ -54,7 +49,7 @@ describe('updateCompanyAction', () => {
   it('refreshes, then follows a new URL name to the new address', async () => {
     vi.mocked(updateCompany).mockResolvedValue({ slug: 'adiutor-tests-moved', slugChanged: true });
 
-    await expect(updateCompanyAction(null, form('adiutor-tests-moved'))).rejects.toThrow(
+    await expect(updateCompanyAction(null, form(fields('adiutor-tests-moved')))).rejects.toThrow(
       'NEXT_REDIRECT',
     );
 
@@ -68,7 +63,7 @@ describe('updateCompanyAction', () => {
   it('refreshes and confirms in place when the URL name stays', async () => {
     vi.mocked(updateCompany).mockResolvedValue({ slug: 'adiutor-tests', slugChanged: false });
 
-    expect(await updateCompanyAction(null, form('adiutor-tests'))).toEqual({
+    expect(await updateCompanyAction(null, form(fields('adiutor-tests')))).toEqual({
       ok: true,
       message: 'Saved.',
     });
@@ -80,7 +75,7 @@ describe('updateCompanyAction', () => {
   it('says why a change was refused, without refreshing', async () => {
     vi.mocked(updateCompany).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
-    expect(await updateCompanyAction(null, form('adiutor-tests'))).toEqual({
+    expect(await updateCompanyAction(null, form(fields('adiutor-tests')))).toEqual({
       ok: false,
       message: "You don't have permission to do that.",
     });

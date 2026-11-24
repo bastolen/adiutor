@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServiceError } from '@/server/errors';
 import { answerByLink } from '@/server/requests';
 
+import form from '../../../../tests/ui/form';
 import { answerLinkAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -22,17 +23,12 @@ vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 vi.mock('@/server/requests', () => ({ answerByLink: vi.fn() }));
 
 /**
- * Builds the page's form, as a press of one of its buttons sends it.
+ * The page's form fields, as a press of one of its buttons sends them.
  *
  * @param answer - The pressed button's answer.
- * @returns The form data.
+ * @returns The fields.
  */
-function form(answer: string): FormData {
-  const data = new FormData();
-  data.set('token', 'link-token');
-  data.set('answer', answer);
-  return data;
-}
+const fields = (answer: string) => ({ token: 'link-token', answer });
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
@@ -49,7 +45,7 @@ describe('answerLinkAction', () => {
       answer: 'deny',
     });
 
-    await expect(answerLinkAction(null, form('deny'))).rejects.toThrow('NEXT_REDIRECT');
+    await expect(answerLinkAction(null, form(fields('deny')))).rejects.toThrow('NEXT_REDIRECT');
 
     expect(answerByLink).toHaveBeenCalledExactlyOnceWith(
       { name: 'app context' },
@@ -61,7 +57,7 @@ describe('answerLinkAction', () => {
   });
 
   it('answers nothing for an answer that isn’t one', async () => {
-    await expect(answerLinkAction(null, form('maybe'))).rejects.toThrow('NEXT_REDIRECT');
+    await expect(answerLinkAction(null, form(fields('maybe')))).rejects.toThrow('NEXT_REDIRECT');
 
     expect(answerByLink).not.toHaveBeenCalled();
   });
@@ -71,7 +67,7 @@ describe('answerLinkAction', () => {
       new ServiceError('rate_limited', 'errors.tooManyAttempts', { minutes: 3 }),
     );
 
-    expect(await answerLinkAction(null, form('approve'))).toEqual({
+    expect(await answerLinkAction(null, form(fields('approve')))).toEqual({
       ok: false,
       message: 'Too many attempts. Try again in 3 minutes.',
     });
