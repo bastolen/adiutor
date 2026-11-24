@@ -1,79 +1,99 @@
 /**
- * @file Storing requests and the people on them directly, and reading back
- * who a request is assigned to.
+ * @file Storing requests and the people on them directly, for tests that
+ * are about something else, and reading back who a request is assigned to.
  */
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { request, requestEntry, requestParticipant } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
+import { incrementSetting } from '@/server/settings';
+
+/** What a stored request may be given; everything else gets a default. */
+export type RequestValues = Partial<typeof request.$inferInsert>;
 
 /**
- * Stores a request with staff members assigned to it, without going through
- * the services: for the tests of what happens to someone's assignments
- * elsewhere (a role change, a deactivation, a deletion). Its number is the
- * next free one.
+ * Stores a request without going through the service, with the next number
+ * (`requests.last_number`, so requests raised afterwards continue from it).
  *
  * @param db - Test database.
  * @param companyId - The company it's in.
- * @param assigneeIds - The staff members assigned to it.
- * @returns The request's ID.
+ * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at the company).
+ * @returns The stored request.
  */
-export async function storeAssignedRequest(
-  db: Database,
-  companyId: string,
-  assigneeIds: readonly string[],
-): Promise<string> {
-  const stored = firstRow(
-    await db
-      .insert(request)
-      .values({
-        number: sql`coalesce((select max(${request.number}) from ${request}), 0) + 1`,
-        companyId,
-        title: 'The printer is broken',
-        description: 'It prints blank pages.',
-        type: 'bug',
-        priority: 'normal',
-        createdBySide: 'company',
-      })
-      .returning({ id: request.id }),
-    'the stored request',
-  );
-  if (assigneeIds.length > 0) {
-    await db
-      .insert(requestParticipant)
-      .values(
-        assigneeIds.map((userId) => ({ requestId: stored.id, userId, role: 'assignee' as const })),
-      );
-  }
-  return stored.id;
+export async function storeRequest(db: Database, companyId: string, values: RequestValues = {}) {
+  return db.transaction(async (tx) => {
+    const { value: number } = await incrementSetting(tx, 'requests.last_number');
+    return firstRow(
+      await tx
+        .insert(request)
+        .values({
+          number,
+          companyId,
+          title: 'The printer is broken',
+          description: 'It prints blank pages.',
+          type: 'bug',
+          priority: 'normal',
+          createdBySide: 'company',
+          ...values,
+        })
+        .returning(),
+      'the stored request',
+    );
+  });
 }
 
 /**
- * Reads who a request is assigned to, and the assignment lines in its
- * history.
+ * Puts people on a request without going through a service.
  *
  * @param db - Test database.
  * @param requestId - The request.
- * @returns The assignees' user IDs, sorted, and each assignment entry as `[change, subject,
- *   author]` in order.
+ * @param userIds - The people.
+ * @param role - Whether they're assigned to it or subscribed to it.
  */
-export async function assignmentsOfRequest(db: Database, requestId: string) {
-  const assignees = await db
+export async function storeParticipants(
+  db: Database,
+  requestId: string,
+  userIds: readonly string[],
+  role: 'assignee' | 'subscriber',
+): Promise<void> {
+  if (userIds.length > 0) {
+    await db
+      .insert(requestParticipant)
+      .values(userIds.map((userId) => ({ requestId, userId, role })));
+  }
+}
+
+/**
+ * The staff members a request is assigned to, as stored.
+ *
+ * @param db - Test database.
+ * @param requestId - The request.
+ * @returns Their user IDs, sorted.
+ */
+export async function assigneesOf(db: Database, requestId: string): Promise<string[]> {
+  const rows = await db
     .select({ userId: requestParticipant.userId })
     .from(requestParticipant)
     .where(
       and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'assignee')),
     );
+  return rows.map(({ userId }) => userId).sort();
+}
+
+/**
+ * The assignment entries in a request's history, in order.
+ *
+ * @param db - Test database.
+ * @param requestId - The request.
+ * @returns Each entry as `[change, subject, author]`: assigned or unassigned, the staff member
+ *   it's about (`null` once their account is gone), and who did it (`null` for nobody).
+ */
+export async function assignmentsOf(db: Database, requestId: string) {
   const entries = await db
     .select()
     .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(asc(requestEntry.id));
-  return {
-    assignees: assignees.map(({ userId }) => userId).sort(),
-    entries: entries
-      .filter(({ kind }) => kind === 'assignee')
-      .map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]),
-  };
+    .where(and(eq(requestEntry.requestId, requestId), eq(requestEntry.kind, 'assignee')))
+    .orderBy(requestEntry.id);
+  return entries.map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]);
 }

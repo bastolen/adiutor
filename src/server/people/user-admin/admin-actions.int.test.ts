@@ -25,7 +25,8 @@ import {
   actorFor,
   addMember,
   addPassword,
-  assignmentsOfRequest,
+  assigneesOf,
+  assignmentsOf,
   atTheSameMoment,
   connectProvider,
   createCompany,
@@ -39,7 +40,8 @@ import {
   sendQueuedEmails,
   setUserLocale,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
   tokenFrom,
   minutesAgo,
   auditEvents,
@@ -580,29 +582,27 @@ describe('requests of people who lose access', () => {
   it('are no longer assigned to an account that is deactivated, with a line in each history', async () => {
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
     const colleague = await staffActor(db, 'manager', 'morgan@adiutor.test');
-    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id, colleague.id]);
+    const { id: assigned } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, assigned, [support.id, colleague.id], 'assignee');
 
     await deactivateUser(ctx, admin, support.id);
 
-    expect(await assignmentsOfRequest(db, assigned)).toEqual({
-      assignees: [colleague.id],
-      entries: [['unassigned', support.id, null]],
-    });
+    expect(await assigneesOf(db, assigned)).toEqual([colleague.id]);
+    expect(await assignmentsOf(db, assigned)).toEqual([['unassigned', support.id, null]]);
     // Reactivating them doesn't put them back.
     await reactivateUser(ctx, admin, support.id);
-    expect((await assignmentsOfRequest(db, assigned)).assignees).toEqual([colleague.id]);
+    expect(await assigneesOf(db, assigned)).toEqual([colleague.id]);
   });
 
   it('are no longer assigned to an account that is deleted, and keep no ID of it', async () => {
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id]);
+    const { id: assigned } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, assigned, [support.id], 'assignee');
 
     await deleteUser(ctx, admin, support.id, 'sam@adiutor.test');
 
-    expect(await assignmentsOfRequest(db, assigned)).toEqual({
-      assignees: [],
-      entries: [['unassigned', null, null]],
-    });
+    expect(await assigneesOf(db, assigned)).toEqual([]);
+    expect(await assignmentsOf(db, assigned)).toEqual([['unassigned', null, null]]);
   });
 });
 

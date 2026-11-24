@@ -11,7 +11,8 @@ import { defined, firstRow } from '@/lib/defined';
 
 import {
   actorFor,
-  assignmentsOfRequest,
+  assigneesOf,
+  assignmentsOf,
   atTheSameMoment,
   createCompany,
   createStaffSettings,
@@ -24,7 +25,8 @@ import {
   sendQueuedEmails,
   setupTestContext,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
   tokenFrom,
   auditEvents,
 } from '../../../tests/integration/helpers';
@@ -537,30 +539,28 @@ describe('losing staff rights', () => {
   it('takes someone off their requests once their role works on no requests, each with a line', async () => {
     const testCompany = await createCompany(db);
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    const first = await storeAssignedRequest(db, testCompany.id, [manager.id, support.id]);
-    const second = await storeAssignedRequest(db, testCompany.id, [manager.id]);
+    const { id: first } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, first, [manager.id, support.id], 'assignee');
+    const { id: second } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, second, [manager.id], 'assignee');
 
     // Support still works on requests.
     await changeStaffRole(ctx, admin, { userId: manager.id, role: 'support' });
-    expect((await assignmentsOfRequest(db, first)).assignees).toHaveLength(2);
+    expect(await assigneesOf(db, first)).toHaveLength(2);
 
     // Finance reads them, but works on none.
     await changeStaffRole(ctx, admin, { userId: manager.id, role: 'finance' });
-    expect(await assignmentsOfRequest(db, first)).toEqual({
-      assignees: [support.id],
-      entries: [['unassigned', manager.id, null]],
-    });
-    expect((await assignmentsOfRequest(db, second)).assignees).toEqual([]);
+    expect(await assigneesOf(db, first)).toEqual([support.id]);
+    expect(await assignmentsOf(db, first)).toEqual([['unassigned', manager.id, null]]);
+    expect(await assigneesOf(db, second)).toEqual([]);
 
     // Off the staff, they work on none either.
     await removeFromStaff(ctx, admin, support.id);
-    expect(await assignmentsOfRequest(db, first)).toEqual({
-      assignees: [],
-      entries: [
-        ['unassigned', manager.id, null],
-        ['unassigned', support.id, null],
-      ],
-    });
+    expect(await assigneesOf(db, first)).toEqual([]);
+    expect(await assignmentsOf(db, first)).toEqual([
+      ['unassigned', manager.id, null],
+      ['unassigned', support.id, null],
+    ]);
   });
 
   it('revokes the open staff invitations addressed to someone taken off the staff', async () => {

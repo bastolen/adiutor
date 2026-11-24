@@ -36,7 +36,8 @@ import {
   fillRateLimitBucket,
   setupTestContext,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
   auditEvents,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
@@ -214,7 +215,7 @@ async function clientWithRequest() {
   const company = await createCompany(db);
   const client = await createUser(db, 'casey@adiutor.test');
   await addMember(db, company.id, client, 'client');
-  const requestId = await storeAssignedRequest(db, company.id, []);
+  const { id: requestId } = await storeRequest(db, company.id);
   return { client, requestId, companyId: company.id };
 }
 
@@ -280,7 +281,8 @@ describe('the link in an email about a request', () => {
     const company = await createCompany(db);
     const manager = await staffActor(db, 'manager');
     await enableTwoFactor(db, manager.id);
-    const requestId = await storeAssignedRequest(db, company.id, [manager.id]);
+    const { id: requestId } = await storeRequest(db, company.id);
+    await storeParticipants(db, requestId, [manager.id], 'assignee');
     const token = await createRequestLink(db, { userId: manager.id, requestId });
     const browser = newBrowser();
 

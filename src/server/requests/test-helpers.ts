@@ -1,17 +1,30 @@
 /**
  * @file The test context shared by the integration tests of requests,
- * helpers that store requests, assignees and history entries directly, for
- * tests that are about reading them, helpers that read assignees and
- * assignment entries back, and one that deactivates a company while a change
- * is under way.
+ * helpers that store requests, people on them and history entries directly,
+ * for tests that are about reading them, helpers that read assignees,
+ * assignment entries and history back, the five kinds of reader a request
+ * can have, and one that deactivates a company while a change is under way.
+ * The ones about requests and people are the shared helpers of
+ * `tests/integration/helpers`, bound to this context's database.
  */
-import { and, desc, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
-import { company, request, requestParticipant, requestEntry, requestType, user } from '@/db/schema';
+import { company, request, requestEntry, requestType, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { atTheSameMoment, setupTestContext } from '../../../tests/integration/helpers';
-import { incrementSetting } from '../settings';
+import {
+  actorFor,
+  addMember,
+  assigneesOf as storedAssigneesOf,
+  assignmentsOf as storedAssignmentsOf,
+  atTheSameMoment,
+  memberActor,
+  type RequestValues,
+  setupTestContext,
+  staffActor,
+  storeParticipants,
+  storeRequest as storeRequestIn,
+} from '../../../tests/integration/helpers';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -19,9 +32,6 @@ import { incrementSetting } from '../settings';
  * and hooks, as when it called `setupTestContext()` itself.
  */
 export const { ctx, db, sent } = setupTestContext();
-
-/** What a stored request may be given; everything else gets a default. */
-type RequestValues = Partial<typeof request.$inferInsert>;
 
 /**
  * Stores a request without going through the service, with the next number
@@ -32,25 +42,7 @@ type RequestValues = Partial<typeof request.$inferInsert>;
  * @returns The stored request.
  */
 export async function storeRequest(companyId: string, values: RequestValues = {}) {
-  return db.transaction(async (tx) => {
-    const { value: number } = await incrementSetting(tx, 'requests.last_number');
-    return firstRow(
-      await tx
-        .insert(request)
-        .values({
-          number,
-          companyId,
-          title: 'The printer is broken',
-          description: 'It prints blank pages.',
-          type: 'bug',
-          priority: 'normal',
-          createdBySide: 'company',
-          ...values,
-        })
-        .returning(),
-      'the stored request',
-    );
-  });
+  return storeRequestIn(db, companyId, values);
 }
 
 /**
@@ -121,6 +113,20 @@ export async function storedRequest(id: string) {
 }
 
 /**
+ * Every entry in a request's history, oldest first: replies and changes alike.
+ *
+ * @param requestId - The request.
+ * @returns The stored rows.
+ */
+export async function entriesOf(requestId: string) {
+  return db
+    .select()
+    .from(requestEntry)
+    .where(eq(requestEntry.requestId, requestId))
+    .orderBy(requestEntry.id);
+}
+
+/**
  * The entries in a request's history, in order: replies and changes alike.
  *
  * @param requestId - The request.
@@ -128,11 +134,7 @@ export async function storedRequest(id: string) {
  *   (`null` for a reply), and the side of whoever wrote it.
  */
 export async function changesOf(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
+  const entries = await entriesOf(requestId);
   return entries.map(({ kind, fromValue, toValue, authorSide }) => [
     kind,
     fromValue,
@@ -148,9 +150,20 @@ export async function changesOf(requestId: string) {
  * @param userIds - The staff members.
  */
 export async function storeAssignees(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db
-    .insert(requestParticipant)
-    .values(userIds.map((userId) => ({ requestId, userId, role: 'assignee' as const })));
+  await storeParticipants(db, requestId, userIds, 'assignee');
+}
+
+/**
+ * Subscribes people to a request without going through a service.
+ *
+ * @param requestId - The request.
+ * @param userIds - The people.
+ */
+export async function storeSubscribers(
+  requestId: string,
+  userIds: readonly string[],
+): Promise<void> {
+  await storeParticipants(db, requestId, userIds, 'subscriber');
 }
 
 /**
@@ -160,13 +173,7 @@ export async function storeAssignees(requestId: string, userIds: readonly string
  * @returns Their user IDs, sorted.
  */
 export async function assigneesOf(requestId: string): Promise<string[]> {
-  const rows = await db
-    .select({ userId: requestParticipant.userId })
-    .from(requestParticipant)
-    .where(
-      and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'assignee')),
-    );
-  return rows.map(({ userId }) => userId).sort();
+  return storedAssigneesOf(db, requestId);
 }
 
 /**
@@ -177,12 +184,56 @@ export async function assigneesOf(requestId: string): Promise<string[]> {
  *   it's about (`null` once their account is gone), and who did it (`null` for nobody).
  */
 export async function assignmentsOf(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(and(eq(requestEntry.requestId, requestId), eq(requestEntry.kind, 'assignee')))
-    .orderBy(requestEntry.id);
-  return entries.map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]);
+  return storedAssignmentsOf(db, requestId);
+}
+
+/**
+ * Sets when a request last had activity, to tell the order of a list or a lane.
+ *
+ * @param id - The request.
+ * @param minutesAgo - How long ago, in minutes.
+ */
+export async function setActivity(id: string, minutesAgo: number): Promise<void> {
+  await db
+    .update(request)
+    .set({ lastActivityAt: new Date(Date.now() - minutesAgo * 60_000) })
+    .where(eq(request.id, id));
+}
+
+/**
+ * The five kinds of reader a request has, as `it.each` rows: a label, the
+ * reader's company role and staff role (either may be `null`), how the
+ * request's page addresses them (`audience`), and whether they contribute and
+ * manage.
+ */
+export const REQUEST_READERS = [
+  ['a Client', 'client', null, 'contributor', true, false],
+  ['a Watcher', 'watcher', null, 'follower', false, false],
+  ['Support', null, 'support', 'staff', true, true],
+  ['Finance', null, 'finance', 'staff', false, false],
+  ['Finance who is also a Client', 'client', 'finance', 'contributor', true, false],
+] as const;
+
+/**
+ * Creates one of the {@link REQUEST_READERS} and loads them as an actor.
+ *
+ * @param companyId - The company a company role is held in.
+ * @param companyRole - Their role at the company, if any.
+ * @param staffRole - Their role on the staff, if any.
+ * @returns The actor, loaded after they got their roles.
+ */
+export async function requestReader(
+  companyId: string,
+  companyRole: 'client' | 'watcher' | null,
+  staffRole: 'support' | 'finance' | null,
+) {
+  const base = staffRole
+    ? await staffActor(db, staffRole)
+    : await memberActor(db, companyId, companyRole ?? 'client');
+  if (staffRole && companyRole) {
+    await addMember(db, companyId, base.id, companyRole);
+  }
+  return actorFor(db, base.id);
 }
 
 /**
