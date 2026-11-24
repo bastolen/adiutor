@@ -194,6 +194,44 @@ describe('wrong passwords', () => {
     expect(await subjects()).toHaveLength(1);
   });
 
+  it('counts the notice before queueing it, so a pause while one is on its way sends no second', async () => {
+    await createUserWithPassword('jane@adiutor.test');
+    await failSignIns(9, 'jane@adiutor.test');
+    const background: Promise<unknown>[] = [];
+    /**
+     * Keeps the work Better Auth would run after the response, to wait for it.
+     *
+     * @param task - The work, already started.
+     */
+    const runInBackground = (task: Promise<unknown>) => {
+      background.push(task);
+    };
+    // The first notice is held back while it's being queued.
+    vi.mocked(queueSecurityNotice).mockClear();
+    const { promise: gate, resolve: open } = Promise.withResolvers<void>();
+    const queue = defined(notices.queue, 'the real queueing of notices');
+    vi.mocked(queueSecurityNotice).mockImplementationOnce(async (...args) => {
+      await gate;
+      return queue(...args);
+    });
+
+    try {
+      await signInWithPassword('jane@adiutor.test', { runInBackground });
+      await vi.waitFor(() => expect(queueSecurityNotice).toHaveBeenCalledOnce());
+      // Meanwhile, the pause is over and ten more wrong passwords pause it again.
+      await db
+        .update(rateLimitBucket)
+        .set({ resetAt: new Date(Date.now() - 1000) })
+        .where(eq(rateLimitBucket.key, 'sign-in-failed:email:jane@adiutor.test'));
+      await failSignIns(10, 'jane@adiutor.test');
+    } finally {
+      open();
+    }
+    await Promise.all(background);
+
+    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+  });
+
   it('tells no one without a password: no account, a deactivated one, or one without a password', async () => {
     const john = await createUserWithPassword('john@adiutor.test');
     await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, john));

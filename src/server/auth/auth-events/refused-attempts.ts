@@ -11,7 +11,7 @@ import { twoFactor, user } from '@/db/schema';
 import { mfaMethodFromPath, TWO_FACTOR_LOCK_MINUTES } from '@/lib/authz/mfa';
 
 import { recordEvent } from '../../audit';
-import { hitRateLimit, peekRateLimit, releaseRateLimitHit } from '../../rate-limit';
+import { hitRateLimit, releaseRateLimitHit } from '../../rate-limit';
 import { hasPassword } from '../accounts';
 import { CODE_PATHS, CURRENT_PASSWORD_PATHS, pendingCodeSignInOf } from '../auth-guards';
 import { queueSecurityNotice } from '../security-notices';
@@ -27,25 +27,27 @@ const PAUSED_NOTICE_LIMIT = { limit: 1, windowSeconds: 24 * 60 * 60 };
 
 /**
  * Tells a user that wrong passwords paused their password sign-in, at most
- * once a day (a notice that couldn't be queued doesn't count; one the mail
- * server refuses is retried by the queue), and only if
- * they have a password: for anyone else nothing was paused. Without the
- * device and IP address: they may be someone else's (staff see them in the
- * audit log).
+ * once a day, and only if they have a password: for anyone else nothing was
+ * paused. Like {@link notifyTwoFactorLocked}, the notice is counted before
+ * it's queued (one atomic statement), so a pause while one is on its way
+ * sends no second, and one that couldn't be queued gives its count back (one
+ * the mail server refuses is retried by the queue). Without the device and
+ * IP address: they may be someone else's (staff see them in the audit log).
  *
  * @param userId - The user.
  */
 async function notifyPasswordSignInPaused(userId: string): Promise<void> {
-  const key = `sign-in-paused-notice:user:${userId}`;
   if (!(await hasPassword(db, userId))) {
     return;
   }
-  if ((await peekRateLimit({ db }, key, PAUSED_NOTICE_LIMIT)).limited) {
+  const key = `sign-in-paused-notice:user:${userId}`;
+  const { allowed } = await hitRateLimit({ db }, key, PAUSED_NOTICE_LIMIT);
+  if (!allowed) {
     return;
   }
   const queued = await queueSecurityNotice(db, userId, 'password_sign_in_paused');
-  if (queued) {
-    await hitRateLimit({ db }, key, PAUSED_NOTICE_LIMIT);
+  if (!queued) {
+    await releaseRateLimitHit({ db }, key);
   }
 }
 
