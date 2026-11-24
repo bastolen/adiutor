@@ -28,9 +28,6 @@ import { getSecurityOverview, getStepUpMethods } from './security';
 
 const { ctx, db } = setupTestContext();
 
-/** An unknown user's ID. */
-const UNKNOWN_USER = '01900000-0000-7000-8000-000000000000';
-
 /** The MFA rules' view of an account with nothing set up. */
 const NOTHING_SET_UP: MfaState = {
   twoFactorEnabled: false,
@@ -68,16 +65,12 @@ async function addPasskey(userId: string, name: string, createdAt: Date): Promis
  * @returns Their overview.
  */
 async function overviewOf(userId: string) {
-  return getSecurityOverview(
-    { db },
-    (await loadActor(db, userId)) ?? { id: userId, mfaState: null, signedInAs: null },
-  );
+  return getSecurityOverview({ db }, defined(await loadActor(db, userId), 'the actor'));
 }
 
 /**
  * Works out a user's step-up methods the way the step-up page does: from the
- * setup their actor brings (none for an unknown user), under the MFA rules of
- * the given role.
+ * setup their actor brings, under the MFA rules of the given role.
  *
  * @param userId - The user.
  * @param mfaRole - Which MFA rules apply to them, or `null`.
@@ -89,7 +82,7 @@ async function stepUpMethodsOf(
   mfaRole: MfaRole | null,
   options?: Parameters<typeof getStepUpMethods>[1],
 ) {
-  const mfaState = (await loadActor(db, userId))?.mfaState ?? null;
+  const { mfaState } = defined(await loadActor(db, userId), 'the actor');
   return getStepUpMethods({ mfaState, mfaRole }, options);
 }
 
@@ -196,14 +189,6 @@ describe('getSecurityOverview', () => {
       mfaState: loadedWithActor,
     });
   });
-
-  it('shows nothing for an unknown user', async () => {
-    expect(await overviewOf(UNKNOWN_USER)).toEqual({
-      passkeys: [],
-      connected: [],
-      mfaState: NOTHING_SET_UP,
-    });
-  });
 });
 
 describe('getSecurityOverview while a staff member is signed in as the user', () => {
@@ -270,18 +255,12 @@ describe('getSecurityOverview while a staff member is signed in as the user', ()
 });
 
 describe('getStepUpMethods', () => {
-  it('offers what the user has set up, and nothing for unknown users', async () => {
+  it('offers what the user has set up', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     await enableTwoFactor(db, jane);
 
     expect(await stepUpMethodsOf(jane, null)).toEqual({
       authenticator: true,
-      email: false,
-      passkey: false,
-      providers: [],
-    });
-    expect(await stepUpMethodsOf(UNKNOWN_USER, null)).toEqual({
-      authenticator: false,
       email: false,
       passkey: false,
       providers: [],
@@ -365,15 +344,6 @@ describe('getStepUpMethods', () => {
         email: true,
         passkey: false,
         providers: ['github'],
-      });
-    });
-
-    it('offers nothing for unknown users', async () => {
-      expect(await stepUpMethodsOf(UNKNOWN_USER, null, { forChange: true })).toEqual({
-        authenticator: false,
-        email: false,
-        passkey: false,
-        providers: [],
       });
     });
   });

@@ -9,7 +9,6 @@ import { passkey } from '@/db/schema';
 import { personalDataShown } from '@/lib/authz/impersonation';
 import {
   type MfaState,
-  NO_STEP_UP_METHODS,
   type StepUpMethods,
   stepUpMethods,
   strongStepUpMethods,
@@ -88,19 +87,12 @@ export async function getSecurityOverview(
       .orderBy(asc(passkey.createdAt)),
     listConnectedProviders(ctx, actor.id),
   ]);
-  const mfaState = actor.mfaState ?? {
-    twoFactorEnabled: false,
-    authenticator: false,
-    passkeyCount: 0,
-    hasPassword: false,
-    providerAccounts: [],
-  };
   return {
     passkeys: shown.devices ? passkeys : passkeys.map((found) => ({ ...found, name: null })),
     connected: shown.accountNames
       ? connected
       : connected.map((link) => ({ ...link, accountName: null })),
-    mfaState,
+    mfaState: actor.mfaState,
   };
 }
 
@@ -116,25 +108,20 @@ export async function getSecurityOverview(
  * that window are (`strongStepUpMethods`): never email codes.
  *
  * @param actor - The signed-in user.
- * @param actor.mfaState - Their sign-in setup, as loaded with them, or `null`
- *   if they disappeared meanwhile.
+ * @param actor.mfaState - Their sign-in setup, as loaded with them.
  * @param actor.mfaRole - Which MFA rules apply to them (see `mfaRoleOf`), or `null`.
  * @param options - Options.
  * @param options.forChange - Whether the confirmation is for a change to how they sign in.
  * @param options.strong - Whether it must be a strong second step whatever the role.
- * @returns The available methods: none for a user without a setup.
+ * @returns The available methods.
  */
 export function getStepUpMethods(
   actor: Pick<Actor, 'mfaState' | 'mfaRole'>,
   { forChange = false, strong = false }: { forChange?: boolean; strong?: boolean } = {},
 ): StepUpMethods {
-  const state = actor.mfaState;
-  if (!state) {
-    return NO_STEP_UP_METHODS;
-  }
   if (strong) {
-    return strongStepUpMethods(state, availableProviders);
+    return strongStepUpMethods(actor.mfaState, availableProviders);
   }
-  const methods = stepUpMethods(state, actor.mfaRole, availableProviders);
+  const methods = stepUpMethods(actor.mfaState, actor.mfaRole, availableProviders);
   return forChange ? windowOpeningMethods(methods) : methods;
 }

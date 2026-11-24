@@ -82,11 +82,10 @@ export interface Actor {
   mfaRole: MfaRole | null;
   /**
    * Their sign-in setup as the MFA rules see it, loaded with the actor (for
-   * display, e.g. the Security page), or `null` if the user disappeared
-   * meanwhile. A change that depends on it reads it again under its lock
-   * (`withSignInChangeLock`), never from here.
+   * display, e.g. the Security page). A change that depends on it reads it
+   * again under its lock (`withSignInChangeLock`), never from here.
    */
-  mfaState: MfaState | null;
+  mfaState: MfaState;
   /** Whether their role requires MFA before they can use the app. */
   mfaRequired: boolean;
   /**
@@ -177,7 +176,8 @@ export interface Actor {
  * @param session.mfaVerifiedAt - When it was proven, if known.
  * @param session.fromRequestLink - Whether the link in an email about a request started it.
  * @param session.createdAt - When it signed in, if known.
- * @returns The actor, or `null` if the user doesn't exist.
+ * @returns The actor, or `null` if the user doesn't exist (also when they were deleted while it
+ *   loaded).
  */
 export async function loadActor(
   db: Database,
@@ -212,10 +212,11 @@ export async function loadActor(
       .innerJoin(company, eq(company.id, membership.companyId))
       .where(eq(membership.userId, userId)),
   ]);
-  if (!found) {
+  const mfaState = mfaStates.get(userId);
+  // The setup alone is missing when the user was deleted between the queries: they're gone too.
+  if (!found || !mfaState) {
     return null;
   }
-  const mfaState = mfaStates.get(userId) ?? null;
 
   const platformRole = found.platformRole ?? null;
   const adminOfActiveCompany = rows.some(
@@ -231,18 +232,15 @@ export async function loadActor(
     memberships: Object.fromEntries(rows.map((row) => [row.companyId, row.role])),
     mfaRole,
     mfaState,
-    mfaEnabled: mfaState ? hasMfa(mfaState, mfaRole, availableProviders) : false,
+    mfaEnabled: hasMfa(mfaState, mfaRole, availableProviders),
     mfaRequired: requiresMfa(mfaRole),
-    canConfirmSessions: mfaState
-      ? canConfirmSessions(mfaState, mfaRole, availableProviders)
-      : false,
+    canConfirmSessions: canConfirmSessions(mfaState, mfaRole, availableProviders),
     sessionMfaVerified: isSessionMfaVerified(sessionMfa, mfaRole),
     fromRequestLink: sessionMfa.fromRequestLink,
-    // A provider's confirmation is judged by the setup (`hasStrongerStepThanProvider`); without one
-    // there's no second step to have confirmed with.
-    mfaConfirmedUntil: mfaState ? mfaConfirmedUntil(sessionMfa, mfaRole, mfaState) : null,
-    strongMfa: mfaState ? hasStrongMfa(mfaState, availableProviders) : false,
-    strongMfaConfirmedUntil: mfaState ? strongMfaConfirmedUntil(sessionMfa, mfaState) : null,
+    // A provider's confirmation is judged by the setup (`hasStrongerStepThanProvider`).
+    mfaConfirmedUntil: mfaConfirmedUntil(sessionMfa, mfaRole, mfaState),
+    strongMfa: hasStrongMfa(mfaState, availableProviders),
+    strongMfaConfirmedUntil: strongMfaConfirmedUntil(sessionMfa, mfaState),
     signedInAt: signedInAtOf({ ...session, fromRequestLink: sessionMfa.fromRequestLink }),
     sessionId: session.id ?? null,
     // Set by `getOptionalActor` when the session belongs to a staff member signed in as the user.
