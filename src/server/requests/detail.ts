@@ -51,13 +51,20 @@ import {
 } from '@/lib/requests';
 import { idSchema } from '@/lib/validation';
 
+import type { Company } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { orderTerms, textOrder } from '../pagination';
 import { loadPictures } from '../people/pictures';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
-import { getRequestAccess, requestAudienceIn, type RequestPerson, requestPerson } from './access';
+import {
+  getRequestAccess,
+  requestAudienceIn,
+  type RequestPerson,
+  requestPerson,
+  type RequestRow,
+} from './access';
 import { readActivityView } from './activity-view';
 import { editableText, type TextMention } from './edits';
 import mentionKey from './mention-key';
@@ -328,6 +335,486 @@ async function chunksDownTo(
   return counted.linked > 0 ? Math.floor(counted.newer / THREAD_CHUNK) : 0;
 }
 
+/** Who reads a request's page, and what that lets them see there. */
+interface PageReader {
+  /** The reader. */
+  actor: Actor;
+  /** Their permissions in the request's company. */
+  permissions: Set<Permission>;
+  /** Their permissions outside a company: whether they open users' pages, see the audit log. */
+  globalPermissions: Set<Permission>;
+  /** Whether they see what only the staff see (`requests:view-internal`). */
+  internal: boolean;
+}
+
+/**
+ * The mark of a piece of work done while signed in as its author, for a
+ * reader who may know (`maySeeSignedInAsWork`); nothing for anyone else.
+ *
+ * @param reader - Who reads it.
+ * @param work - The work's row: whether it was done that way, and the staff member's name.
+ * @param work.signedInAs - Whether a staff member did it while signed in as its author.
+ * @param work.staff - The staff member, while their account exists.
+ * @param authorId - Who it shows as theirs, while their account exists.
+ * @returns The mark to spread into what the reader gets.
+ */
+function signedInAsMark(
+  reader: PageReader,
+  work: { signedInAs: boolean; staff: { name: string | null } | null },
+  authorId: string | null | undefined,
+): SignedInAsMark | undefined {
+  return work.signedInAs &&
+    maySeeSignedInAsWork({
+      isAuthor: Boolean(authorId) && authorId === reader.actor.id,
+      globalPermissions: reader.globalPermissions,
+    })
+    ? { staffName: visibleName(work.staff?.name) }
+    : undefined;
+}
+
+/**
+ * Loads entries of a request's history, newest first, with who wrote or
+ * changed each, who an `assignee` entry is about, and the staff member
+ * signed in as the author, if one was.
+ *
+ * @param ctx - Service context.
+ * @param shown - The condition for the entries the reader is shown.
+ * @param limit - How many to load.
+ * @returns The entries' rows.
+ */
+function loadEntries(ctx: ServiceContext, shown: SQL | undefined, limit: number) {
+  return ctx.db
+    .select({
+      id: requestEntry.id,
+      kind: requestEntry.kind,
+      authorSide: requestEntry.authorSide,
+      createdAt: requestEntry.createdAt,
+      body: requestEntry.body,
+      bodyFormat: requestEntry.bodyFormat,
+      editedAt: requestEntry.editedAt,
+      from: requestEntry.fromValue,
+      to: requestEntry.toValue,
+      author: { id: user.id, name: user.name },
+      subject: { id: subjectUser.id, name: subjectUser.name },
+      signedInAs: requestEntry.signedInAs,
+      signedInAsStaff: { name: signedInAsStaff.name },
+    })
+    .from(requestEntry)
+    .leftJoin(user, eq(requestEntry.authorId, user.id))
+    .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
+    .leftJoin(signedInAsStaff, eq(requestEntry.signedInAsStaffId, signedInAsStaff.id))
+    .where(shown)
+    .orderBy(desc(requestEntry.id))
+    .limit(limit);
+}
+
+/** An entry of a request's history, as {@link loadEntries} loads it. */
+type EntryRow = Awaited<ReturnType<typeof loadEntries>>[number];
+
+/** The part of a request's history its reader is shown. */
+interface ShownThread {
+  /** How the reader reads it, as their saved choice applies to them. */
+  activity: ActivityView;
+  /** The entries loaded: the latest of the groups shown, newest first. */
+  latest: EntryRow[];
+  /** How many entries of the groups shown there are in all. */
+  total: number;
+  /** How many earlier chunks are loaded besides the latest one. */
+  earlierChunks: number;
+}
+
+/**
+ * Loads the part of a request's history the reader is shown: the latest
+ * {@link THREAD_CHUNK} entries of the groups they show (their saved activity
+ * view, never a group they aren't offered), as many earlier chunks as asked
+ * for or as reach the entry a link points at, and how many entries of those
+ * groups there are in all.
+ *
+ * @param ctx - Service context.
+ * @param requestId - The request.
+ * @param reader - Who reads it.
+ * @param saved - Their saved activity view (`readActivityView`).
+ * @param options - What the page asks for (see {@link getRequest}).
+ * @param options.earlier - How many earlier chunks to add.
+ * @param options.entry - The ID of the entry a link points at.
+ * @returns The entries shown, and how.
+ */
+async function loadThread(
+  ctx: ServiceContext,
+  requestId: string,
+  reader: PageReader,
+  saved: ActivityView,
+  options: { earlier?: number; entry?: string | null },
+): Promise<ShownThread> {
+  const { permissions, internal } = reader;
+  const earlier = Number.isSafeInteger(options.earlier)
+    ? Math.min(Math.max(options.earlier ?? 0, 0), MAX_EARLIER_CHUNKS)
+    : 0;
+  // The reader's choice, as it applies to them: never a group they aren't offered.
+  const activity: ActivityView = {
+    order: saved.order,
+    groups: effectiveActivityGroups(saved.groups, permissions),
+  };
+  const kinds = activityKinds(activity.groups, permissions);
+  const linked = idSchema.safeParse(options.entry);
+  // What only the staff see (a change of priority, an internal note) is left out for everyone
+  // else: of the entries, of the count of earlier ones, and of the texts' mentions and versions
+  // (`ofShownText`). The reader's groups narrow the entries and the count further, never widen
+  // them; the entry a link points at stays, within what the reader may see.
+  const ofGroups = kinds ? inArray(requestEntry.kind, kinds) : undefined;
+  const shown = and(
+    eq(requestEntry.requestId, requestId),
+    internal ? undefined : notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
+    ofGroups && linked.success ? or(ofGroups, eq(requestEntry.id, linked.data)) : ofGroups,
+  );
+  // The earlier chunks shown: the ones asked for, or as many as reach the entry a link points at
+  // when it's further back, so the conversation shows it without a gap. An entry further back than
+  // every chunk a reader can add leaves them as asked: loading them all wouldn't reach it either.
+  // Counted with the rest, and only then are the entries loaded.
+  const shownEarlier = linked.success
+    ? chunksDownTo(ctx, shown, linked.data).then((needed) =>
+        needed <= MAX_EARLIER_CHUNKS ? Math.max(earlier, needed) : earlier,
+      )
+    : Promise.resolve(earlier);
+  const [counted, earlierChunks, latest] = await Promise.all([
+    ctx.db.select({ total: count() }).from(requestEntry).where(shown),
+    shownEarlier,
+    shownEarlier.then((chunks) => loadEntries(ctx, shown, THREAD_CHUNK * (chunks + 1))),
+  ]);
+  return { activity, latest, total: firstRow(counted, 'the entry count').total, earlierChunks };
+}
+
+/**
+ * Loads the people a request's page names besides its history: who raised
+ * it, the staff member signed in as them when it was raised (if one was),
+ * the staff members it's assigned to and its subscribers who can read it by
+ * now (`loadSubscribers`), both by name.
+ *
+ * @param ctx - Service context.
+ * @param found - The request.
+ * @returns Their rows; `null` for an account that's gone, or a staff member there wasn't.
+ */
+async function loadPeople(ctx: ServiceContext, found: RequestRow) {
+  const [raisedBy, raisedByStaff, assignees, following] = await Promise.all([
+    found.createdBy
+      ? ctx.db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdBy))
+      : [],
+    found.createdSignedInAsStaffId
+      ? ctx.db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdSignedInAsStaffId))
+      : [],
+    ctx.db
+      .select({ id: user.id, name: user.name })
+      .from(requestParticipant)
+      .innerJoin(user, eq(requestParticipant.userId, user.id))
+      .where(and(eq(requestParticipant.requestId, found.id), ASSIGNED))
+      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
+    loadSubscribers(ctx.db, found),
+  ]);
+  return {
+    raisedBy: raisedBy[0] ?? null,
+    raisedByStaff: raisedByStaff[0] ?? null,
+    assignees,
+    following,
+  };
+}
+
+/**
+ * Leaves out the rows of a text the reader isn't shown: the description is
+ * shown to every reader, an entry's text only when its entry is. The query
+ * joins the row's entry for it.
+ *
+ * @param internal - Whether the reader sees what only the staff see, every text among it.
+ * @param entryId - The column with the row's entry; `null` for the description.
+ * @returns The condition, or nothing for the staff, who are shown every text.
+ */
+function ofShownText(
+  internal: boolean,
+  entryId: typeof requestMention.entryId | typeof requestTextVersion.entryId,
+): SQL | undefined {
+  return internal
+    ? undefined
+    : or(isNull(entryId), notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]));
+}
+
+/**
+ * Loads what the texts the reader is shown come with ({@link ofShownText}):
+ * the people each mentions, and each one's earlier versions, newest first.
+ * Every reader gets the versions' rows, since the newest says who made the
+ * last edit and how and their number is what an edit sends back; only the
+ * staff get the versions themselves ({@link requestText}).
+ *
+ * @param ctx - Service context.
+ * @param requestId - The request.
+ * @param internal - Whether the reader sees what only the staff see.
+ * @returns The mentions' and the versions' rows.
+ */
+async function loadTextRows(ctx: ServiceContext, requestId: string, internal: boolean) {
+  const [mentioned, versions] = await Promise.all([
+    ctx.db
+      .select({
+        id: requestMention.id,
+        entryId: requestMention.entryId,
+        side: requestMention.side,
+        person: { id: user.id, name: user.name },
+      })
+      .from(requestMention)
+      .leftJoin(user, eq(requestMention.userId, user.id))
+      .leftJoin(requestEntry, eq(requestMention.entryId, requestEntry.id))
+      .where(
+        and(eq(requestMention.requestId, requestId), ofShownText(internal, requestMention.entryId)),
+      ),
+    ctx.db
+      .select({
+        entryId: requestTextVersion.entryId,
+        text: requestTextVersion.body,
+        format: requestTextVersion.bodyFormat,
+        editedBySide: requestTextVersion.editedBySide,
+        at: requestTextVersion.createdAt,
+        editedBy: { id: user.id, name: user.name },
+        signedInAs: requestTextVersion.signedInAs,
+        signedInAsStaff: { name: signedInAsStaff.name },
+      })
+      .from(requestTextVersion)
+      .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
+      .leftJoin(signedInAsStaff, eq(requestTextVersion.signedInAsStaffId, signedInAsStaff.id))
+      .leftJoin(requestEntry, eq(requestTextVersion.entryId, requestEntry.id))
+      .where(
+        and(
+          eq(requestTextVersion.requestId, requestId),
+          ofShownText(internal, requestTextVersion.entryId),
+        ),
+      )
+      .orderBy(desc(requestTextVersion.id)),
+  ]);
+  return { mentioned, versions };
+}
+
+/**
+ * A request's texts as their reader gets them, each under the ID of the
+ * reply or note it is (`null` for the description).
+ */
+interface ShownTexts {
+  /** The people each text mentions, as the reader sees them. */
+  mentions: Map<string | null, Record<string, MentionedPerson>>;
+  /** Each text's mentions as stored, which the text its editor starts from names again. */
+  storedMentions: Map<string | null, TextMention[]>;
+  /** Each text's earlier versions, newest first. */
+  versions: Map<string | null, TextVersion[]>;
+}
+
+/**
+ * Sorts the mentions and versions of a request's texts by text, as the
+ * reader gets them. A mention shows a name, never a picture. A reader who
+ * may write here gets each person's key too, so a mention they copy into a
+ * text stays one (nothing is written for a deactivated company); someone
+ * without an account or a name to show can't be mentioned, so has none.
+ *
+ * @param reader - Who reads them.
+ * @param company - The request's company.
+ * @param rows - The texts' mentions and versions ({@link loadTextRows}).
+ * @returns The texts' mentions and versions, by text.
+ */
+function shownTexts(
+  reader: PageReader,
+  company: Company,
+  rows: Awaited<ReturnType<typeof loadTextRows>>,
+): ShownTexts {
+  const writes = mayContribute(reader.permissions, {
+    deactivated: company.deactivatedAt !== null,
+  });
+  const texts: ShownTexts = { mentions: new Map(), storedMentions: new Map(), versions: new Map() };
+  rows.mentioned.forEach(({ entryId, ...mention }) => {
+    const { id, side, person } = mention;
+    const ofText = texts.mentions.get(entryId) ?? {};
+    const asShown = requestPerson(person ?? { id: null, name: null }, side, reader.actor);
+    ofText[id] = {
+      ...asShown,
+      key: writes && person?.id && asShown.name !== null ? mentionKey(company.id, person.id) : null,
+    };
+    texts.mentions.set(entryId, ofText);
+    texts.storedMentions.set(entryId, [...(texts.storedMentions.get(entryId) ?? []), mention]);
+  });
+  rows.versions.forEach(
+    ({ entryId, editedBy, editedBySide, signedInAs, signedInAsStaff: staff, ...version }) => {
+      const ofText = texts.versions.get(entryId) ?? [];
+      const mark = signedInAsMark(reader, { signedInAs, staff }, editedBy?.id);
+      ofText.push({
+        ...version,
+        editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, reader.actor),
+        ...(mark && { signedInAs: mark }),
+      });
+      texts.versions.set(entryId, ofText);
+    },
+  );
+  return texts;
+}
+
+/** What the parts of a request's page are built from, once everything is loaded. */
+interface PageContext {
+  /** Who reads it. */
+  reader: PageReader;
+  /** The request. */
+  found: RequestRow;
+  /** Its company. */
+  company: Company;
+  /** The name the staff are shown with. */
+  staffName: string;
+  /** Its texts' mentions and versions ({@link shownTexts}). */
+  texts: ShownTexts;
+  /** The pictures of the people the page names (`loadPictures`), by user ID. */
+  pictures: ReadonlyMap<string, string | null>;
+  /** The request types' names, by key. */
+  typeNames: Map<string, string>;
+}
+
+/**
+ * A text of a request as its reader gets it: the people it mentions, when
+ * it was edited (and, for the readers who may know, whether that edit was
+ * made while signed in as its editor), what its editor starts from (for a
+ * reader who may edit it, without links to the staff's pages unless they
+ * may open them or it's an internal note), and its versions (staff).
+ *
+ * @param page - What the page is built from.
+ * @param stored - The text.
+ * @param stored.entryId - The reply or note it is; `null` for the description.
+ * @param stored.text - The text as it's stored.
+ * @param stored.format - Its format.
+ * @param stored.editedAt - When it was last edited.
+ * @param stored.mayEdit - Whether the reader may edit it now.
+ * @param stored.staffOnly - Whether it's an internal note, which keeps its links to the staff's
+ *   pages.
+ * @returns The text.
+ */
+function requestText(
+  page: PageContext,
+  stored: {
+    entryId: string | null;
+    text: string;
+    format: RequestTextFormat;
+    editedAt: Date | null;
+    mayEdit: boolean;
+    staffOnly: boolean;
+  },
+): RequestText {
+  const { reader, texts, company } = page;
+  const versions = texts.versions.get(stored.entryId) ?? [];
+  // The newest version is the last edit's.
+  const lastEdit = versions[0];
+  // Nothing of a deactivated company's request changes, so nothing of it is edited.
+  const editable = company.deactivatedAt === null;
+  // Only a reader who may open the staff's pages gets a text to edit with links to them (and a
+  // note keeps them for whoever edits it).
+  const keepsStaffLinks = reader.globalPermissions.has('users:view') || stored.staffOnly;
+  return {
+    text: stored.text,
+    format: stored.format,
+    mentions: texts.mentions.get(stored.entryId),
+    editedAt: stored.editedAt,
+    ...(lastEdit?.signedInAs && {
+      editedSignedInAs: { ...lastEdit.signedInAs, editedBy: lastEdit.editedBy },
+    }),
+    ...(editable &&
+      stored.mayEdit && {
+        edit: {
+          markdown: editableText(
+            keepsStaffLinks ? stored.text : withoutStaffPageLinksToEdit(stored.text, appUrl),
+            texts.storedMentions.get(stored.entryId) ?? [],
+            company.id,
+            { company: company.name, staff: page.staffName },
+          ),
+          edits: versions.length,
+        },
+      }),
+    ...(reader.internal && versions.length > 0 && { versions }),
+  };
+}
+
+/**
+ * An entry of a request's history as its reader sees it: who did it (and,
+ * for the readers who may know, whether they did it while signed in as its
+ * author), its text, the types a type change names as they're called now,
+ * and who an assignment is about.
+ *
+ * @param page - What the page is built from.
+ * @param row - The entry, as {@link loadEntries} loaded it.
+ * @returns The entry.
+ */
+function entryView(page: PageContext, row: EntryRow): RequestEntryView {
+  const { reader, pictures, typeNames } = page;
+  const {
+    author,
+    authorSide,
+    body,
+    bodyFormat,
+    subject,
+    editedAt,
+    signedInAs,
+    signedInAsStaff: staff,
+    ...entry
+  } = row;
+  const mark = signedInAsMark(reader, { signedInAs, staff }, author?.id);
+  const staffOnly = entry.kind === 'note';
+  return {
+    ...entry,
+    ...(mark && { signedInAs: mark }),
+    // A type change names the types as they're called now: a type is never deleted.
+    ...(entry.kind === 'type' && {
+      from: entry.from && (typeNames.get(entry.from) ?? entry.from),
+      to: entry.to && (typeNames.get(entry.to) ?? entry.to),
+    }),
+    author: requestPerson(author ?? { id: null, name: null }, authorSide, reader.actor, pictures),
+    body:
+      body === null
+        ? null
+        : requestText(page, {
+            entryId: entry.id,
+            text: body,
+            format: bodyFormat,
+            editedAt,
+            mayEdit: (staffOnly ? mayEditNote : mayEditReply)(
+              reader.permissions,
+              page.found.status,
+              author?.id === reader.actor.id,
+            ),
+            staffOnly,
+          }),
+    // An assignment's subject is always on the staff's side, also once their account is gone.
+    subject:
+      entry.kind === 'assignee'
+        ? requestPerson(subject ?? { id: null, name: null }, 'staff', reader.actor, pictures)
+        : null,
+    subjectIsAuthor:
+      entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
+  };
+}
+
+/**
+ * When the staff first replied to a request.
+ *
+ * @param ctx - Service context.
+ * @param requestId - The request.
+ * @returns When, or `null` while they haven't.
+ */
+async function firstStaffReplyAt(ctx: ServiceContext, requestId: string): Promise<Date | null> {
+  const [first] = await ctx.db
+    .select({ at: min(requestEntry.createdAt) })
+    .from(requestEntry)
+    .where(
+      and(
+        eq(requestEntry.requestId, requestId),
+        eq(requestEntry.kind, 'comment'),
+        eq(requestEntry.authorSide, 'staff'),
+      ),
+    );
+  return first?.at ?? null;
+}
+
 /**
  * Loads a request with its conversation: the latest {@link THREAD_CHUNK}
  * entries, and as many earlier chunks as asked for, of the groups the reader
@@ -362,332 +849,52 @@ export async function getRequest(
     getRequestAccess(ctx.db, actor, ref),
     readActivityView(ctx.db, actor.id),
   ]);
-  const internal = permissions.has('requests:view-internal');
-  const earlier = Number.isSafeInteger(options.earlier)
-    ? Math.min(Math.max(options.earlier ?? 0, 0), MAX_EARLIER_CHUNKS)
-    : 0;
-  // The reader's choice, as it applies to them: never a group they aren't offered.
-  const activity: ActivityView = {
-    order: saved.order,
-    groups: effectiveActivityGroups(saved.groups, permissions),
+  const reader: PageReader = {
+    actor,
+    permissions,
+    globalPermissions: getGlobalPermissions(actor),
+    internal: permissions.has('requests:view-internal'),
   };
-  const kinds = activityKinds(activity.groups, permissions);
-  const linked = idSchema.safeParse(options.entry);
-  // What only the staff see (a change of priority, an internal note) is left out for everyone
-  // else: of the entries, of the count of earlier ones, and of the texts' mentions and versions.
-  // The reader's groups narrow the entries and the count further, never widen them; the entry a
-  // link points at stays, within what the reader may see.
-  const ofGroups = kinds ? inArray(requestEntry.kind, kinds) : undefined;
-  const shown = and(
-    eq(requestEntry.requestId, found.id),
-    internal ? undefined : notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]),
-    ofGroups && linked.success ? or(ofGroups, eq(requestEntry.id, linked.data)) : ofGroups,
-  );
-  // The earlier chunks shown: the ones asked for, or as many as reach the entry a link points at
-  // when it's further back, so the conversation shows it without a gap. An entry further back than
-  // every chunk a reader can add leaves them as asked: loading them all wouldn't reach it either.
-  // Counted with the rest, and only then are the entries loaded.
-  const shownEarlier = linked.success
-    ? chunksDownTo(ctx, shown, linked.data).then((needed) =>
-        needed <= MAX_EARLIER_CHUNKS ? Math.max(earlier, needed) : earlier,
-      )
-    : Promise.resolve(earlier);
-  /**
-   * Leaves out the rows of a text the reader isn't shown: the description is
-   * shown to every reader, an entry's text only when its entry is.
-   *
-   * @param entryId - The column with the row's entry; `null` for the description.
-   * @returns The condition, or nothing for the staff, who are shown every text.
-   */
-  const ofShownText = (
-    entryId: typeof requestMention.entryId | typeof requestTextVersion.entryId,
-  ) =>
-    internal
-      ? undefined
-      : or(isNull(entryId), notInArray(requestEntry.kind, [...STAFF_ONLY_ENTRY_KINDS]));
-  const globalPermissions = getGlobalPermissions(actor);
-  /**
-   * The mark of a piece of work done while signed in as its author, for a
-   * reader who may know (`maySeeSignedInAsWork`); nothing for anyone else.
-   *
-   * @param work - The work's row: whether it was done that way, and the staff member's name.
-   * @param work.signedInAs - Whether a staff member did it while signed in as its author.
-   * @param work.staff - The staff member, while their account exists.
-   * @param authorId - Who it shows as theirs, while their account exists.
-   * @returns The mark to spread into what the reader gets.
-   */
-  const signedInAsOf = (
-    work: { signedInAs: boolean; staff: { name: string | null } | null },
-    authorId: string | null | undefined,
-  ): SignedInAsMark | undefined =>
-    work.signedInAs &&
-    maySeeSignedInAsWork({
-      isAuthor: Boolean(authorId) && authorId === actor.id,
-      globalPermissions,
-    })
-      ? { staffName: visibleName(work.staff?.name) }
-      : undefined;
+  const [people, textRows, thread, staffName, prefix, firstResponseAt, typeNames] =
+    await Promise.all([
+      loadPeople(ctx, found),
+      loadTextRows(ctx, found.id, reader.internal),
+      loadThread(ctx, found.id, reader, saved, options),
+      getStaffName(ctx.db),
+      getRequestPrefix(ctx.db),
+      firstStaffReplyAt(ctx, found.id),
+      requestTypeNames(ctx.db),
+    ]);
 
-  const [
-    raisedBy,
-    raisedByStaff,
-    assignees,
-    following,
-    mentioned,
-    versions,
-    staffName,
-    prefix,
-    firstResponse,
-    total,
-    earlierChunks,
-    latest,
-    typeNames,
-  ] = await Promise.all([
-    found.createdBy
-      ? ctx.db
-          .select({ id: user.id, name: user.name })
-          .from(user)
-          .where(eq(user.id, found.createdBy))
-      : [],
-    found.createdSignedInAsStaffId
-      ? ctx.db
-          .select({ name: user.name })
-          .from(user)
-          .where(eq(user.id, found.createdSignedInAsStaffId))
-      : [],
-    ctx.db
-      .select({ id: user.id, name: user.name })
-      .from(requestParticipant)
-      .innerJoin(user, eq(requestParticipant.userId, user.id))
-      .where(and(eq(requestParticipant.requestId, found.id), ASSIGNED))
-      .orderBy(...orderTerms('asc', textOrder(user.name), user.id)),
-    loadSubscribers(ctx.db, found),
-    ctx.db
-      .select({
-        id: requestMention.id,
-        entryId: requestMention.entryId,
-        side: requestMention.side,
-        person: { id: user.id, name: user.name },
-      })
-      .from(requestMention)
-      .leftJoin(user, eq(requestMention.userId, user.id))
-      .leftJoin(requestEntry, eq(requestMention.entryId, requestEntry.id))
-      .where(and(eq(requestMention.requestId, found.id), ofShownText(requestMention.entryId))),
-    ctx.db
-      .select({
-        entryId: requestTextVersion.entryId,
-        text: requestTextVersion.body,
-        format: requestTextVersion.bodyFormat,
-        editedBySide: requestTextVersion.editedBySide,
-        at: requestTextVersion.createdAt,
-        editedBy: { id: user.id, name: user.name },
-        signedInAs: requestTextVersion.signedInAs,
-        signedInAsStaff: { name: signedInAsStaff.name },
-      })
-      .from(requestTextVersion)
-      .leftJoin(user, eq(requestTextVersion.editedBy, user.id))
-      .leftJoin(signedInAsStaff, eq(requestTextVersion.signedInAsStaffId, signedInAsStaff.id))
-      .leftJoin(requestEntry, eq(requestTextVersion.entryId, requestEntry.id))
-      .where(
-        and(eq(requestTextVersion.requestId, found.id), ofShownText(requestTextVersion.entryId)),
-      )
-      .orderBy(desc(requestTextVersion.id)),
-    getStaffName(ctx.db),
-    getRequestPrefix(ctx.db),
-    ctx.db
-      .select({ at: min(requestEntry.createdAt) })
-      .from(requestEntry)
-      .where(
-        and(
-          eq(requestEntry.requestId, found.id),
-          eq(requestEntry.kind, 'comment'),
-          eq(requestEntry.authorSide, 'staff'),
-        ),
-      ),
-    ctx.db.select({ total: count() }).from(requestEntry).where(shown),
-    shownEarlier,
-    shownEarlier.then((chunks) =>
-      ctx.db
-        .select({
-          id: requestEntry.id,
-          kind: requestEntry.kind,
-          authorSide: requestEntry.authorSide,
-          createdAt: requestEntry.createdAt,
-          body: requestEntry.body,
-          bodyFormat: requestEntry.bodyFormat,
-          editedAt: requestEntry.editedAt,
-          from: requestEntry.fromValue,
-          to: requestEntry.toValue,
-          author: { id: user.id, name: user.name },
-          subject: { id: subjectUser.id, name: subjectUser.name },
-          signedInAs: requestEntry.signedInAs,
-          signedInAsStaff: { name: signedInAsStaff.name },
-        })
-        .from(requestEntry)
-        .leftJoin(user, eq(requestEntry.authorId, user.id))
-        .leftJoin(subjectUser, eq(requestEntry.subjectUserId, subjectUser.id))
-        .leftJoin(signedInAsStaff, eq(requestEntry.signedInAsStaffId, signedInAsStaff.id))
-        .where(shown)
-        .orderBy(desc(requestEntry.id))
-        .limit(THREAD_CHUNK * (chunks + 1)),
-    ),
-    requestTypeNames(ctx.db),
-  ]);
-
-  // Each text's own mentions: the description's under no entry, a reply's under its entry. A
-  // mention shows a name, never a picture. A reader who may write here gets each person's key
-  // too, so a mention they copy into a text stays one (nothing is written for a deactivated
-  // company); someone without an account or a name to show can't be mentioned, so has none.
-  const writes = mayContribute(permissions, { deactivated: company.deactivatedAt !== null });
-  const mentionsOf = new Map<string | null, Record<string, MentionedPerson>>();
-  mentioned.forEach(({ id, entryId, side, person }) => {
-    const ofText = mentionsOf.get(entryId) ?? {};
-    const asShown = requestPerson(person ?? { id: null, name: null }, side, actor);
-    ofText[id] = {
-      ...asShown,
-      key: writes && person?.id && asShown.name !== null ? mentionKey(company.id, person.id) : null,
-    };
-    mentionsOf.set(entryId, ofText);
-  });
-
-  // What each text was before its edits: everyone gets how many there were (to edit it), only the
-  // staff get the versions themselves.
-  const versionsOf = new Map<string | null, TextVersion[]>();
-  versions.forEach(
-    ({ entryId, editedBy, editedBySide, signedInAs, signedInAsStaff: staff, ...version }) => {
-      const ofText = versionsOf.get(entryId) ?? [];
-      const mark = signedInAsOf({ signedInAs, staff }, editedBy?.id);
-      ofText.push({
-        ...version,
-        editedBy: requestPerson(editedBy ?? { id: null, name: null }, editedBySide, actor),
-        ...(mark && { signedInAs: mark }),
-      });
-      versionsOf.set(entryId, ofText);
-    },
-  );
-  const textMentions = new Map<string | null, TextMention[]>();
-  mentioned.forEach(({ entryId, ...mention }) => {
-    textMentions.set(entryId, [...(textMentions.get(entryId) ?? []), mention]);
-  });
-  const names = { company: company.name, staff: staffName };
-  // Nothing of a deactivated company's request changes, so nothing of it is edited.
-  const editable = company.deactivatedAt === null;
-  // Only a reader who may open the staff's pages gets a text to edit with links to them (and a
-  // note keeps them for whoever edits it).
-  const opensStaffPages = globalPermissions.has('users:view');
-  /**
-   * What a text adds for its readers: when it was edited (and, for the
-   * readers who may know, whether that edit was made while signed in as its
-   * editor), what its editor starts from (for a reader who may edit it,
-   * without links to the staff's pages unless they may open them or it's an
-   * internal note), and its versions (staff).
-   *
-   * @param entryId - The reply; `null` for the description.
-   * @param stored - The text as it's stored.
-   * @param editedAt - When it was last edited.
-   * @param mayEdit - Whether the reader may edit it now.
-   * @param staffOnly - Whether it's an internal note, which keeps its links to the staff's pages.
-   * @returns The text's extra fields.
-   */
-  const editsOf = (
-    entryId: string | null,
-    stored: string,
-    editedAt: Date | null,
-    mayEdit: boolean,
-    staffOnly = false,
-  ): Pick<RequestText, 'editedAt' | 'editedSignedInAs' | 'edit' | 'versions'> => {
-    const ofText = versionsOf.get(entryId) ?? [];
-    // The newest version is the last edit's.
-    const lastEdit = ofText[0];
-    return {
-      editedAt,
-      ...(lastEdit?.signedInAs && {
-        editedSignedInAs: { ...lastEdit.signedInAs, editedBy: lastEdit.editedBy },
-      }),
-      ...(editable &&
-        mayEdit && {
-          edit: {
-            markdown: editableText(
-              opensStaffPages || staffOnly ? stored : withoutStaffPageLinksToEdit(stored, appUrl),
-              textMentions.get(entryId) ?? [],
-              company.id,
-              names,
-            ),
-            edits: ofText.length,
-          },
-        }),
-      ...(internal && ofText.length > 0 && { versions: ofText }),
-    };
-  };
-
-  // Everyone the page names, with their pictures, in one go.
   // The subscribers the reader may see: the company's own for someone at the company, and
   // never someone the request is assigned to, who is listed as that.
-  const assigned = new Set(assignees.map(({ id }) => id));
-  const subscribers = following.filter(
-    ({ id, member }) => !assigned.has(id) && (internal || member),
+  const assigned = new Set(people.assignees.map(({ id }) => id));
+  const subscribers = people.following.filter(
+    ({ id, member }) => !assigned.has(id) && (reader.internal || member),
   );
-
+  // Everyone the page names, with their pictures, in one go.
   const pictures = await loadPictures(ctx.db, [
     found.createdBy,
-    ...assignees.map(({ id }) => id),
+    ...people.assignees.map(({ id }) => id),
     ...subscribers.map(({ id }) => id),
-    ...latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
+    ...thread.latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
   ]);
+  const page: PageContext = {
+    reader,
+    found,
+    company,
+    staffName,
+    texts: shownTexts(reader, company, textRows),
+    pictures,
+    typeNames,
+  };
   // Loaded newest first; turned around for a reader who reads the oldest first.
-  const entries = (activity.order === 'oldest' ? latest.reverse() : latest).map(
-    ({
-      author,
-      authorSide,
-      body,
-      bodyFormat,
-      subject,
-      editedAt,
-      signedInAs,
-      signedInAsStaff: staff,
-      ...entry
-    }) => {
-      const mark = signedInAsOf({ signedInAs, staff }, author?.id);
-      return {
-        ...entry,
-        ...(mark && { signedInAs: mark }),
-        // A type change names the types as they're called now: a type is never deleted.
-        ...(entry.kind === 'type' && {
-          from: entry.from && (typeNames.get(entry.from) ?? entry.from),
-          to: entry.to && (typeNames.get(entry.to) ?? entry.to),
-        }),
-        author: requestPerson(author ?? { id: null, name: null }, authorSide, actor, pictures),
-        body:
-          body === null
-            ? null
-            : {
-                text: body,
-                format: bodyFormat,
-                mentions: mentionsOf.get(entry.id),
-                ...editsOf(
-                  entry.id,
-                  body,
-                  editedAt,
-                  (entry.kind === 'note' ? mayEditNote : mayEditReply)(
-                    permissions,
-                    found.status,
-                    author?.id === actor.id,
-                  ),
-                  entry.kind === 'note',
-                ),
-              },
-        // An assignment's subject is always on the staff's side, also once their account is gone.
-        subject:
-          entry.kind === 'assignee'
-            ? requestPerson(subject ?? { id: null, name: null }, 'staff', actor, pictures)
-            : null,
-        subjectIsAuthor:
-          entry.kind === 'assignee' && Boolean(subject?.id) && subject?.id === author?.id,
-      };
-    },
-  );
-  const raisedSignedInAs = signedInAsOf(
-    { signedInAs: found.createdSignedInAs, staff: raisedByStaff[0] ?? null },
+  const entries = (
+    thread.activity.order === 'oldest' ? thread.latest.reverse() : thread.latest
+  ).map((row) => entryView(page, row));
+  const raisedSignedInAs = signedInAsMark(
+    reader,
+    { signedInAs: found.createdSignedInAs, staff: people.raisedByStaff },
     found.createdBy,
   );
   return {
@@ -695,37 +902,34 @@ export async function getRequest(
     number: found.number,
     prefix,
     title: found.title,
-    description: {
+    description: requestText(page, {
+      entryId: null,
       text: found.description,
       format: found.descriptionFormat,
-      mentions: mentionsOf.get(null),
-      ...editsOf(
-        null,
-        found.description,
-        found.descriptionEditedAt,
-        mayEditDescription(permissions, found.status),
-      ),
-    },
+      editedAt: found.descriptionEditedAt,
+      mayEdit: mayEditDescription(permissions, found.status),
+      staffOnly: false,
+    }),
     type: found.type,
     typeName: typeNames.get(found.type) ?? found.type,
     status: found.status,
     reopenedAt: found.reopenedAt,
-    priority: internal ? found.priority : null,
+    priority: reader.internal ? found.priority : null,
     raisedBy: requestPerson(
-      raisedBy[0] ?? { id: null, name: null },
+      people.raisedBy ?? { id: null, name: null },
       found.createdBySide,
       actor,
       pictures,
     ),
     ...(raisedSignedInAs && { raisedSignedInAs }),
-    assignees: assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
+    assignees: people.assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
     // Someone on the staff who is also in the company is a colleague to the company's readers.
     subscribers: subscribers.map(({ id, name, staff }) =>
-      requestPerson({ id, name }, internal && staff ? 'staff' : 'company', actor, pictures),
+      requestPerson({ id, name }, reader.internal && staff ? 'staff' : 'company', actor, pictures),
     ),
-    subscribed: following.some(({ id }) => id === actor.id),
+    subscribed: people.following.some(({ id }) => id === actor.id),
     createdAt: found.createdAt,
-    firstResponseAt: firstResponse[0]?.at ?? null,
+    firstResponseAt,
     lastActivityAt: found.lastActivityAt,
     company: {
       id: company.id,
@@ -736,9 +940,9 @@ export async function getRequest(
     permissions,
     audience: requestAudienceIn(actor, company),
     staffName,
-    activity,
+    activity: thread.activity,
     entries,
-    earlierEntries: firstRow(total, 'the entry count').total - entries.length,
-    earlierChunks,
+    earlierEntries: thread.total - entries.length,
+    earlierChunks: thread.earlierChunks,
   };
 }
