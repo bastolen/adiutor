@@ -303,7 +303,7 @@ describe('loadPicture', () => {
   it('never fetches an address that isn’t on the provider’s picture hosts', async () => {
     const userId = await createUser(db, 'stored@adiutor.test');
     const github = await connectProvider(db, userId, {
-      accountImage: 'https://example.org/me.png',
+      accountImage: 'https://pictures.adiutor.test/me.png',
     });
     const fetchMock = providerAnswers(
       () => new Response(PNG, { headers: { 'Content-Type': 'image/png' } }),

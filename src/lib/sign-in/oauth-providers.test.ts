@@ -114,8 +114,8 @@ describe('account pictures', () => {
   });
 
   it.each([
-    ['another host', 'https://example.org/me.png'],
-    ['a host that only ends like it', 'https://evil-avatars.githubusercontent.com.example.org/1'],
+    ['another host', 'https://pictures.adiutor.test/me.png'],
+    ['a host that only ends like it', 'https://evil-avatars.githubusercontent.com.adiutor.test/1'],
     ['plain http', 'http://avatars.githubusercontent.com/u/1'],
     ['a port', 'https://avatars.githubusercontent.com:8443/u/1'],
     ['credentials', 'https://user:pass@avatars.githubusercontent.com/u/1'],

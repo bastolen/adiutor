@@ -141,7 +141,7 @@ describe('naming a provider account, and keeping its picture', () => {
   it('keeps no picture from another host, and leaves the stored one alone', () => {
     const { ctx } = githubCallback();
     noteProviderProfile(
-      githubSource({ login: 'adiutor-tests', avatar_url: 'https://example.org/me.png' }),
+      githubSource({ login: 'adiutor-tests', avatar_url: 'https://pictures.adiutor.test/me.png' }),
       ctx,
     );
 
