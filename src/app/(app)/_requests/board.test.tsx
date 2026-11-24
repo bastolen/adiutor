@@ -18,6 +18,7 @@ import type { ActionResult } from '@/lib/action-result';
 import { defined } from '@/lib/defined';
 import type { BoardLaneState, RequestStatus } from '@/lib/requests';
 
+import stubLayout from '../../../../tests/ui/layout';
 import Board from './board';
 import { moveRequestAction } from './board-actions';
 import type { BoardCardView } from './board-card';
@@ -164,8 +165,7 @@ function renderBoard() {
 }
 
 beforeEach(() => {
-  // jsdom has no layout: give every element a box, as a shown one has.
-  vi.spyOn(Element.prototype, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList);
+  stubLayout();
 });
 
 afterEach(() => {

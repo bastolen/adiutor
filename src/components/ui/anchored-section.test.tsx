@@ -7,6 +7,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import stubLayout from '../../../tests/ui/layout';
 import nextFrames from '../../../tests/ui/next-frames';
 import { useSectionId } from './anchored-section';
 import Card from './card';
@@ -50,12 +51,7 @@ let scrolled: Element[] = [];
 
 beforeEach(() => {
   scrolled = [];
-  // jsdom has no layout: give every element a box, except the ones a test hides.
-  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function getClientRects(
-    this: Element,
-  ) {
-    return (hidden.has(this) ? [] : [{}]) as unknown as DOMRectList;
-  });
+  stubLayout((element) => hidden.has(element));
   vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function scrollIntoView(
     this: Element,
   ) {

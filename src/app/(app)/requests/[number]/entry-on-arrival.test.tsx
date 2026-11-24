@@ -7,6 +7,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import stubLayout from '../../../../../tests/ui/layout';
 import nextFrames from '../../../../../tests/ui/next-frames';
 import EntryOnArrival from './entry-on-arrival';
 
@@ -39,10 +40,7 @@ let scrolled: Element[] = [];
 
 beforeEach(() => {
   scrolled = [];
-  // jsdom has no layout: give every element a box.
-  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(
-    () => [{}] as unknown as DOMRectList,
-  );
+  stubLayout();
   vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function scrollIntoView(
     this: Element,
   ) {

@@ -9,6 +9,7 @@ import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import stubLayout from '../../../tests/ui/layout';
 import nextFrames from '../../../tests/ui/next-frames';
 import Card from './card';
 import restoreFocusIfLost, { focusMainContent, keepFocus } from './focus-fallback';
@@ -17,12 +18,7 @@ import restoreFocusIfLost, { focusMainContent, keepFocus } from './focus-fallbac
 const hidden = new Set<Element>();
 
 beforeEach(() => {
-  // jsdom has no layout: give every element a box, except the ones a test hides.
-  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function getClientRects(
-    this: Element,
-  ) {
-    return (hidden.has(this) ? [] : [{}]) as unknown as DOMRectList;
-  });
+  stubLayout((element) => hidden.has(element));
 });
 
 afterEach(() => {
