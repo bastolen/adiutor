@@ -12,8 +12,8 @@
  */
 import type { DatabaseOrTransaction } from '@/db';
 
+import errorCode from './error-code';
 import {
-  errorCode,
   JOURNAL_ENTRIES,
   type JournalEntry,
   migrationStatus,
