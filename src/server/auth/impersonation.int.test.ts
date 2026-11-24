@@ -175,10 +175,12 @@ describe('startImpersonation', () => {
   it('decides with the rules: Support signs in as Clients, not company Admins', async () => {
     const support = await confirmedStaff('support');
     const admin = await companyUser('admin');
-    const client = await createUser(db, 'watcher@adiutor.test');
+    const client = await companyUser('client');
 
     expect((await refusal(support, admin)).key).toBe('errors.impersonation.companyAdmin');
-    await expect(startImpersonation(ctx, support, { userId: client })).resolves.toBeDefined();
+    await expect(startImpersonation(ctx, support, { userId: client })).resolves.toMatchObject({
+      expiresAt: expect.any(Date),
+    });
   });
 
   it('refuses a staff Admin, yourself and a deactivated account', async () => {
