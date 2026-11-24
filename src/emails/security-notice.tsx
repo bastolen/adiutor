@@ -50,18 +50,10 @@ export interface SecurityNoticeEmailProps extends EmailBaseProps {
 }
 
 /** The provider, role, company and staff member a notice names, where it has them. */
-interface NoticeNames {
-  /** The provider's name, e.g. "GitHub". */
-  provider?: string;
-  /** The role, for staff and company role changes. */
-  role?: Role;
-  /** The company's name, e.g. "Adiutor". */
-  company?: string;
-  /** The staff member, for a sign-in as the recipient, e.g. "Sam Lee". */
-  staffMember?: string;
-  /** The name the staff are shown with to users, e.g. "Adiutor". */
-  staffName?: string;
-}
+type NoticeNames = Pick<
+  SecurityNoticeEmailProps,
+  'provider' | 'role' | 'company' | 'staffMember' | 'staffName'
+>;
 
 /**
  * The card of the Security page a notice's button goes to, by kind: the
@@ -230,13 +222,7 @@ SecurityNoticeEmail.PreviewProps = {
 export function securityNoticeEmail(to: string, props: SecurityNoticeEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    securityNoticeSubject(props.locale, props.kind, {
-      provider: props.provider,
-      role: props.role,
-      company: props.company,
-      staffMember: props.staffMember,
-      staffName: props.staffName,
-    }),
+    securityNoticeSubject(props.locale, props.kind, props),
     <SecurityNoticeEmail {...props} />,
   );
 }
