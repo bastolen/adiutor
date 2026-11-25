@@ -28,6 +28,12 @@
   minimumReleaseAge: '3 days',
   /** Refresh the lockfile weekly, picking up updates to indirect dependencies. */
   lockFileMaintenance: { enabled: true },
+  /**
+   * No Dependency Dashboard issue: the repository is public, and the same
+   * dashboard, with its boxes to open or retry an update, is on the
+   * repository's page at developer.mend.io.
+   */
+  dependencyDashboard: false,
   /** Conventional Commit messages, matching commitlint. */
   semanticCommits: 'enabled',
   packageRules: [
