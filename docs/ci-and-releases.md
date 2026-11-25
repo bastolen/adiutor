@@ -257,8 +257,9 @@ Weekly on Monday morning, a few days after a release at the earliest:
 - Each other major update arrives in a pull request of its own. A major often waits on the tools
   around it (typescript-eslint for TypeScript, plugins for ESLint): its pull request stays open,
   and runs CI again on each update, until they're ready. Closing a pull request makes Renovate
-  skip that version; the Dependency Dashboard issue lists every update, with a box to open a closed
-  one again or to retry one.
+  skip that version; the repository's Renovate page at developer.mend.io lists every update, with a
+  box to open a closed one again or to retry one (there's no Dependency Dashboard issue, since the
+  repository is public).
 - Dependabot (`.github/dependabot.yml`, built into GitHub) updates the GitHub Actions, SHA and
   version comment together, in one pull request. Leave the repository's "Dependabot security
   updates" off, or it opens npm pull requests next to Renovate's.
