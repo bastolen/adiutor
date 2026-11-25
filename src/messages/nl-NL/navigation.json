@@ -17,7 +17,6 @@
     "accountMenu": "Accountmenu:",
     "accountSettings": "Accountinstellingen",
     "signOut": "Uitloggen",
-    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw.",
     "signedInAs": {
       "label": "Ingelogd als iemand anders",
       "text": "Je bent ingelogd als {name} ({email}). Je kunt aan de verzoeken van deze persoon werken; al het andere kun je alleen bekijken. Dit stopt om {time}.",

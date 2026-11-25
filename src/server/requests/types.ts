@@ -341,7 +341,8 @@ export async function moveRequestType(
  * @param actor - The acting user; needs `staff:manage`.
  * @param input - The type's key.
  * @param input.type - The type's key.
- * @returns Whether it changed (it may have been archived already).
+ * @returns Whether it changed (it may have been archived already), and the type's name, for the
+ *   confirmation.
  * @throws {ServiceError} `signed_in_as`, `forbidden`, `not_found` when there's no such type,
  *   `invalid` for the last active type (`errors.requestTypes.lastActive`).
  */
@@ -349,13 +350,13 @@ export async function archiveRequestType(
   ctx: ServiceContext,
   actor: Actor,
   input: { type: string },
-): Promise<{ changed: boolean }> {
+): Promise<{ changed: boolean; name: string }> {
   assertManagesTypes(actor);
   return ctx.db.transaction(async (tx) => {
     const types = await lockTypes(tx);
     const found = findType(types, input.type);
     if (found.archivedAt !== null) {
-      return { changed: false };
+      return { changed: false, name: found.name };
     }
     const othersActive = types.filter(
       ({ id, archivedAt }) => id !== found.id && archivedAt === null,
@@ -376,7 +377,7 @@ export async function archiveRequestType(
       },
       tx,
     );
-    return { changed: true };
+    return { changed: true, name: found.name };
   });
 }
 
@@ -387,19 +388,20 @@ export async function archiveRequestType(
  * @param actor - The acting user; needs `staff:manage`.
  * @param input - The type's key.
  * @param input.type - The type's key.
- * @returns Whether it changed (it may not have been archived).
+ * @returns Whether it changed (it may not have been archived), and the type's name, for the
+ *   confirmation.
  * @throws {ServiceError} `signed_in_as`, `forbidden`, `not_found` when there's no such type.
  */
 export async function restoreRequestType(
   ctx: ServiceContext,
   actor: Actor,
   input: { type: string },
-): Promise<{ changed: boolean }> {
+): Promise<{ changed: boolean; name: string }> {
   assertManagesTypes(actor);
   return ctx.db.transaction(async (tx) => {
     const found = findType(await lockTypes(tx), input.type);
     if (found.archivedAt === null) {
-      return { changed: false };
+      return { changed: false, name: found.name };
     }
     await tx
       .update(requestType)
@@ -414,7 +416,7 @@ export async function restoreRequestType(
       },
       tx,
     );
-    return { changed: true };
+    return { changed: true, name: found.name };
   });
 }
 

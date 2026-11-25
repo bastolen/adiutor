@@ -49,7 +49,7 @@ export default function RequestTypesCard({ types }: { types: readonly RequestTyp
     >
       <ul aria-label={t('listLabel')} className="-my-3 divide-y divide-border">
         {types.map((type, index) => {
-          const fields = { type: type.key, name: type.name };
+          const fields = { type: type.key };
           return (
             <li
               key={type.key}
