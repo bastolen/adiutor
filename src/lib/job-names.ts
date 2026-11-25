@@ -19,6 +19,7 @@ export const RECURRING_JOB_NAMES = [
   'finished-sign-ins-as-users',
   'expired-sign-in-data',
   'invitation-reminders',
+  'attachment-files',
   'retention',
 ] as const;
 
@@ -81,6 +82,8 @@ const JOB_SUMMARY_KEYS = [
   'signInErrors',
   'jobRuns',
   'queuedJobs',
+  /** Attached files that were never sent (or never finished uploading) and were purged. */
+  'unsentFiles',
 ] as const;
 
 /** One count a run can report. */

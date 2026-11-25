@@ -67,6 +67,7 @@ code is the source if they ever differ.
 | Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
 | Storages tried in Settings (`storageChecksPerUser`)             | 20    | 1 hour      | user                  |
+| Files uploaded to attach (`attachmentUploadsPerUser`)           | 100   | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
 | App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
 
@@ -384,6 +385,36 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
   new secret only means each picture is fetched once more.
 
+## Files people attach
+
+A file attached to a request is uploaded on its own first, then sent with its text (see
+[decision 0044](decisions/0044-attachments.md)):
+
+- **The upload skips the proxy** (`POST /api/attachments`, the one path left out of the matcher in
+  `src/proxy.ts`): the proxy holds every request's body in memory, whoever sends it, and cuts one
+  over 10 MB short without a word. The route checks what the proxy would and more: only a page of
+  this site may send (`isOwnPageFetch`: `Sec-Fetch-Site: same-origin`, or else an `Origin` that's
+  exactly the site's), the session must count as `getActor` asks (answered in JSON, never a
+  redirect), the size must be given (`Content-Length`, else 411), be within the limit (else 413,
+  before the body is read) and match the body read, a piece at a time, and the name must decode.
+- **Only the allow-list** (`ATTACHMENT_TYPES` in `src/lib/requests/attachments.ts`), by extension:
+  images, PDF, text, Office and OpenDocument files, archives and screen recordings; never HTML,
+  SVG, scripts or programs. **A file's bytes must be what its extension says**
+  (`matchesAttachmentKind` in `src/server/requests/attachment-checks.ts`): each kind's signature,
+  and for text, valid UTF-8 or UTF-16 throughout without a NUL character, so an HTML page named
+  `.png` or a program named `.txt` is refused.
+- **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
+  text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
+  extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its
+  name.
+- **Limits per person who really acts** (`actingUserId`): 100 uploads an hour, and 1 GB in any 24
+  hours, sent or not (`DAILY_UPLOAD_BYTES`), so one account can't fill the storage. The largest
+  file is chosen per install (at most 50 MB, and 4 on Vercel).
+- **Row first, then the file:** a row is stored before its file is written and marked uploaded
+  after, so a file never sits in storage without a row; one that couldn't be stored takes its row
+  back. An unsent upload is only its uploader's to send, for 24 hours, and the `attachment-files`
+  job purges it after 25, or once the uploader's account is gone.
+
 ## Where attached files are kept
 
 A staff Admin chooses the storage on the Attachments tab of Settings, unless the server's
@@ -519,7 +550,7 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
 the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
-(`next.config.ts`). One known gap: Next.js's built-in page for errors outside rendering is
+(`next.config.ts`); the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
 HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script, and e2e tests fail
 on CSP violations that pages report (`e2e/support/test.ts`, console errors and uncaught `EvalError`s).

@@ -124,7 +124,20 @@
         "not_set_up": "Die map is niet van Adiutor. Controleer het pad.",
         "timed_out": "De opslag deed er te lang over om te antwoorden. Probeer het opnieuw, of controleer het adres.",
         "failed": "Adiutor kon daar geen testbestand opslaan, teruglezen en verwijderen. Controleer de instellingen."
-      }
+      },
+      "off": "Bestanden toevoegen staat uit.",
+      "typeNotAllowed": "Dat soort bestand kun je niet toevoegen. Voeg afbeeldingen, pdf’s, tekst, Office- of OpenDocument-bestanden, archieven of schermopnames toe.",
+      "empty": "Dat bestand is leeg.",
+      "tooLarge": "Dat bestand is te groot: voeg bestanden van hoogstens {maximum, number} MB toe.",
+      "notItsType": "Dat bestand is niet wat de naam zegt, dus je kunt het niet toevoegen.",
+      "dailyTotal": "Je hebt vandaag al veel toegevoegd. Probeer het morgen opnieuw.",
+      "unavailable": "{name} is niet meer beschikbaar. Voeg het opnieuw toe.",
+      "storageFailed": "Het bestand kon nu niet worden opgeslagen. Probeer het zo opnieuw.",
+      "noLength": "Je browser stuurde het bestand zonder de grootte. Probeer een andere browser.",
+      "incomplete": "Het bestand kwam onvolledig aan. Probeer het opnieuw.",
+      "badName": "De naam van het bestand kon niet worden gelezen. Geef het een andere naam en probeer het opnieuw.",
+      "signedOut": "Log opnieuw in om bestanden toe te voegen.",
+      "confirmFirst": "Bevestig dat jij het bent voordat je bestanden toevoegt."
     }
   }
 }

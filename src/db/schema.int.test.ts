@@ -68,6 +68,7 @@ describe('database rules', () => {
     'job_state_last_status_valid',
     'queued_job_status_valid',
     'request_answer_link_answer_valid',
+    'request_attachment_content_type_valid',
     'request_created_by_side_valid',
     'request_description_format_valid',
     'request_entry_author_side_valid',

@@ -15,6 +15,13 @@ would grow with every screenshot, and a hosted database's free plan is small.
 
 How to set it up is in [Deploying](../deploying.md#attachments). The choices behind it:
 
+- **Uploads go through Adiutor, a file at a time,** as soon as it's picked, to a route that checks
+  who sends it, its size, its type by extension and by its first bytes (an allow-list), before
+  it's stored; the text's form then sends the files' IDs, and its service claims them. The largest
+  file is chosen per install, at most 50 MB, and 4 on Vercel, which refuses a larger request body.
+- **The upload is the one route the proxy skips:** the proxy holds every body in memory, whoever
+  sends it, and cuts one over its limit short without a word. Raising its limit would let anyone
+  make the server hold that much for any path; the route checks the session and the origin itself.
 - **Several storages behind one small interface** (`FileStorage` in
   `src/server/storage/`: put, get as a stream, delete): a folder on the server's disk, a bucket
   of any S3-compatible service (AWS S3, Cloudflare R2, Backblaze B2, Garage, SeaweedFS), or a
@@ -44,6 +51,9 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
 
 ## Consequences
 
+- An upload is unsent until a text claims it, for a day; a job purges what's left after 25 hours,
+  file and row.
+
 - A Vercel deployment needs a bucket; R2's free plan fits, and downloads cost nothing there.
 - Local disk serves one server only, and a container that runs the jobs needs the same volume.
 - Every call has a time limit (connecting, the first byte, and each next piece of a file that's
@@ -69,6 +79,9 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
   to S3-compatible services before.
 - **A hosted file service** (such as Vercel Blob): another account, and self-hosted installs
   couldn't use it.
+- **Raising the proxy's body limit** (`proxyClientMaxBodySize`) instead of skipping it for the
+  upload: every request to any path, signed in or not, could then make the server hold the
+  largest file's worth of memory.
 - **Presigned uploads straight to the bucket:** larger files on Vercel, but the bucket needs CORS,
   the Content Security Policy must allow its host, the server checks a file only after it's
   stored, and local disk would still need a second way in.

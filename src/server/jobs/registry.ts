@@ -7,6 +7,7 @@ import addedToCompanyJob from './queued/added-to-company';
 import { requestUpdateRunner, requestUpdatesBatch } from './queued/request-updates';
 import securityNoticeJob from './queued/security-notice';
 import staffAdminAddedJob from './queued/staff-admin-added';
+import attachmentFiles from './recurring/attachment-files';
 import expiredSignInData from './recurring/expired-sign-in-data';
 import finishedSignInsAsUsers from './recurring/finished-sign-ins-as-users';
 import invitationReminders from './recurring/invitation-reminders';
@@ -19,6 +20,7 @@ export const RECURRING_JOBS: readonly RecurringJob[] = [
   finishedSignInsAsUsers,
   expiredSignInData,
   invitationReminders,
+  attachmentFiles,
   retention,
 ];
 

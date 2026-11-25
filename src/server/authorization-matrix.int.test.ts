@@ -53,6 +53,7 @@ import {
   createCompany,
   createSession,
   createStaffSettings,
+  saveSettings,
   createUser,
   inSequence,
   memberActor,
@@ -141,8 +142,8 @@ import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   addNote,
-  answerSolution,
   addRequestType,
+  answerSolution,
   archiveRequestType,
   changeAssignees,
   changeRequestStatus,
@@ -168,6 +169,7 @@ import {
   unsubscribe,
   updateRequestDetails,
   updateRequestType,
+  uploadAttachment,
 } from './requests';
 import { getAttachmentSettings, saveAttachmentLimit, saveAttachmentStorage } from './storage';
 
@@ -539,6 +541,14 @@ function listOperations(): Operation[] {
         ),
     ],
     ['choose the largest attachment', (w) => saveAttachmentLimit(ctx, w.actor, '20', {})],
+    [
+      'upload a file to attach',
+      (w) =>
+        uploadAttachment(ctx, w.actor, {
+          name: 'screenshot.png',
+          bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        }),
+    ],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -862,6 +872,7 @@ const READS: ReadonlySet<string> = new Set([
  */
 const OWN_WORK: ReadonlySet<string> = new Set([
   'dismiss own MFA recommendation',
+  'upload a file to attach',
   'raise request (own)',
   'raise request (other)',
   'reply to request (own)',
@@ -1010,6 +1021,8 @@ const EXPECTED: Record<string, string> = {
   'view attachment settings': 'FFFFFFA',
   'choose where attachments are kept': 'FFFFFFA',
   'choose the largest attachment': 'FFFFFFA',
+  // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
+  'upload a file to attach': 'FAAAFAA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',
   'add request type': 'FFFFFFA',
@@ -1185,6 +1198,8 @@ async function openInvitation(admin: Actor, companyId: string, email: string): P
  */
 async function createWorld(role: MatrixRole): Promise<World> {
   await createStaffSettings(db);
+  // Attaching is on, with the test file's own folder as the storage.
+  await saveSettings(db, { 'attachments.enabled': true });
   const own = await createCompany(db, { name: 'Adiutor Tests A' });
   const other = await createCompany(db, { name: 'Adiutor Tests B' });
   // Each company keeps an admin, so changes never hit the last-admin rule.

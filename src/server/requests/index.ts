@@ -68,3 +68,10 @@ export {
   updateRequestType,
 } from './types';
 export type { RequestTypeView } from './types';
+export {
+  type AttachmentsOn,
+  attachmentsOn,
+  DAILY_UPLOAD_BYTES,
+  type UploadedAttachment,
+  uploadAttachment,
+} from './attachments';

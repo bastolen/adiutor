@@ -363,3 +363,16 @@ export function storageView(config: StorageConfig): StorageView {
   }
   return config;
 }
+
+/** Bytes in a megabyte, as the limit counts them (a mebibyte, so a file just over 10 MB on Windows still fits). */
+export const BYTES_PER_MB = 1024 * 1024;
+
+/**
+ * The largest file in bytes, for a limit in megabytes.
+ *
+ * @param megabytes - The limit.
+ * @returns The bytes.
+ */
+export function maxFileBytes(megabytes: number): number {
+  return megabytes * BYTES_PER_MB;
+}

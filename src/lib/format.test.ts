@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import formatDate, {
   formatDateTime,
   formatDuration,
+  formatFileSize,
   formatList,
   formatRelative,
   formatTime,
@@ -195,5 +196,19 @@ describe('formatList', () => {
 
   it('gives one name as it is', () => {
     expect(formatList(['Sam Support'], 'en-US')).toBe('Sam Support');
+  });
+});
+
+describe('formatFileSize', () => {
+  it('uses the largest unit the size fills, with one decimal below 10', () => {
+    expect(formatFileSize(512, 'en-US')).toBe('512 byte');
+    expect(formatFileSize(240_000, 'en-US')).toBe('240 kB');
+    expect(formatFileSize(1_234_567, 'en-US')).toBe('1.2 MB');
+    expect(formatFileSize(25_000_000, 'en-US')).toBe('25 MB');
+  });
+
+  it('writes the size the reader’s way', () => {
+    expect(formatFileSize(1_234_567, 'nl-NL')).toBe('1,2 MB');
+    expect(formatFileSize(1_234_567, 'es-ES')).toBe('1,2 MB');
   });
 });

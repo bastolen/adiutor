@@ -421,7 +421,9 @@ whose file is gone can't be downloaded. Files are kept at the same paths in ever
 
 **The largest file** anyone may attach is chosen on the Attachments tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
-Vercel, which refuses a larger request body.
+Vercel, which refuses a larger request body. Behind a reverse proxy, let it pass request bodies that
+large to `/api/attachments` (with nginx, `client_max_body_size 51m;`, which defaults to 1 MB), or
+it refuses larger uploads itself.
 
 ## Logs
 

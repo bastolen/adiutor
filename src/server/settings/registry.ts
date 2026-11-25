@@ -104,6 +104,13 @@ export const SETTINGS = {
    * services refuse more than 4 whatever is saved.
    */
   'attachments.max_file_mb': defineSetting(maxFileMbSchema(MAX_FILE_MB), DEFAULT_MAX_FILE_MB),
+  /**
+   * Whether people can attach files ("People can attach files" on the
+   * Attachments tab of Settings): off until a staff Admin turns it on, and
+   * it counts only while a storage is chosen. Off, files already attached
+   * stay downloadable.
+   */
+  'attachments.enabled': defineSetting(z.boolean(), false),
 } as const;
 
 /** The key of a setting, e.g. `staff.name`. */

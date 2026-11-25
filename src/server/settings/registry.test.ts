@@ -28,6 +28,7 @@ const FALLBACKS: SettingValues = {
   'setup.completed_at': null,
   'attachments.storage': null,
   'attachments.max_file_mb': 10,
+  'attachments.enabled': false,
 };
 
 describe('the settings', () => {

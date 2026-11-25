@@ -124,7 +124,20 @@
         "not_set_up": "That folder isn't Adiutor's. Check its path.",
         "timed_out": "The storage took too long to answer. Try again, or check its address.",
         "failed": "Adiutor couldn't store, read back and delete a test file there. Check the settings."
-      }
+      },
+      "off": "Attaching files is turned off.",
+      "typeNotAllowed": "That kind of file can't be attached. Attach images, PDFs, text, Office or OpenDocument files, archives or screen recordings.",
+      "empty": "That file is empty.",
+      "tooLarge": "That file is too large: attach files of at most {maximum, number} MB.",
+      "notItsType": "That file isn't what its name says it is, so it can't be attached.",
+      "dailyTotal": "You've attached a lot today. Try again tomorrow.",
+      "unavailable": "{name} is no longer available. Attach it again.",
+      "storageFailed": "The file couldn't be stored right now. Try again in a moment.",
+      "noLength": "Your browser sent the file without its size. Try another browser.",
+      "incomplete": "The file arrived incomplete. Try again.",
+      "badName": "The file's name couldn't be read. Rename it and try again.",
+      "signedOut": "Sign in again to attach files.",
+      "confirmFirst": "Confirm it’s you before you attach files."
     }
   }
 }

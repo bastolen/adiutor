@@ -124,7 +124,20 @@
         "not_set_up": "Esa carpeta no es de Adiutor. Revisa su ruta.",
         "timed_out": "El almacenamiento ha tardado demasiado en responder. Vuelve a intentarlo o revisa su dirección.",
         "failed": "Adiutor no ha podido guardar, leer y borrar un archivo de prueba ahí. Revisa la configuración."
-      }
+      },
+      "off": "Adjuntar archivos está desactivado.",
+      "typeNotAllowed": "Ese tipo de archivo no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
+      "empty": "Ese archivo está vacío.",
+      "tooLarge": "Ese archivo es demasiado grande: adjunta archivos de como máximo {maximum, number} MB.",
+      "notItsType": "Ese archivo no es lo que dice su nombre, así que no se puede adjuntar.",
+      "dailyTotal": "Hoy ya has adjuntado mucho. Vuelve a intentarlo mañana.",
+      "unavailable": "{name} ya no está disponible. Vuelve a adjuntarlo.",
+      "storageFailed": "No se ha podido guardar el archivo ahora. Vuelve a intentarlo en un momento.",
+      "noLength": "Tu navegador envió el archivo sin su tamaño. Prueba con otro navegador.",
+      "incomplete": "El archivo llegó incompleto. Vuelve a intentarlo.",
+      "badName": "No se ha podido leer el nombre del archivo. Cámbiale el nombre y vuelve a intentarlo.",
+      "signedOut": "Vuelve a iniciar sesión para adjuntar archivos.",
+      "confirmFirst": "Confirma que eres tú antes de adjuntar archivos."
     }
   }
 }

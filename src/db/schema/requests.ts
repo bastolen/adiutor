@@ -1,8 +1,8 @@
 /**
  * @file Drizzle schema for requests: what a company raises with the staff,
  * the people on it (assigned or subscribed), the entries of its history
- * (replies and changes), the earlier versions of its edited texts and the
- * people its texts mention. Requests are numbered from the
+ * (replies and changes), the earlier versions of its edited texts, the
+ * people its texts mention and the files attached to them. Requests are numbered from the
  * `requests.last_number` setting (`src/server/settings/`). The values of the
  * status, type, priority, side, kind and format columns live in
  * `src/lib/requests`.
@@ -25,6 +25,7 @@ import {
 
 import {
   ASSIGNMENT_CHANGES,
+  ATTACHMENT_CONTENT_TYPES,
   REQUEST_ENTRY_KINDS,
   REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,
@@ -401,6 +402,101 @@ export const requestTextVersion = pgTable(
     check(
       'request_text_version_signed_in_as_fits',
       sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
+  ],
+);
+
+/**
+ * A file attached to a request's text (decision 0044): its description, a
+ * reply or an internal note. The file itself is kept in the storage chosen
+ * for attachments, under a key made from this row's ID (`attachmentKey`);
+ * this row is how it's found, named and checked. A file is uploaded on its
+ * own first (unsent: no request yet) and claimed by the text it's sent with
+ * (`claimAttachments`); one left unsent is purged after a day, file and row.
+ * A removed file keeps its row, so its place in the text says who removed
+ * it, while the file itself is deleted. The rows go with the request or the
+ * text.
+ */
+export const requestAttachment = pgTable(
+  'request_attachment',
+  {
+    id: id(),
+    /** The request it was sent with; `null` while it's unsent. */
+    requestId: uuid('request_id').references(() => request.id, { onDelete: 'cascade' }),
+    /** The reply or note it belongs to; `null` for the description (or while unsent). */
+    entryId: uuid('entry_id').references(() => requestEntry.id, { onDelete: 'cascade' }),
+    /** Who uploaded it, while their account exists. */
+    uploadedBy: uuid('uploaded_by').references(() => user.id, { onDelete: 'set null' }),
+    /**
+     * Whether a staff member uploaded it while signed in as `uploadedBy`
+     * (decision 0028). Kept once the staff member's account is gone.
+     */
+    signedInAs: boolean('signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `uploadedBy`, while their account exists. */
+    signedInAsStaffId: uuid('signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /** Its name, cleaned (`cleanAttachmentName`), with an extension on the allow-list. */
+    name: text('name').notNull(),
+    /** The type it's stored and served as, from the allow-list (`ATTACHMENT_TYPES`). */
+    contentType: text('content_type').notNull(),
+    /** Its size in bytes. */
+    size: integer('size').notNull(),
+    /** When the upload started. */
+    createdAt: createdAt(),
+    /** When its file was stored; `null` while it's being written (or if that failed). */
+    uploadedAt: timestampTz('uploaded_at'),
+    /** When it was removed; its file is deleted then. */
+    removedAt: timestampTz('removed_at'),
+    /** Who removed it, while their account exists. */
+    removedBy: uuid('removed_by').references(() => user.id, { onDelete: 'set null' }),
+    /** Whether a staff member removed it while signed in as `removedBy`. */
+    removedSignedInAs: boolean('removed_signed_in_as').default(false).notNull(),
+    /** The staff member who was signed in as `removedBy`, while their account exists. */
+    removedSignedInAsStaffId: uuid('removed_signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /** When a removed file's bytes were deleted from storage; the cleanup job tries again until then. */
+    fileDeletedAt: timestampTz('file_deleted_at'),
+  },
+  (table) => [
+    /** A request's files, by text; also serves the request foreign key. */
+    index('request_attachment_request_idx').on(table.requestId, table.entryId),
+    index('request_attachment_entry_idx').on(table.entryId),
+    /** What someone uploaded lately (the day's total); also serves the uploader foreign key. */
+    index('request_attachment_uploaded_by_idx').on(table.uploadedBy, table.createdAt),
+    index('request_attachment_signed_in_as_staff_idx').on(table.signedInAsStaffId),
+    index('request_attachment_removed_by_idx').on(table.removedBy),
+    index('request_attachment_removed_signed_in_as_staff_idx').on(table.removedSignedInAsStaffId),
+    /** The unsent files the cleanup job purges. */
+    index('request_attachment_unsent_idx')
+      .on(table.createdAt)
+      .where(sql`${table.requestId} is null`),
+    oneOf('request_attachment_content_type_valid', table.contentType, ATTACHMENT_CONTENT_TYPES),
+    check('request_attachment_size_fits', sql`${table.size} > 0`),
+    /** A reply's or note's file belongs to that reply's request. */
+    check(
+      'request_attachment_entry_fits',
+      sql`${table.entryId} is null or ${table.requestId} is not null`,
+    ),
+    /** Only a stored file is sent, and only a sent one is removed. */
+    check(
+      'request_attachment_sent_fits',
+      sql`(${table.requestId} is null or ${table.uploadedAt} is not null) and (${table.removedAt} is null or ${table.requestId} is not null)`,
+    ),
+    /** A staff member is named only for an upload made while signed in as someone. */
+    check(
+      'request_attachment_signed_in_as_fits',
+      sql`${table.signedInAsStaffId} is null or ${table.signedInAs}`,
+    ),
+    /** Who removed it, and its deleted file, only for a removed one. */
+    check(
+      'request_attachment_removed_fits',
+      sql`${table.removedAt} is not null or (${table.removedBy} is null and not ${table.removedSignedInAs} and ${table.fileDeletedAt} is null)`,
+    ),
+    check(
+      'request_attachment_removed_signed_in_as_fits',
+      sql`${table.removedSignedInAsStaffId} is null or ${table.removedSignedInAs}`,
     ),
   ],
 );
