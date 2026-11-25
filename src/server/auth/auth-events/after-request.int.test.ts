@@ -3,13 +3,12 @@
  * session with a code, changes to how the user signs in, and a first
  * passkey.
  */
-import { APIError, getOAuthState, getSessionFromCtx } from 'better-auth/api';
+import { APIError, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket, session, twoFactor, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 
 import {
   addPassword,
@@ -23,6 +22,7 @@ import {
   staffActor,
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { type AuthGuardContext, beforeAuthRequest, sessionCodeChallenge } from '../auth-guards';
 import { requestState } from '../request-state';
@@ -39,7 +39,6 @@ import {
   trustDevice,
   subjects,
   devicesLeft,
-  addPasskey,
   storeSessionMfa,
 } from './test-helpers';
 
@@ -52,22 +51,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('confirming a session with a code', () => {
   it('records a wrong code and counts it towards the step-up limit', async () => {
@@ -561,8 +544,8 @@ describe('a change to how the user signs in', () => {
   it('gives back the lock it took once the request is done', async () => {
     const manager = await createUser(db, 'manager@adiutor.test');
     await db.update(user).set({ platformRole: 'manager' }).where(eq(user.id, manager));
-    await addPasskey(manager);
-    await addPasskey(manager);
+    await addPasskey(db, manager);
+    await addPasskey(db, manager);
     const sessionId = await createSession(db, manager, { mfaMethod: 'passkey' });
     await storeSessionMfa(sessionId, 'passkey');
     const ctx = {
@@ -596,7 +579,7 @@ describe('a first passkey', () => {
     await addPassword(db, admin.id);
     await enableTwoFactor(db, admin.id, 'email');
     const sessionId = await createSession(db, admin.id);
-    await addPasskey(admin.id);
+    await addPasskey(db, admin.id);
 
     await afterAuthRequest(
       await requestWithSession('/passkey/verify-registration', { sessionId, userId: admin.id }),
@@ -611,7 +594,7 @@ describe('a first passkey', () => {
     await addPassword(db, manager.id);
     await enableTwoFactor(db, manager.id);
     const sessionId = await createSession(db, manager.id);
-    await addPasskey(manager.id);
+    await addPasskey(db, manager.id);
 
     await afterAuthRequest(
       await requestWithSession('/passkey/verify-registration', { sessionId, userId: manager.id }),
@@ -636,7 +619,7 @@ describe('a first passkey', () => {
     const firstPasskey = async (userId: string) => {
       await connectGitHub(db, userId);
       const sessionId = await createSession(db, userId);
-      await addPasskey(userId);
+      await addPasskey(db, userId);
       await afterAuthRequest(
         await requestWithSession('/passkey/verify-registration', { sessionId, userId }),
       );

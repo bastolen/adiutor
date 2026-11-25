@@ -7,7 +7,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { passkey, twoFactor, user } from '@/db/schema';
+import { passkey, user } from '@/db/schema';
 import type { MfaRole, MfaState } from '@/lib/authz/mfa';
 import type { Permission } from '@/lib/authz/permissions';
 import { defined } from '@/lib/defined';
@@ -21,6 +21,7 @@ import {
   setupTestContext,
   staffActor,
   turnOffGitHubSignIn,
+  startAuthenticatorSetup,
 } from '../../../tests/integration/helpers';
 import { type Actor, loadActor } from '../actor';
 import { getUserDetail } from '../people/user-admin';
@@ -114,12 +115,7 @@ describe('getSecurityOverview', () => {
 
   it("doesn't count an authenticator setup that was never finished", async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(twoFactor).values({
-      userId: jane,
-      secret: 'encrypted-secret',
-      backupCodes: 'encrypted-codes',
-      verified: false,
-    });
+    await startAuthenticatorSetup(db, jane);
     expect((await overviewOf(jane)).mfaState).toMatchObject({
       twoFactorEnabled: false,
       authenticator: false,

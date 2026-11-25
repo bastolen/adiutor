@@ -22,18 +22,6 @@ import { loadMfaContext, loadMfaStates } from './mfa-state';
 const { db } = setupTestContext();
 
 /**
- * Connects a GitHub account with two-factor authentication, as Better Auth
- * stores it.
- *
- * @param userId - The user.
- * @param confirmed - Whether it counts yet (see `beforeAccountCreate`).
- * @returns The account row's ID.
- */
-async function connectGitHubWith2fa(userId: string, confirmed: boolean): Promise<string> {
-  return connectProvider(db, userId, { mfaVerified: true, confirmed });
-}
-
-/**
  * Loads a user's MFA context and applies the rules to it.
  *
  * @param userId - The user.
@@ -54,7 +42,7 @@ async function mfaOf(userId: string) {
 describe('provider accounts connected at sign-in', () => {
   it('don’t count as MFA or a second step until they’re confirmed', async () => {
     const admin = await staffActor(db, 'platform_admin');
-    const github = await connectGitHubWith2fa(admin.id, false);
+    const github = await connectProvider(db, admin.id, { confirmed: false });
 
     expect(await mfaOf(admin.id)).toEqual({
       providerAccounts: [],
@@ -74,8 +62,8 @@ describe('provider accounts connected at sign-in', () => {
   it('are left out per user when loading several users', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
     const john = await createUser(db, 'john@adiutor.test');
-    await connectGitHubWith2fa(jane, false);
-    const johnsGitHub = await connectGitHubWith2fa(john, true);
+    await connectProvider(db, jane, { confirmed: false });
+    const johnsGitHub = await connectProvider(db, john, { confirmed: true });
 
     const states = await loadMfaStates(db, [jane, john]);
 
@@ -89,7 +77,7 @@ describe('provider accounts connected at sign-in', () => {
 describe('provider accounts', () => {
   it('come with their account row’s ID, the one Better Auth’s unlink takes', async () => {
     const manager = await staffActor(db, 'manager');
-    const github = await connectGitHubWith2fa(manager.id, true);
+    const github = await connectProvider(db, manager.id, { confirmed: true });
     // Without two-factor authentication at Google (the helper's default is with).
     const google = await connectProvider(db, manager.id, {
       providerId: 'google',

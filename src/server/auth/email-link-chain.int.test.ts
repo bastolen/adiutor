@@ -18,7 +18,7 @@
  * (`confirmSignInLinkFirst`) to the return address check.
  */
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { session, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
@@ -32,15 +32,11 @@ import {
   setupTestContext,
   storeSignInLink,
 } from '../../../tests/integration/helpers';
+import { authRequest, sentEmail, sentEmails } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
 const { db } = setupTestContext();
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
 
 beforeEach(() => {
   vi.mocked(sendEmail).mockClear();
@@ -88,13 +84,7 @@ function askForLink(
   body: Record<string, unknown>,
   headers: Record<string, string> = {},
 ): Promise<Response> {
-  return auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/magic-link`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, ...headers },
-      body: JSON.stringify(body),
-    }),
-  );
+  return authRequest('sign-in/magic-link', { body, headers });
 }
 
 /**
@@ -152,13 +142,7 @@ describe('sending a sign-in link', () => {
 
     expect(response.status).toBe(200);
     // Sent after the response.
-    const sent = await vi.waitFor(() => {
-      const [email] = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
-      if (!email) {
-        throw new Error('The sign-in email has not been sent yet');
-      }
-      return email;
-    }, 10_000);
+    const sent = await sentEmail('The sign-in email');
     expect(sent.subject).toBe('Your Adiutor sign-in link');
     expect(sent.to).toBe('jane@adiutor.test');
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
@@ -173,13 +157,7 @@ describe('sending a sign-in link', () => {
     await askForLink({ email: 'sam@adiutor.test', callbackURL: '/dashboard' }, spanishBrowser);
 
     // Sent after the responses.
-    const sent = await vi.waitFor(() => {
-      const emails = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
-      if (emails.length < 2) {
-        throw new Error('The sign-in emails have not been sent yet');
-      }
-      return emails;
-    }, 10_000);
+    const sent = await sentEmails(2, 'The sign-in emails');
     expect(
       sent
         .map((email) => [email.to, emailLanguage(email)])

@@ -2,14 +2,12 @@
  * @file Integration tests for creating sessions: what a replacement keeps, and
  * what a new session records.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { session } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { defined } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 
 import {
   addMember,
@@ -23,6 +21,7 @@ import {
   memberActor,
   turnOffGitHubSignIn,
   minutesAgo,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import type { AuthHookContext } from './hook-context';
 import { afterSessionCreate, beforeSessionCreate } from './session-hooks';
@@ -34,7 +33,6 @@ import {
   SESSION_COOKIE,
   COOKIE_SECRET,
   signedInHeaders,
-  addPasskey,
 } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
@@ -46,22 +44,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('a new session', () => {
   /**
@@ -258,7 +240,7 @@ describe('creating a session', () => {
 
   it('records no time when a code step replaces an unconfirmed session of an account with MFA', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await addPasskey(jane);
+    await addPasskey(db, jane);
     const unconfirmed = await createSession(db, jane);
 
     // Turning on email codes from a session that didn't confirm with the passkey.

@@ -10,13 +10,14 @@ import { APIError } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
-import { account, auditEvent, rateLimitBucket } from '@/db/schema';
-import type { MfaMethod } from '@/lib/authz/mfa';
+import { account, rateLimitBucket } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
   addPasskey,
   addPassword,
+  auditEvents,
   connectGitHub,
   connectProvider,
   createUser,
@@ -28,7 +29,7 @@ import {
   turnOffGitHubSignIn,
   minutesAgo,
 } from '../../../tests/integration/helpers';
-import { loadActor } from '../actor';
+import type { Actor } from '../actor';
 import { ServiceError } from '../errors';
 import {
   changeOwnPassword,
@@ -40,6 +41,7 @@ import {
 import { wrongCurrentPasswordsKey } from './current-password';
 import { loadMfaContext } from './mfa-state';
 import { releaseSignInChangeLock, takeSignInChangeLock } from './sign-in-change-lock';
+import { signInChangeLockFree } from './test-helpers';
 
 // Watched, to check when the services read a user's MFA state; it still reads it.
 vi.mock('./mfa-state', async (importOriginal) => {
@@ -52,40 +54,6 @@ const { loadMfaContext: realLoadMfaContext } =
   await vi.importActual<typeof import('./mfa-state')>('./mfa-state');
 
 const { ctx, db } = setupTestContext();
-
-/**
- * Reads whether a user's lock for sign-in changes is taken.
- *
- * @param userId - The user.
- * @returns Whether its row exists.
- */
-async function lockTaken(userId: string): Promise<boolean> {
-  const held = await takeSignInChangeLock({ db }, userId);
-  if (!held) {
-    return true;
-  }
-  await releaseSignInChangeLock({ db }, held);
-  return false;
-}
-
-/**
- * Connects a provider account to a user, as Better Auth stores it.
- *
- * @param userId - The user.
- * @param providerId - `github`, `google` or `credential`.
- * @param confirmed - Whether it counts yet (see `beforeAccountCreate`).
- * @returns The account row's ID.
- */
-async function connect(userId: string, providerId: string, confirmed = true): Promise<string> {
-  const created = firstRow(
-    await db
-      .insert(account)
-      .values({ userId, accountId: `${providerId}-${userId}`, providerId, confirmed })
-      .returning({ id: account.id }),
-    'the new account',
-  );
-  return created.id;
-}
 
 /**
  * Reads whether an account counts yet.
@@ -105,49 +73,11 @@ async function isConfirmed(accountId: string): Promise<boolean | null> {
 }
 
 /**
- * Loads a user as the actor of a session, confirmed with a second step or
- * not.
+ * Lists the audit log's actions, actors and details.
  *
- * @param userId - The user.
- * @param confirmedAt - When the session was confirmed, or `null` when it wasn't.
- * @param method - What it was confirmed with; defaults to the authenticator app.
- * @param signedInAt - When it signed in (Better Auth's `createdAt`, for the one-hour rule);
- *   defaults to now.
- * @returns The actor.
+ * @returns The events, oldest first.
  */
-async function signedIn(
-  userId: string,
-  confirmedAt: Date | null,
-  method: MfaMethod = 'authenticator',
-  signedInAt: Date = new Date(),
-) {
-  const actor = await loadActor(db, userId, {
-    id: 'adiutor-tests-session',
-    mfaVerified: confirmedAt !== null,
-    mfaMethod: confirmedAt ? method : null,
-    mfaVerifiedAt: confirmedAt,
-    createdAt: signedInAt,
-  });
-  if (!actor) {
-    throw new Error(`No user ${userId}`);
-  }
-  return actor;
-}
-
-/**
- * Lists the audit log's actions and details.
- *
- * @returns The events, in no particular order.
- */
-async function events() {
-  return db
-    .select({
-      action: auditEvent.action,
-      actorUserId: auditEvent.actorUserId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent);
-}
+const events = () => auditEvents(db, { fields: ['action', 'actorUserId', 'details'] });
 
 describe('sign-in methods', () => {
   it('lists only the user’s own GitHub and Google accounts, not their password', async () => {
@@ -169,8 +99,8 @@ describe('sign-in methods', () => {
 
   it('tells which connected accounts wait for confirmation', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
-    const google = await connect(userId, 'google');
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
+    const google = await connectProvider(db, userId, { providerId: 'google', mfaVerified: false });
 
     const connected = await listConnectedProviders({ db }, userId);
 
@@ -238,9 +168,13 @@ describe('confirmConnectedProvider', () => {
   it('confirms the user’s own account connected at sign-in, and records it', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
-    await confirmConnectedProvider(ctx, await signedIn(userId, new Date()), github);
+    await confirmConnectedProvider(
+      ctx,
+      await actorFor(db, userId, { confirmedAt: new Date() }),
+      github,
+    );
 
     expect(await isConfirmed(github)).toBe(true);
     expect(await events()).toEqual([
@@ -257,7 +191,11 @@ describe('confirmConnectedProvider', () => {
     await enableTwoFactor(db, userId);
     const github = await connectProvider(db, userId, { mfaVerified: true, confirmed: false });
 
-    await confirmConnectedProvider(ctx, await signedIn(userId, new Date()), github);
+    await confirmConnectedProvider(
+      ctx,
+      await actorFor(db, userId, { confirmedAt: new Date() }),
+      github,
+    );
 
     expect(await events()).toEqual([
       {
@@ -271,12 +209,16 @@ describe('confirmConnectedProvider', () => {
   it('is refused while another change to how the user signs in is made, and reads under the lock', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
     const held = await takeSignInChangeLock({ db }, userId);
     vi.mocked(loadMfaContext).mockClear();
 
     await expect(
-      confirmConnectedProvider(ctx, await signedIn(userId, new Date()), github),
+      confirmConnectedProvider(
+        ctx,
+        await actorFor(db, userId, { confirmedAt: new Date() }),
+        github,
+      ),
     ).rejects.toMatchObject({ code: 'conflict' });
     expect(await isConfirmed(github)).toBe(false);
     expect(loadMfaContext).not.toHaveBeenCalled();
@@ -284,23 +226,27 @@ describe('confirmConnectedProvider', () => {
     await releaseSignInChangeLock({ db }, defined(held, 'the sign-in change lock'));
     const lockedWhileRead: boolean[] = [];
     vi.mocked(loadMfaContext).mockImplementationOnce(async (database, id) => {
-      lockedWhileRead.push(await lockTaken(id));
+      lockedWhileRead.push(!(await signInChangeLockFree(db, id)));
       return realLoadMfaContext(database, id);
     });
-    await confirmConnectedProvider(ctx, await signedIn(userId, new Date()), github);
+    await confirmConnectedProvider(
+      ctx,
+      await actorFor(db, userId, { confirmedAt: new Date() }),
+      github,
+    );
     expect(await isConfirmed(github)).toBe(true);
     expect(lockedWhileRead).toEqual([true]);
     // Given back afterwards.
-    expect(await lockTaken(userId)).toBe(false);
+    expect(await signInChangeLockFree(db, userId)).toBe(true);
   });
 
   it('needs a session confirmed with the account’s second step', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await expect(
-      confirmConnectedProvider(ctx, await signedIn(userId, null), github),
+      confirmConnectedProvider(ctx, await actorFor(db, userId, {}), github),
     ).rejects.toMatchObject({ code: 'forbidden' });
 
     expect(await isConfirmed(github)).toBe(false);
@@ -310,9 +256,9 @@ describe('confirmConnectedProvider', () => {
   it('goes ahead without a second step left to confirm with, as for adding a first one', async () => {
     // E.g. two-step verification was turned off after GitHub was connected at sign-in.
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
-    await confirmConnectedProvider(ctx, await signedIn(userId, null), github);
+    await confirmConnectedProvider(ctx, await actorFor(db, userId, {}), github);
 
     expect(await isConfirmed(github)).toBe(true);
     expect(await events()).toEqual([
@@ -326,12 +272,12 @@ describe('confirmConnectedProvider', () => {
 
   it('needs a sign-in from the last hour without a second step', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
 
     await expect(
       confirmConnectedProvider(
         ctx,
-        await signedIn(userId, null, 'authenticator', minutesAgo(61)),
+        await actorFor(db, userId, { signedInAt: minutesAgo(61) }),
         github,
       ),
     ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' });
@@ -340,7 +286,7 @@ describe('confirmConnectedProvider', () => {
 
     await confirmConnectedProvider(
       ctx,
-      await signedIn(userId, null, 'authenticator', minutesAgo(59)),
+      await actorFor(db, userId, { signedInAt: minutesAgo(59) }),
       github,
     );
     expect(await isConfirmed(github)).toBe(true);
@@ -349,11 +295,15 @@ describe('confirmConnectedProvider', () => {
   it('needs that confirmation to be from the last 15 minutes', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await enableTwoFactor(db, userId);
-    const github = await connect(userId, 'github', false);
+    const github = await connectProvider(db, userId, { confirmed: false, mfaVerified: false });
     const sixteenMinutesAgo = new Date(Date.now() - 16 * 60_000);
 
     await expect(
-      confirmConnectedProvider(ctx, await signedIn(userId, sixteenMinutesAgo), github),
+      confirmConnectedProvider(
+        ctx,
+        await actorFor(db, userId, { confirmedAt: sixteenMinutesAgo }),
+        github,
+      ),
     ).rejects.toMatchObject({ code: 'forbidden' });
 
     expect(await isConfirmed(github)).toBe(false);
@@ -363,10 +313,22 @@ describe('confirmConnectedProvider', () => {
   it('only confirms the user’s own unconfirmed provider accounts', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     const otherId = await createUser(db, 'other@adiutor.test');
-    const othersGitHub = await connect(otherId, 'github', false);
-    const ownPassword = await connect(userId, 'credential', false);
-    const ownGoogle = await connect(userId, 'google');
-    const actor = await signedIn(userId, new Date());
+    const othersGitHub = await connectProvider(db, otherId, {
+      confirmed: false,
+      mfaVerified: false,
+    });
+    const ownPassword = firstRow(
+      await db
+        .insert(account)
+        .values({ userId, accountId: userId, providerId: 'credential', confirmed: false })
+        .returning({ id: account.id }),
+      'the new account',
+    ).id;
+    const ownGoogle = await connectProvider(db, userId, {
+      providerId: 'google',
+      mfaVerified: false,
+    });
+    const actor = await actorFor(db, userId, { confirmedAt: new Date() });
 
     await expect(confirmConnectedProvider(ctx, actor, othersGitHub)).rejects.toMatchObject({
       code: 'not_found',
@@ -398,7 +360,10 @@ describe('confirmConnectedProvider for a role that requires MFA', () => {
   async function gitHubOnlyAdmin() {
     const admin = await staffActor(db, 'platform_admin');
     await connectGitHub(db, admin.id);
-    return { adminId: admin.id, actor: await signedIn(admin.id, new Date(), 'github') };
+    return {
+      adminId: admin.id,
+      actor: await actorFor(db, admin.id, { confirmedAt: new Date(), method: 'github' }),
+    };
   }
 
   it('refuses Google, which would stop GitHub counting as MFA, and changes nothing', async () => {
@@ -429,7 +394,7 @@ describe('confirmConnectedProvider for a role that requires MFA', () => {
     });
 
     // E.g. from an email-link session: GitHub can't confirm it, so there's no second step to ask for.
-    await confirmConnectedProvider(ctx, await signedIn(admin.id, null), google);
+    await confirmConnectedProvider(ctx, await actorFor(db, admin.id, {}), google);
 
     expect(await isConfirmed(google)).toBe(true);
   });
@@ -479,7 +444,11 @@ describe('confirmConnectedProvider for a role that requires MFA', () => {
     });
     await addPasskey(db, adminId);
 
-    await confirmConnectedProvider(ctx, await signedIn(adminId, new Date(), 'passkey'), google);
+    await confirmConnectedProvider(
+      ctx,
+      await actorFor(db, adminId, { confirmedAt: new Date(), method: 'passkey' }),
+      google,
+    );
 
     expect(await isConfirmed(google)).toBe(true);
     expect(await events()).toEqual([
@@ -506,7 +475,11 @@ describe('setFirstPassword', () => {
     const setPassword = passwordSetter();
 
     await expect(
-      setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'github'), setPassword),
+      setFirstPassword(
+        ctx,
+        await actorFor(db, manager.id, { confirmedAt: new Date(), method: 'github' }),
+        setPassword,
+      ),
     ).rejects.toMatchObject({
       code: 'forbidden',
       key: 'errors.signIn.mfaRequiredForRole',
@@ -516,11 +489,19 @@ describe('setFirstPassword', () => {
     await addPasskey(db, manager.id);
     // GitHub no longer confirms changes then: the passkey does.
     await expect(
-      setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'github'), setPassword),
+      setFirstPassword(
+        ctx,
+        await actorFor(db, manager.id, { confirmedAt: new Date(), method: 'github' }),
+        setPassword,
+      ),
     ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.mfaVerificationRequired' });
-    await setFirstPassword(ctx, await signedIn(manager.id, new Date(), 'passkey'), setPassword);
+    await setFirstPassword(
+      ctx,
+      await actorFor(db, manager.id, { confirmedAt: new Date(), method: 'passkey' }),
+      setPassword,
+    );
     expect(setPassword).toHaveBeenCalledTimes(1);
-    expect(await lockTaken(manager.id)).toBe(false);
+    expect(await signInChangeLockFree(db, manager.id)).toBe(true);
   });
 
   it('needs a recent confirmation next to a second step, but not without one', async () => {
@@ -530,12 +511,16 @@ describe('setFirstPassword', () => {
     const longAgo = new Date(Date.now() - 16 * 60_000);
 
     await expect(
-      setFirstPassword(ctx, await signedIn(support.id, longAgo), setPassword),
+      setFirstPassword(ctx, await actorFor(db, support.id, { confirmedAt: longAgo }), setPassword),
     ).rejects.toMatchObject({ code: 'forbidden' });
-    await setFirstPassword(ctx, await signedIn(support.id, new Date()), setPassword);
+    await setFirstPassword(
+      ctx,
+      await actorFor(db, support.id, { confirmedAt: new Date() }),
+      setPassword,
+    );
     // A password isn't a second step: without one, nothing to confirm with.
     const newcomer = await createUser(db, 'newcomer@adiutor.test');
-    await setFirstPassword(ctx, await signedIn(newcomer, null), setPassword);
+    await setFirstPassword(ctx, await actorFor(db, newcomer, {}), setPassword);
 
     expect(setPassword).toHaveBeenCalledTimes(2);
   });
@@ -548,22 +533,22 @@ describe('setFirstPassword', () => {
     await expect(
       setFirstPassword(
         ctx,
-        await signedIn(newcomer, null, 'authenticator', minutesAgo(61)),
+        await actorFor(db, newcomer, { signedInAt: minutesAgo(61) }),
         setPassword,
       ),
     ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' });
     // A session whose sign-in time is unknown counts as too old.
-    const unknown = { ...(await signedIn(newcomer, null)), signedInAt: null };
+    const unknown = { ...(await actorFor(db, newcomer, {})), signedInAt: null };
     await expect(setFirstPassword(ctx, unknown, setPassword)).rejects.toMatchObject({
       code: 'forbidden',
       key: 'errors.signIn.sessionNotFresh',
     });
     expect(setPassword).not.toHaveBeenCalled();
-    expect(await lockTaken(newcomer)).toBe(false);
+    expect(await signInChangeLockFree(db, newcomer)).toBe(true);
 
     await setFirstPassword(
       ctx,
-      await signedIn(newcomer, null, 'authenticator', minutesAgo(59)),
+      await actorFor(db, newcomer, { signedInAt: minutesAgo(59) }),
       setPassword,
     );
     // With a second step, its recent confirmation decides, however long ago the sign-in was.
@@ -571,7 +556,7 @@ describe('setFirstPassword', () => {
     await enableTwoFactor(db, support.id);
     await setFirstPassword(
       ctx,
-      await signedIn(support.id, new Date(), 'authenticator', minutesAgo(3 * 60)),
+      await actorFor(db, support.id, { confirmedAt: new Date(), signedInAt: minutesAgo(3 * 60) }),
       setPassword,
     );
     expect(setPassword).toHaveBeenCalledTimes(2);
@@ -583,12 +568,12 @@ describe('setFirstPassword', () => {
     const held = await takeSignInChangeLock({ db }, userId);
 
     await expect(
-      setFirstPassword(ctx, await signedIn(userId, null), setPassword),
+      setFirstPassword(ctx, await actorFor(db, userId, {}), setPassword),
     ).rejects.toMatchObject({ code: 'conflict' });
     await releaseSignInChangeLock({ db }, defined(held, 'the sign-in change lock'));
     await addPassword(db, userId);
     await expect(
-      setFirstPassword(ctx, await signedIn(userId, null), setPassword),
+      setFirstPassword(ctx, await actorFor(db, userId, {}), setPassword),
     ).rejects.toMatchObject({
       code: 'conflict',
       key: 'errors.signIn.passwordAlreadySet',
@@ -620,7 +605,7 @@ describe('changeOwnPassword', () => {
    */
   async function attempts(
     times: number,
-    actor: Awaited<ReturnType<typeof signedIn>>,
+    actor: Actor,
     change: () => Promise<unknown>,
   ): Promise<unknown[]> {
     return inSequence(Array.from({ length: times }), () =>
@@ -644,7 +629,7 @@ describe('changeOwnPassword', () => {
   it('records each wrong current password, and refuses after five without checking', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await addPassword(db, userId);
-    const actor = await signedIn(userId, null);
+    const actor = await actorFor(db, userId, {});
     const change = wrongPassword();
 
     await expect(changeOwnPassword(ctx, actor, change)).rejects.toMatchObject({
@@ -677,7 +662,7 @@ describe('changeOwnPassword', () => {
   it('gives a right password its attempt back, and records nothing for it', async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await addPassword(db, userId);
-    const actor = await signedIn(userId, null);
+    const actor = await actorFor(db, userId, {});
     const wrong = wrongPassword();
     const right = vi.fn(async () => undefined);
 
@@ -697,7 +682,7 @@ describe('changeOwnPassword', () => {
   it("passes Better Auth's other errors on without counting them as wrong passwords", async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     await addPassword(db, userId);
-    const actor = await signedIn(userId, null);
+    const actor = await actorFor(db, userId, {});
     const tooLong = new APIError('BAD_REQUEST', {
       code: 'PASSWORD_TOO_LONG',
       message: 'Password too long',
@@ -719,13 +704,13 @@ describe('changeOwnPassword', () => {
   it("counts each user's wrong passwords on their own", async () => {
     const userId = await createUser(db, 'user@adiutor.test');
     const otherId = await createUser(db, 'other@adiutor.test');
-    expect(await attempts(6, await signedIn(userId, null), wrongPassword())).toEqual([
+    expect(await attempts(6, await actorFor(db, userId, {}), wrongPassword())).toEqual([
       ...Array.from({ length: 5 }, () => 'invalid'),
       'rate_limited',
     ]);
 
     const right = vi.fn(async () => undefined);
-    await changeOwnPassword(ctx, await signedIn(otherId, null), right);
+    await changeOwnPassword(ctx, await actorFor(db, otherId, {}), right);
     expect(right).toHaveBeenCalledTimes(1);
   });
 });

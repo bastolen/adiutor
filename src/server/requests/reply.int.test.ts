@@ -22,7 +22,14 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import replyToRequest from './reply';
-import { ctx, db, deactivatedMeanwhile, storeRequest, storedRequest } from './test-helpers';
+import {
+  ctx,
+  db,
+  deactivatedMeanwhile,
+  storeRequest,
+  storedRequest,
+  entriesOf,
+} from './test-helpers';
 
 /**
  * The entries of a request's history, in order, as rows to compare.
@@ -31,11 +38,7 @@ import { ctx, db, deactivatedMeanwhile, storeRequest, storedRequest } from './te
  * @returns Each entry's kind, side, text and change.
  */
 async function history(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
+  const entries = await entriesOf(requestId);
   return entries.map(({ kind, authorSide, body, fromValue, toValue }) => ({
     kind,
     authorSide,

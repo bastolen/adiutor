@@ -17,11 +17,10 @@
  * A deactivated account is refused there too, after that check, so nothing
  * gets connected to it, verified or stored (`checkIncomingUser`).
  */
-import { hashPassword } from 'better-auth/crypto';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { account, auditEvent, session as sessionTable, user } from '@/db/schema';
+import { account, session as sessionTable, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { firstRow } from '@/lib/defined';
 import { sendEmail } from '@/lib/email';
@@ -29,7 +28,15 @@ import { env } from '@/lib/env';
 import { REVERIFY_HINT } from '@/lib/sign-in/oauth-providers';
 import { ACCOUNT_DEACTIVATED } from '@/lib/sign-in/sign-in-refusals';
 
-import { createUser, queuedJobKinds, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createUser,
+  queuedJobKinds,
+  setupTestContext,
+  auditEvents,
+  addPassword,
+  connectProvider,
+} from '../../../tests/integration/helpers';
+import { authRequest, cookieJar } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
@@ -85,11 +92,13 @@ function mockGitHub(profile: { id: number; login?: string; email: string }, twoF
  * @returns E.g. `a=1; b=2`.
  */
 function cookiesOf(response: Response): string {
-  return response.headers
-    .getSetCookie()
-    .map((set) => set.split(';')[0])
-    .join('; ');
+  const jar = cookieJar();
+  jar.keep(response);
+  return jar.cookie();
 }
+
+/** The password of the users who sign in with one. */
+const PASSWORD = 'adiutor-tests-password';
 
 /** Where "Confirm with GitHub" on the step-up page comes back to when it fails. */
 const STEP_UP_ERROR_URL = '/auth/verify?callbackURL=%2Fdashboard&provider=github';
@@ -117,13 +126,10 @@ async function githubFlow(
   cookie = '',
   body: Record<string, unknown> = {},
 ): Promise<Response> {
-  const start = await auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, cookie },
-      body: JSON.stringify({ provider: 'github', callbackURL: '/dashboard', ...body }),
-    }),
-  );
+  const start = await authRequest(path, {
+    body: { provider: 'github', callbackURL: '/dashboard', ...body },
+    cookie,
+  });
   expect(start.ok).toBe(true);
   const { url } = (await start.json()) as { url: string };
   const state = new URL(url).searchParams.get('state');
@@ -144,13 +150,7 @@ async function githubFlow(
  * @returns The session cookie.
  */
 async function signInWithPassword(email: string, password: string): Promise<string> {
-  const response = await auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/sign-in/email`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL },
-      body: JSON.stringify({ email, password }),
-    }),
-  );
+  const response = await authRequest('sign-in/email', { body: { email, password } });
   expect(response.ok).toBe(true);
   return cookiesOf(response);
 }
@@ -260,7 +260,7 @@ describe('signing in with GitHub to a deactivated account', () => {
     );
     expect(found.emailVerified).toBe(false);
     expect(await db.select().from(sessionTable)).toEqual([]);
-    expect(await db.select({ action: auditEvent.action }).from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db, { fields: ['action'] })).toEqual([]);
     expect(sendEmail).not.toHaveBeenCalled();
     expect(await queuedJobKinds(db)).toEqual([]);
   });
@@ -289,13 +289,8 @@ describe('signing in with GitHub to a deactivated account', () => {
 describe('connecting GitHub from the Security page', () => {
   it('stores the username of the account it connects, whatever its email address', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values({
-      userId: jane,
-      accountId: jane,
-      providerId: 'credential',
-      password: await hashPassword('adiutor-tests-password'),
-    });
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
 
     mockGitHub({ id: 5151, login: 'adiutor-tests-work', email: 'jane.work@adiutor.test' });
     expectSucceeded(await githubFlow('link-social', session));
@@ -307,27 +302,16 @@ describe('connecting GitHub from the Security page', () => {
 describe('confirming a session with GitHub on the step-up page', () => {
   it('records that the session was confirmed, not another sign-in', async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      // Her GitHub account, connected and confirmed earlier.
-      { userId: jane, accountId: '4242', providerId: 'github' },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    // Her GitHub account, connected and confirmed earlier.
+    await connectProvider(db, jane, { accountId: '4242', mfaVerified: false });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
 
     // "Confirm with GitHub" signs in with GitHub on the signed-in browser; GitHub says it has 2FA.
     mockGitHub({ id: 4242, login: 'adiutor-tests', email: 'jane@adiutor.test' });
     expectSucceeded(await githubFlow('sign-in/social', session, REVERIFY));
 
-    const recorded = await db
-      .select({ action: auditEvent.action, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.actorUserId, jane))
-      .orderBy(asc(auditEvent.id));
+    const recorded = await auditEvents(db, { actorUserId: jane, fields: ['action', 'details'] });
     expect(recorded).toEqual([
       { action: 'sign_in', details: { method: 'password' } },
       { action: 'mfa_verified', details: { method: 'github' } },
@@ -343,16 +327,9 @@ describe('confirming a session with GitHub on the step-up page', () => {
 
   it("keeps the session's earlier confirmation as it was when GitHub's 2FA is off", async () => {
     const jane = await createUser(db, 'jane@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      { userId: jane, accountId: '4242', providerId: 'github' },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    await connectProvider(db, jane, { accountId: '4242', mfaVerified: false });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
     // Confirmed with a passkey 20 minutes ago: too long ago to change how she signs in.
     const confirmedAt = new Date(Date.now() - 20 * 60_000);
     await db
@@ -387,17 +364,10 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
   async function janeSignedIn(): Promise<{ jane: string; john: string; session: string }> {
     const jane = await createUser(db, 'jane@adiutor.test');
     const john = await createUser(db, 'john@adiutor.test');
-    await db.insert(account).values([
-      {
-        userId: jane,
-        accountId: jane,
-        providerId: 'credential',
-        password: await hashPassword('adiutor-tests-password'),
-      },
-      { userId: jane, accountId: '4242', providerId: 'github', mfaVerified: true },
-      { userId: john, accountId: '7777', providerId: 'github', mfaVerified: true },
-    ]);
-    const session = await signInWithPassword('jane@adiutor.test', 'adiutor-tests-password');
+    await addPassword(db, jane, PASSWORD);
+    await connectProvider(db, jane, { accountId: '4242' });
+    await connectProvider(db, john, { accountId: '7777' });
+    const session = await signInWithPassword('jane@adiutor.test', PASSWORD);
     return { jane, john, session };
   }
 
@@ -437,14 +407,7 @@ describe('"Confirm with GitHub" with another GitHub account than her own confirm
    * @returns The events' action, user and details, oldest first.
    */
   async function recordedSinceSignIn() {
-    const rows = await db
-      .select({
-        action: auditEvent.action,
-        actorUserId: auditEvent.actorUserId,
-        details: auditEvent.details,
-      })
-      .from(auditEvent)
-      .orderBy(asc(auditEvent.id));
+    const rows = await auditEvents(db, { fields: ['action', 'actorUserId', 'details'] });
     return rows.filter((row) => row.action !== 'sign_in' || row.details.method !== 'password');
   }
 

@@ -10,13 +10,13 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { auditEvent, impersonation, membership, session, user } from '@/db/schema';
+import { impersonation, membership, session, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import type { PlatformRole } from '@/lib/authz/roles';
-import { defined } from '@/lib/defined';
 import { IMPERSONATION_REASON_MAX_LENGTH } from '@/lib/input-rules';
 
 import {
+  actorFor,
   addMember,
   addPasskey,
   createCompany,
@@ -31,6 +31,7 @@ import {
   setupTestContext,
   setUserLocale,
   staffActor,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import { type Actor, loadActor } from '../actor';
 import { ServiceError } from '../errors';
@@ -71,16 +72,7 @@ async function confirmedStaff(
     mfaMethod: method,
     mfaVerifiedAt: confirmedAt,
   });
-  const loaded = await loadActor(db, staff.id, {
-    id: sessionId,
-    mfaVerified: true,
-    mfaMethod: method,
-    mfaVerifiedAt: confirmedAt,
-  });
-  if (!loaded) {
-    throw new Error('No staff member');
-  }
-  return loaded;
+  return actorFor(db, staff.id, { sessionId, confirmedAt, method, signedInAt: null });
 }
 
 /**
@@ -119,16 +111,10 @@ async function refusal(actor: Actor, userId: string): Promise<ServiceError> {
  * @returns Their actor, target, time and details.
  */
 async function endEvents() {
-  return db
-    .select({
-      actorUserId: auditEvent.actorUserId,
-      targetUserId: auditEvent.targetUserId,
-      at: auditEvent.at,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .where(eq(auditEvent.action, 'impersonation_ended'))
-    .orderBy(auditEvent.at);
+  return auditEvents(db, {
+    action: 'impersonation_ended',
+    fields: ['actorUserId', 'targetUserId', 'at', 'details'],
+  });
 }
 
 describe('startImpersonation', () => {
@@ -155,10 +141,7 @@ describe('startImpersonation', () => {
       reason: 'Ticket 12: the Members page is empty',
       returnTo: `/admin/users/${userId}#sign-in-as`,
     });
-    const [event] = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'impersonation_started'));
+    const [event] = await auditEvents(db, { action: 'impersonation_started' });
     expect(event).toMatchObject({
       actorUserId: staff.id,
       targetUserId: userId,
@@ -185,20 +168,19 @@ describe('startImpersonation', () => {
     const [row] = await db.select().from(impersonation);
     expect(row?.reason).toBeNull();
     expect(row?.returnTo).toBe(`/admin/users/${userId}`);
-    const [event] = await db
-      .select({ details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'impersonation_started'));
+    const [event] = await auditEvents(db, { action: 'impersonation_started', fields: ['details'] });
     expect(event?.details).not.toHaveProperty('reason');
   });
 
   it('decides with the rules: Support signs in as Clients, not company Admins', async () => {
     const support = await confirmedStaff('support');
     const admin = await companyUser('admin');
-    const client = await createUser(db, 'watcher@adiutor.test');
+    const client = await companyUser('client');
 
     expect((await refusal(support, admin)).key).toBe('errors.impersonation.companyAdmin');
-    await expect(startImpersonation(ctx, support, { userId: client })).resolves.toBeDefined();
+    await expect(startImpersonation(ctx, support, { userId: client })).resolves.toMatchObject({
+      expiresAt: expect.any(Date),
+    });
   });
 
   it('refuses a staff Admin, yourself and a deactivated account', async () => {
@@ -236,18 +218,16 @@ describe('startImpersonation', () => {
       mfaMethod: 'email_code',
       mfaVerifiedAt: new Date(),
     });
-    const withEmailCodes = await loadActor(db, support.id, {
-      id: sessionId,
-      mfaVerified: true,
-      mfaMethod: 'email_code',
-      mfaVerifiedAt: new Date(),
+    const withEmailCodes = await actorFor(db, support.id, {
+      sessionId,
+      confirmedAt: new Date(),
+      method: 'email_code',
+      signedInAt: null,
     });
     const userId = await companyUser();
 
-    expect(withEmailCodes?.mfaConfirmedUntil).not.toBeNull();
-    expect((await refusal(withEmailCodes as Actor, userId)).key).toBe(
-      'errors.impersonation.needsMfa',
-    );
+    expect(withEmailCodes.mfaConfirmedUntil).not.toBeNull();
+    expect((await refusal(withEmailCodes, userId)).key).toBe('errors.impersonation.needsMfa');
   });
 
   it('needs a confirmation with that strong step from the last 15 minutes', async () => {
@@ -264,15 +244,10 @@ describe('startImpersonation', () => {
     const staff = await staffActor(db, 'platform_admin', 'link.admin@adiutor.test');
     await addPasskey(db, staff.id);
     const sessionId = await createSession(db, staff.id);
-    const linked = await loadActor(db, staff.id, {
-      id: sessionId,
-      mfaVerified: false,
-      fromRequestLink: true,
-      createdAt: new Date(),
-    });
+    const linked = await actorFor(db, staff.id, { sessionId, fromRequestLink: true });
     const userId = await companyUser();
 
-    const error = await refusal(defined(linked, 'the staff member'), userId);
+    const error = await refusal(linked, userId);
 
     expect(error.code).toBe('confirmation_required');
     expect(await db.select().from(impersonation)).toEqual([]);
@@ -378,14 +353,14 @@ describe('actorSignedInAs', () => {
     const { staff, found } = await signedIn('manager');
     // Demoted to Finance, as the next request loads them.
     await db.update(user).set({ platformRole: 'finance' }).where(eq(user.id, staff.id));
-    const demoted = await loadActor(db, staff.id, {
-      id: staff.sessionId ?? undefined,
-      mfaVerified: true,
-      mfaMethod: 'passkey',
-      mfaVerifiedAt: new Date(),
+    const demoted = await actorFor(db, staff.id, {
+      sessionId: staff.sessionId ?? undefined,
+      confirmedAt: new Date(),
+      method: 'passkey',
+      signedInAt: null,
     });
 
-    await expect(actorSignedInAs(db, demoted as Actor, found)).resolves.toEqual({
+    await expect(actorSignedInAs(db, demoted, found)).resolves.toEqual({
       end: 'no_longer_allowed',
     });
     // Or without strong MFA on their account any more.
@@ -423,10 +398,7 @@ describe('setStaffSignInAllowed', () => {
     await expect(setStaffSignInAllowed(ctx, jane, true)).resolves.toBe(true);
     expect((await loadActor(db, userId))?.allowStaffSignIn).toBe(true);
 
-    const events = await db
-      .select({ action: auditEvent.action, actorUserId: auditEvent.actorUserId })
-      .from(auditEvent)
-      .orderBy(auditEvent.at);
+    const events = await auditEvents(db, { fields: ['action', 'actorUserId'] });
     expect(events).toEqual([
       { action: 'staff_sign_in_turned_off', actorUserId: userId },
       { action: 'staff_sign_in_turned_on', actorUserId: userId },

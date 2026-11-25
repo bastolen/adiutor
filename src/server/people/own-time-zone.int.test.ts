@@ -8,7 +8,6 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { user } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 
 import {
   actorFor,
@@ -16,24 +15,12 @@ import {
   createUser,
   saveSettings,
   setupTestContext,
+  savedTimeZone,
 } from '../../../tests/integration/helpers';
 import { loadActor } from '../actor';
 import saveFirstTimeZone, { ownTimeZone, setOwnTimeZone } from './own-time-zone';
 
 const { ctx, db } = setupTestContext();
-
-/**
- * Reads a user's saved time zone.
- *
- * @param userId - The user.
- * @returns Their `user.time_zone`.
- */
-async function savedTimeZone(userId: string) {
-  return firstRow(
-    await db.select({ timeZone: user.timeZone }).from(user).where(eq(user.id, userId)),
-    'the user',
-  ).timeZone;
-}
 
 describe('saveFirstTimeZone', () => {
   it("saves the browser's zone for an account without one", async () => {
@@ -42,7 +29,7 @@ describe('saveFirstTimeZone', () => {
     const saved = await saveFirstTimeZone(ctx, await actorFor(db, jane), 'Europe/Amsterdam');
 
     expect(saved).toBe('Europe/Amsterdam');
-    expect(await savedTimeZone(jane)).toBe('Europe/Amsterdam');
+    expect(await savedTimeZone(db, jane)).toBe('Europe/Amsterdam');
     expect((await loadActor(db, jane))?.timeZone).toBe('Europe/Amsterdam');
   });
 
@@ -53,7 +40,7 @@ describe('saveFirstTimeZone', () => {
     const saved = await saveFirstTimeZone(ctx, await actorFor(db, jane), 'Europe/Amsterdam');
 
     expect(saved).toBe('Asia/Kolkata');
-    expect(await savedTimeZone(jane)).toBe('Asia/Kolkata');
+    expect(await savedTimeZone(db, jane)).toBe('Asia/Kolkata');
   });
 
   it.each(['Mars/Olympus_Mons', 'europe/amsterdam', '', 42, null])(
@@ -62,7 +49,7 @@ describe('saveFirstTimeZone', () => {
       const jane = await createUser(db, 'jane@adiutor.test');
 
       expect(await saveFirstTimeZone(ctx, await actorFor(db, jane), zone)).toBeNull();
-      expect(await savedTimeZone(jane)).toBeNull();
+      expect(await savedTimeZone(db, jane)).toBeNull();
     },
   );
 
@@ -83,7 +70,7 @@ describe('saveFirstTimeZone', () => {
     await expect(saveFirstTimeZone(ctx, signedInAs, 'Europe/Amsterdam')).rejects.toMatchObject({
       code: 'signed_in_as',
     });
-    expect(await savedTimeZone(jane)).toBeNull();
+    expect(await savedTimeZone(db, jane)).toBeNull();
   });
 });
 
@@ -95,7 +82,7 @@ describe('setOwnTimeZone', () => {
     await expect(setOwnTimeZone(ctx, await actorFor(db, jane), 'America/New_York')).resolves.toBe(
       'America/New_York',
     );
-    expect(await savedTimeZone(jane)).toBe('America/New_York');
+    expect(await savedTimeZone(db, jane)).toBe('America/New_York');
   });
 
   it('refuses a zone Adiutor doesn’t accept, keeping the saved one', async () => {
@@ -105,7 +92,7 @@ describe('setOwnTimeZone', () => {
     await expect(setOwnTimeZone(ctx, await actorFor(db, jane), 'europe/amsterdam')).rejects.toThrow(
       'validation.timeZone',
     );
-    expect(await savedTimeZone(jane)).toBe('Asia/Tokyo');
+    expect(await savedTimeZone(db, jane)).toBe('Asia/Tokyo');
   });
 });
 

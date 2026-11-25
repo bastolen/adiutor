@@ -2,13 +2,11 @@
  * @file Integration tests for connecting and disconnecting provider accounts,
  * also at sign-in.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { user } from '@/db/schema';
 import { defined } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import {
@@ -23,6 +21,7 @@ import {
   staffActor,
   turnOffGitHubSignIn,
   minutesAgo,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { holdSignInChangeLock, releaseSignInChangeLockOf } from '../auth-guards';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
@@ -36,7 +35,6 @@ import {
   githubCallback,
   storeSessionMfa,
   signedInHeaders,
-  addPasskey,
   mockGitHubApi,
   connectGitHubWithToken,
 } from './test-helpers';
@@ -51,22 +49,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('disconnecting a provider', () => {
   it('records and names the provider', async () => {
@@ -291,7 +273,7 @@ describe('connecting a provider account', () => {
     await storeSessionMfa(clientSession, 'email_code');
     const admin = await memberActor(db, testCompany.id, 'admin');
     await enableTwoFactor(db, admin.id, 'email');
-    await addPasskey(admin.id);
+    await addPasskey(db, admin.id);
     const adminSession = await createSession(db, admin.id);
     await storeSessionMfa(adminSession, 'email_code');
 
@@ -341,7 +323,7 @@ describe('connecting a provider account', () => {
       staffActor(db, 'support'),
       staffActor(db, 'support'),
     ]);
-    await addPasskey(withPasskey.id);
+    await addPasskey(db, withPasskey.id);
     const results = await inSequence([withPasskey.id, githubOnly.id], async (userId) => {
       await connectGitHub(db, userId);
       const viaGitHub = await createSession(db, userId, {

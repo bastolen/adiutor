@@ -6,18 +6,18 @@
  * browser is removed), and a password whose code step is still to come
  * changes nothing.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { user } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 
 import {
   createSession,
   createStaffSettings,
   createUser,
   setUserLocale,
+  savedLocale,
+  savedTimeZone,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import { afterPasswordSignIn } from './password-sign-in';
@@ -30,28 +30,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-/**
- * Reads a user's saved language.
- *
- * @param userId - The user.
- * @returns Their `user.locale`.
- */
-async function savedLocale(userId: string) {
-  return firstRow(
-    await db.select({ locale: user.locale }).from(user).where(eq(user.id, userId)),
-    'the user',
-  ).locale;
-}
 
 /**
  * The language cookies a request set.
@@ -77,7 +55,7 @@ describe('the language at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
     expect(languageCookies(setCookie)).toEqual([]);
   });
 
@@ -93,7 +71,7 @@ describe('the language at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
     // The browser follows Adiutor's default language from here, like the account.
     expect(languageCookies(setCookie)).toEqual(['']);
     expect(setCookie).toHaveBeenCalledWith(...REMOVED);
@@ -109,7 +87,7 @@ describe('the language at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
     expect(setCookie).toHaveBeenCalledWith(...REMOVED);
   });
 
@@ -124,7 +102,7 @@ describe('the language at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedLocale(jane)).toBe('es-ES');
+    expect(await savedLocale(db, jane)).toBe('es-ES');
     expect(languageCookies(setCookie)).toEqual(['es-ES']);
     expect(setCookie).toHaveBeenCalledWith(
       'adiutor.locale',
@@ -143,7 +121,7 @@ describe('the language at sign-in', () => {
     const after = passwordSignIn({ cookie: 'adiutor.locale=es-ES' }, null);
     await afterPasswordSignIn(after.ctx);
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
     expect(languageCookies(before.setCookie)).toEqual([]);
     expect(languageCookies(after.setCookie)).toEqual([]);
   });
@@ -172,23 +150,10 @@ describe('the language at sign-in', () => {
 
     await afterAuthRequest(ctx);
 
-    expect(await savedLocale(jane)).toBeNull();
+    expect(await savedLocale(db, jane)).toBeNull();
     expect(setCookie).toHaveBeenCalledWith(...REMOVED);
   });
 });
-
-/**
- * Reads a user's saved time zone.
- *
- * @param userId - The user.
- * @returns Their `user.time_zone`.
- */
-async function savedTimeZone(userId: string) {
-  return firstRow(
-    await db.select({ timeZone: user.timeZone }).from(user).where(eq(user.id, userId)),
-    'the user',
-  ).timeZone;
-}
 
 /**
  * The values a request set the time zone cookie to.
@@ -229,7 +194,7 @@ describe('the time zone at sign-in', () => {
 
     await afterPasswordSignIn(ctx);
 
-    expect(await savedTimeZone(jane)).toBeNull();
+    expect(await savedTimeZone(db, jane)).toBeNull();
     expect(setCookie).toHaveBeenCalledWith(
       'adiutor.time-zone',
       '',

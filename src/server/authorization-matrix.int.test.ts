@@ -35,11 +35,10 @@
  * removing, reactivating, accepting) gets a target of its own in
  * `createWorld`.
  */
-import { hashPassword } from 'better-auth/crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
+import { impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -57,6 +56,7 @@ import {
   staffActor,
   storeQueuedJob,
   tokenFrom,
+  addPassword,
 } from '../../tests/integration/helpers';
 import type { Actor } from './actor';
 import { listAuditEvents, listAuditLog } from './audit';
@@ -251,20 +251,6 @@ const NEW_REQUEST = {
 
 /** The password the acting user is given in `deactivate own account`. */
 const OWN_PASSWORD = 'correct horse battery';
-
-/**
- * Gives a user a password, as Better Auth stores it.
- *
- * @param userId - The user.
- */
-async function givePassword(userId: string): Promise<void> {
-  await db.insert(account).values({
-    userId,
-    accountId: userId,
-    providerId: 'credential',
-    password: await hashPassword(OWN_PASSWORD),
-  });
-}
 
 /** One operation: what it does, on which target, and how to run it in a world. */
 type Operation = [name: string, run: (world: World) => Promise<unknown>];
@@ -786,7 +772,7 @@ function listOperations(): Operation[] {
     [
       'deactivate own account',
       async (w) => {
-        await givePassword(w.actor.id);
+        await addPassword(db, w.actor.id, OWN_PASSWORD);
         await deactivateOwnAccount(ctx, w.actor, OWN_PASSWORD);
       },
     ],
@@ -1391,7 +1377,7 @@ describe('authorization matrix', () => {
       await memberActor(db, company.id, 'client'),
     ];
     const results = await inSequence([soleStaffAdmin, soleCompanyAdmin, client], async (actor) => {
-      await givePassword(actor.id);
+      await addPassword(db, actor.id, OWN_PASSWORD);
       return outcomeCode(() => deactivateOwnAccount(ctx, actor, OWN_PASSWORD));
     });
     expect(results).toEqual(['conflict', 'conflict', 'done']);

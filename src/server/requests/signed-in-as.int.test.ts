@@ -11,7 +11,6 @@ import { and, eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
-  auditEvent,
   impersonation,
   rateLimitBucket,
   request,
@@ -21,7 +20,12 @@ import {
 } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
-import { createCompany, memberActor, staffActor } from '../../../tests/integration/helpers';
+import {
+  createCompany,
+  memberActor,
+  staffActor,
+  auditEvents,
+} from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { listOwnActivity } from '../audit';
 import { changeAssignees } from './assignees';
@@ -33,7 +37,7 @@ import raiseRequest from './raise';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
 import { subscribe, unsubscribe } from './subscribers';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, storeRequest, entriesOf } from './test-helpers';
 import { addRequestType } from './types';
 
 /**
@@ -72,16 +76,13 @@ async function signInAs(staff: Actor, target: Actor): Promise<Actor> {
  * @returns Each entry.
  */
 async function entries(requestId: string) {
-  return db
-    .select({
-      kind: requestEntry.kind,
-      authorId: requestEntry.authorId,
-      signedInAs: requestEntry.signedInAs,
-      signedInAsStaffId: requestEntry.signedInAsStaffId,
-    })
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
+  const rows = await entriesOf(requestId);
+  return rows.map(({ kind, authorId, signedInAs, signedInAsStaffId }) => ({
+    kind,
+    authorId,
+    signedInAs,
+    signedInAsStaffId,
+  }));
 }
 
 describe('request work while a staff member is signed in as a user', () => {
@@ -235,7 +236,9 @@ describe('request work while a staff member is signed in as a user', () => {
 
     await expect(
       storeRequest(company.id, { createdSignedInAsStaffId: admin.id }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      cause: { code: '23514', constraint: 'request_created_signed_in_as_fits' },
+    });
   });
 });
 
@@ -338,11 +341,7 @@ describe('subscriptions changed while signed in as someone', () => {
       unsubscribed: true,
     });
 
-    const events = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'request_subscribers_changed'))
-      .orderBy(auditEvent.at);
+    const events = await auditEvents(db, { action: 'request_subscribers_changed' });
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({
       actorUserId: admin.id,
@@ -372,10 +371,10 @@ describe('subscriptions changed while signed in as someone', () => {
     expect(buckets.map(({ key }) => key).sort()).toEqual(
       [`request-change:user:${admin.id}`, `request-change:user:${client.id}`].sort(),
     );
-    const events = await db
-      .select({ actorUserId: auditEvent.actorUserId })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'request_subscribers_changed'));
+    const events = await auditEvents(db, {
+      action: 'request_subscribers_changed',
+      fields: ['actorUserId'],
+    });
     expect(events).toEqual([{ actorUserId: admin.id }]);
   });
 });

@@ -26,7 +26,7 @@ import mentionKey from './mention-key';
 import { listMentionable } from './mentions';
 import addNote from './notes';
 import { loadSubscribers } from './participants';
-import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers';
+import { ctx, db, storeEntry, storeRequest, storedRequest, entriesOf } from './test-helpers';
 
 /**
  * The entries of a request's history, in order.
@@ -35,11 +35,7 @@ import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers
  * @returns Each entry's kind, author, side and text.
  */
 async function history(requestId: string) {
-  const entries = await db
-    .select()
-    .from(requestEntry)
-    .where(eq(requestEntry.requestId, requestId))
-    .orderBy(requestEntry.id);
+  const entries = await entriesOf(requestId);
   return entries.map(({ kind, authorId, authorSide, body, bodyFormat }) => ({
     kind,
     authorId,

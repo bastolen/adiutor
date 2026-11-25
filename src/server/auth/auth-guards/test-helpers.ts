@@ -2,25 +2,34 @@
  * @file Requests, signed-in sessions and outcomes shared by the integration tests
  * of the checks before Better Auth requests.
  */
-import { getSessionFromCtx } from 'better-auth/api';
+import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq, like } from 'drizzle-orm';
-import { expect, vi } from 'vitest';
+import { beforeEach, expect, vi } from 'vitest';
 
 import { rateLimitBucket, user } from '@/db/schema';
 import type { MfaMethod } from '@/lib/authz/mfa';
 import { firstRow } from '@/lib/defined';
 
-import { inSequence, rateLimitHits, setupTestContext } from '../../../../tests/integration/helpers';
+import { inSequence, setupTestContext } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
 
 /**
- * The test database context these tests share. Each test file imports this
- * module afresh (Vitest isolates test files), so each gets its own context
- * and hooks, as when it called `setupTestContext()` itself.
+ * The test database context these tests share, and the hook that forgets the mocked session
+ * before each test. Each test file imports this module afresh (Vitest isolates test files), so
+ * each gets its own context and hooks, as when it called `setupTestContext()` itself. The
+ * `vi.mock` calls stay in the test files, which hoists them.
  */
 export const { db } = setupTestContext();
+
+beforeEach(() => {
+  // A test file that doesn't mock `better-auth/api` has no session to forget.
+  if (vi.isMockFunction(getSessionFromCtx)) {
+    vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
+    vi.mocked(addOAuthServerContext).mockReset();
+  }
+});
 
 /**
  * Builds the endpoint context of a request.
@@ -139,16 +148,6 @@ export async function outcomeOf(path: string, body: Record<string, unknown> = {}
   // The reactions after a request get their own context object; only `context` is shared.
   await releaseSignInChangeLockOf({ context: ctx.context });
   return 'allowed';
-}
-
-/**
- * Reads how often a limit was hit.
- *
- * @param key - The limit's key.
- * @returns The count, or `null` when it was never hit.
- */
-export async function hits(key: string): Promise<number | null> {
-  return rateLimitHits(db, key);
 }
 
 /**

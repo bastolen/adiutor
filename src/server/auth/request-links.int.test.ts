@@ -16,16 +16,9 @@
  * - a link ends with the user's trusted devices, and is capped per hour.
  */
 import { and, eq, like } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  auditEvent,
-  membership,
-  rateLimitBucket,
-  requestSignInLink,
-  session,
-  user,
-} from '@/db/schema';
+import { membership, rateLimitBucket, requestSignInLink, session, user } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { mustStepUp, needsFreshSignIn, needsRecentConfirmation } from '@/lib/authz/mfa';
 import { defined } from '@/lib/defined';
@@ -43,12 +36,15 @@ import {
   fillRateLimitBucket,
   setupTestContext,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import { getOptionalActor } from '../authz';
 import { RATE_LIMITS } from '../rate-limit';
 import { createRequestLink, getRequestLinkView } from './request-links';
 import { revokeOtherOwnSessions, endSessionsOf } from './sessions';
+import { cookieJar } from './test-helpers';
 
 /** The request a page renders for; tests set its headers (e.g. the browser's cookies). */
 const pageRequest = vi.hoisted(() => ({ headers: new Headers() }));
@@ -62,11 +58,6 @@ vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }));
 vi.mock('../background', () => ({ default: vi.fn() }));
 
 const { ctx, db } = setupTestContext();
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
 
 beforeEach(async () => {
   await createStaffSettings(db);
@@ -120,17 +111,10 @@ const OTHER_ORIGIN = 'https://mail.adiutor.test';
  * @returns The browser.
  */
 function newBrowser() {
-  const cookies = new Map<string, string>();
-
-  /**
-   * The cookies it sends.
-   *
-   * @returns A `Cookie` header.
-   */
-  const cookie = () => [...cookies].map(([name, value]) => `${name}=${value}`).join('; ');
+  const jar = cookieJar();
 
   return {
-    cookie,
+    cookie: jar.cookie,
 
     /**
      * Sends a request link, keeping the cookies the response sets.
@@ -163,7 +147,7 @@ function newBrowser() {
       }
       // `SameSite=Lax`: another site's POST carries none of the site's cookies.
       const sent: Record<string, string> =
-        posted && headers['sec-fetch-site'] === 'cross-site' ? {} : { cookie: cookie() };
+        posted && headers['sec-fetch-site'] === 'cross-site' ? {} : { cookie: jar.cookie() };
       const response = await auth.handler(
         posted
           ? new Request(`${env.BETTER_AUTH_URL}/api/auth/request-link/sign-in`, {
@@ -176,19 +160,10 @@ function newBrowser() {
               body: form,
             })
           : new Request(`${env.BETTER_AUTH_URL}${requestLinkPath(token, { entry })}${query}`, {
-              headers: { ...headers, cookie: cookie() },
+              headers: { ...headers, cookie: jar.cookie() },
             }),
       );
-      response.headers.getSetCookie().forEach((set) => {
-        const pair = defined(set.split(';')[0], 'the cookie name and value');
-        const name = pair.slice(0, pair.indexOf('='));
-        const value = pair.slice(pair.indexOf('=') + 1);
-        if (value === '' || /max-age=0/i.test(set)) {
-          cookies.delete(name);
-        } else {
-          cookies.set(name, value);
-        }
-      });
+      jar.keep(response);
       return response;
     },
 
@@ -240,7 +215,7 @@ async function clientWithRequest() {
   const company = await createCompany(db);
   const client = await createUser(db, 'casey@adiutor.test');
   await addMember(db, company.id, client, 'client');
-  const requestId = await storeAssignedRequest(db, company.id, []);
+  const { id: requestId } = await storeRequest(db, company.id);
   return { client, requestId, companyId: company.id };
 }
 
@@ -296,10 +271,7 @@ describe('the link in an email about a request', () => {
     expect(needsRecentConfirmation(actor)).toBe(true);
     expect(actor.strongMfaConfirmedUntil).toBeNull();
     // Recorded as a sign-in with the link.
-    const events = await db
-      .select({ action: auditEvent.action, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.actorUserId, client));
+    const events = await auditEvents(db, { actorUserId: client, fields: ['action', 'details'] });
     expect(events).toEqual([{ action: 'sign_in', details: { method: 'request_link' } }]);
     const [link] = await db.select().from(requestSignInLink);
     expect(link?.lastUsedAt).not.toBeNull();
@@ -309,7 +281,8 @@ describe('the link in an email about a request', () => {
     const company = await createCompany(db);
     const manager = await staffActor(db, 'manager');
     await enableTwoFactor(db, manager.id);
-    const requestId = await storeAssignedRequest(db, company.id, [manager.id]);
+    const { id: requestId } = await storeRequest(db, company.id);
+    await storeParticipants(db, requestId, [manager.id], 'assignee');
     const token = await createRequestLink(db, { userId: manager.id, requestId });
     const browser = newBrowser();
 

@@ -2,12 +2,11 @@
  * @file Integration tests for confirming a session with GitHub on the step-up
  * page.
  */
-import { APIError, getOAuthState } from 'better-auth/api';
+import { APIError } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session } from '@/db/schema';
-import { sendEmail } from '@/lib/email';
+import { session } from '@/db/schema';
 import { PROVIDER_STEP_UP_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import {
@@ -16,6 +15,7 @@ import {
   inSequence,
   lastActiveAt,
   minutesAgo,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
 import type { AuthHookContext } from './hook-context';
@@ -47,22 +47,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('confirming a session with GitHub on the step-up page', () => {
   /** Where the new session was created from, as Better Auth stores it. */
@@ -145,9 +129,9 @@ describe('confirming a session with GitHub on the step-up page', () => {
       afterRequest: [['mfa_verified', jane, { method: 'github' }]],
     });
     // From where the new session was created, like a passkey step-up.
-    expect(
-      await db.select({ ip: auditEvent.ip, userAgent: auditEvent.userAgent }).from(auditEvent),
-    ).toEqual([{ ip: BROWSER.ipAddress, userAgent: BROWSER.userAgent }]);
+    expect(await auditEvents(db, { fields: ['ip', 'userAgent'] })).toEqual([
+      { ip: BROWSER.ipAddress, userAgent: BROWSER.userAgent },
+    ]);
     expect(await sessionMfa(created.sessionId)).toEqual({ mfaVerified: true, mfaMethod: 'github' });
     expect(await sessionExists(previous)).toBe(false);
     expectSetSince(await lastActiveAt(db, jane), start);

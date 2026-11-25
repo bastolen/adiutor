@@ -21,7 +21,7 @@
  * - the reset email is in the account's language, else the browser's.
  */
 import { and, eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { account, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
@@ -44,15 +44,11 @@ import {
 } from '../../../tests/integration/helpers';
 import { registerUser } from '../people/user-registration';
 import { releaseSignInChangeLock, takeSignInChangeLock } from './sign-in-change-lock';
+import { authRequest, sentEmail, sentEmails, signInChangeLockFree } from './test-helpers';
 
 vi.mock('@/lib/email', () => ({ sendEmail: vi.fn() }));
 
 const { ctx, db, sent } = setupTestContext();
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
 
 beforeEach(() => {
   vi.mocked(sendEmail).mockClear();
@@ -83,35 +79,13 @@ async function storeResetLink(
 }
 
 /**
- * Sends a request to a Better Auth endpoint, as the app's pages do.
- *
- * @param path - The endpoint, e.g. `reset-password`.
- * @param body - The JSON body.
- * @param headers - More request headers, e.g. the language cookie.
- * @returns The response.
- */
-function post(
-  path: string,
-  body: Record<string, unknown>,
-  headers: Record<string, string> = {},
-): Promise<Response> {
-  return auth.handler(
-    new Request(`${env.BETTER_AUTH_URL}/api/auth/${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: env.BETTER_AUTH_URL, ...headers },
-      body: JSON.stringify(body),
-    }),
-  );
-}
-
-/**
  * Sets a password with a reset link's token, as the reset page does.
  *
  * @param token - The link's token.
  * @returns The response.
  */
 function resetPassword(token: string): Promise<Response> {
-  return post('reset-password', { token, newPassword: NEW_PASSWORD });
+  return authRequest('reset-password', { body: { token, newPassword: NEW_PASSWORD } });
 }
 
 /**
@@ -122,18 +96,11 @@ function resetPassword(token: string): Promise<Response> {
  * @returns The link's token.
  */
 async function requestResetLink(email: string): Promise<string> {
-  const response = await post('request-password-reset', {
-    email,
-    redirectTo: '/auth/reset-password',
+  const response = await authRequest('request-password-reset', {
+    body: { email, redirectTo: '/auth/reset-password' },
   });
   expect(response.status).toBe(200);
-  const resetEmail = await vi.waitFor(() => {
-    const [found] = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
-    if (!found) {
-      throw new Error('The reset email has not been sent yet');
-    }
-    return found;
-  }, 10_000);
+  const resetEmail = await sentEmail('The reset email');
   const token = /\/reset-password\/([\w-]+)/.exec(resetEmail.text)?.[1];
   if (!token) {
     throw new Error('No reset link in the email');
@@ -164,7 +131,7 @@ function openResetLink(token: string, callbackURL: string): Promise<Response> {
  * @returns The response's status.
  */
 async function signInWithNewPassword(email: string): Promise<number> {
-  return (await post('sign-in/email', { email, password: NEW_PASSWORD })).status;
+  return (await authRequest('sign-in/email', { body: { email, password: NEW_PASSWORD } })).status;
 }
 
 /**
@@ -179,22 +146,6 @@ async function credentialCount(userId: string): Promise<number> {
     .from(account)
     .where(and(eq(account.userId, userId), eq(account.providerId, 'credential')));
   return rows.length;
-}
-
-/**
- * Checks that nobody holds the user's sign-in change lock, by taking and
- * giving it back.
- *
- * @param userId - The user.
- * @returns Whether it was free.
- */
-async function lockIsFree(userId: string): Promise<boolean> {
-  const lock = await takeSignInChangeLock({ db }, userId);
-  if (!lock) {
-    return false;
-  }
-  await releaseSignInChangeLock({ db }, lock);
-  return true;
 }
 
 /**
@@ -258,7 +209,7 @@ describe('a reset link on an account whose only MFA is GitHub', () => {
     expect(await signInWithNewPassword(victim.email)).toBe(401);
     // Refused before Better Auth used the link, and the lock was given back right away.
     expect(await db.select({ id: verification.id }).from(verification)).toHaveLength(1);
-    expect(await lockIsFree(victim.id)).toBe(true);
+    expect(await signInChangeLockFree(db, victim.id)).toBe(true);
   });
 
   it('is refused for a staff Manager, who is told to add a passkey or an authenticator app first', async () => {
@@ -299,18 +250,16 @@ describe('the reset email', () => {
     await Promise.all(
       ['jane@adiutor.test', 'sam@adiutor.test'].map(async (email) => {
         const body = { email, redirectTo: '/auth/reset-password' };
-        expect((await post('request-password-reset', body, spanishBrowser)).status).toBe(200);
+        const response = await authRequest('request-password-reset', {
+          body,
+          headers: spanishBrowser,
+        });
+        expect(response.status).toBe(200);
       }),
     );
 
     // Sent after the responses.
-    const emails = await vi.waitFor(() => {
-      const found = vi.mocked(sendEmail).mock.calls.map(([call]) => call);
-      if (found.length < 2) {
-        throw new Error('The reset emails have not been sent yet');
-      }
-      return found;
-    }, 10_000);
+    const emails = await sentEmails(2, 'The reset emails');
     expect(
       emails
         .map((email) => [email.to, emailLanguage(email), email.subject])
@@ -339,7 +288,7 @@ describe('the welcome link of a new account', () => {
     expect(response.status).toBe(200);
     expect(await credentialCount(registered.userId)).toBe(1);
     expect(await signInWithNewPassword('new.person@adiutor.test')).toBe(200);
-    expect(await lockIsFree(registered.userId)).toBe(true);
+    expect(await signInChangeLockFree(db, registered.userId)).toBe(true);
   });
 });
 
@@ -408,7 +357,7 @@ describe('a link that is not valid', () => {
     expect(old.status).toBe(400);
     expect(await old.json()).toMatchObject({ code: 'INVALID_TOKEN' });
     expect(await credentialCount(support.id)).toBe(0);
-    expect(await lockIsFree(support.id)).toBe(true);
+    expect(await signInChangeLockFree(db, support.id)).toBe(true);
   });
 });
 

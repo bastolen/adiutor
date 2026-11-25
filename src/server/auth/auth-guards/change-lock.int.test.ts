@@ -1,19 +1,18 @@
 /**
  * @file Integration tests for one change to how a user signs in at a time.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 import { defined } from '@/lib/defined';
 
-import { addPasskey, staffActor } from '../../../../tests/integration/helpers';
+import { addPasskey, staffActor, rateLimitHits } from '../../../../tests/integration/helpers';
 import { loadMfaContext } from '../mfa-state';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../sign-in-change-lock';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
-import { db, signedIn, request, outcomeOf, hits } from './test-helpers';
+import { db, signedIn, request, outcomeOf } from './test-helpers';
 
 /** The real `loadMfaContext`, for spies that look around it. */
 const { loadMfaContext: realLoadMfaContext } =
@@ -30,16 +29,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
 vi.mock('../mfa-state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../mfa-state')>();
   return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
-});
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
 });
 
 describe('one change to how a user signs in at a time', () => {
@@ -98,7 +87,7 @@ describe('one change to how a user signs in at a time', () => {
     // Whenever the change reads the user's MFA state, it holds the lock.
     const lockHeldWhileRead: (number | null)[] = [];
     vi.mocked(loadMfaContext).mockImplementationOnce(async (database, userId) => {
-      lockHeldWhileRead.push(await hits(`sign-in-change:user:${userId}`));
+      lockHeldWhileRead.push(await rateLimitHits(db, `sign-in-change:user:${userId}`));
       return realLoadMfaContext(database, userId);
     });
     expect(await outcomeOf('/passkey/delete-passkey')).toBe('allowed');
@@ -109,7 +98,7 @@ describe('one change to how a user signs in at a time', () => {
     const manager = await managerWithTwoPasskeys();
     const lockHeldWhileRead: (number | null)[] = [];
     vi.mocked(loadMfaContext).mockImplementationOnce(async (database, userId) => {
-      lockHeldWhileRead.push(await hits(`sign-in-change:user:${userId}`));
+      lockHeldWhileRead.push(await rateLimitHits(db, `sign-in-change:user:${userId}`));
       return realLoadMfaContext(database, userId);
     });
 

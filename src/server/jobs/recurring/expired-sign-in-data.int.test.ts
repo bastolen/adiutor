@@ -12,7 +12,7 @@ import {
   createUser,
   later,
   setupTestContext,
-  storeAssignedRequest,
+  storeRequest,
 } from '../../../../tests/integration/helpers';
 import { createRequestLink } from '../../auth/request-links';
 import expiredSignInData from './expired-sign-in-data';
@@ -35,7 +35,7 @@ describe('expired-sign-in-data', () => {
       { key: 'new', count: 1, resetAt: future },
     ]);
     // A link in an email about a request that ended, and one that still works.
-    const requestId = await storeAssignedRequest(db, (await createCompany(db)).id, []);
+    const { id: requestId } = await storeRequest(db, (await createCompany(db)).id);
     await createRequestLink(db, { userId: jane, requestId });
     await db.update(requestSignInLink).set({ expiresAt: past });
     await createRequestLink(db, { userId: jane, requestId });

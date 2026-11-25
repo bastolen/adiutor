@@ -24,6 +24,7 @@ import {
   fillRateLimitBucket,
   memberActor,
   staffActor,
+  inSequence,
 } from '../../../tests/integration/helpers';
 import { removeMember } from '../people/members';
 import { changeStaffRole, removeFromStaff } from '../people/staff';
@@ -42,7 +43,15 @@ import {
   subscribe,
   unsubscribe,
 } from './subscribers';
-import { assigneesOf, ctx, db, storedRequest, storeRequest } from './test-helpers';
+import {
+  assigneesOf,
+  storeAssignees,
+  ctx,
+  db,
+  storedRequest,
+  storeRequest,
+  storeSubscribers,
+} from './test-helpers';
 
 /**
  * Who is subscribed to a request.
@@ -58,18 +67,6 @@ async function subscribersOf(requestId: string): Promise<string[]> {
       and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'subscriber')),
     );
   return rows.map(({ userId }) => userId).sort();
-}
-
-/**
- * Subscribes people to a request without going through a service.
- *
- * @param requestId - The request.
- * @param userIds - The people.
- */
-async function storeSubscribers(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db
-    .insert(requestParticipant)
-    .values(userIds.map((userId) => ({ requestId, userId, role: 'subscriber' as const })));
 }
 
 /**
@@ -288,8 +285,7 @@ describe('changeSubscribers', () => {
     const finance = await staffActor(db, 'finance');
     const raised = await storeRequest(company.id);
 
-    for (const actor of [client, watcher, finance]) {
-      // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
+    await inSequence([client, watcher, finance], async (actor) => {
       await expect(
         changeSubscribers(ctx, actor, {
           request: raised.id,
@@ -297,7 +293,7 @@ describe('changeSubscribers', () => {
           remove: [],
         }),
       ).rejects.toMatchObject({ code: 'forbidden' });
-    }
+    });
     expect(await subscribersOf(raised.id)).toEqual([]);
   });
 
@@ -309,8 +305,7 @@ describe('changeSubscribers', () => {
     const stranger = await createUser(db, 'stranger@adiutor.test');
     const raised = await storeRequest(company.id);
 
-    for (const id of [left.id, stranger, '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b']) {
-      // eslint-disable-next-line no-await-in-loop -- One after another, on one connection.
+    await inSequence([left.id, stranger, '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b'], async (id) => {
       await expect(
         changeSubscribers(ctx, support, {
           request: raised.id,
@@ -318,7 +313,7 @@ describe('changeSubscribers', () => {
           remove: [],
         }),
       ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notSubscribable' });
-    }
+    });
     expect(await subscribersOf(raised.id)).toEqual([]);
   });
 
@@ -717,9 +712,7 @@ describe('the subscribers of the requests there were', () => {
     await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, deactivated.id));
     await db.delete(membership).where(eq(membership.userId, leftCompany.id));
     // Someone the request is assigned to keeps that row, and gets one as a subscriber for replying.
-    await db
-      .insert(requestParticipant)
-      .values({ requestId: raised.id, userId: replier.id, role: 'assignee' });
+    await storeAssignees(raised.id, [replier.id]);
 
     expect(backfill).toContain('INSERT INTO "request_participant"');
     await db.execute(sql.raw(backfill));

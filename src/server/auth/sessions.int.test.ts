@@ -6,7 +6,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { auditEvent, session, verification } from '@/db/schema';
+import { session, verification } from '@/db/schema';
 
 import {
   actorFor,
@@ -14,6 +14,7 @@ import {
   createUser,
   setupTestContext,
   sendQueuedEmails,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import { revokeAllSessions, revokeOtherOwnSessions, revokeOwnSession } from './sessions';
 
@@ -68,20 +69,14 @@ describe('own sessions', () => {
       code: 'not_found',
     });
     // The refused attempts recorded nothing.
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
     await revokeOwnSession(ctx, actor, other);
 
     expect(await sessionIds(jane)).toEqual([current]);
     expect(await sessionIds(sam)).toEqual([samSession]);
-    expect(
-      await db
-        .select({
-          action: auditEvent.action,
-          actor: auditEvent.actorUserId,
-          target: auditEvent.targetUserId,
-        })
-        .from(auditEvent),
-    ).toEqual([{ action: 'session_revoked', actor: jane, target: jane }]);
+    expect(await auditEvents(db, { fields: ['action', 'actorUserId', 'targetUserId'] })).toEqual([
+      { action: 'session_revoked', actorUserId: jane, targetUserId: jane },
+    ]);
   });
 
   it('forgets every device the user trusted when signing out another device, and no one else’s', async () => {
@@ -163,18 +158,10 @@ describe('signing out from the command line', () => {
 
     expect(await db.select().from(session)).toEqual([]);
     expect(await trustedDevices()).toEqual(['sign-in-link']);
-    expect(
-      await db
-        .select({
-          action: auditEvent.action,
-          target: auditEvent.targetUserId,
-          details: auditEvent.details,
-        })
-        .from(auditEvent),
-    ).toEqual([
+    expect(await auditEvents(db, { fields: ['action', 'targetUserId', 'details'] })).toEqual([
       {
         action: 'sessions_revoked',
-        target: null,
+        targetUserId: null,
         details: { commandLine: true, count: 3, everyone: true },
       },
     ]);
@@ -200,11 +187,9 @@ describe('signing out from the command line', () => {
     expect(await sessionIds(jane)).toEqual([]);
     expect(await sessionIds(sam)).toEqual([samSession]);
     expect(await trustedDevices()).toEqual(['trust-device-phone']);
-    expect(
-      await db
-        .select({ target: auditEvent.targetUserId, details: auditEvent.details })
-        .from(auditEvent),
-    ).toEqual([{ target: jane, details: { commandLine: true, count: 2 } }]);
+    expect(await auditEvents(db, { fields: ['targetUserId', 'details'] })).toEqual([
+      { targetUserId: jane, details: { commandLine: true, count: 2 } },
+    ]);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
       { to: 'jane@adiutor.test', subject: 'You were signed out of Adiutor' },
     ]);
@@ -223,6 +208,6 @@ describe('signing out from the command line', () => {
     });
 
     expect(await sessionIds(jane)).toEqual([janeSession]);
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 });

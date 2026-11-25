@@ -5,7 +5,7 @@
 import { eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, membership, user, verification } from '@/db/schema';
+import { membership, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { hashVerificationIdentifier } from '@/lib/sign-in/tokens';
 
@@ -17,6 +17,7 @@ import {
   saveSettings,
   setupTestContext,
   staffActor,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { registerUser } from './user-registration';
@@ -73,10 +74,7 @@ describe('registerUser', () => {
       await db.select().from(verification).where(like(verification.identifier, 'reset-password:%')),
     ).toEqual([]);
 
-    const [entry] = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'account_created'));
+    const [entry] = await auditEvents(db, { action: 'account_created' });
     expect(entry).toMatchObject({ actorUserId: manager.id, targetUserId: result.userId });
   });
 

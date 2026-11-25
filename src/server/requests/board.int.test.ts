@@ -7,10 +7,8 @@
  * company's requests. Which roles may load the board is in the
  * authorization matrix.
  */
-import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { request } from '@/db/schema';
 import { defined } from '@/lib/defined';
 import type { RequestStatus } from '@/lib/requests';
 
@@ -23,7 +21,7 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { type BoardLane, listBoard } from './board';
-import { ctx, db, storeAssignees, storeRequest } from './test-helpers';
+import { ctx, db, storeAssignees, storeRequest, setActivity } from './test-helpers';
 
 /**
  * One lane of a board.
@@ -59,19 +57,6 @@ const titlesIn = (board: { lanes: BoardLane[] }, status: RequestStatus) =>
  */
 const allTitles = ({ lanes }: { lanes: BoardLane[] }) =>
   lanes.flatMap(({ items }) => items.map(({ title }) => title)).sort();
-
-/**
- * Sets when a request last had activity, to tell the order of a lane.
- *
- * @param id - The request.
- * @param minutesAgo - How long ago, in minutes.
- */
-async function setActivity(id: string, minutesAgo: number): Promise<void> {
-  await db
-    .update(request)
-    .set({ lastActivityAt: new Date(Date.now() - minutesAgo * 60_000) })
-    .where(eq(request.id, id));
-}
 
 describe('listBoard: who sees what', () => {
   it('has a lane per status, in the order a request moves through them', async () => {

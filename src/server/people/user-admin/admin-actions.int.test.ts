@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   account,
-  auditEvent,
   invitation,
   inviteLink,
   passkey,
@@ -26,7 +25,8 @@ import {
   actorFor,
   addMember,
   addPassword,
-  assignmentsOfRequest,
+  assigneesOf,
+  assignmentsOf,
   atTheSameMoment,
   connectProvider,
   createCompany,
@@ -40,9 +40,12 @@ import {
   sendQueuedEmails,
   setUserLocale,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
   tokenFrom,
   minutesAgo,
+  auditEvents,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { listOwnActivity, recordEvent } from '../../audit';
 import { releaseSignInChangeLock, takeSignInChangeLock } from '../../auth/sign-in-change-lock';
@@ -71,16 +74,8 @@ describe('admin actions', () => {
         expiresAt: new Date(Date.now() + 1e6),
       },
     ]);
-    await db.update(user).set({ twoFactorEnabled: true }).where(eq(user.id, jane));
-    await db.insert(twoFactor).values({ userId: jane, secret: 'x', backupCodes: 'y' });
-    await db.insert(passkey).values({
-      userId: jane,
-      publicKey: 'key',
-      credentialID: 'credential',
-      counter: 0,
-      deviceType: 'multiDevice',
-      backedUp: true,
-    });
+    await enableTwoFactor(db, jane);
+    await addPasskey(db, jane);
 
     await resetUserMfa(ctx, await adminConfirmedAt(), jane, { removePasskeys: true });
 
@@ -132,10 +127,10 @@ describe('admin actions', () => {
     expect(await providersOf(jane)).toEqual(['credential']);
     // Nobody else's.
     expect(await providersOf(john)).toEqual(['github']);
-    const [event] = await db
-      .select({ actorUserId: auditEvent.actorUserId, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'mfa_reset'));
+    const [event] = await auditEvents(db, {
+      action: 'mfa_reset',
+      fields: ['actorUserId', 'details'],
+    });
     expect(event).toEqual({
       actorUserId: admin.id,
       details: { removePasskeys: false, disconnectedProviders: ['github', 'google'] },
@@ -152,10 +147,7 @@ describe('admin actions', () => {
     await resetUserMfa(ctx, await adminConfirmedAt(), jane);
 
     const event = firstRow(
-      await db
-        .select({ details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.action, 'mfa_reset')),
+      await auditEvents(db, { action: 'mfa_reset', fields: ['details'] }),
       'the audit event',
     );
     expect(event.details).toEqual({ removePasskeys: false, disconnectedProviders: [] });
@@ -385,10 +377,7 @@ describe('admin actions', () => {
     await deleteUser(ctx, admin, jane, ' Jane@Adiutor.test ');
 
     expect(await db.select().from(user).where(eq(user.id, jane))).toEqual([]);
-    const [entry] = await db
-      .select()
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'account_deleted'));
+    const [entry] = await auditEvents(db, { action: 'account_deleted' });
     expect(entry).toMatchObject({
       actorUserId: admin.id,
       details: { email: 'jane@adiutor.test' },
@@ -495,10 +484,10 @@ describe('invitations of people who lose access', () => {
         password: 'jane-again-password',
       }),
     ).toEqual({ status: 'invalid' });
-    const [revoked] = await db
-      .select({ companyId: auditEvent.companyId, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'invitation_revoked'));
+    const [revoked] = await auditEvents(db, {
+      action: 'invitation_revoked',
+      fields: ['companyId', 'details'],
+    });
     expect(revoked).toEqual({
       companyId: null,
       details: {
@@ -586,29 +575,27 @@ describe('requests of people who lose access', () => {
   it('are no longer assigned to an account that is deactivated, with a line in each history', async () => {
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
     const colleague = await staffActor(db, 'manager', 'morgan@adiutor.test');
-    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id, colleague.id]);
+    const { id: assigned } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, assigned, [support.id, colleague.id], 'assignee');
 
     await deactivateUser(ctx, admin, support.id);
 
-    expect(await assignmentsOfRequest(db, assigned)).toEqual({
-      assignees: [colleague.id],
-      entries: [['unassigned', support.id, null]],
-    });
+    expect(await assigneesOf(db, assigned)).toEqual([colleague.id]);
+    expect(await assignmentsOf(db, assigned)).toEqual([['unassigned', support.id, null]]);
     // Reactivating them doesn't put them back.
     await reactivateUser(ctx, admin, support.id);
-    expect((await assignmentsOfRequest(db, assigned)).assignees).toEqual([colleague.id]);
+    expect(await assigneesOf(db, assigned)).toEqual([colleague.id]);
   });
 
   it('are no longer assigned to an account that is deleted, and keep no ID of it', async () => {
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    const assigned = await storeAssignedRequest(db, testCompany.id, [support.id]);
+    const { id: assigned } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, assigned, [support.id], 'assignee');
 
     await deleteUser(ctx, admin, support.id, 'sam@adiutor.test');
 
-    expect(await assignmentsOfRequest(db, assigned)).toEqual({
-      assignees: [],
-      entries: [['unassigned', null, null]],
-    });
+    expect(await assigneesOf(db, assigned)).toEqual([]);
+    expect(await assignmentsOf(db, assigned)).toEqual([['unassigned', null, null]]);
   });
 });
 

@@ -9,7 +9,12 @@ import { describe, expect, it } from 'vitest';
 import { user, verification } from '@/db/schema';
 import { emailLinkVerificationIdentifier } from '@/lib/sign-in/tokens';
 
-import { createUser, fromIp, setupTestContext } from '../../../tests/integration/helpers';
+import {
+  createUser,
+  fromIp,
+  setupTestContext,
+  inSequence,
+} from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import { getEmailLinkPreview } from './email-links';
 
@@ -86,10 +91,11 @@ describe('getEmailLinkPreview', () => {
     const { limit } = RATE_LIMITS.emailLinkMissesPerIp;
     const attacker = fromIp(ctx, '203.0.113.66');
 
-    for (let attempt = 0; attempt < limit; attempt += 1) {
-      // eslint-disable-next-line no-await-in-loop -- One at a time, so the count is exact.
-      expect(await getEmailLinkPreview(attacker, `guess-${attempt}`)).toBeNull();
-    }
+    // One at a time, so the count is exact.
+    await inSequence(
+      Array.from({ length: limit }, (_, attempt) => attempt),
+      async (attempt) => expect(await getEmailLinkPreview(attacker, `guess-${attempt}`)).toBeNull(),
+    );
 
     await expect(getEmailLinkPreview(attacker, 'valid-token')).rejects.toMatchObject({
       code: 'rate_limited',
@@ -104,14 +110,14 @@ describe('getEmailLinkPreview', () => {
     const { limit } = RATE_LIMITS.emailLinkMissesPerIp;
     const office = fromIp(ctx, '203.0.113.7');
 
-    for (let attempt = 0; attempt < limit + 5; attempt += 1) {
-      // eslint-disable-next-line no-await-in-loop -- One at a time, so the count is exact.
-      expect(await getEmailLinkPreview(office, 'valid-token')).not.toBeNull();
-    }
-    for (let attempt = 0; attempt < limit - 1; attempt += 1) {
-      // eslint-disable-next-line no-await-in-loop -- Same.
-      await getEmailLinkPreview(office, `guess-${attempt}`);
-    }
+    // One at a time, so the count is exact.
+    await inSequence(Array.from({ length: limit + 5 }), async () =>
+      expect(await getEmailLinkPreview(office, 'valid-token')).not.toBeNull(),
+    );
+    await inSequence(
+      Array.from({ length: limit - 1 }, (_, attempt) => attempt),
+      (attempt) => getEmailLinkPreview(office, `guess-${attempt}`),
+    );
 
     expect(await getEmailLinkPreview(office, 'valid-token')).not.toBeNull();
   });

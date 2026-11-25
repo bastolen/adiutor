@@ -2,13 +2,11 @@
  * @file Integration tests for emailed links, email addresses verified by a
  * provider, and a first password.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { account, rateLimitBucket, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 
 import { connectGitHub, createUser, inSequence } from '../../../../tests/integration/helpers';
 import { countFailedSignIn } from '../auth-guards';
@@ -26,22 +24,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('a first password', () => {
   it('is emailed when a reset adds it to an account that could already sign in another way', async () => {

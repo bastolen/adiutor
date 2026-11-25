@@ -3,11 +3,11 @@
  * (only their confirmation page's Continue signs in, also through Better
  * Auth's whole handler), return addresses and passkey names.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
+import { getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session, verification } from '@/db/schema';
+import { session, verification } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { env } from '@/lib/env';
 import {
@@ -22,12 +22,14 @@ import {
   inSequence,
   staffActor,
   storeSignInLink,
+  auditEvents,
+  rateLimitHits,
 } from '../../../../tests/integration/helpers';
 import { loadMfaContext } from '../mfa-state';
 import { beforeAuthRequest } from './before-request';
 import { releaseSignInChangeLockOf } from './change-lock';
 import type { AuthGuardContext } from './paths';
-import { request, refusedWith, hits, db, signedIn, outcomeOf } from './test-helpers';
+import { request, refusedWith, db, signedIn, outcomeOf } from './test-helpers';
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -40,16 +42,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
 vi.mock('../mfa-state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../mfa-state')>();
   return { ...actual, loadMfaContext: vi.fn(actual.loadMfaContext) };
-});
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
 });
 
 /** The site's origin, which a form `POST` from its pages names (`Origin`). */
@@ -254,12 +246,9 @@ describe("a sign-in link used through Better Auth's handler", () => {
     );
     expect(await sessionsOf(alex)).toBe(0);
     expect(await sessionsOf(jane)).toBe(1);
-    expect(
-      await db
-        .select({ action: auditEvent.action, details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.actorUserId, jane)),
-    ).toEqual([{ action: 'sign_in', details: { method: 'email_link' } }]);
+    expect(await auditEvents(db, { actorUserId: jane, fields: ['action', 'details'] })).toEqual([
+      { action: 'sign_in', details: { method: 'email_link' } },
+    ]);
   });
 
   it.each([
@@ -449,8 +438,8 @@ describe('return addresses', () => {
       ),
     ).rejects.toEqual(refusedWith('UNSAFE_RETURN_ADDRESS'));
 
-    expect(await hits('/sign-in/magic-link:email:jane@adiutor.test')).toBeNull();
-    expect(await hits('/request-password-reset:email:jane@adiutor.test')).toBeNull();
+    expect(await rateLimitHits(db, '/sign-in/magic-link:email:jane@adiutor.test')).toBeNull();
+    expect(await rateLimitHits(db, '/request-password-reset:email:jane@adiutor.test')).toBeNull();
   });
 
   it("refuses connecting a provider before taking the user's lock", async () => {

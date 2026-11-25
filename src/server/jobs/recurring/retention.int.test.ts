@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { appError, auditEvent, jobRun, queuedJob, signInError } from '@/db/schema';
 
-import { later, setupTestContext } from '../../../../tests/integration/helpers';
+import { later, setupTestContext, auditEvents } from '../../../../tests/integration/helpers';
 import retention, { RETENTION_CHUNK_ROWS } from './retention';
 
 const { ctx, db } = setupTestContext();
@@ -22,7 +22,7 @@ describe('retention', () => {
     await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { auditEvents: 1 },
     });
-    expect(await db.select().from(auditEvent)).toHaveLength(1);
+    expect(await auditEvents(db)).toHaveLength(1);
   });
 
   it('removes errors in the app after 7 days', async () => {
@@ -106,7 +106,7 @@ describe('retention', () => {
     await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
       summary: { auditEvents: RETENTION_CHUNK_ROWS + 1 },
     });
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it('removes queued jobs 30 days after they were done, but never waiting ones', async () => {

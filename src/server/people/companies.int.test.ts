@@ -5,7 +5,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, company, invitation, rateLimitBucket, user } from '@/db/schema';
+import { company, invitation, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -19,6 +19,8 @@ import {
   saveSettings,
   setupTestContext,
   staffActor,
+  auditEvents,
+  fillRateLimitBucket,
 } from '../../../tests/integration/helpers';
 import { getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
@@ -86,11 +88,7 @@ describe('registerCompany', () => {
 
   it('counts the first admin’s invitation against the sender’s invitation limit', async () => {
     // The manager has sent as many invitations this hour as they may.
-    await db.insert(rateLimitBucket).values({
-      key: `invite:user:${manager.id}`,
-      count: RATE_LIMITS.invitesPerUser.limit,
-      resetAt: sql`now() + interval '1 hour'`,
-    });
+    await fillRateLimitBucket(db, `invite:user:${manager.id}`, RATE_LIMITS.invitesPerUser.limit);
 
     await expect(
       registerCompany(ctx, manager, {
@@ -253,16 +251,10 @@ describe('listing', () => {
  * @returns Each event's action, actor, company and details.
  */
 async function companyEvents() {
-  return db
-    .select({
-      action: auditEvent.action,
-      actorUserId: auditEvent.actorUserId,
-      companyId: auditEvent.companyId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .where(sql`${auditEvent.action} like 'company_%'`)
-    .orderBy(auditEvent.id);
+  return auditEvents(db, {
+    actionLike: 'company_%',
+    fields: ['action', 'actorUserId', 'companyId', 'details'],
+  });
 }
 
 describe('deactivation', () => {

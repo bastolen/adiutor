@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, request, user } from '@/db/schema';
+import { company as companyTable, user } from '@/db/schema';
 
 import {
   actorFor,
@@ -19,7 +19,15 @@ import {
 import type { Actor } from '../actor';
 import { getRequest } from './detail';
 import { listRequestCompanies, listRequests } from './list';
-import { ctx, db, storeAssignees, storeRequest } from './test-helpers';
+import {
+  ctx,
+  db,
+  storeAssignees,
+  storeRequest,
+  REQUEST_READERS,
+  requestReader,
+  setActivity,
+} from './test-helpers';
 
 /**
  * The titles of a page of requests, in order.
@@ -29,19 +37,6 @@ import { ctx, db, storeAssignees, storeRequest } from './test-helpers';
  * @returns The titles.
  */
 const titles = ({ items }: { items: { title: string }[] }) => items.map(({ title }) => title);
-
-/**
- * Sets when a request last had activity, to tell the order of a list.
- *
- * @param id - The request.
- * @param minutesAgo - How long ago, in minutes.
- */
-async function setActivity(id: string, minutesAgo: number): Promise<void> {
-  await db
-    .update(request)
-    .set({ lastActivityAt: new Date(Date.now() - minutesAgo * 60_000) })
-    .where(eq(request.id, id));
-}
 
 describe('listRequests: who sees what', () => {
   it('shows a company’s members its requests only, and the staff every company’s', async () => {
@@ -411,24 +406,12 @@ describe('listRequests: what a request shows', () => {
     ]);
   });
 
-  it.each([
-    ['a Client', 'client', null, 'contributor'],
-    ['a Watcher', 'watcher', null, 'follower'],
-    ['Support', null, 'support', 'staff'],
-    ['Finance', null, 'finance', 'staff'],
-    ['Finance who is also a Client', 'client', 'finance', 'contributor'],
-  ] as const)(
+  it.each(REQUEST_READERS)(
     'tells %s how they are addressed about a waiting request, as its own page does',
     async (_who, companyRole, staffRole, audience) => {
       const company = await createCompany(db);
       await storeRequest(company.id, { status: 'waiting' });
-      const base = staffRole
-        ? await staffActor(db, staffRole)
-        : await memberActor(db, company.id, companyRole);
-      if (staffRole && companyRole) {
-        await addMember(db, company.id, base.id, companyRole);
-      }
-      const reader = await actorFor(db, base.id);
+      const reader = await requestReader(company.id, companyRole, staffRole);
 
       const page = await listRequests(ctx, reader, { status: 'waiting' });
 

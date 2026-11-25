@@ -2,19 +2,22 @@
  * @file Integration tests for the code step of a password sign-in: which codes
  * hand their user to the reactions after the request.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { rateLimitBucket } from '@/db/schema';
 
-import { enableTwoFactor, inSequence, staffActor } from '../../../../tests/integration/helpers';
+import {
+  enableTwoFactor,
+  inSequence,
+  staffActor,
+  rateLimitHits,
+} from '../../../../tests/integration/helpers';
 import { requestState } from '../request-state';
 import { beforeAuthRequest } from './before-request';
 import {
   db,
   request,
   refusedWith,
-  hits,
   sendCodesOverTime,
   waitForNextCode,
   signedIn,
@@ -27,16 +30,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   // Better Auth's request state isn't there outside a request; the tests watch what's added.
   addOAuthServerContext: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
-});
 
 /**
  * The user a request's checks handed to the reactions after it, which record
@@ -64,7 +57,7 @@ describe('a password sign-in waiting for its code step', () => {
     await expect(
       beforeAuthRequest(request('/two-factor/verify-totp', pending)),
     ).resolves.toBeUndefined();
-    expect(await hits(`email-code:user:${support.id}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${support.id}`)).toBeNull();
   });
 
   it('lets Managers finish signing in with email codes, within the limit', async () => {
@@ -75,7 +68,7 @@ describe('a password sign-in waiting for its code step', () => {
     await sendCodesOverTime(5, sendCode);
     await waitForNextCode();
     await expect(beforeAuthRequest(sendCode)).rejects.toEqual(refusedWith('TOO_MANY_ATTEMPTS'));
-    expect(await hits(`email-code:user:${manager.id}`)).toBe(6);
+    expect(await rateLimitHits(db, `email-code:user:${manager.id}`)).toBe(6);
   });
 
   it('hands the user of each code it lets through to the reactions after the request', async () => {
@@ -123,7 +116,7 @@ describe('a password sign-in waiting for its code step', () => {
     await beforeAuthRequest(ctx);
 
     expect(pendingCodeSignIn(ctx)).toBeUndefined();
-    expect(await hits(`step-up-failed:user:${support.id}`)).toBe(1);
+    expect(await rateLimitHits(db, `step-up-failed:user:${support.id}`)).toBe(1);
   });
 
   it('leaves requests without a session or pending sign-in to Better Auth', async () => {

@@ -3,10 +3,10 @@
  * audit log, for companies and for staff, so refactoring the services keeps
  * the log's contents exactly.
  */
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { auditEvent, invitation, inviteLink, user } from '@/db/schema';
+import { invitation, inviteLink, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
@@ -18,6 +18,7 @@ import {
   setupTestContext,
   staffActor,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { registerCompany } from './companies';
@@ -53,16 +54,7 @@ beforeEach(async () => {
  * @returns The events' recorded fields.
  */
 async function events() {
-  return db
-    .select({
-      action: auditEvent.action,
-      actorUserId: auditEvent.actorUserId,
-      targetUserId: auditEvent.targetUserId,
-      companyId: auditEvent.companyId,
-      details: auditEvent.details,
-    })
-    .from(auditEvent)
-    .orderBy(asc(auditEvent.id));
+  return auditEvents(db);
 }
 
 /**

@@ -31,20 +31,15 @@ import raiseRequest from './raise';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
 import { changeSubscribers, subscribe, unsubscribe } from './subscribers';
-import { ctx, db, storeEntry, storeRequest } from './test-helpers';
+import {
+  ctx,
+  db,
+  storeEntry,
+  storeRequest,
+  storeSubscribers,
+  storeAssignees,
+} from './test-helpers';
 import { type QueuedRequestNews, readRequestUpdate } from './updates';
-
-/**
- * Subscribes people to a request without going through a service.
- *
- * @param requestId - The request.
- * @param userIds - The people.
- */
-async function storeSubscribers(requestId: string, userIds: readonly string[]): Promise<void> {
-  await db
-    .insert(requestParticipant)
-    .values(userIds.map((userId) => ({ requestId, userId, role: 'subscriber' as const })));
-}
 
 /**
  * The news that waits in the queue, as `<person>:<event>`, sorted.
@@ -249,9 +244,7 @@ describe('who is told they were put on a request', () => {
     const admin = await staffActor(db, 'platform_admin');
     const raised = await storeRequest(company.id);
     await storeSubscribers(raised.id, [client.id, manager.id, finance.id]);
-    await db
-      .insert(requestParticipant)
-      .values({ requestId: raised.id, userId: admin.id, role: 'assignee' });
+    await storeAssignees(raised.id, [admin.id]);
     const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
     const toMorgan = writtenMentionMarker('morgan', mentionKey(company.id, manager.id));
 

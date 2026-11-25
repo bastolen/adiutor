@@ -7,10 +7,11 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach } from 'vitest';
 
-import { auditEvent, session, user } from '@/db/schema';
+import { session, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
+  actorFor,
   addMember,
   createCompany,
   createSession,
@@ -19,8 +20,9 @@ import {
   enableTwoFactor,
   setupTestContext,
   staffActor,
+  auditEvents,
 } from '../../../../tests/integration/helpers';
-import { type Actor, loadActor } from '../../actor';
+import type { Actor } from '../../actor';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -54,41 +56,8 @@ beforeEach(async () => {
  * @returns The actions, oldest first.
  */
 export async function actionsAbout(userId: string) {
-  const rows = await db
-    .select({ action: auditEvent.action })
-    .from(auditEvent)
-    .where(eq(auditEvent.targetUserId, userId))
-    .orderBy(auditEvent.at);
+  const rows = await auditEvents(db, { targetUserId: userId, fields: ['action'] });
   return rows.map(({ action }) => action);
-}
-
-/**
- * Loads a user as the actor of their own session.
- *
- * @param userId - The user.
- * @param session - The session.
- * @param session.signedInAt - When it signed in; defaults to now.
- * @param session.confirmedAt - When it was confirmed with the authenticator app, if it was.
- * @returns The actor.
- */
-export async function signedIn(
-  userId: string,
-  {
-    signedInAt = new Date(),
-    confirmedAt = null,
-  }: { signedInAt?: Date | null; confirmedAt?: Date | null } = {},
-): Promise<Actor> {
-  const actor = await loadActor(db, userId, {
-    id: 'adiutor-tests-session',
-    mfaVerified: confirmedAt !== null,
-    mfaMethod: confirmedAt ? 'authenticator' : null,
-    mfaVerifiedAt: confirmedAt,
-    createdAt: signedInAt,
-  });
-  if (!actor) {
-    throw new Error(`No user ${userId}`);
-  }
-  return actor;
 }
 
 /** A request from a known browser and IP address, for the security emails' device line. */
@@ -124,7 +93,7 @@ export async function adminConfirmedAt(confirmedAt: Date | null = new Date()): P
   if (!found.twoFactorEnabled) {
     await enableTwoFactor(db, admin.id);
   }
-  return signedIn(admin.id, { confirmedAt });
+  return actorFor(db, admin.id, { confirmedAt });
 }
 
 /**

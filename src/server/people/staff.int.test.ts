@@ -5,13 +5,15 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 
-import { auditEvent, invitation, inviteLink, setting, user } from '@/db/schema';
+import { invitation, inviteLink, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import {
   actorFor,
-  assignmentsOfRequest,
+  assigneesOf,
+  assignmentsOf,
   atTheSameMoment,
   createCompany,
   createStaffSettings,
@@ -24,8 +26,10 @@ import {
   sendQueuedEmails,
   setupTestContext,
   staffActor,
-  storeAssignedRequest,
+  storeParticipants,
+  storeRequest,
   tokenFrom,
+  auditEvents,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { RATE_LIMITS } from '../rate-limit';
@@ -90,10 +94,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
-    const entry = firstRow(
-      await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
-      'the audit event',
-    );
+    const entry = firstRow(await auditEvents(db, { action: 'staff_renamed' }), 'the audit event');
     expect(entry.details).toMatchObject({ from: 'Adiutor Tests', to: 'Adiutor Support' });
   });
 
@@ -107,10 +108,7 @@ describe('staff settings and people', () => {
       defaultTimeZone: 'UTC',
       requestPrefix: 'AD',
     });
-    const entry = firstRow(
-      await db.select().from(auditEvent).where(eq(auditEvent.action, 'staff_renamed')),
-      'the audit event',
-    );
+    const entry = firstRow(await auditEvents(db, { action: 'staff_renamed' }), 'the audit event');
     expect(entry.details).toMatchObject({ from: null, to: 'Adiutor Support' });
     // Saving a setting never sets Adiutor up.
     expect(await isSetUp(db)).toBe(false);
@@ -129,7 +127,7 @@ describe('staff settings and people', () => {
       requestPrefix: 'AD',
     });
     // Not a security change: nothing in the audit log.
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it("sets Adiutor's default time zone, keeping the rest, with nothing in the audit log", async () => {
@@ -148,7 +146,7 @@ describe('staff settings and people', () => {
       'validation.timeZone',
     );
     expect((await getStaffSettings(ctx, admin)).defaultTimeZone).toBe('Europe/Amsterdam');
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it.each([
@@ -156,7 +154,7 @@ describe('staff settings and people', () => {
     ['an unknown language to offer', { defaultLocale: 'en-US', offered: ['fr-FR'] }],
     ['no list of languages', { defaultLocale: 'en-US', offered: 'nl-NL' }],
   ])('refuses %s', async (_name, input) => {
-    await expect(setLanguages(ctx, admin, input)).rejects.toThrow();
+    await expect(setLanguages(ctx, admin, input)).rejects.toBeInstanceOf(ZodError);
     expect(await getStaffSettings(ctx, admin)).toMatchObject({
       defaultLocale: 'en-US',
       offeredLocales: ['en-US', 'nl-NL', 'es-ES'],
@@ -167,7 +165,9 @@ describe('staff settings and people', () => {
     await expect(saveSettings(db, { 'staff.offered_locales': ['nl-NL'] })).rejects.toThrow(
       'the default language must be one of the languages offered',
     );
-    await expect(saveSettings(db, { 'staff.offered_locales': [] })).rejects.toThrow();
+    await expect(saveSettings(db, { 'staff.offered_locales': [] })).rejects.toBeInstanceOf(
+      ZodError,
+    );
     await expect(saveSettings(db, { 'staff.default_locale': 'nl-NL' })).resolves.toBeUndefined();
     expect(await getStaffSettings(ctx, admin)).toMatchObject({
       defaultLocale: 'nl-NL',
@@ -203,7 +203,7 @@ describe('staff settings and people', () => {
       requestPrefix: 'HELP',
     });
     // Not a security change: nothing in the audit log.
-    expect(await db.select().from(auditEvent)).toEqual([]);
+    expect(await auditEvents(db)).toEqual([]);
   });
 
   it.each(['', '1AD', 'A-D', 'TOOLONG', 'ÄD'])('refuses %j as a prefix', async (prefix) => {
@@ -310,9 +310,7 @@ describe('staff settings and people', () => {
       }),
     });
     expect(await platformRoleOf(manager.id)).toBe('manager');
-    expect(await db.select().from(auditEvent).where(eq(auditEvent.action, 'role_changed'))).toEqual(
-      [],
-    );
+    expect(await auditEvents(db, { action: 'role_changed' })).toEqual([]);
   });
 
   it('refuses an Admin taken off the staff while their request was under way', async () => {
@@ -358,11 +356,7 @@ describe('granting staff access', () => {
       'Your Adiutor staff role changed',
       'Your Adiutor staff access was removed',
     ]);
-    const actions = await db
-      .select({ action: auditEvent.action })
-      .from(auditEvent)
-      .where(eq(auditEvent.targetUserId, userId))
-      .orderBy(auditEvent.at);
+    const actions = await auditEvents(db, { targetUserId: userId, fields: ['action'] });
     expect(actions.map(({ action }) => action)).toEqual([
       'member_added',
       'role_changed',
@@ -548,30 +542,28 @@ describe('losing staff rights', () => {
   it('takes someone off their requests once their role works on no requests, each with a line', async () => {
     const testCompany = await createCompany(db);
     const support = await staffActor(db, 'support', 'sam@adiutor.test');
-    const first = await storeAssignedRequest(db, testCompany.id, [manager.id, support.id]);
-    const second = await storeAssignedRequest(db, testCompany.id, [manager.id]);
+    const { id: first } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, first, [manager.id, support.id], 'assignee');
+    const { id: second } = await storeRequest(db, testCompany.id);
+    await storeParticipants(db, second, [manager.id], 'assignee');
 
     // Support still works on requests.
     await changeStaffRole(ctx, admin, { userId: manager.id, role: 'support' });
-    expect((await assignmentsOfRequest(db, first)).assignees).toHaveLength(2);
+    expect(await assigneesOf(db, first)).toHaveLength(2);
 
     // Finance reads them, but works on none.
     await changeStaffRole(ctx, admin, { userId: manager.id, role: 'finance' });
-    expect(await assignmentsOfRequest(db, first)).toEqual({
-      assignees: [support.id],
-      entries: [['unassigned', manager.id, null]],
-    });
-    expect((await assignmentsOfRequest(db, second)).assignees).toEqual([]);
+    expect(await assigneesOf(db, first)).toEqual([support.id]);
+    expect(await assignmentsOf(db, first)).toEqual([['unassigned', manager.id, null]]);
+    expect(await assigneesOf(db, second)).toEqual([]);
 
     // Off the staff, they work on none either.
     await removeFromStaff(ctx, admin, support.id);
-    expect(await assignmentsOfRequest(db, first)).toEqual({
-      assignees: [],
-      entries: [
-        ['unassigned', manager.id, null],
-        ['unassigned', support.id, null],
-      ],
-    });
+    expect(await assigneesOf(db, first)).toEqual([]);
+    expect(await assignmentsOf(db, first)).toEqual([
+      ['unassigned', manager.id, null],
+      ['unassigned', support.id, null],
+    ]);
   });
 
   it('revokes the open staff invitations addressed to someone taken off the staff', async () => {
@@ -622,10 +614,7 @@ describe('losing staff rights', () => {
     ).toEqual({ status: 'invalid' });
     expect(await platformRoleOf(erin)).toBeNull();
     const revoked = firstRow(
-      await db
-        .select({ details: auditEvent.details })
-        .from(auditEvent)
-        .where(eq(auditEvent.action, 'invitation_revoked')),
+      await auditEvents(db, { action: 'invitation_revoked', fields: ['details'] }),
       'the audit event',
     );
     expect(revoked.details).toEqual({

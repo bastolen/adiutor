@@ -4,15 +4,15 @@
  * refusal before the password, and the limit on wrong passwords, against the
  * test database.
  */
-import { hashPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, auditEvent, rateLimitBucket, session, user, verification } from '@/db/schema';
+import { rateLimitBucket, session, user, verification } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 
 import { deactivateOwnAccount } from '.';
 import {
+  actorFor,
   addMember,
   createSession,
   createUser,
@@ -20,6 +20,8 @@ import {
   inSequence,
   sendQueuedEmails,
   minutesAgo,
+  auditEvents,
+  addPassword,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
 import {
@@ -30,27 +32,12 @@ import {
   fromKnownDevice,
   jane,
   sent,
-  signedIn,
   testCompany,
 } from './test-helpers';
 
 describe('deactivateOwnAccount', () => {
   /** Jane's password in these tests. */
   const PASSWORD = 'correct horse battery';
-
-  /**
-   * Gives a user a password, as Better Auth stores it.
-   *
-   * @param userId - The user.
-   */
-  async function givePassword(userId: string): Promise<void> {
-    await db.insert(account).values({
-      userId,
-      accountId: userId,
-      providerId: 'credential',
-      password: await hashPassword(PASSWORD),
-    });
-  }
 
   /**
    * Reads when a user was deactivated.
@@ -84,7 +71,7 @@ describe('deactivateOwnAccount', () => {
   }
 
   it('checks the password, then deactivates, signs out and forgets trusted devices', async () => {
-    await givePassword(jane);
+    await addPassword(db, jane, PASSWORD);
     await createSession(db, jane);
     await db.insert(verification).values([
       { identifier: 'trust-device-own', value: jane, expiresAt: new Date(Date.now() + 1e6) },
@@ -95,7 +82,7 @@ describe('deactivateOwnAccount', () => {
       },
     ]);
     // With a password, the sign-in may be of any age.
-    const actor = await signedIn(jane, { signedInAt: minutesAgo(3 * 24 * 60) });
+    const actor = await actorFor(db, jane, { signedInAt: minutesAgo(3 * 24 * 60) });
 
     await expect(deactivateOwnAccount(ctx, actor, 'wrong')).rejects.toMatchObject({
       code: 'invalid',
@@ -112,16 +99,16 @@ describe('deactivateOwnAccount', () => {
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual(['Your Adiutor account was deactivated']);
     expect(await actionsAbout(jane)).toEqual(['password_check_failed', 'account_deactivated']);
-    const [wrong] = await db
-      .select({ actorUserId: auditEvent.actorUserId, details: auditEvent.details })
-      .from(auditEvent)
-      .where(eq(auditEvent.action, 'password_check_failed'));
+    const [wrong] = await auditEvents(db, {
+      action: 'password_check_failed',
+      fields: ['actorUserId', 'details'],
+    });
     expect(wrong).toEqual({ actorUserId: jane, details: { purpose: 'deactivate' } });
   });
 
   it('names the device and IP address in the email: it was their own change', async () => {
-    await givePassword(jane);
-    await deactivateOwnAccount(fromKnownDevice, await signedIn(jane), PASSWORD);
+    await addPassword(db, jane, PASSWORD);
+    await deactivateOwnAccount(fromKnownDevice, await actorFor(db, jane, {}), PASSWORD);
 
     await sendQueuedEmails(ctx);
     expect(sent).toHaveLength(1);
@@ -140,8 +127,8 @@ describe('deactivateOwnAccount', () => {
   it("refuses a company's only Admin the same way with a right or a wrong password", async () => {
     const owner = await createUser(db, 'owner@adiutor.test');
     await addMember(db, testCompany.id, owner, 'admin');
-    await givePassword(owner);
-    const actor = await signedIn(owner);
+    await addPassword(db, owner, PASSWORD);
+    const actor = await actorFor(db, owner, {});
 
     const refusals = await inSequence([PASSWORD, 'wrong', PASSWORD], (password) =>
       deactivateOwnAccount(ctx, actor, password).catch((error: unknown) => error),
@@ -163,8 +150,8 @@ describe('deactivateOwnAccount', () => {
   });
 
   it('limits wrong passwords per user, refusing even a right one after five', async () => {
-    await givePassword(jane);
-    const actor = await signedIn(jane);
+    await addPassword(db, jane, PASSWORD);
+    const actor = await actorFor(db, jane, {});
 
     expect(await attempts(5, actor, 'wrong')).toEqual(Array.from({ length: 5 }, () => 'invalid'));
     await expect(deactivateOwnAccount(ctx, actor, PASSWORD)).rejects.toMatchObject({
@@ -185,7 +172,7 @@ describe('deactivateOwnAccount', () => {
     // Not confirmed, or confirmed too long ago.
     await inSequence([null, minutesAgo(16)], async (confirmedAt) =>
       expect(
-        deactivateOwnAccount(ctx, await signedIn(jane, { confirmedAt }), ''),
+        deactivateOwnAccount(ctx, await actorFor(db, jane, { confirmedAt }), ''),
       ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.mfaVerificationRequired' }),
     );
     expect(await deactivatedAt(jane)).toBeNull();
@@ -193,7 +180,7 @@ describe('deactivateOwnAccount', () => {
     // Confirmed just now, it goes ahead without a password, whenever the session signed in.
     await deactivateOwnAccount(
       ctx,
-      await signedIn(jane, { confirmedAt: new Date(), signedInAt: minutesAgo(3 * 60) }),
+      await actorFor(db, jane, { confirmedAt: new Date(), signedInAt: minutesAgo(3 * 60) }),
       '',
     );
     expect(await deactivatedAt(jane)).toBeInstanceOf(Date);
@@ -203,12 +190,12 @@ describe('deactivateOwnAccount', () => {
     // Signed in too long ago, or at an unknown time.
     await inSequence([minutesAgo(61), null], async (signedInAt) =>
       expect(
-        deactivateOwnAccount(ctx, await signedIn(jane, { signedInAt }), ''),
+        deactivateOwnAccount(ctx, await actorFor(db, jane, { signedInAt }), ''),
       ).rejects.toMatchObject({ code: 'forbidden', key: 'errors.signIn.sessionNotFresh' }),
     );
     expect(await deactivatedAt(jane)).toBeNull();
 
-    await deactivateOwnAccount(ctx, await signedIn(jane, { signedInAt: minutesAgo(59) }), '');
+    await deactivateOwnAccount(ctx, await actorFor(db, jane, { signedInAt: minutesAgo(59) }), '');
     expect(await deactivatedAt(jane)).toBeInstanceOf(Date);
     expect(await actionsAbout(jane)).toEqual(['account_deactivated']);
   });

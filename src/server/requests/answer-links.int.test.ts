@@ -9,8 +9,7 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { company as companyTable, membership, request, requestAnswerLink, user } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
+import { company as companyTable, membership, requestAnswerLink, user } from '@/db/schema';
 
 import {
   createCompany,
@@ -24,7 +23,7 @@ import { answerByLink, createAnswerLink, readAnswerLink } from './answer-links';
 import currentProposalEntryId from './proposals';
 import replyToRequest from './reply';
 import changeRequestStatus from './status';
-import { ctx, db, storeRequest } from './test-helpers';
+import { ctx, db, storeRequest, storedRequest } from './test-helpers';
 
 /**
  * A request waiting for the client's approval, with the client's answer link.
@@ -51,19 +50,6 @@ async function aLinkToAnswer() {
     proposalEntryId,
   });
   return { company, raised, client, support, token, proposalEntryId };
-}
-
-/**
- * The request's status now.
- *
- * @param requestId - The request.
- * @returns Its status.
- */
-async function statusOf(requestId: string) {
-  return firstRow(
-    await db.select({ status: request.status }).from(request).where(eq(request.id, requestId)),
-    'the request',
-  ).status;
 }
 
 describe('an answer link', () => {
@@ -97,7 +83,7 @@ describe('an answer link', () => {
       state: 'used',
       answer: 'approve',
     });
-    expect(await statusOf(raised.id)).toBe('done');
+    expect((await storedRequest(raised.id))?.status).toBe('done');
     const [link] = await db
       .select({ usedAt: requestAnswerLink.usedAt, answer: requestAnswerLink.answer })
       .from(requestAnswerLink)
@@ -110,7 +96,7 @@ describe('an answer link', () => {
       state: 'used',
       answer: 'approve',
     });
-    expect(await statusOf(raised.id)).toBe('done');
+    expect((await storedRequest(raised.id))?.status).toBe('done');
   });
 
   it('denies, which puts the request back in progress', async () => {
@@ -120,7 +106,7 @@ describe('an answer link', () => {
       state: 'used',
       answer: 'deny',
     });
-    expect(await statusOf(raised.id)).toBe('in_progress');
+    expect((await storedRequest(raised.id))?.status).toBe('in_progress');
   });
 
   it('answers once when it’s used twice at the same moment', async () => {
@@ -132,7 +118,7 @@ describe('an answer link', () => {
     ]);
 
     expect(views.map(({ state }) => state).sort()).toEqual(['overtaken', 'used']);
-    expect(await statusOf(raised.id)).toBe('done');
+    expect((await storedRequest(raised.id))?.status).toBe('done');
   });
 
   it('has expired after its time, and changes nothing', async () => {
@@ -145,7 +131,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'expired',
     });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('is overtaken once the request no longer waits for its proposal', async () => {
@@ -156,7 +142,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'overtaken',
     });
-    expect(await statusOf(raised.id)).toBe('in_progress');
+    expect((await storedRequest(raised.id))?.status).toBe('in_progress');
   });
 
   it('is overtaken by a newer proposal, which needs its own link', async () => {
@@ -171,7 +157,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'overtaken',
     });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('is unavailable once its person is deactivated', async () => {
@@ -181,7 +167,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'unavailable',
     });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('is unavailable once its person left the company', async () => {
@@ -193,7 +179,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'unavailable',
     });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('answers only as someone who may answer: a Watcher’s link changes nothing', async () => {
@@ -208,7 +194,7 @@ describe('an answer link', () => {
     await expect(answerByLink(ctx, token, 'approve')).resolves.toMatchObject({
       state: 'unavailable',
     });
-    expect(await statusOf(raised.id)).toBe('proposed');
+    expect((await storedRequest(raised.id))?.status).toBe('proposed');
   });
 
   it('shows its page as unavailable once its person left the company', async () => {

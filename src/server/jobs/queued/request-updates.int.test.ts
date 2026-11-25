@@ -13,11 +13,9 @@ import {
   request,
   requestAnswerLink,
   requestEntry,
-  requestParticipant,
   requestSignInLink,
   user,
 } from '@/db/schema';
-import { firstRow } from '@/lib/defined';
 import { writtenMentionMarker } from '@/lib/requests';
 import { hashToken } from '@/lib/sign-in/tokens';
 
@@ -30,6 +28,8 @@ import {
   sendQueuedEmails,
   setupTestContext,
   staffActor,
+  storeParticipants,
+  storeRequest,
 } from '../../../../tests/integration/helpers';
 import {
   addNote,
@@ -51,32 +51,15 @@ const { ctx, db, sent } = setupTestContext();
  * @returns The request's ID and number.
  */
 async function storeWaitingRequest(companyId: string, subscribers: readonly { id: string }[]) {
-  await saveSettings(db, { 'requests.last_number': 142 });
-  const stored = firstRow(
-    await db
-      .insert(request)
-      .values({
-        number: 142,
-        companyId,
-        title: 'The printer is broken',
-        description: 'It prints blank pages.',
-        type: 'bug',
-        priority: 'high',
-        status: 'waiting',
-        createdBySide: 'company',
-      })
-      .returning({ id: request.id, number: request.number }),
-    'the stored request',
+  // The subject of the emails names the number, so the request takes number 142.
+  await saveSettings(db, { 'requests.last_number': 141 });
+  const stored = await storeRequest(db, companyId, { priority: 'high', status: 'waiting' });
+  await storeParticipants(
+    db,
+    stored.id,
+    subscribers.map(({ id }) => id),
+    'subscriber',
   );
-  if (subscribers.length > 0) {
-    await db.insert(requestParticipant).values(
-      subscribers.map(({ id }) => ({
-        requestId: stored.id,
-        userId: id,
-        role: 'subscriber' as const,
-      })),
-    );
-  }
   return stored;
 }
 

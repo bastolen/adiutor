@@ -4,9 +4,9 @@
  * that would take away the MFA a role requires, and turning two-step
  * verification and backup codes on or off.
  */
-import { addOAuthServerContext, getSessionFromCtx } from 'better-auth/api';
+import { getSessionFromCtx } from 'better-auth/api';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { account } from '@/db/schema';
 
@@ -24,17 +24,10 @@ import {
   startAuthenticatorSetup,
   turnOffGitHubSignIn,
   minutesAgo,
+  rateLimitHits,
 } from '../../../../tests/integration/helpers';
 import { beforeAuthRequest } from './before-request';
-import {
-  outcomeOf,
-  db,
-  signedIn,
-  request,
-  refusedWith,
-  hits,
-  sendCodesOverTime,
-} from './test-helpers';
+import { outcomeOf, db, signedIn, request, refusedWith, sendCodesOverTime } from './test-helpers';
 
 vi.mock('better-auth/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('better-auth/api')>()),
@@ -42,16 +35,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   // Better Auth's request state isn't there outside a request; the tests watch what's added.
   addOAuthServerContext: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(getSessionFromCtx).mockReset().mockResolvedValue(null);
-  vi.mocked(addOAuthServerContext).mockReset();
-});
 
 /**
  * Sends several requests with the current session, one after another.
@@ -99,7 +82,7 @@ describe('changing sign-in methods', () => {
       refusedWith('EMAIL_CODES_NOT_ALLOWED'),
     );
     // Setting up isn't counted towards the email code limit.
-    expect(await hits(`email-code:user:${manager.id}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${manager.id}`)).toBeNull();
   });
 
   it('lets a company user without MFA set up email codes without counting, once per wait', async () => {
@@ -112,7 +95,7 @@ describe('changing sign-in methods', () => {
       refusedWith('EMAIL_CODE_SENT_RECENTLY'),
     );
     await sendCodesOverTime(6, sendCode);
-    expect(await hits(`email-code:user:${newcomer}`)).toBeNull();
+    expect(await rateLimitHits(db, `email-code:user:${newcomer}`)).toBeNull();
   });
 });
 

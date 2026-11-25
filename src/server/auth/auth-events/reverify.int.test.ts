@@ -2,9 +2,8 @@
  * @file Integration tests for refusing a re-verify with another account, and the
  * user an incoming identity is for.
  */
-import { getOAuthState } from 'better-auth/api';
 import { eq, sql } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { account, session, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
@@ -42,22 +41,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('refusing a re-verify with another account', () => {
   /** Jane's GitHub account's ID at GitHub. */

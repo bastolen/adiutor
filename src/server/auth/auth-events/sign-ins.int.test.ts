@@ -2,13 +2,12 @@
  * @file Integration tests for the reactions to a password sign-in and a sign-in
  * with GitHub.
  */
-import { APIError, getOAuthState } from 'better-auth/api';
+import { APIError } from 'better-auth/api';
 import { eq, inArray } from 'drizzle-orm';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { auditEvent, session } from '@/db/schema';
+import { session } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 import { ACTING_AS_CHANGED_COOKIE } from '@/lib/sign-in/auth-cookies';
 
 import {
@@ -19,6 +18,8 @@ import {
   lastActiveAt,
   memberActor,
   staffActor,
+  auditEvents,
+  addPasskey,
 } from '../../../../tests/integration/helpers';
 import { loadActor } from '../../actor';
 import { listOwnActivity } from '../../audit';
@@ -37,7 +38,6 @@ import {
   githubCallback,
   gitHubAccountIdOf,
   storedGitHubMfa,
-  addPasskey,
   signedInHeaders,
   trustDevice,
   withTrustedDevice,
@@ -55,22 +55,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('a password sign-in', () => {
   /** The browser that typed the password. */
@@ -135,10 +119,7 @@ describe('a password sign-in', () => {
         details: { method: 'password' },
       },
     ]);
-    const recorded = firstRow(
-      await db.select({ userAgent: auditEvent.userAgent }).from(auditEvent),
-      'the audit event',
-    );
+    const recorded = firstRow(await auditEvents(db, { fields: ['userAgent'] }), 'the audit event');
     expect(recorded.userAgent).toBe(FIREFOX);
     expectSetSince(await lastActiveAt(db, jane), start);
     expect(await sessionMfa(sessionId)).toEqual({ mfaVerified: false, mfaMethod: null });
@@ -186,10 +167,7 @@ describe('a password sign-in', () => {
     // Whoever typed it may be someone else: the user's own activity leaves out their IP and browser.
     const [own] = await listOwnActivity(services, client);
     expect(own).toMatchObject({ action: 'sign_in_code_pending', ip: null, userAgent: null });
-    const recorded = firstRow(
-      await db.select({ userAgent: auditEvent.userAgent }).from(auditEvent),
-      'the audit event',
-    );
+    const recorded = firstRow(await auditEvents(db, { fields: ['userAgent'] }), 'the audit event');
     expect(recorded.userAgent).toBe(FIREFOX);
   });
 
@@ -269,7 +247,7 @@ describe('signing in with GitHub', () => {
     mockGitHubApi({ 'john-token': true });
     const john = await createUser(db, 'john@adiutor.test');
     await connectGitHubWithToken(john, 'john-token');
-    await addPasskey(john);
+    await addPasskey(db, john);
     const johnSession = await createSession(db, john);
     const start = new Date();
 

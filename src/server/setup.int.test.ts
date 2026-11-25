@@ -5,7 +5,7 @@ import { verifyPassword } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { account, auditEvent, rateLimitBucket, requestType, setting, user } from '@/db/schema';
+import { account, rateLimitBucket, requestType, setting, user } from '@/db/schema';
 import { defined, firstRow } from '@/lib/defined';
 import { LOCALES } from '@/lib/i18n/locales';
 
@@ -14,6 +14,7 @@ import {
   createUser,
   saveSettings,
   setupTestContext,
+  auditEvents,
 } from '../../tests/integration/helpers';
 import { hitRateLimit } from './rate-limit';
 import { addSetting, readSettings } from './settings';
@@ -76,14 +77,7 @@ describe('setUpPlatform', () => {
     const { userId } = await setUpPlatform({ db }, input);
 
     expect(
-      await db
-        .select({
-          action: auditEvent.action,
-          actorUserId: auditEvent.actorUserId,
-          targetUserId: auditEvent.targetUserId,
-          details: auditEvent.details,
-        })
-        .from(auditEvent),
+      await auditEvents(db, { fields: ['action', 'actorUserId', 'targetUserId', 'details'] }),
     ).toEqual([
       {
         action: 'account_created',
@@ -127,7 +121,7 @@ describe('setUpPlatform', () => {
     await db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date()));
     await expect(
       db.transaction((tx) => addSetting(tx, 'setup.completed_at', new Date())),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ cause: { code: '23505', constraint: 'setting_key_idx' } });
   });
 
   it('counts as done only once setup marked it, whatever settings are saved', async () => {
@@ -304,14 +298,7 @@ describe('the command line', () => {
     await setUpPlatform({ db }, input, { allowExistingAccount: true });
 
     expect(
-      await db
-        .select({
-          action: auditEvent.action,
-          actorUserId: auditEvent.actorUserId,
-          targetUserId: auditEvent.targetUserId,
-          details: auditEvent.details,
-        })
-        .from(auditEvent),
+      await auditEvents(db, { fields: ['action', 'actorUserId', 'targetUserId', 'details'] }),
     ).toEqual([
       {
         action: 'member_added',

@@ -2,11 +2,9 @@
  * @file Integration tests for naming provider accounts from the provider's
  * profile, and keeping their pictures.
  */
-import { getOAuthState } from 'better-auth/api';
-import { afterEach, beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { defined } from '@/lib/defined';
-import { sendEmail } from '@/lib/email';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '@/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
@@ -38,22 +36,6 @@ vi.mock('better-auth/api', async (importOriginal) => ({
   getSessionFromCtx: vi.fn(),
   getOAuthState: vi.fn(),
 }));
-
-afterAll(async () => {
-  const app = await import('@/db');
-  await app.db.$client.end();
-});
-
-beforeEach(() => {
-  vi.mocked(sendEmail).mockClear();
-  // No OAuth sign-in marked as a re-verify, unless a test marks one (`markReverify`).
-  vi.mocked(getOAuthState).mockReset().mockResolvedValue(null);
-});
-
-afterEach(() => {
-  // Puts back the real `fetch` after tests that stand in for GitHub's API.
-  vi.restoreAllMocks();
-});
 
 describe('naming a provider account, and keeping its picture', () => {
   /**
