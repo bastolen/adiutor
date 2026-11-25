@@ -727,33 +727,73 @@ export function pasteMarkdown(editor: Editor, event: ClipboardEvent): boolean {
 /** The elements of a text whose look is their own, not formatting: mentions and images. */
 const OWN_LOOKS = '[data-mention], [data-written-image]';
 
+/** The elements a text is shown with in a weight of their own: headings and header cells. */
+const OWN_WEIGHTS = 'h1, h2, h3, h4, h5, h6, th';
+
 /**
- * Takes the styles off the mentions and images in pasted HTML. A browser
- * copies every element with the styles it was shown in, and the editor
- * reads some styles as formatting (a weight from 500 up as bold), so a
- * mention copied from where a text is read would come in bold: its look
- * isn't formatting anyone gave it. Read in a template, where nothing runs
- * or loads, and which keeps table cells and rows that come without their
- * table.
+ * A block of code as it's shown where a text is read: its caption and Copy
+ * button around the code (`MarkdownCodeBlock` in `elements.tsx`).
+ */
+const CODE_FIGURE = 'figure[data-code-figure]';
+
+/** Whether pasted HTML may hold anything {@link withoutOwnLooks} takes off. */
+const MAY_HOLD_OWN_LOOKS = /data-mention|data-written-image|data-code-figure|<(?:h[1-6]|th)[\s>]/i;
+
+/**
+ * Takes off what the elements of pasted HTML look like by themselves, which
+ * isn't formatting anyone gave the text. A browser copies every element with
+ * the styles it was shown in, and the editor reads some styles as formatting
+ * (a weight from 500 up as bold, which is how Google Docs copies bold):
+ *
+ * - a mention or an image loses its styles, or a mention copied from where a
+ *   text is read would come in bold;
+ * - a heading or a table's header cell loses its weight, or its text would
+ *   come in bold (`### **Steps**`); its other styles stay, for the editor's
+ *   rules to ignore;
+ * - a block of code copied from where a text is read is its code alone, or
+ *   its caption (the language's name) would paste as a paragraph above it.
+ *   The code keeps its language, which the editor reads from its
+ *   `language-*` class. Another site's figure keeps its caption, which is
+ *   part of what it says.
+ *
+ * Bold someone gave the text (`<strong>`, `<b>`, or a weight on a `<span>`)
+ * stays. Read in a template, where nothing runs or loads, and which keeps
+ * table cells and rows that come without their table.
  *
  * @param html - The pasted HTML.
- * @returns The HTML, with its mentions and images unstyled.
+ * @returns The HTML, without those looks.
  */
 export function withoutOwnLooks(html: string): string {
-  if (!html.includes('data-mention') && !html.includes('data-written-image')) {
+  if (!MAY_HOLD_OWN_LOOKS.test(html)) {
     return html;
   }
   const template = document.createElement('template');
   template.innerHTML = html;
-  template.content.querySelectorAll(OWN_LOOKS).forEach((element) => {
+  const { content } = template;
+  content.querySelectorAll(OWN_LOOKS).forEach((element) => {
     element.removeAttribute('style');
+  });
+  content.querySelectorAll<HTMLElement>(OWN_WEIGHTS).forEach((element) => {
+    element.style.removeProperty('font-weight');
+    if (element.style.length === 0) {
+      element.removeAttribute('style');
+    }
+  });
+  content.querySelectorAll(CODE_FIGURE).forEach((figure) => {
+    // Its caption alone (a selection that ended before the code) isn't part of the text either.
+    const code = figure.querySelector('pre');
+    if (code) {
+      figure.replaceWith(code);
+    } else {
+      figure.remove();
+    }
   });
   return template.innerHTML;
 }
 
 /**
  * Pastes plain text as the Markdown it is ({@link pasteMarkdown}), and
- * takes the look of mentions and images off pasted HTML ({@link withoutOwnLooks}).
+ * takes what elements look like by themselves off pasted HTML ({@link withoutOwnLooks}).
  */
 const MarkdownPaste = Extension.create({
   name: 'markdownPaste',

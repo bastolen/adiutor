@@ -239,7 +239,8 @@ function namedLanguage(block: Element | undefined): string | null {
  * the text's note as a comment in the block's language (`withCodeNote`). It
  * comes before the code, as on the screen, and stays out of the caption, so
  * the block is still named by its language alone. A block without code has
- * no button.
+ * no button. The figure is marked (`data-code-figure`), so a copy pasted in
+ * the editor is the code alone, without the caption (`withoutOwnLooks`).
  *
  * @param props - The block's attributes, and the text's note.
  * @param props.node - The block's node in the text's tree, for its language and its code.
@@ -256,7 +257,10 @@ function MarkdownCodeBlock({
   const name = language === null ? null : (codeLanguageName(language) ?? language);
   const code = writtenCode(node);
   return (
-    <figure className={cn(markdownStyles.codeFigure, markdownStyles.codeFigureRead)}>
+    <figure
+      data-code-figure=""
+      className={cn(markdownStyles.codeFigure, markdownStyles.codeFigureRead)}
+    >
       <figcaption
         className={cn(
           markdownStyles.codeCaption,

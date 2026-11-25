@@ -1551,6 +1551,61 @@ test('a mention that is copied and pasted is still a mention once it is sent', a
   await expect(sent).toContainText(`Please check, @${REQUESTS_CLIENT.name} thanks.`);
 });
 
+test('a heading, a table and code copied from a request paste without the page’s looks', async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const number = await storeOwnRequest({
+    title: 'Formatting copied into a reply',
+    description: [
+      '### Steps',
+      '',
+      '| Name | Role |',
+      '| --- | --- |',
+      '| Sam | Support |',
+      '',
+      '```bash',
+      'npm test',
+      '```',
+    ].join('\n'),
+  });
+  await context.addCookies(supportCookies());
+  await page.goto(`/requests/${number}`);
+  const editor = await markdownEditor(page, 'Your reply');
+
+  // Copied as someone selects it, from the heading to the block of code: the browser copies each
+  // element with the weight it's shown in, and the block with its caption.
+  const description = page.getByRole('region', { name: 'Description' });
+  await description.locator('h3').evaluate((heading) => {
+    const figure = heading.parentElement?.querySelector('figure');
+    const range = document.createRange();
+    range.setStartBefore(heading);
+    range.setEndAfter(figure ?? heading);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  });
+  await page.keyboard.press('ControlOrMeta+C');
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+V');
+
+  // The heading and the header row aren't bold, and the caption isn't a paragraph of its own.
+  await expect(editor.getByRole('heading', { name: 'Steps' })).toBeVisible();
+  await expect(editor.locator('pre')).toHaveText('npm test');
+  await expect(editor.locator(':is(h1, h2, h3, h4, h5, h6, th) strong')).toHaveCount(0);
+  await expect(editor.locator('p', { hasText: /^Bash$/ })).toHaveCount(0);
+
+  // Sent, it reads as it was copied.
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  const sent = page.getByRole('region', { name: 'Conversation' }).locator('ol > li').last();
+  await expect(sent.getByRole('heading', { name: 'Steps' })).toBeVisible();
+  await expect(sent.getByRole('columnheader', { name: 'Role' })).toBeVisible();
+  await expect(sent.getByRole('group', { name: 'Bash code' })).toHaveText('npm test');
+  await expect(sent.locator(':is(h1, h2, h3, h4, h5, h6, th) strong')).toHaveCount(0);
+  await expect(sent.locator('p', { hasText: /^Bash$/ })).toHaveCount(0);
+});
+
 test('people are mentioned from the list at @, by what the writer may know', async ({ page }) => {
   const number = await storeOwnRequest({ title: 'A reply that mentions someone' });
   const list = page.getByRole('listbox', { name: 'People to mention' });

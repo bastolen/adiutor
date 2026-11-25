@@ -534,8 +534,12 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   elements carry what the editor reads them back from: a mention its person's key
   (`data-mention-key`, see [Mentions](#mentions)), an image in the editor the Markdown it was
   written as (`data-markdown`, taken only when it reads as one image). A mention's element is
-  never a link, also where it links to the person's page, and the styles a browser copies with
-  a mention or an image are dropped first (`withoutOwnLooks`), so a mention doesn't come in bold.
+  never a link, also where it links to the person's page. A browser copies each element with the
+  styles it was shown in, and the editor reads a weight as bold, so what an element looks like by
+  itself is dropped first (`withoutOwnLooks`): the styles of a mention or an image (a mention
+  doesn't come in bold), the weight of a heading or a table's header cell, and a block of code's
+  caption and Copy button (its figure carries `data-code-figure`), so it pastes as its code alone.
+  Bold someone gave the text stays bold, also as a weight (as Google Docs copies it).
 - **Links to the staff's pages:** in the field for a description or reply, a link to one of the
   staff's pages is its text however it comes in: pasted with its formatting (an entry's author,
   a row of the list of users) or as Markdown, typed, or pasted over a selection, and the link
