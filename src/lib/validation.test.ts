@@ -42,6 +42,8 @@ import {
   slugSchema,
   staffNameSchema,
   staffRoleSchema,
+  maxFileMbSchema,
+  storageFormSchema,
 } from './validation';
 
 describe('emailSchema', () => {
@@ -654,6 +656,88 @@ describe('messages', () => {
     );
     expect(issueFor(companyNameSchema, 'Adiutor\tTests')?.message).toBe(
       'validation.companyName.controlCharacters',
+    );
+  });
+});
+
+describe('storageFormSchema', () => {
+  it('reads a bucket, with the default region and an empty secret as none', () => {
+    expect(
+      storageFormSchema.parse({
+        driver: 's3',
+        endpoint: 'https://files.adiutor.dev',
+        region: ' ',
+        bucket: 'adiutor',
+        accessKeyId: 'key-id',
+        secretAccessKey: '',
+        forcePathStyle: false,
+      }),
+    ).toEqual({
+      driver: 's3',
+      endpoint: 'https://files.adiutor.dev',
+      region: 'us-east-1',
+      bucket: 'adiutor',
+      accessKeyId: 'key-id',
+      secretAccessKey: undefined,
+      forcePathStyle: false,
+    });
+  });
+
+  it('reads an SFTP server, with port 22 when it was left empty', () => {
+    expect(
+      storageFormSchema.parse({
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: '',
+        username: 'adiutor',
+        password: 'secret',
+        privateKey: '',
+        hostKey: ' SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls ',
+        dir: '/srv/adiutor',
+      }),
+    ).toMatchObject({ port: 22, password: 'secret', privateKey: undefined });
+  });
+
+  it.each([
+    [{ driver: 'ftp', dir: '/data' }, 'validation.storage.driver'],
+    [{ driver: 'local', dir: '' }, 'validation.storage.folder'],
+    [
+      { driver: 's3', endpoint: 'ftp://files.adiutor.dev', bucket: 'a', accessKeyId: 'b' },
+      'validation.storage.endpoint',
+    ],
+    [
+      {
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: '70000',
+        username: 'adiutor',
+        hostKey: 'SHA256:x',
+        dir: '/srv',
+      },
+      'validation.storage.port',
+    ],
+  ])('refuses %j with %s', (input, message) => {
+    const result = storageFormSchema.safeParse({
+      region: '',
+      secretAccessKey: '',
+      forcePathStyle: false,
+      password: '',
+      privateKey: '',
+      ...input,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(message);
+  });
+});
+
+describe('maxFileMbSchema', () => {
+  it('takes a whole number of megabytes from 1 to the ceiling', () => {
+    expect(maxFileMbSchema(50).parse('25')).toBe(25);
+    expect(maxFileMbSchema(4).safeParse('5').error?.issues[0]?.message).toBe(
+      'validation.storage.maxFileMb.tooBig',
+    );
+    expect(maxFileMbSchema(50).safeParse('2.5').error?.issues[0]?.message).toBe(
+      'validation.storage.maxFileMb.whole',
     );
   });
 });

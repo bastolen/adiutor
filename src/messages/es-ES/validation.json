@@ -89,6 +89,23 @@
     "requestStatus": "Elige un estado.",
     "requestPrefix": "Usa de una a cinco letras o cifras para el prefijo, empezando por una letra, por ejemplo AD.",
     "locale": "Elige uno de los idiomas.",
-    "timeZone": "Elige una de las zonas horarias."
+    "timeZone": "Elige una de las zonas horarias.",
+    "storage": {
+      "driver": "Elige dónde se guardan los archivos.",
+      "folder": "Indica la ruta absoluta de la carpeta, por ejemplo /data/attachments.",
+      "endpoint": "Indica la dirección del servicio, empezando por https://.",
+      "region": "Revisa la región.",
+      "bucket": "Indica el nombre del bucket.",
+      "accessKeyId": "Indica el ID de la clave de acceso.",
+      "secret": "Ese secreto es demasiado largo.",
+      "host": "Indica el nombre de host o la dirección del servidor.",
+      "port": "Indica un puerto del 1 al 65535.",
+      "username": "Indica el usuario con el que iniciar sesión.",
+      "hostKey": "Indica la huella de la clave de host tal como la muestra ssh-keygen -lf, empezando por SHA256:.",
+      "maxFileMb": {
+        "whole": "Indica un número entero de megabytes, al menos 1.",
+        "tooBig": "Elige como máximo {maximum, number} megabytes."
+      }
+    }
   }
 }

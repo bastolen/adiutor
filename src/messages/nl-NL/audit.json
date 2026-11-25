@@ -44,6 +44,7 @@
       "company_deactivated": "Bedrijf gedeactiveerd",
       "company_reactivated": "Bedrijf opnieuw geactiveerd",
       "staff_renamed": "Naam voor gebruikers gewijzigd",
+      "attachment_storage_changed": "Gewijzigd waar bijlagen worden bewaard",
       "request_type_added": "Verzoektype toegevoegd",
       "request_type_changed": "Verzoektype gewijzigd",
       "request_type_archived": "Verzoektype gearchiveerd",

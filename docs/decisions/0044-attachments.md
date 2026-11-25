@@ -15,12 +15,20 @@ would grow with every screenshot, and a hosted database's free plan is small.
 
 How to set it up is in [Deploying](../deploying.md#attachments). The choices behind it:
 
-- **The operator chooses the storage,** behind one small interface (`FileStorage` in
+- **Several storages behind one small interface** (`FileStorage` in
   `src/server/storage/`: put, get as a stream, delete): a folder on the server's disk, a bucket
   of any S3-compatible service (AWS S3, Cloudflare R2, Backblaze B2, Garage, SeaweedFS), or a
-  folder on another server over SFTP (`ssh2`).
-  The server's environment chooses it (`ATTACHMENTS_STORAGE`); without a storage, attachments are
-  off.
+  folder on another server over SFTP (`ssh2`). Without a storage, attachments are off.
+- **Settings chooses it, unless the environment does:** a staff Admin sets it up on the
+  Attachments tab, and the server's environment (`ATTACHMENTS_STORAGE`, or `off`) wins over it, so
+  an operator can fix it, or keep staff from choosing one; the tab then only shows it.
+- **A storage is tried before it's saved** (a small file written, read back and deleted), with the
+  staff Admin's second step from the last 15 minutes and a record in the audit log: it decides
+  where every company's files go, and holds credentials.
+- **Its secrets are encrypted** with Better Auth's `symmetricEncrypt` and the versioned auth
+  secrets, as authenticator secrets are, never shown again, and kept only for the place they were
+  saved for: another S3 service or key, or another SFTP server, port or user, must be given them
+  again, so a changed host can't receive a saved password.
 - **One S3 driver for every S3-compatible service,** with a configurable endpoint, signed with
   `aws4fetch` (AWS Signature V4 on `fetch`) rather than the AWS SDK: the driver needs four requests,
   not the SDK's hundred packages. Each upload is signed with its SHA-256.
@@ -46,7 +54,14 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
   `cpu-features` isn't installed (`ignoredOptionalDependencies`), since an unbuilt one kept Next's
   development server reloading every page that imports `ssh2`.
 
+- A staff Admin can make the server connect to any address it reaches by saving a storage, which
+  a server of your own on the local network needs. The test reports only the kind of failure,
+  never the reply, and an operator who doesn't want this sets the storage, or `off`.
+
 ## Alternatives considered
+
+- **The environment alone:** simpler and out of reach of the web, but every change needs the
+  operator and a restart, and a Vercel project's secrets are set in another place again.
 
 - **Files in PostgreSQL:** nothing to set up, and backups include them, but the database grows
   with every file and a hosted database's free plan is small.

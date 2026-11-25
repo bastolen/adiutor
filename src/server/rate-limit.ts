@@ -96,6 +96,11 @@ export const RATE_LIMITS = {
   requestRepliesPerUser: { limit: 200, windowSeconds: 60 * 60 },
   /** Changes one user makes to requests: their status, and their title, type and priority. */
   requestChangesPerUser: { limit: 300, windowSeconds: 60 * 60 },
+  /**
+   * Storages a staff Admin saves on the Attachments tab of Settings: each one
+   * is tried first, which connects to whatever server the settings name.
+   */
+  storageChecksPerUser: { limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

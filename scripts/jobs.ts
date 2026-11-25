@@ -47,7 +47,17 @@ const RUN_NOW_MINUTES = 10;
  * and the file storage, which a jobs container must reach like the app does
  * (the same volume, for local disk).
  */
-const ctx = { db, sendEmail, baseUrl: appUrl, storage: activeStorage };
+const ctx = {
+  db,
+  sendEmail,
+  baseUrl: appUrl,
+  /**
+   * The storage files go to now: the environment's, or Settings'.
+   *
+   * @returns The storage, or `null`.
+   */
+  storage: () => activeStorage(db),
+};
 
 /**
  * The moment some minutes from now.

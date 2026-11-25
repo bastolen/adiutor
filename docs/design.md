@@ -18,8 +18,10 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
-  view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  values), `SetByEnvironment` (for a setting the server's environment chooses: the sentence that
+  says so, naming the variable, above what was chosen; `useSetByEnvironment` gives it for a locked
+  field's description), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on
+  its own for a view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside

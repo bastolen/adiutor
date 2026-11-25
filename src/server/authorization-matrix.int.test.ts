@@ -35,6 +35,10 @@
  * removing, reactivating, accepting) gets a target of its own in
  * `createWorld`.
  */
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
@@ -165,6 +169,7 @@ import {
   updateRequestDetails,
   updateRequestType,
 } from './requests';
+import { getAttachmentSettings, saveAttachmentLimit, saveAttachmentStorage } from './storage';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -521,6 +526,19 @@ function listOperations(): Operation[] {
     ],
     ['set default time zone', (w) => setDefaultTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
+    // Settings decide, whatever the checkout's environment says (`{}`); a new folder for each try.
+    ['view attachment settings', (w) => getAttachmentSettings(ctx, w.actor, {})],
+    [
+      'choose where attachments are kept',
+      (w) =>
+        saveAttachmentStorage(
+          ctx,
+          w.actor,
+          { driver: 'local', dir: mkdtempSync(join(tmpdir(), 'adiutor-matrix-')) },
+          {},
+        ),
+    ],
+    ['choose the largest attachment', (w) => saveAttachmentLimit(ctx, w.actor, '20', {})],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -800,6 +818,7 @@ const READS: ReadonlySet<string> = new Set([
   'list staff invitations',
   'list staff',
   'view staff settings',
+  'view attachment settings',
   'list request types',
   'list users',
   'view user',
@@ -987,6 +1006,10 @@ const EXPECTED: Record<string, string> = {
   'set languages': 'FFFFFFA',
   'set default time zone': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
+  // Where files are kept, and how large they may be: staff Admins only, like the other settings.
+  'view attachment settings': 'FFFFFFA',
+  'choose where attachments are kept': 'FFFFFFA',
+  'choose the largest attachment': 'FFFFFFA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',
   'add request type': 'FFFFFFA',

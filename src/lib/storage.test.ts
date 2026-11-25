@@ -10,6 +10,7 @@ import {
   type S3StorageConfig,
   storageFromEnvironment,
   storageProblems,
+  storageView,
 } from './storage';
 
 /** A bucket's settings. */
@@ -164,5 +165,32 @@ describe('maxFileMbCeiling', () => {
   it('allows 50 megabytes, or 4 on Vercel', () => {
     expect(maxFileMbCeiling(false)).toBe(50);
     expect(maxFileMbCeiling(true)).toBe(4);
+  });
+});
+
+describe('storageView', () => {
+  it('leaves out every secret', () => {
+    expect(storageView(bucket)).toEqual({ ...bucket, secretAccessKey: undefined });
+    expect('secretAccessKey' in storageView(bucket)).toBe(false);
+    const server = {
+      driver: 'sftp',
+      host: 'files.adiutor.dev',
+      port: 22,
+      username: 'adiutor',
+      hostKey: HOST_KEY,
+      dir: '/srv/adiutor',
+    } as const;
+    expect(storageView({ ...server, password: 'secret' })).toEqual({
+      ...server,
+      signsInWith: 'password',
+    });
+    expect(storageView({ ...server, privateKey: 'PEM' })).toEqual({
+      ...server,
+      signsInWith: 'key',
+    });
+    expect(storageView({ driver: 'local', dir: '/data' })).toEqual({
+      driver: 'local',
+      dir: '/data',
+    });
   });
 });

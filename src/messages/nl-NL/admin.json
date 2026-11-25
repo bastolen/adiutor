@@ -258,7 +258,8 @@
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
-        "requests": "Verzoeken"
+        "requests": "Verzoeken",
+        "attachments": "Bijlagen"
       },
       "general": {
         "name": {
@@ -368,6 +369,72 @@
           "restore": "Terugzetten",
           "restoreLabel": "{name} terugzetten",
           "restored": "{name} teruggezet."
+        }
+      },
+      "attachments": {
+        "title": "Bijlagen",
+        "storage": {
+          "title": "Waar bestanden worden bewaard",
+          "description": "Bestanden die mensen aan verzoeken toevoegen, worden hier bewaard. Adiutor levert elk bestand zelf, aan wie het mag lezen.",
+          "none": "Er is nog geen opslag gekozen, dus niemand kan bestanden toevoegen.",
+          "driver": "Opslag",
+          "choose": "Kies een opslag",
+          "drivers": {
+            "local": "Een map op deze server",
+            "s3": "Een S3-compatibele bucket",
+            "sftp": "Een map op een andere server (SFTP)"
+          },
+          "driverHints": {
+            "local": "Bestanden op de schijf van deze server. Niet op Vercel, en voor één server.",
+            "s3": "AWS S3, Cloudflare R2, Backblaze B2, of een eigen server zoals Garage of SeaweedFS.",
+            "sftp": "Elke server die je via SSH bereikt, zoals een storage box of een NAS."
+          },
+          "dir": "Map",
+          "localDirHint": "Een absoluut pad op deze server, bijvoorbeeld /data/attachments. De map moet bestaan en Adiutor moet erin kunnen schrijven.",
+          "endpoint": "Adres van de dienst",
+          "endpointHint": "Bijvoorbeeld https://jouw-account-id.r2.cloudflarestorage.com voor Cloudflare R2.",
+          "region": "Regio",
+          "regionHint": "auto bij Cloudflare R2. Laat leeg voor us-east-1.",
+          "bucket": "Bucket",
+          "accessKeyId": "ID van de toegangssleutel",
+          "secretAccessKey": "Geheime toegangssleutel",
+          "s3SecretSaved": "Er is een geheime sleutel opgeslagen. Laat dit leeg om hem te houden, zolang het adres van de dienst en de toegangssleutel hetzelfde blijven.",
+          "forcePathStyle": "Bucket in het pad",
+          "forcePathStyleHint": "Nodig voor de meeste eigen servers, zoals Garage of SeaweedFS.",
+          "host": "Server",
+          "port": "Poort",
+          "username": "Gebruiker",
+          "password": "Wachtwoord",
+          "privateKey": "Privésleutel",
+          "privateKeyHint": "De PEM-tekst van de sleutel. Geef een wachtwoord of een privésleutel.",
+          "sftpSecretSaved": {
+            "password": "Er is een wachtwoord opgeslagen. Laat beide leeg om het te houden, zolang server, poort en gebruiker hetzelfde blijven.",
+            "key": "Er is een privésleutel opgeslagen. Laat beide leeg om hem te houden, zolang server, poort en gebruiker hetzelfde blijven."
+          },
+          "hostKey": "Vingerafdruk van de hostsleutel",
+          "hostKeyHint": "Zoals ssh-keygen -lf die toont, beginnend met SHA256:. Controleer hem op de server zelf: Adiutor maakt met geen andere sleutel verbinding.",
+          "sftpDirHint": "Een absoluut pad op de server. De map moet bestaan.",
+          "bucketAddress": "Adres van de bucket",
+          "inPath": "In het pad",
+          "inHost": "In de hostnaam",
+          "signsInWith": "Logt in met",
+          "signsInWithPassword": "Een wachtwoord",
+          "signsInWithKey": "Een privésleutel",
+          "save": "Testen en opslaan",
+          "saved": "Opslag opgeslagen. Adiutor heeft er een testbestand geschreven, teruggelezen en verwijderd.",
+          "confirmFirst": "Om te kiezen waar bestanden worden bewaard, moet je eerst bevestigen dat jij het bent.",
+          "offInEnvironment": "Bijlagen staan uit in de omgeving van de server (ATTACHMENTS_STORAGE=off).",
+          "dirPlaceholder": "/data/attachments",
+          "endpointPlaceholder": "https://",
+          "hostKeyPlaceholder": "SHA256:"
+        },
+        "largestFile": {
+          "title": "Grootste bestand",
+          "description": "Het grootste bestand dat iemand mag toevoegen.",
+          "label": "Megabyte",
+          "hint": "Van 1 tot {ceiling, number}.",
+          "save": "Grootte opslaan",
+          "saved": "Grootste bestand opgeslagen."
         }
       }
     },

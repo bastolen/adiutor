@@ -347,10 +347,28 @@ run tries again. `pnpm jobs:list` shows every job with its last and next run, an
 
 ## Attachments
 
-Files people attach to requests are kept in a storage the server's environment chooses
+Files people attach to requests are kept in a storage a staff Admin chooses on the **Attachments**
+tab of Settings, unless the server's environment chooses it
 ([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
-a folder on another server over SFTP. Without one, attachments are off. Set
-`ATTACHMENTS_STORAGE` to one of these, with what it needs:
+a folder on another server over SFTP. Without one, attachments are off.
+
+- **In Settings,** a storage is tried before it's saved: Adiutor writes a small file there, reads
+  it back and deletes it, and says what went wrong if any step fails (unreachable, keys refused,
+  folder missing, and so on, never the server's own reply). Saving needs the staff Admin's second
+  step from the last 15 minutes, and is in the audit log. Its secrets (the S3 secret key, the SFTP
+  password or private key) are encrypted with the auth secret, like authenticator secrets, so
+  [Rotating the auth secret](#rotating-the-auth-secret) holds for them: keep the old version until
+  the storage has been saved again. A saved secret is never shown again, and is kept only for the
+  place it was saved for: another S3 service or key, or another SFTP server, port or user, must be
+  given it again.
+- **In the environment,** `ATTACHMENTS_STORAGE` and the variables below win over Settings, which
+  then only shows the storage, without its secrets. `ATTACHMENTS_STORAGE=off` turns attachments
+  off and keeps staff Admins from choosing a storage: a storage in Settings lets them make the
+  server connect to any address it reaches (which a server of your own on the local network needs),
+  so set the storage yourself, or `off`, if that's not what you want.
+
+The storages, with the variables each one takes when the environment chooses it (Settings asks for
+the same):
 
 - **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
   exists and the app can write to). It serves one server only, and never Vercel, whose disk doesn't
@@ -387,10 +405,12 @@ a folder on another server over SFTP. Without one, attachments are off. Set
   (22 when unset), `ATTACHMENTS_SFTP_USERNAME`, `ATTACHMENTS_SFTP_PASSWORD` or
   `ATTACHMENTS_SFTP_PRIVATE_KEY`, `ATTACHMENTS_SFTP_HOST_KEY` and `ATTACHMENTS_SFTP_DIR`). Any server
   with SSH will do, a storage box or a NAS included, and it works from Vercel too. The private key
-  is the PEM file in base64 (`base64 < key`), so it fits on one line. The host key is required:
-  Adiutor connects only to the server whose key has that fingerprint, as
-  `ssh-keyscan <host> | ssh-keygen -lf -` prints it (`SHA256:…`; check it against the server's own
-  `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`, since a scan can't tell an impostor). The
+  is the PEM file in base64 (`base64 < key`), so it fits on one line (Settings takes the PEM text
+  as it is). The host key is required: Adiutor connects only to the server whose key has that
+  fingerprint, as `ssh-keyscan <host> | ssh-keygen -lf -` prints it (`SHA256:…`). A server has a
+  key per type, and Adiutor is given its ED25519 key when it has one (else ECDSA, then RSA); check
+  the fingerprint against the server's own `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`,
+  since a scan can't tell an impostor. The
   folder must exist, with an absolute path, and like the local disk it gets the marker file.
   Each upload or download opens its own connection, so it's slower than the others.
 
@@ -399,8 +419,9 @@ whose file is gone can't be downloaded. Files are kept at the same paths in ever
 (`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
 `attachments/` there as it is (with `rclone copy`, say), then switching.
 
-**`ATTACHMENTS_MAX_FILE_MB`** is the largest file anyone may attach, in megabytes: 1 to 50, and at
-most 4 on Vercel, which refuses a larger request body; 10 when unset.
+**The largest file** anyone may attach is chosen on the Attachments tab too (10 MB until it's
+changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
+Vercel, which refuses a larger request body.
 
 ## Logs
 

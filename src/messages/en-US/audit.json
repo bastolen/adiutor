@@ -44,6 +44,7 @@
       "company_deactivated": "Deactivated a company",
       "company_reactivated": "Reactivated a company",
       "staff_renamed": "Changed the name shown to users",
+      "attachment_storage_changed": "Changed where attached files are kept",
       "request_type_added": "Added a request type",
       "request_type_changed": "Changed a request type",
       "request_type_archived": "Archived a request type",

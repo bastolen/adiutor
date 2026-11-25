@@ -129,7 +129,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 ## Staff screens
 
-- **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with three tabs, each a page
+- **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with four tabs, each a page
   of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages.
   Every tab is for staff Admins, so none is left out. The address before it had tabs,
   `/admin/staff`, is gone (no redirect).
@@ -145,6 +145,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
+  - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
+    it's saved and with the staff Admin's second step from the last 15 minutes, and the largest
+    file anyone may attach; each only shown when the server's environment chooses it (see
+    [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It

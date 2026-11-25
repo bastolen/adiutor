@@ -89,6 +89,23 @@
     "requestStatus": "Choose a status.",
     "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",
     "locale": "Choose one of the languages.",
-    "timeZone": "Choose one of the time zones."
+    "timeZone": "Choose one of the time zones.",
+    "storage": {
+      "driver": "Choose where files are kept.",
+      "folder": "Give the folder's absolute path, e.g. /data/attachments.",
+      "endpoint": "Give the service's address, starting with https://.",
+      "region": "Check the region.",
+      "bucket": "Give the bucket's name.",
+      "accessKeyId": "Give the access key's ID.",
+      "secret": "That secret is too long.",
+      "host": "Give the server's host name or address.",
+      "port": "Give a port from 1 to 65535.",
+      "username": "Give the user to sign in as.",
+      "hostKey": "Give the host key's fingerprint as ssh-keygen -lf prints it, starting with SHA256:.",
+      "maxFileMb": {
+        "whole": "Give a whole number of megabytes, at least 1.",
+        "tooBig": "Choose at most {maximum, number} megabytes."
+      }
+    }
   }
 }

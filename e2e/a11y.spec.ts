@@ -97,6 +97,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
+  '/admin/settings/attachments',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',
@@ -912,6 +913,15 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('region', { name: 'Conversation' })).toContainText(
           'Internal note',
         );
+        await expectAccessible(page);
+      });
+
+      test('the fields of an SFTP server on the Attachments tab of Settings', async ({ page }) => {
+        // Only chosen in the select: nothing is saved.
+        await page.goto('/admin/settings/attachments');
+        await page.getByRole('combobox', { name: 'Storage' }).click();
+        await page.getByRole('option', { name: /A folder on another server/ }).click();
+        await expect(page.getByRole('textbox', { name: 'Host key fingerprint' })).toBeVisible();
         await expectAccessible(page);
       });
 

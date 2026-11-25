@@ -199,6 +199,7 @@
         "invalid": "Enter a whole web address that starts with http:// or https://.",
         "staffPage": "The company reads this text, so it can't link to a page for the staff."
       }
-    }
+    },
+    "setByEnvironment": "Chosen in the server's environment ({variable}), so it can't be changed here."
   }
 }

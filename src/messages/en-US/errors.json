@@ -101,6 +101,30 @@
     "requestTypes": {
       "unavailable": "This type can’t be chosen any more. Pick another one.",
       "lastActive": "Keep at least one type that isn’t archived, or no request can be raised."
+    },
+    "attachments": {
+      "storageFromEnvironment": "The server's environment chooses where files are kept, so it can't be changed here.",
+      "limitFromEnvironment": "The server's environment chooses the largest file, so it can't be changed here.",
+      "confirmationRequired": "Confirm it’s you with your second step before choosing where files are kept.",
+      "secretNeeded": {
+        "s3": "Give the secret key again: a saved one is only kept for the same service and access key.",
+        "sftp": "Give the password or the private key again: a saved one is only kept for the same server and user."
+      },
+      "storageProblem": {
+        "local_on_vercel": "Vercel's disk doesn't keep files. Choose an S3-compatible bucket or an SFTP server.",
+        "relative_folder": "Give the folder as an absolute path, starting with /.",
+        "insecure_endpoint": "Use an https:// address, or the files and the keys would travel unencrypted."
+      },
+      "storageCheck": {
+        "unreachable": "Adiutor couldn't reach the storage. Check its address and port.",
+        "refused": "The storage refused the keys or the password. Check them.",
+        "host_key": "The server's host key doesn't match the fingerprint. Check it on the server itself before trying again.",
+        "not_found": "The bucket or the folder doesn't exist. Create it first.",
+        "not_writable": "Adiutor can't write there. Check the folder's permissions and the free space.",
+        "not_set_up": "That folder isn't Adiutor's. Check its path.",
+        "timed_out": "The storage took too long to answer. Try again, or check its address.",
+        "failed": "Adiutor couldn't store, read back and delete a test file there. Check the settings."
+      }
     }
   }
 }

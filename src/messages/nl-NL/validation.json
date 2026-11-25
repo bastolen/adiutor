@@ -89,6 +89,23 @@
     "requestStatus": "Kies een status.",
     "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",
     "locale": "Kies een van de talen.",
-    "timeZone": "Kies een van de tijdzones."
+    "timeZone": "Kies een van de tijdzones.",
+    "storage": {
+      "driver": "Kies waar bestanden worden bewaard.",
+      "folder": "Geef het absolute pad van de map, bijvoorbeeld /data/attachments.",
+      "endpoint": "Geef het adres van de dienst, beginnend met https://.",
+      "region": "Controleer de regio.",
+      "bucket": "Geef de naam van de bucket.",
+      "accessKeyId": "Geef de ID van de toegangssleutel.",
+      "secret": "Dat geheim is te lang.",
+      "host": "Geef de hostnaam of het adres van de server.",
+      "port": "Geef een poort van 1 tot 65535.",
+      "username": "Geef de gebruiker om mee in te loggen.",
+      "hostKey": "Geef de vingerafdruk van de hostsleutel zoals ssh-keygen -lf die toont, beginnend met SHA256:.",
+      "maxFileMb": {
+        "whole": "Geef een heel aantal megabytes, minstens 1.",
+        "tooBig": "Kies hoogstens {maximum, number} megabyte."
+      }
+    }
   }
 }

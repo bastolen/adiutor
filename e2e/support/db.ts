@@ -461,6 +461,41 @@ export async function setRequestPrefix(prefix: string): Promise<void> {
   });
 }
 
+/** The attachment settings as their rows hold them, to put back after a test changes them. */
+export type AttachmentSettingRows = { key: string; value: unknown }[];
+
+/**
+ * Reads the attachment settings' rows (`attachments.*`), for a test that
+ * changes them on the Attachments tab to put them back afterwards.
+ *
+ * @returns The rows, whatever they hold.
+ */
+export async function attachmentSettingRows(): Promise<AttachmentSettingRows> {
+  return withTestDatabase((db) =>
+    db
+      .select({ key: schema.setting.key, value: schema.setting.value })
+      .from(schema.setting)
+      .where(like(schema.setting.key, 'attachments.%')),
+  );
+}
+
+/**
+ * Puts the attachment settings back as {@link attachmentSettingRows} read
+ * them: the rows there were, and none of the others.
+ *
+ * @param rows - The rows to put back.
+ */
+export async function restoreAttachmentSettings(rows: AttachmentSettingRows): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.setting).where(like(schema.setting.key, 'attachments.%'));
+      if (rows.length > 0) {
+        await tx.insert(schema.setting).values(rows);
+      }
+    });
+  });
+}
+
 /**
  * Brings back the dashboard's MFA recommendation for a user, as if they had
  * never dismissed it, so a test that dismisses it can run again.

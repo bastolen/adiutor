@@ -58,6 +58,11 @@ The folders of the repository and what belongs in each. Back to the [documentati
     every setting (key, schema, fallback) and the checks between them, `store.ts` reads and writes
     them. It imports no server-only code: the default language in `src/lib/i18n/` reads it, and
     Better Auth's configuration reads that.
+  - `src/server/storage/`: where attached files are kept (see [Attachments](deploying.md#attachments)):
+    a driver per storage (`local.ts`, `s3.ts`, `sftp.ts`) behind `FileStorage`, the keys files are
+    kept under, the storage files go to now (`activeStorage`), and the Attachments tab of Settings
+    (`settings.ts`, with the secrets encrypted by `secrets.ts`). Free of `server-only`, since the
+    jobs' command imports it.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client

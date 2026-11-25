@@ -1,5 +1,5 @@
 /**
- * @file Layout of the Settings pages (General, Staff and Requests): the
+ * @file Layout of the Settings pages (General, Staff, Requests and Attachments): the
  * heading and tabs, then the page. Layouts stay mounted while the pages under
  * them change, so choosing a tab keeps focus on it and the header doesn't
  * reload. Only staff Admins (`staff:manage`) get here, and each page checks

@@ -33,7 +33,12 @@ const appContext: ServiceContext = {
    * @returns The locale.
    */
   requestLocale,
-  storage: activeStorage,
+  /**
+   * The storage files go to now: the environment's, or Settings'.
+   *
+   * @returns The storage, or `null`.
+   */
+  storage: () => activeStorage(db),
 };
 
 export default appContext;

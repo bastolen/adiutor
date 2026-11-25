@@ -258,7 +258,8 @@
       "tabs": {
         "general": "General",
         "staff": "Personal",
-        "requests": "Solicitudes"
+        "requests": "Solicitudes",
+        "attachments": "Archivos adjuntos"
       },
       "general": {
         "name": {
@@ -368,6 +369,72 @@
           "restore": "Restaurar",
           "restoreLabel": "Restaurar {name}",
           "restored": "{name} restaurado."
+        }
+      },
+      "attachments": {
+        "title": "Archivos adjuntos",
+        "storage": {
+          "title": "Dónde se guardan los archivos",
+          "description": "Los archivos que se adjuntan a las solicitudes se guardan aquí. Adiutor sirve cada uno él mismo, a quien pueda leerlo.",
+          "none": "Aún no se ha elegido un almacenamiento, así que nadie puede adjuntar archivos.",
+          "driver": "Almacenamiento",
+          "choose": "Elige un almacenamiento",
+          "drivers": {
+            "local": "Una carpeta en este servidor",
+            "s3": "Un bucket compatible con S3",
+            "sftp": "Una carpeta en otro servidor (SFTP)"
+          },
+          "driverHints": {
+            "local": "Archivos en el disco de este servidor. No en Vercel, y para un solo servidor.",
+            "s3": "AWS S3, Cloudflare R2, Backblaze B2 o un servidor propio como Garage o SeaweedFS.",
+            "sftp": "Cualquier servidor al que llegues por SSH, como un storage box o un NAS."
+          },
+          "dir": "Carpeta",
+          "localDirHint": "Una ruta absoluta en este servidor, por ejemplo /data/attachments. Debe existir y Adiutor debe poder escribir en ella.",
+          "endpoint": "Dirección del servicio",
+          "endpointHint": "Por ejemplo https://tu-id-de-cuenta.r2.cloudflarestorage.com para Cloudflare R2.",
+          "region": "Región",
+          "regionHint": "auto en Cloudflare R2. Déjala vacía para us-east-1.",
+          "bucket": "Bucket",
+          "accessKeyId": "ID de la clave de acceso",
+          "secretAccessKey": "Clave de acceso secreta",
+          "s3SecretSaved": "Hay una clave secreta guardada. Deja esto vacío para conservarla mientras la dirección del servicio y la clave de acceso sigan siendo las mismas.",
+          "forcePathStyle": "Bucket en la ruta",
+          "forcePathStyleHint": "Lo necesitan la mayoría de los servidores propios, como Garage o SeaweedFS.",
+          "host": "Servidor",
+          "port": "Puerto",
+          "username": "Usuario",
+          "password": "Contraseña",
+          "privateKey": "Clave privada",
+          "privateKeyHint": "El texto PEM de la clave. Indica una contraseña o una clave privada.",
+          "sftpSecretSaved": {
+            "password": "Hay una contraseña guardada. Deja ambos vacíos para conservarla mientras el servidor, el puerto y el usuario sigan siendo los mismos.",
+            "key": "Hay una clave privada guardada. Deja ambos vacíos para conservarla mientras el servidor, el puerto y el usuario sigan siendo los mismos."
+          },
+          "hostKey": "Huella de la clave de host",
+          "hostKeyHint": "Tal como la muestra ssh-keygen -lf, empezando por SHA256:. Compruébala en el propio servidor: Adiutor no se conecta a ninguna otra clave.",
+          "sftpDirHint": "Una ruta absoluta en el servidor. Debe existir.",
+          "bucketAddress": "Dirección del bucket",
+          "inPath": "En la ruta",
+          "inHost": "En el nombre de host",
+          "signsInWith": "Inicia sesión con",
+          "signsInWithPassword": "Una contraseña",
+          "signsInWithKey": "Una clave privada",
+          "save": "Probar y guardar",
+          "saved": "Almacenamiento guardado. Adiutor escribió, leyó y borró un archivo de prueba ahí.",
+          "confirmFirst": "Para elegir dónde se guardan los archivos, primero confirma que eres tú.",
+          "offInEnvironment": "Los archivos adjuntos están desactivados en el entorno del servidor (ATTACHMENTS_STORAGE=off).",
+          "dirPlaceholder": "/data/attachments",
+          "endpointPlaceholder": "https://",
+          "hostKeyPlaceholder": "SHA256:"
+        },
+        "largestFile": {
+          "title": "Archivo más grande",
+          "description": "El archivo más grande que alguien puede adjuntar.",
+          "label": "Megabytes",
+          "hint": "Del 1 al {ceiling, number}.",
+          "save": "Guardar tamaño",
+          "saved": "Archivo más grande guardado."
         }
       }
     },

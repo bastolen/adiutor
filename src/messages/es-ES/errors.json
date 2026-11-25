@@ -101,6 +101,30 @@
     "requestTypes": {
       "unavailable": "Este tipo ya no se puede elegir. Elige otro.",
       "lastActive": "Deja al menos un tipo sin archivar, o no se podrá abrir ninguna solicitud."
+    },
+    "attachments": {
+      "storageFromEnvironment": "El entorno del servidor elige dónde se guardan los archivos, así que no puedes cambiarlo aquí.",
+      "limitFromEnvironment": "El entorno del servidor elige el archivo más grande, así que no puedes cambiarlo aquí.",
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de elegir dónde se guardan los archivos.",
+      "secretNeeded": {
+        "s3": "Vuelve a indicar la clave secreta: una guardada solo se conserva para el mismo servicio y la misma clave de acceso.",
+        "sftp": "Vuelve a indicar la contraseña o la clave privada: una guardada solo se conserva para el mismo servidor y usuario."
+      },
+      "storageProblem": {
+        "local_on_vercel": "El disco de Vercel no conserva archivos. Elige un bucket compatible con S3 o un servidor SFTP.",
+        "relative_folder": "Indica la carpeta como ruta absoluta, empezando por /.",
+        "insecure_endpoint": "Usa una dirección https://, o los archivos y las claves viajarían sin cifrar."
+      },
+      "storageCheck": {
+        "unreachable": "Adiutor no ha podido llegar al almacenamiento. Revisa su dirección y su puerto.",
+        "refused": "El almacenamiento ha rechazado las claves o la contraseña. Revísalas.",
+        "host_key": "La clave de host del servidor no coincide con la huella. Compruébala en el propio servidor antes de volver a intentarlo.",
+        "not_found": "El bucket o la carpeta no existe. Créalo primero.",
+        "not_writable": "Adiutor no puede escribir ahí. Revisa los permisos de la carpeta y el espacio libre.",
+        "not_set_up": "Esa carpeta no es de Adiutor. Revisa su ruta.",
+        "timed_out": "El almacenamiento ha tardado demasiado en responder. Vuelve a intentarlo o revisa su dirección.",
+        "failed": "Adiutor no ha podido guardar, leer y borrar un archivo de prueba ahí. Revisa la configuración."
+      }
     }
   }
 }

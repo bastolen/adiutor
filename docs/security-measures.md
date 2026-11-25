@@ -66,6 +66,7 @@ code is the source if they ever differ.
 | Requests raised (`requestsPerUser`)                             | 60    | 1 hour      | user                  |
 | Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
+| Storages tried in Settings (`storageChecksPerUser`)             | 20    | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
 | App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
 
@@ -382,6 +383,29 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   sees the version try every number until one matched; without the secret, a version can't be
   checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
   new secret only means each picture is fetched once more.
+
+## Where attached files are kept
+
+A staff Admin chooses the storage on the Attachments tab of Settings, unless the server's
+environment does (see [Attachments](deploying.md#attachments) and
+[decision 0044](decisions/0044-attachments.md)):
+
+- **Secrets are encrypted** (the S3 secret key, the SFTP password or private key) with Better
+  Auth's `symmetricEncrypt` and the versioned auth secrets (`sealSecret` in
+  `src/server/sealed-secrets.ts`, which any setting with a secret uses), never sent back to a
+  browser, and kept only for the place they were saved for (`secretToSave`): another S3 service or
+  access key, or another SFTP server, port or user, must be given them again, so a staff Admin
+  can't point a saved password at a host of their own.
+- **A storage is tried before it's saved** (`checkStorage`, through `checkBeforeSaving` in
+  `src/server/check-before-save.ts`), with the staff Admin's second step from the last 15 minutes
+  (`needsRecentConfirmation`), at most 20 times an hour, and in the audit log
+  (`attachment_storage_changed`, with the driver and its place, never a secret). A failure is told
+  and logged by its kind only (`StorageError`): unreachable, refused, host key, not found and so
+  on, never what the server replied.
+- **SFTP checks the host key** against the fingerprint given, on every connection.
+- **Saving a storage connects to whatever address it names**, from the server: a server of your own
+  on the local network needs this. An operator who doesn't want staff Admins to choose sets the
+  storage in the environment, or `ATTACHMENTS_STORAGE=off`.
 
 ## Provider tokens aren't kept
 

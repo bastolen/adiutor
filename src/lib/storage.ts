@@ -318,3 +318,48 @@ export function storageFromEnvironment(environment: StorageEnvironment): Environ
     },
   };
 }
+
+/** The longest a storage's text field may be (an address, a bucket, a folder, a key's ID or secret). */
+export const STORAGE_FIELD_MAX_LENGTH = 1024;
+
+/** The longest a private key may be, in its PEM text. */
+export const PRIVATE_KEY_MAX_LENGTH = 16_384;
+
+/**
+ * What a page may show of a storage: its settings without any secret (the
+ * S3 secret key, the SFTP password or private key). The Settings page shows
+ * it, and the storage's form starts from it.
+ */
+export type StorageView =
+  | LocalStorageConfig
+  | Omit<S3StorageConfig, 'secretAccessKey'>
+  | (Omit<SftpStorageConfig, 'password' | 'privateKey'> & {
+      /** How it signs in: with a password or with a private key. */
+      signsInWith: 'password' | 'key';
+    });
+
+/**
+ * A storage's settings without its secrets, for a page.
+ *
+ * @param config - The settings.
+ * @returns What a page may show.
+ */
+export function storageView(config: StorageConfig): StorageView {
+  if (config.driver === 's3') {
+    const { driver, endpoint, region, bucket, accessKeyId, forcePathStyle } = config;
+    return { driver, endpoint, region, bucket, accessKeyId, forcePathStyle };
+  }
+  if (config.driver === 'sftp') {
+    const { driver, host, port, username, hostKey, dir, privateKey } = config;
+    return {
+      driver,
+      host,
+      port,
+      username,
+      hostKey,
+      dir,
+      signsInWith: privateKey ? 'key' : 'password',
+    };
+  }
+  return config;
+}

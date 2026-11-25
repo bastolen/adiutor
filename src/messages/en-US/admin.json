@@ -258,7 +258,8 @@
       "tabs": {
         "general": "General",
         "staff": "Staff",
-        "requests": "Requests"
+        "requests": "Requests",
+        "attachments": "Attachments"
       },
       "general": {
         "name": {
@@ -368,6 +369,72 @@
           "restore": "Restore",
           "restoreLabel": "Restore {name}",
           "restored": "{name} restored."
+        }
+      },
+      "attachments": {
+        "title": "Attachments",
+        "storage": {
+          "title": "Where files are kept",
+          "description": "Files people attach to requests are kept here. Adiutor serves each one itself, to whoever may read it.",
+          "none": "No storage is chosen yet, so nobody can attach files.",
+          "driver": "Storage",
+          "choose": "Choose a storage",
+          "drivers": {
+            "local": "A folder on this server",
+            "s3": "An S3-compatible bucket",
+            "sftp": "A folder on another server (SFTP)"
+          },
+          "driverHints": {
+            "local": "Files on this server's disk. Not on Vercel, and for one server only.",
+            "s3": "AWS S3, Cloudflare R2, Backblaze B2, or a server of your own such as Garage or SeaweedFS.",
+            "sftp": "Any server you reach over SSH, such as a storage box or a NAS."
+          },
+          "dir": "Folder",
+          "localDirHint": "An absolute path on this server, e.g. /data/attachments. It must exist, and Adiutor must be able to write to it.",
+          "endpoint": "Service address",
+          "endpointHint": "E.g. https://your-account-id.r2.cloudflarestorage.com for Cloudflare R2.",
+          "region": "Region",
+          "regionHint": "auto on Cloudflare R2. Leave it empty for us-east-1.",
+          "bucket": "Bucket",
+          "accessKeyId": "Access key ID",
+          "secretAccessKey": "Secret access key",
+          "s3SecretSaved": "A secret key is saved. Leave this empty to keep it while the service address and the access key stay the same.",
+          "forcePathStyle": "Bucket in the path",
+          "forcePathStyleHint": "Most servers of your own, such as Garage or SeaweedFS, need this.",
+          "host": "Server",
+          "port": "Port",
+          "username": "User",
+          "password": "Password",
+          "privateKey": "Private key",
+          "privateKeyHint": "The key's PEM text. Give a password or a private key.",
+          "sftpSecretSaved": {
+            "password": "A password is saved. Leave both empty to keep it while the server, port and user stay the same.",
+            "key": "A private key is saved. Leave both empty to keep it while the server, port and user stay the same."
+          },
+          "hostKey": "Host key fingerprint",
+          "hostKeyHint": "As ssh-keygen -lf prints it, starting with SHA256:. Check it on the server itself: Adiutor connects to no other key.",
+          "sftpDirHint": "An absolute path on the server. It must exist.",
+          "bucketAddress": "Bucket address",
+          "inPath": "In the path",
+          "inHost": "In the host name",
+          "signsInWith": "Signs in with",
+          "signsInWithPassword": "A password",
+          "signsInWithKey": "A private key",
+          "save": "Test and save",
+          "saved": "Storage saved. Adiutor wrote, read back and deleted a test file there.",
+          "confirmFirst": "Choosing where files are kept needs you to confirm it’s you first.",
+          "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
+          "dirPlaceholder": "/data/attachments",
+          "endpointPlaceholder": "https://",
+          "hostKeyPlaceholder": "SHA256:"
+        },
+        "largestFile": {
+          "title": "Largest file",
+          "description": "The largest file anyone may attach.",
+          "label": "Megabytes",
+          "hint": "From 1 to {ceiling, number}.",
+          "save": "Save size",
+          "saved": "Largest file saved."
         }
       }
     },
