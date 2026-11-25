@@ -27,8 +27,8 @@ detail, one topic each.
 - [Multi-factor authentication](mfa.md): second steps, who must have them, and when a session
   counts as confirmed.
 - [Security measures](security-measures.md): the audit log, rate limits, the client IP, tokens,
-  the name checks, the lock order of concurrent changes, security headers and the Content Security
-  Policy.
+  the name checks, webhooks' addresses, the lock order of concurrent changes, security headers and
+  the Content Security Policy.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
 - [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,
   the commands and adding a job.
@@ -40,8 +40,8 @@ detail, one topic each.
 ## Running it
 
 - [Deploying and running Adiutor](deploying.md): installing and upgrading, deploying on Vercel, the
-  Docker image and health check, what to set up on a server, the client IP address, background jobs, logs, rotating
-  the auth secret, and what to do after a suspected leak.
+  Docker image and health check, what to set up on a server, the client IP address, background jobs,
+  webhooks, logs, rotating the auth secret, and what to do after a suspected leak.
 
 ## The project
 

@@ -9,7 +9,7 @@
  */
 import { z } from 'zod';
 
-import isLocalHostname from './local-host';
+import isLocalHostname, { isSecureOrLocalUrl } from './local-host';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
 
 /**
@@ -44,7 +44,7 @@ function parsedUrl(value: string | undefined): URL | null {
  * @returns Whether it may be used in production.
  */
 function isProductionAppUrl(url: URL): boolean {
-  return url.protocol === 'https:' || (url.protocol === 'http:' && isLocalHostname(url.hostname));
+  return isSecureOrLocalUrl(url);
 }
 
 /**
@@ -183,6 +183,26 @@ const envSchema = z
      * them, only a single-value IP header is trusted.
      */
     TRUSTED_PROXIES: z.preprocess(
+      emptyToUndefined,
+      z
+        .string()
+        .optional()
+        .transform((value) =>
+          (value ?? '')
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        )
+        .pipe(z.array(z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]))),
+    ),
+    /**
+     * Networks inside Adiutor's own that webhooks may still send to, as IP
+     * addresses or CIDR ranges, comma-separated, e.g. `10.20.0.0/16` for a
+     * receiver on the local network. Without it, webhooks never reach a
+     * private, loopback or link-local address (`src/server/webhooks/address-guard.ts`).
+     * Only the operator sets it: nobody in the app can widen it.
+     */
+    WEBHOOK_ALLOWED_NETWORKS: z.preprocess(
       emptyToUndefined,
       z
         .string()

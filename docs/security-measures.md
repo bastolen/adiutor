@@ -383,6 +383,32 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
   new secret only means each picture is fetched once more.
 
+## Webhooks' addresses
+
+A webhook's address is typed by a staff Admin and the server connects to it, so without a check it
+could reach what only the server reaches: a database's admin page, another service on the local
+network, or the cloud's metadata service and the credentials it hands out. So
+(`src/server/webhooks/address-guard.ts` and `send.ts`):
+
+- **The address:** `https://`, or in production `http://` only on this computer (as for the app's
+  own address, `isSecureOrLocalUrl`); no user name or password; at most 2,048 characters
+  (`webhookUrlProblem` in `src/lib/webhooks.ts`).
+- **Never inside Adiutor's network:** every address a host name resolves to is checked in the
+  request's own lookup (`guardedLookup`), so the address that's checked is the one connected to: a
+  name that resolves to a public address for one look-up and an internal one for the next can't slip
+  through. An IP address in the URL, which is never looked up, is checked before connecting, as the
+  URL parser writes it (so `http://2130706433/` is `127.0.0.1`). Refused, unless the operator
+  allowed the network (`WEBHOOK_ALLOWED_NETWORKS`, see [Webhooks](deploying.md#webhooks)): private,
+  loopback, link-local, shared (CGNAT), multicast, reserved, documentation and benchmarking ranges,
+  in IPv4 and IPv6 (unique local and link-local addresses included), and an IPv4 address written
+  inside IPv6 (`::ffff:…`, NAT64's `64:ff9b::…`) is judged as the IPv4 it holds. A name with any
+  internal address is refused as a whole.
+- **What's sent and read:** a signed `POST` that follows no redirect, goes through no proxy, gives up
+  after 10 seconds in all (look-up, connection, encryption and the answer's headers), and reads at
+  most 4 KB of the answer, which it drops. Only the status, the time it took and a kind of failure
+  are kept, never what the receiver answered, so a webhook can't be used to read a page.
+- **Logs** name a delivery and its kind of failure, never the address, which can hold a token.
+
 ## Provider tokens aren't kept
 
 Refresh and ID tokens are never stored, nor the access tokens of
