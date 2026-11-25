@@ -49,7 +49,6 @@ export type {
   MfaDowngradeBlocks,
 } from './sign-in-changes';
 export {
-  NO_STEP_UP_METHODS,
   stepUpMethods,
   canConfirmSessions,
   windowOpeningMethods,

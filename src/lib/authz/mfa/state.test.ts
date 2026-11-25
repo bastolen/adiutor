@@ -13,13 +13,14 @@ import {
   mfaStatus,
   unavailableProviderMfa,
 } from './state';
-import { canConfirmSessions, NO_STEP_UP_METHODS, stepUpMethods } from './step-up';
+import { canConfirmSessions, stepUpMethods } from './step-up';
 import {
   authenticatorApp,
   bare,
   emailCodes,
   githubWith2fa,
   githubOnly,
+  NO_STEP_UP_METHODS,
   WITHOUT_GITHUB,
   WITH_GITHUB,
   REQUIRED_ROLES,
