@@ -9,7 +9,8 @@ and the name users see and Adiutor's default language and time zone are settings
 `staff.default_locale`, `staff.default_time_zone`), rows of the `setting` table that
 `src/server/settings/` reads and writes ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
-each. Staff can also be members of companies. What each role may do with requests is in
+each. Staff can also be members of companies. Each company manages its own users (its Admins invite
+and manage them), and the staff see every company. What each role may do with requests is in
 [Requests](requests.md).
 
 In the interface, staff screens say **users**, **companies** and **staff** (the `Staff` badge),

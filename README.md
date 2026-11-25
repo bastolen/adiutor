@@ -8,80 +8,68 @@
 [![CI](https://github.com/bastolen/adiutor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bastolen/adiutor/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Adiutor is a shared service desk: a ticketing system where companies raise requests with your staff
-and work them through together by commenting, explaining, approving and reporting, without chasing
-emails.
+**A shared service desk for IT service providers, agencies and consultancies.**
 
-It's for staff who support several companies, such as IT service providers, agencies and
-consultants: the companies raise requests, and the staff work them through with them. Each company
-manages its own users, and the staff see every company.
+Adiutor gives the companies you support one place to raise requests and work them through with your
+staff, without chasing emails. Each request is one conversation, from the first question to the
+solution the company approves. Your staff see every company's requests; each company sees its own.
 
-**Status:** early development. Accounts, companies, roles, invitations, sign-in security and
-requests, with staff assigned and people subscribed to them, emails about what happens to them
-and solutions the company approves, are built; attachments come next.
+## Why Adiutor
+
+- **One conversation per request.** Replies, decisions and status changes stay together, and your
+  staff follow every request on a list or a board.
+- **Companies manage their own users.** Each company's Admins invite their colleagues as Admin,
+  Client or Watcher, so you don't have to.
+- **Solutions the company approves.** Send a reply as the solution, and the company approves or
+  denies it on the request or straight from the email.
+- **Secure by default.** Passkeys, two-step verification that every Admin and Manager must use,
+  and an audit log of every change to sign-ins and access.
+- **Accessible, in light and dark.** Built to WCAG 2.2 AA, and everything works with the keyboard
+  alone.
+- **Everyone's own language and time.** English, Dutch and Spanish, with every time shown in the
+  reader's own time zone.
 
 ## Features
 
 - **Requests.** Companies raise requests, and both sides work each one through in one
-  conversation: replies, a status from Open to Done (or Cancelled), and a type (the staff's
-  own list) that sets a priority only the staff see. Descriptions and replies are written in an editor that turns
-  Markdown into formatting as it's typed, with lists, tables and highlighted code, and can mention
-  people, picked from a list at "@". Authors can edit their replies, and the description can be
-  edited while the request is open; the staff can read what a text said before, and write
-  internal notes the company never sees. Everyone chooses which parts of a request's activity
-  they see (replies, notes, status changes, other changes) and whether the newest comes first,
-  saved with their account. Company Admins and Clients raise, reply, close and
-  reopen; Watchers follow; the staff work on every company's requests and assign each to one or
-  more of themselves, which everyone on the request sees. Everyone who reads a request can
-  subscribe to it, and whoever raises it, replies to it or is mentioned in it is subscribed. The
-  people on a request get an email when someone replies or changes its status, and so does someone
-  who is assigned to one, mentioned in one or subscribed by someone else: one email with
-  everything, the reply in full, which they can turn off per request or in their account. Its
-  links sign the reader in, so one click opens the request. The staff can send a reply as the
-  solution: the company's Admins and Clients approve it, which closes the request, or deny it, on
-  the request or with a button in the email. Requests show as a list or as a board with a lane per
-  status, across companies or on a company's page, with the same search and filters; each card's
-  Move menu, or on a wider screen a drag,
-  moves it to another lane, as far as the reader's role allows. See [Requests](docs/requests.md).
-- **Companies and staff.** Staff add companies and invite each company's first Admin. Users can
-  belong to several companies, with a role in each (Admin, Client or Watcher), and staff have their
-  own roles (Admin, Manager, Finance and Support). See
+  conversation, with replies written in Markdown, mentions, and internal notes and priorities only
+  the staff see. See [Requests](docs/requests.md).
+- **Board and list.** All requests on a board with a lane per status, or as a list, with the same
+  search and filters, across companies or on a company's page. See
+  [The board](docs/requests.md#the-board).
+- **Emails and solutions.** The people on a request get an email when someone replies or changes
+  its status, with links that open it in one click. The staff can send a reply as the solution,
+  which the company approves or denies. See [Emails](docs/requests.md#emails) and
+  [Solutions](docs/requests.md#solutions).
+- **Companies, users and roles.** Staff add companies and invite each company's first Admin, who
+  invites the rest. Users can belong to several companies, with a role in each (Admin, Client or
+  Watcher), and the staff have roles of their own. There's no public sign-up. See
   [Companies, users and roles](docs/companies-and-roles.md).
-- **Invitations.** Invite people by email or with a single-use invite link, up to 20 addresses at
-  once, with a reminder before an invitation expires. There's no public sign-up.
 - **Sign-in.** Email and password, passkeys, email links, and GitHub or Google accounts. See
   [Sign-in and accounts](docs/authentication.md).
-- **Pictures.** People show the picture of a GitHub or Google account they connected, or their
-  initials, chosen on their account page. Adiutor serves the picture itself and stores no files.
-- **Multi-factor authentication.** Authenticator apps, passkeys, email codes and backup codes.
-  Required for staff Admins and Managers and for company Admins, and changing a sign-in method
-  needs a recent confirmation. See [Multi-factor authentication](docs/mfa.md).
-- **Account security.** Users see their recent activity and signed-in devices, and get an email
-  about every security change. Staff Admins can reset two-step verification, sign users out and
-  deactivate accounts. A searchable audit log, rate limits and a strict Content Security Policy
-  guard the rest, and staff Admins can look up the error references people send them. See
-  [Security measures](docs/security-measures.md).
+- **Multi-factor authentication.** Authenticator apps, passkeys, email codes and backup codes,
+  required for staff Admins and Managers and for company Admins. See
+  [Multi-factor authentication](docs/mfa.md).
+- **Security.** People see their recent activity and signed-in devices, and get an email when their
+  access changes. A searchable audit log, rate limits and a strict Content Security Policy guard the
+  rest. See [Security measures](docs/security-measures.md).
 - **Sign in as a user.** Staff Admins, Managers and Support can see Adiutor the way a user does, to
-  check what isn't working for them. It lasts 30 minutes at most, needs strong MFA and shows a
-  banner. Only the user's request work can be done, and their requests show them who did it;
-  nothing else changes in their name. The user gets an email, and every start is in the audit
-  log. See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
-- **Background jobs.** Reminders, clean-ups and emails that can wait a few minutes run in the
-  background, and are tried again when they fail. Staff Admins and Managers see them under Logs →
-  Jobs, where staff Admins also run, pause and retry them. See [Background jobs](docs/jobs.md).
-- **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA, with full keyboard support.
-  See [Design, accessibility and dark mode](docs/design.md).
-- **English, Dutch and Spanish.** The staff choose which of them Adiutor offers and its default
-  language, which everyone follows until they choose their own on the sign-in page or their
-  account, without the address changing; emails reach them in it. Invitations go out in the
-  language the sender picks. See
-  [Languages](docs/i18n.md).
-- **Times in your own time zone.** Every page, email and copied note shows times in each person's
-  own zone, which their browser sets the first time they're signed in and they can change on their
-  Profile. See
-  [Time zones](docs/i18n.md#time-zones).
+  find out what isn't working for them. It lasts 30 minutes at most, and the user gets an email.
+  See [Signing in as a user](docs/authentication.md#signing-in-as-a-user).
+- **Background jobs.** Reminders, clean-ups and emails that can wait run in the background and are
+  tried again when they fail. Staff Admins and Managers follow them under Logs → Jobs. See
+  [Background jobs](docs/jobs.md).
+- **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA in both modes, with full
+  keyboard support. See [Design, accessibility and dark mode](docs/design.md).
+- **Languages and time zones.** Staff Admins choose the languages Adiutor offers and its default;
+  everyone can pick their own, and emails reach them in it. Times show in each person's own zone.
+  See [Languages](docs/i18n.md).
 
-**Coming next:** attachments.
+## Status
+
+Adiutor is in early development. Requests, with assignees, subscribers, emails and solutions the
+company approves, are built, and so are companies, roles, invitations and sign-in security.
+Attachments come next.
 
 ## Tech stack
 
@@ -166,16 +154,17 @@ the code style and how to get a change merged. Please follow the
 
 ## Security
 
-Please don't report security issues in public issues or pull requests. Report them privately as
-described in [SECURITY.md](SECURITY.md) (by email too, if you have no GitHub account).
+Please don't report security issues in public issues or pull requests. Report them privately
+through the repository's **Security** tab (**Report a vulnerability**), or, without a GitHub
+account, by email to **adiutor@bastolen.nl**. [SECURITY.md](SECURITY.md) has the details.
 
 ## License
 
 The code is released under the [MIT License](LICENSE).
 
-The MIT License covers the source code only. The Adiutor name, logo and other brand assets (including
-the files listed in [NOTICE](NOTICE)) are not covered by it and may not be used to represent other
-projects or products without permission.
+The MIT License covers the source code only. The Adiutor name, logo and other brand assets
+(including the files listed in [NOTICE](NOTICE)) are not covered by it and may not be used to
+represent other projects or products without permission.
 
 The fonts Adiutor ships, [Inter](https://github.com/rsms/inter) and
 [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), are under the SIL Open Font License
