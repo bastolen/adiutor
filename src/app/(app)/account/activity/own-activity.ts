@@ -110,16 +110,15 @@ function providerValue(providerId: unknown): string {
  * @param entry.details - Extra facts.
  * @param entry.company - The company it was about.
  * @param by - Who made the change.
- * @param t - Translates the `account` namespace.
- * @param translators - The translations of roles and the audit log's words.
+ * @param translators - The translations: the descriptions, roles and the audit log's words.
  * @returns The description.
  */
 function describeMembership(
   { action, details, company }: Omit<OwnActivityEntry, 'actor'>,
   by: ByValues,
-  t: ReturnType<typeof useTranslations<'account'>>,
   translators: OwnActivityTranslators,
 ): string {
+  const t = translators.account;
   const onStaff = details.staff === true;
   // Used an invitation or invite link while already in: nothing was given, they kept their role.
   const kept = action === 'member_joined' && details.kept === true;
@@ -175,16 +174,16 @@ function describeMembership(
  * @param entry.details - Extra facts.
  * @param entry.company - The company it was about.
  * @param by - Who made the change, for the descriptions that can name them.
- * @param t - Translates the `account` namespace.
- * @param others - The other translations, for the events {@link describeMembership} describes.
+ * @param translators - The translations: the descriptions, and roles and the audit log's words
+ *   for the events {@link describeMembership} describes.
  * @returns The description.
  */
 function describeAction(
   { action, details, company }: OwnActivityEntry,
   by: ByValues,
-  t: ReturnType<typeof useTranslations<'account'>>,
-  others: OwnActivityTranslators,
+  translators: OwnActivityTranslators,
 ): string {
+  const t = translators.account;
   // Staff events have no company; they're marked `staff: true` in the details.
   const onStaff = details.staff === true;
   const provider = providerValue(details.providerId);
@@ -208,7 +207,7 @@ function describeAction(
       // At a password sign-in's code step, recorded without an actor: whoever typed it may not be
       // the user.
       if (details.atSignIn === true) {
-        return others.audit('events.mfaFailedAtSignIn');
+        return translators.audit('events.mfaFailedAtSignIn');
       }
       return t('ownActivity.mfaFailedWrongCode');
     case 'password_changed':
@@ -275,7 +274,7 @@ function describeAction(
     case 'impersonation_ended':
       return t('ownActivity.impersonationEnded', { ...by });
     default:
-      return describeMembership({ action, details, company }, by, t, others);
+      return describeMembership({ action, details, company }, by, translators);
   }
 }
 
@@ -300,5 +299,5 @@ export default function describeOwnActivity(
     const name = visibleName(entry.actor.name);
     by = name ? { by: 'other', name } : { by: 'admin', name: '' };
   }
-  return describeAction(entry, by, translators.account, translators);
+  return describeAction(entry, by, translators);
 }
