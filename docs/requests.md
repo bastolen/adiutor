@@ -337,7 +337,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   unassigned) gets nothing, and their jobs are skipped. News that's no longer true is left out
   too: an assignment that was taken back, a mention an edit removed.
 - **Turning them off:** Unsubscribe on a request's page stops that request's emails. **Emails
-  about requests** on the account's Profile page (`user.request_emails`, on by default;
+  about requests** on the account's Preferences page (`user.request_emails`, on by default;
   `setOwnRequestEmails`) stops all of them, also for the requests assigned to someone; it's
   checked when an email is sent, so it also stops what's on its way. The footer says why the
   reader gets the email (the request is assigned to them, or they're subscribed) and links to

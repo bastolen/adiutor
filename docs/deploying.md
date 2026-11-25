@@ -43,7 +43,11 @@ Vercel runs two environments from two branches:
 - **Preview** follows `main`: every commit on `main` is a preview deployment, at an address of its
   own.
 
-Every other branch is skipped, so pull requests get no preview deployments.
+Every other branch of this repository is skipped by `vercel.json`, so its pull requests get no
+preview deployments. Pull requests from forks are held by Vercel's Git Fork Protection, which must
+stay on (Project Settings → Git): a fork brings its own `vercel.json`, so the guard can't stop its
+builds, and never authorise a deployment of a fork's pull request, since it would run with the
+Preview environment's secrets.
 
 `vercel.json` sets how Vercel builds and runs Adiutor. It's strict JSON, so it can't carry
 comments; this section explains it instead. Its build settings take precedence over the same
@@ -137,7 +141,9 @@ docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
 The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
 changes it). The application's files belong to root and only `.next`, where Next.js keeps its
 caches, is writable by that user, so a flaw that lets the server write files can't change the
-application's own code. The settings are the same as without Docker (see the checklist below); when the
+application's own code. The settings are the same as without Docker (see the checklist below,
+including `EMAIL_FROM`, and finish setup right after the first start: until then whoever opens
+`/setup` first becomes the staff Admin); when the
 database runs on the host, `DATABASE_URL` points at the host's address (such as
 `host.docker.internal` on Docker Desktop), not `localhost`.
 
@@ -176,16 +182,14 @@ works signed out and tells nobody more than that; the reason it's unhealthy goes
 the migration state or an error code, never connection details. Not cached.
 
 **Published images:** every release publishes the image for amd64 and arm64, tagged with its
-version, its minor line and `latest` (see [Docker image](ci-and-releases.md#docker-image)). While
-the repository is private, so are they, so log in first:
+version, its minor line and `latest` (see [Docker image](ci-and-releases.md#docker-image)). They're
+public, so pulling one needs no login:
 
 ```bash
-docker login
 docker pull bastolen/adiutor:0.1.0
 ```
 
-From GitHub's registry instead, log in with a personal access token that can read packages
-(`docker login ghcr.io`) and pull `ghcr.io/bastolen/adiutor:0.1.0`. Pull requests don't build the
+GitHub's registry has the same image: `docker pull ghcr.io/bastolen/adiutor:0.1.0`. Pull requests don't build the
 image, so build it once yourself after changing the `Dockerfile`, the dependencies or the build.
 
 ## Before sharing the address
@@ -220,7 +224,9 @@ What to set up on a server before sharing its address:
 - **First run:** complete `/setup` (or run `pnpm setup:platform`) right after deploying. Until then
   the first visitor becomes the staff Admin (see [First run](companies-and-roles.md#first-run)).
 - **Email:** set `SMTP_URL` (without it, every email fails, and the server logs a warning when it
-  starts). Use TLS, since the emails carry sign-in links:
+  starts) and `EMAIL_FROM`, the sender, such as `Adiutor <no-reply@yourdomain>` on a domain you
+  control: left unset, it defaults to an address on `adiutor.dev`, which providers that check the
+  sender reject and which isn't yours. Use TLS, since the emails carry sign-in links:
   `smtps://user:password@smtp.adiutor.dev:465` (TLS from the start), or
   `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` (STARTTLS, required). A plain
   `smtp://` URL only uses STARTTLS when the server offers it, so someone on the network could strip

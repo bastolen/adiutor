@@ -55,7 +55,7 @@ jobs:
           # Later steps don't push to git, so the token isn't kept in .git/config.
           persist-credentials: false
 
-      # GitHub's free runners for private repositories are amd64, so arm64 is emulated.
+      # The build runs on an amd64 runner, so arm64 is emulated.
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64

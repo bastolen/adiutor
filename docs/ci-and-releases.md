@@ -105,8 +105,7 @@ generate such a migration locally.
 ## Protecting main
 
 `.github/rulesets/main.json` holds the rules for `main`, and the ruleset on GitHub is made from it.
-GitHub enforces rulesets on a private repository only with GitHub Pro (or Team), which this
-account has. The file is strict JSON (no comments) in the format GitHub's ruleset import and API
+The file is strict JSON (no comments) in the format GitHub's ruleset import and API
 take, so this section explains it:
 
 - `main` (the default branch, `~DEFAULT_BRANCH`) can't be deleted or force-pushed, and its history
@@ -241,7 +240,7 @@ token, so they start this workflow (events made with the built-in token don't st
 
 - **Platforms:** `linux/amd64` and `linux/arm64`. The workflow builds both on one amd64 runner, so
   the arm64 half is built under emulation and a release build takes a while (about 25 minutes).
-  GitHub also has arm64 runners for private repositories, should that ever need to be faster.
+  GitHub also has native arm64 runners, should that ever need to be faster.
 - **Tags:** the version (`0.1.0`), its minor line (`0.1`, which moves to `0.1.1` when that's out)
   and `latest`. There's no `0` tag while Adiutor is below 1.0.0, since a new minor can break things.
 - **Build cache:** kept in GitHub's registry, as the `buildcache` tag of `ghcr.io/bastolen/adiutor`
@@ -266,11 +265,10 @@ needs no setup: the workflow pushes with its own token.
 To publish a release again (after a failed push, say), run the workflow by hand: Actions → Docker
 image → Run workflow, with the release's tag (`v0.1.0`). That doesn't move `latest`.
 
-**Visibility:** both images are private while the repository is. The Docker Hub repository's
-visibility is set on Docker Hub. GitHub's package is linked to this repository (through the image's
-source label), so it gets the repository's access, but its visibility is a separate setting that
-GitHub doesn't keep in step: when you make the repository public, also make the package public (the
-package's settings → Change visibility).
+**Visibility:** both images are public. The Docker Hub repository's visibility is set on Docker
+Hub. GitHub's package is linked to this repository (through the image's source label), but its
+visibility is a separate setting that GitHub doesn't keep in step with the repository's: it's
+changed in the package's settings → Change visibility.
 
 ## Dependency updates
 
