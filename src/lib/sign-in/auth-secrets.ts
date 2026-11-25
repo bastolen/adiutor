@@ -6,7 +6,9 @@
  * The format is `"<version>:<secret>,<version>:<secret>"` with the newest
  * first, e.g. `"2:new-secret,1:old-secret"`. New data is encrypted with the
  * first secret; older ones only decrypt. `BETTER_AUTH_SECRET` stays as the
- * fallback for data encrypted before versioned secrets were used.
+ * fallback for data encrypted before versioned secrets were used. The first
+ * secret is also the current one Better Auth signs with, and the one Adiutor
+ * works out its own secrets from (`currentSecret`).
  *
  * Kept free of `server-only` so the seed scripts can encrypt the same way.
  */
@@ -55,6 +57,19 @@ export function parseAuthSecrets(value: string | undefined): AuthSecret[] | unde
     throw new Error(`The current (first) secret must be at least ${MIN_LENGTH} characters.`);
   }
   return secrets;
+}
+
+/**
+ * The current secret, as Better Auth chooses it: the first versioned secret
+ * when there are any, else `BETTER_AUTH_SECRET`. It's what Better Auth signs
+ * with, so a rotation that changes it also changes what's worked out from it.
+ *
+ * @param secret - `BETTER_AUTH_SECRET`.
+ * @param secrets - Parsed `BETTER_AUTH_SECRETS`, if set.
+ * @returns The secret in use now.
+ */
+export function currentSecret(secret: string, secrets?: AuthSecret[]): string {
+  return secrets?.[0]?.value ?? secret;
 }
 
 /**

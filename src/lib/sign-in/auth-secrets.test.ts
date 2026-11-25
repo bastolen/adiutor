@@ -1,10 +1,11 @@
 /**
- * @file Tests for parsing versioned auth secrets.
+ * @file Tests for parsing versioned auth secrets, the current one, and the
+ * encryption key they make.
  */
 import { symmetricDecrypt, symmetricEncrypt } from 'better-auth/crypto';
 import { describe, expect, it } from 'vitest';
 
-import { encryptionKey, parseAuthSecrets } from './auth-secrets';
+import { currentSecret, encryptionKey, parseAuthSecrets } from './auth-secrets';
 
 const NEW = 'n'.repeat(32);
 const OLD = 'o'.repeat(32);
@@ -37,6 +38,19 @@ describe('parseAuthSecrets', () => {
 
   it('rejects a short current secret', () => {
     expect(() => parseAuthSecrets(`2:short,1:${OLD}`)).toThrow(/at least 32/);
+  });
+});
+
+describe('currentSecret', () => {
+  it('is the plain secret without versions', () => {
+    expect(currentSecret(LEGACY)).toBe(LEGACY);
+    expect(currentSecret(LEGACY, parseAuthSecrets(undefined))).toBe(LEGACY);
+  });
+
+  it('is the newest version once there are versions, whatever older ones follow', () => {
+    expect(currentSecret(LEGACY, parseAuthSecrets(`1:${OLD}`))).toBe(OLD);
+    expect(currentSecret(LEGACY, parseAuthSecrets(`2:${NEW},1:${OLD}`))).toBe(NEW);
+    expect(currentSecret(LEGACY, parseAuthSecrets(`2:${NEW}`))).toBe(NEW);
   });
 });
 
