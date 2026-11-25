@@ -16,20 +16,23 @@ would grow with every screenshot, and a hosted database's free plan is small.
 How to set it up is in [Deploying](../deploying.md#attachments). The choices behind it:
 
 - **The operator chooses the storage,** behind one small interface (`FileStorage` in
-  `src/server/storage/`: put, get as a stream, delete): a folder on the server's disk, or a
-  bucket of any S3-compatible service (AWS S3, Cloudflare R2, Backblaze B2, Garage, SeaweedFS).
+  `src/server/storage/`: put, get as a stream, delete): a folder on the server's disk, a bucket
+  of any S3-compatible service (AWS S3, Cloudflare R2, Backblaze B2, Garage, SeaweedFS), or a
+  folder on another server over SFTP (`ssh2`).
   The server's environment chooses it (`ATTACHMENTS_STORAGE`); without a storage, attachments are
   off.
 - **One S3 driver for every S3-compatible service,** with a configurable endpoint, signed with
   `aws4fetch` (AWS Signature V4 on `fetch`) rather than the AWS SDK: the driver needs four requests,
   not the SDK's hundred packages. Each upload is signed with its SHA-256.
+- **SFTP checks the server's host key** against a fingerprint the operator gives, on every
+  connection, and a connection to any other key is refused.
 - **Keys come from IDs only,** `attachments/<last two characters>/<ID>`, never from a file's name,
   and are the same paths in every storage, so files can be copied from one to another as they are.
 - **Errors name a kind, never a reply:** a driver's failure says unreachable, refused, not found,
   not writable, timed out and the like (`StorageError`), so it can be logged and shown as it is.
-- **The local disk is marked as Adiutor's:** a marker file, written with the first file, must be
-  there before a file is read or deleted, so a server started without its volume fails loudly
-  instead of taking every file for gone.
+- **A folder is marked as Adiutor's:** on the local disk and over SFTP, a marker file, written
+  with the first file, must be there before a file is read or deleted, so a server started
+  without its volume fails loudly instead of taking every file for gone.
 
 ## Consequences
 
@@ -37,8 +40,11 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
 - Local disk serves one server only, and a container that runs the jobs needs the same volume.
 - Every call has a time limit (connecting, the first byte, and each next piece of a file that's
   read, rather than a whole file), so a slow storage fails a request instead of holding it.
-- The integration tests run the S3 driver against a real S3 server (SeaweedFS in `compose.yaml`),
-  locally and in CI.
+- The integration tests run the S3 and SFTP drivers against real servers (SeaweedFS and OpenSSH
+  in `compose.yaml`), locally and in CI.
+- `ssh2` runs in plain JavaScript: its native cipher code isn't built, and its optional
+  `cpu-features` isn't installed (`ignoredOptionalDependencies`), since an unbuilt one kept Next's
+  development server reloading every page that imports `ssh2`.
 
 ## Alternatives considered
 

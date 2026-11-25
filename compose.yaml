@@ -60,3 +60,23 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+
+  # An SFTP server (OpenSSH) for the SFTP driver's integration tests and for trying it in
+  # development: host localhost, port 2222, user adiutor with the test-only password below, folder
+  # /config (the user's home). It makes its host key when it first starts: read its fingerprint
+  # with `ssh-keyscan -p 2222 localhost 2>/dev/null | ssh-keygen -lf -`.
+  sftp:
+    image: lscr.io/linuxserver/openssh-server:10.3_p1-r2-ls244@sha256:c8431b8982e7eb3935ebf9c46607d19c6417e39c12ce884cc66945df2e9334e8
+    environment:
+      USER_NAME: adiutor
+      USER_PASSWORD: adiutor-test-secret
+      PASSWORD_ACCESS: 'true'
+      TZ: Etc/UTC
+    # Only reachable from this computer.
+    ports:
+      - '127.0.0.1:2222:2222'
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 2222']
+      interval: 2s
+      timeout: 5s
+      retries: 30

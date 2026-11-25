@@ -166,5 +166,5 @@ account)` where a spec needs the state itself) and open each test with those coo
     keeps a trace of its first failure instead (traces are in the `playwright-report` artifact).
 
 `pnpm services:up` must be running for integration and end-to-end tests. The integration tests
-also reach its S3-compatible server (SeaweedFS), which the storage driver's tests use; CI starts it
-with `docker compose` too.
+also reach its S3-compatible server (SeaweedFS) and its SFTP server (OpenSSH), which the storage
+drivers' tests use; CI starts them with `docker compose` too.

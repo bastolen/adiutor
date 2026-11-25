@@ -139,6 +139,33 @@ describe('parseEnv', () => {
       ).toThrow(/Vercel's disk doesn't keep files/);
     });
 
+    it('takes an SFTP server with a password or a key, and its host key fingerprint', () => {
+      const server = {
+        ...validEnv,
+        ATTACHMENTS_STORAGE: 'sftp',
+        ATTACHMENTS_SFTP_HOST: 'files.adiutor.dev',
+        ATTACHMENTS_SFTP_USERNAME: 'adiutor',
+        ATTACHMENTS_SFTP_HOST_KEY: 'SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls',
+        ATTACHMENTS_SFTP_DIR: '/srv/adiutor',
+      };
+      const withPassword = { ...server, ATTACHMENTS_SFTP_PASSWORD: 'secret' };
+      expect(
+        parseEnv({ ...withPassword, ATTACHMENTS_SFTP_PORT: '2222' }).ATTACHMENTS_SFTP_PORT,
+      ).toBe(2222);
+      expect(() => parseEnv(server)).toThrow(
+        /Required, or ATTACHMENTS_SFTP_PRIVATE_KEY, when ATTACHMENTS_STORAGE is sftp/,
+      );
+      expect(() => parseEnv({ ...withPassword, ATTACHMENTS_SFTP_HOST_KEY: 'ab:cd' })).toThrow(
+        /SHA256: fingerprint/,
+      );
+      expect(() => parseEnv({ ...server, ATTACHMENTS_SFTP_PRIVATE_KEY: 'not base64!' })).toThrow(
+        /ATTACHMENTS_SFTP_PRIVATE_KEY/,
+      );
+      expect(() => parseEnv({ ...withPassword, ATTACHMENTS_SFTP_DIR: 'adiutor' })).toThrow(
+        /absolute path[\s\S]*ATTACHMENTS_SFTP_DIR/,
+      );
+    });
+
     it('takes a limit from 1 to 50 megabytes, and at most 4 on Vercel', () => {
       expect(parseEnv({ ...validEnv, ATTACHMENTS_MAX_FILE_MB: '25' }).ATTACHMENTS_MAX_FILE_MB).toBe(
         25,

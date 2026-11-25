@@ -23,6 +23,9 @@ const bucket: S3StorageConfig = {
   forcePathStyle: false,
 };
 
+/** A host key's fingerprint, as `ssh-keygen -lf` prints one. */
+const HOST_KEY = 'SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls';
+
 /** A development server that isn't on Vercel. */
 const development = { production: false, vercel: false };
 
@@ -59,6 +62,40 @@ describe('storageFromEnvironment', () => {
     ).toEqual({ state: 'set', config: { ...bucket, forcePathStyle: true } });
   });
 
+  it('reads an SFTP server, with a password or a key in base64, and port 22 unless said', () => {
+    const server = {
+      ATTACHMENTS_STORAGE: 'sftp',
+      ATTACHMENTS_SFTP_HOST: 'files.adiutor.dev',
+      ATTACHMENTS_SFTP_USERNAME: 'adiutor',
+      ATTACHMENTS_SFTP_HOST_KEY: HOST_KEY,
+      ATTACHMENTS_SFTP_DIR: '/srv/adiutor',
+    } as const;
+    expect(storageFromEnvironment({ ...server, ATTACHMENTS_SFTP_PASSWORD: 'secret' })).toEqual({
+      state: 'set',
+      config: {
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: 22,
+        username: 'adiutor',
+        password: 'secret',
+        hostKey: HOST_KEY,
+        dir: '/srv/adiutor',
+      },
+    });
+    const pem = '-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----\n';
+    expect(
+      storageFromEnvironment({
+        ...server,
+        ATTACHMENTS_SFTP_PORT: 2222,
+        ATTACHMENTS_SFTP_PRIVATE_KEY: btoa(pem),
+      }),
+    ).toMatchObject({ state: 'set', config: { port: 2222, privateKey: pem } });
+    expect(storageFromEnvironment(server)).toEqual({
+      state: 'incomplete',
+      missing: ['ATTACHMENTS_SFTP_PASSWORD'],
+    });
+  });
+
   it('names what a driver is missing', () => {
     expect(storageFromEnvironment({ ATTACHMENTS_STORAGE: 'local' })).toEqual({
       state: 'incomplete',
@@ -88,6 +125,21 @@ describe('storageProblems', () => {
     expect(storageProblems({ driver: 'local', dir: 'files' }, development)).toEqual([
       'relative_folder',
     ]);
+    const server = {
+      driver: 'sftp',
+      host: 'files.adiutor.dev',
+      port: 22,
+      username: 'adiutor',
+      password: 'secret',
+      hostKey: HOST_KEY,
+    } as const;
+    expect(storageProblems({ ...server, dir: 'adiutor' }, development)).toEqual([
+      'relative_folder',
+    ]);
+    // A folder on another server is fine on Vercel.
+    expect(
+      storageProblems({ ...server, dir: '/srv/adiutor' }, { production: true, vercel: true }),
+    ).toEqual([]);
     expect(
       storageProblems({ driver: 'local', dir: '/data/files' }, { production: true, vercel: true }),
     ).toEqual(['local_on_vercel']);

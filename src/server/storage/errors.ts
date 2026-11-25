@@ -8,6 +8,7 @@
  * The kinds of failure:
  * - `unreachable`: no connection to the storage;
  * - `refused`: it refused the keys or the password;
+ * - `host_key`: an SFTP server's host key isn't the one expected;
  * - `not_found`: the bucket or the folder isn't there;
  * - `not_writable`: the folder can't be written to (or the disk is full);
  * - `not_set_up`: a folder without Adiutor's marker file, so its files
@@ -18,6 +19,7 @@
 export const STORAGE_FAILURES = [
   'unreachable',
   'refused',
+  'host_key',
   'not_found',
   'not_writable',
   'not_set_up',

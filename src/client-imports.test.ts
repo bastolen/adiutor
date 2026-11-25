@@ -152,7 +152,7 @@ const RULES: ImportRule[] = [
     module: 'src/app/(app)/_requests/board-drag.ts',
     instead: 'the board loads it with `import()` once the page is there, from tablet width only.',
   },
-  ...['src/server/storage', 'aws4fetch'].map((module) => ({
+  ...['src/server/storage', 'aws4fetch', 'ssh2'].map((module) => ({
     module,
     instead:
       'files are stored and read on the server only: upload them to `/api/attachments` and link to `/attachments/<id>`.',

@@ -8,6 +8,7 @@ import { type StorageConfig, storageFromEnvironment } from '@/lib/storage';
 
 import diskStorage from './local';
 import bucketStorage from './s3';
+import sftpStorage from './sftp';
 import type { FileStorage } from './types';
 
 /** The last driver built, with the settings it was built from. */
@@ -20,7 +21,14 @@ let built: { fingerprint: string; storage: FileStorage } | null = null;
  * @returns The storage.
  */
 export function storageFor(config: StorageConfig): FileStorage {
-  return config.driver === 'local' ? diskStorage(config.dir) : bucketStorage(config);
+  switch (config.driver) {
+    case 'local':
+      return diskStorage(config.dir);
+    case 's3':
+      return bucketStorage(config);
+    default:
+      return sftpStorage(config);
+  }
 }
 
 /**

@@ -14,6 +14,7 @@ import { z } from 'zod';
 import isLocalHostname from './local-host';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
 import {
+  HOST_KEY_PATTERN,
   MAX_FILE_MB,
   maxFileMbCeiling,
   STORAGE_DRIVERS,
@@ -226,7 +227,8 @@ const envSchema = z
     /**
      * Where attached files are kept (decision 0044, "Attachments" in
      * `docs/deploying.md`): `local` (a folder, `ATTACHMENTS_DIR`), `s3` (a
-     * bucket, `ATTACHMENTS_S3_*`), or `off`. Set, it wins over Settings, which
+     * bucket, `ATTACHMENTS_S3_*`), `sftp` (a folder on another server,
+     * `ATTACHMENTS_SFTP_*`), or `off`. Set, it wins over Settings, which
      * then only shows it; unset, Settings decides.
      */
     ATTACHMENTS_STORAGE: z.preprocess(
@@ -250,6 +252,32 @@ const envSchema = z
       emptyToUndefined,
       z.enum(['true', 'false']).optional(),
     ),
+    /** The SFTP server's host name or address, for `sftp`. */
+    ATTACHMENTS_SFTP_HOST: optionalString,
+    /** Its SSH port; 22 when unset. */
+    ATTACHMENTS_SFTP_PORT: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number().int().min(1).max(65535).optional(),
+    ),
+    /** The user to sign in as, for `sftp`. */
+    ATTACHMENTS_SFTP_USERNAME: optionalString,
+    /** The user's password, unless it signs in with a key. */
+    ATTACHMENTS_SFTP_PASSWORD: optionalString,
+    /** The user's private key (PEM), in base64 so it fits on one line, unless it signs in with a password. */
+    ATTACHMENTS_SFTP_PRIVATE_KEY: z.preprocess(emptyToUndefined, z.base64().optional()),
+    /**
+     * The server's host key fingerprint, as `ssh-keygen -lf` prints it
+     * (`SHA256:` and 43 characters); a connection to any other key is refused.
+     */
+    ATTACHMENTS_SFTP_HOST_KEY: z.preprocess(
+      emptyToUndefined,
+      z
+        .string()
+        .regex(HOST_KEY_PATTERN, 'Use the SHA256: fingerprint ssh-keygen -lf prints.')
+        .optional(),
+    ),
+    /** The folder on the SFTP server, as an absolute path. */
+    ATTACHMENTS_SFTP_DIR: optionalString,
     /**
      * The largest file anyone may attach, in megabytes (1 to 50, at most 4 on
      * Vercel). Set, it wins over Settings; unset, Settings decides (10 until
@@ -276,14 +304,23 @@ const envSchema = z
         ctx.addIssue({
           code: 'custom',
           path: [name],
-          message: `Required when ATTACHMENTS_STORAGE is ${value.ATTACHMENTS_STORAGE}.`,
+          message:
+            name === 'ATTACHMENTS_SFTP_PASSWORD'
+              ? 'Required, or ATTACHMENTS_SFTP_PRIVATE_KEY, when ATTACHMENTS_STORAGE is sftp.'
+              : `Required when ATTACHMENTS_STORAGE is ${value.ATTACHMENTS_STORAGE}.`,
         });
       }
     }
     if (storage.state === 'set') {
       const surroundings = { production: value.NODE_ENV === 'production', vercel };
       for (const problem of storageProblems(storage.config, surroundings)) {
-        ctx.addIssue({ code: 'custom', ...STORAGE_PROBLEM_ISSUES[problem] });
+        const issue = STORAGE_PROBLEM_ISSUES[problem];
+        // An SFTP folder is a variable of its own.
+        const path =
+          problem === 'relative_folder' && storage.config.driver === 'sftp'
+            ? ['ATTACHMENTS_SFTP_DIR']
+            : issue.path;
+        ctx.addIssue({ code: 'custom', path, message: issue.message });
       }
     }
     const ceiling = maxFileMbCeiling(vercel);

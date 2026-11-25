@@ -7,8 +7,8 @@
  */
 import isLocalHostname from './local-host';
 
-/** The drivers: a folder on the server's disk, and an S3-compatible bucket. */
-export const STORAGE_DRIVERS = ['local', 's3'] as const;
+/** The drivers: a folder on the server's disk, an S3-compatible bucket, and a folder over SFTP. */
+export const STORAGE_DRIVERS = ['local', 's3', 'sftp'] as const;
 
 /** One of {@link STORAGE_DRIVERS}. */
 export type StorageDriver = (typeof STORAGE_DRIVERS)[number];
@@ -43,8 +43,36 @@ export interface S3StorageConfig {
   forcePathStyle: boolean;
 }
 
+/** Files in a folder on another server, over SFTP. */
+export interface SftpStorageConfig {
+  driver: 'sftp';
+  /** The server's host name or address. */
+  host: string;
+  /** Its SSH port. */
+  port: number;
+  /** The user to sign in as. */
+  username: string;
+  /** The user's password, when it signs in with one. */
+  password?: string;
+  /** The user's private key (PEM), when it signs in with one. */
+  privateKey?: string;
+  /**
+   * The server's host key, as `ssh-keygen -lf` prints its fingerprint
+   * (`SHA256:` and 43 characters): a connection to any other key is refused.
+   */
+  hostKey: string;
+  /** The folder on the server, as an absolute path. */
+  dir: string;
+}
+
 /** A storage's settings: a driver and what it needs. */
-export type StorageConfig = LocalStorageConfig | S3StorageConfig;
+export type StorageConfig = LocalStorageConfig | S3StorageConfig | SftpStorageConfig;
+
+/** The SSH port, when none is given. */
+export const DEFAULT_SFTP_PORT = 22;
+
+/** A host key's fingerprint as OpenSSH prints it: SHA-256, in base64 without padding. */
+export const HOST_KEY_PATTERN = /^SHA256:[A-Za-z0-9+/]{43}$/;
 
 /** The region requests are signed for when none is given: what most services without regions accept. */
 export const DEFAULT_S3_REGION = 'us-east-1';
@@ -78,8 +106,8 @@ export function maxFileMbCeiling(vercel: boolean): number {
 /**
  * What can make a storage unfit for where it runs:
  * - `local_on_vercel`: Vercel's disk doesn't keep files between requests.
- * - `relative_folder`: a folder must be an absolute path, so it doesn't
- *   depend on where the server was started.
+ * - `relative_folder`: a folder (on this server or over SFTP) must be an
+ *   absolute path, so it doesn't depend on where the server was started.
  * - `insecure_endpoint`: in production, an S3 endpoint must be `https`
  *   (the keys sign every request, and the files travel with them), except
  *   on this computer.
@@ -119,10 +147,10 @@ export function storageProblems(
 ): StorageProblem[] {
   const { production, vercel } = surroundings;
   const problems: StorageProblem[] = [];
-  if (config.driver === 'local') {
-    if (vercel) {
-      problems.push('local_on_vercel');
-    }
+  if (config.driver === 'local' && vercel) {
+    problems.push('local_on_vercel');
+  }
+  if (config.driver !== 's3') {
     if (!isAbsolutePath(config.dir)) {
       problems.push('relative_folder');
     }
@@ -145,6 +173,83 @@ export interface StorageEnvironment {
   ATTACHMENTS_S3_ACCESS_KEY_ID?: string;
   ATTACHMENTS_S3_SECRET_ACCESS_KEY?: string;
   ATTACHMENTS_S3_FORCE_PATH_STYLE?: 'true' | 'false';
+  ATTACHMENTS_SFTP_HOST?: string;
+  ATTACHMENTS_SFTP_PORT?: number;
+  ATTACHMENTS_SFTP_USERNAME?: string;
+  ATTACHMENTS_SFTP_PASSWORD?: string;
+  /** Base64, so the key fits on one line in `.env`, `docker --env-file` and Vercel. */
+  ATTACHMENTS_SFTP_PRIVATE_KEY?: string;
+  ATTACHMENTS_SFTP_HOST_KEY?: string;
+  ATTACHMENTS_SFTP_DIR?: string;
+}
+
+/**
+ * The names of those of `values` that aren't set.
+ *
+ * @param values - Required values, by their variable's name.
+ * @returns The names of the missing ones.
+ */
+function missingOf<K extends keyof StorageEnvironment>(values: Record<K, string | undefined>): K[] {
+  return (Object.keys(values) as K[]).filter((key) => !values[key]);
+}
+
+/**
+ * Decodes a private key given in base64.
+ *
+ * @param encoded - The key in base64, if set.
+ * @returns The key, or `undefined` when it isn't set or isn't base64 (which
+ *   the environment's schema reports on its own).
+ */
+function decodedKey(encoded: string | undefined): string | undefined {
+  if (!encoded) {
+    return undefined;
+  }
+  try {
+    return atob(encoded);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Reads an SFTP server the environment chooses.
+ *
+ * @param environment - The parsed environment.
+ * @returns What it says about storage.
+ */
+function sftpFromEnvironment(environment: StorageEnvironment): EnvironmentStorage {
+  const {
+    ATTACHMENTS_SFTP_HOST: host,
+    ATTACHMENTS_SFTP_USERNAME: username,
+    ATTACHMENTS_SFTP_PASSWORD: password,
+    ATTACHMENTS_SFTP_HOST_KEY: hostKey,
+    ATTACHMENTS_SFTP_DIR: dir,
+  } = environment;
+  const privateKey = decodedKey(environment.ATTACHMENTS_SFTP_PRIVATE_KEY);
+  const missing = missingOf({
+    ATTACHMENTS_SFTP_HOST: host,
+    ATTACHMENTS_SFTP_USERNAME: username,
+    // One way to sign in is needed; the password stands for both when neither is set.
+    ATTACHMENTS_SFTP_PASSWORD: password ?? privateKey,
+    ATTACHMENTS_SFTP_HOST_KEY: hostKey,
+    ATTACHMENTS_SFTP_DIR: dir,
+  });
+  if (!host || !username || !hostKey || !dir || missing.length > 0) {
+    return { state: 'incomplete', missing };
+  }
+  return {
+    state: 'set',
+    config: {
+      driver: 'sftp',
+      host,
+      port: environment.ATTACHMENTS_SFTP_PORT ?? DEFAULT_SFTP_PORT,
+      username,
+      ...(password ? { password } : {}),
+      ...(privateKey ? { privateKey } : {}),
+      hostKey,
+      dir,
+    },
+  };
 }
 
 /**
@@ -180,6 +285,9 @@ export function storageFromEnvironment(environment: StorageEnvironment): Environ
       ? { state: 'set', config: { driver, dir } }
       : { state: 'incomplete', missing: ['ATTACHMENTS_DIR'] };
   }
+  if (driver === 'sftp') {
+    return sftpFromEnvironment(environment);
+  }
   const {
     ATTACHMENTS_S3_ENDPOINT: endpoint,
     ATTACHMENTS_S3_BUCKET: bucket,
@@ -187,15 +295,14 @@ export function storageFromEnvironment(environment: StorageEnvironment): Environ
     ATTACHMENTS_S3_SECRET_ACCESS_KEY: secretAccessKey,
   } = environment;
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-    const required = {
-      ATTACHMENTS_S3_ENDPOINT: endpoint,
-      ATTACHMENTS_S3_BUCKET: bucket,
-      ATTACHMENTS_S3_ACCESS_KEY_ID: accessKeyId,
-      ATTACHMENTS_S3_SECRET_ACCESS_KEY: secretAccessKey,
-    } as const;
     return {
       state: 'incomplete',
-      missing: (Object.keys(required) as (keyof typeof required)[]).filter((key) => !required[key]),
+      missing: missingOf({
+        ATTACHMENTS_S3_ENDPOINT: endpoint,
+        ATTACHMENTS_S3_BUCKET: bucket,
+        ATTACHMENTS_S3_ACCESS_KEY_ID: accessKeyId,
+        ATTACHMENTS_S3_SECRET_ACCESS_KEY: secretAccessKey,
+      }),
     };
   }
   return {

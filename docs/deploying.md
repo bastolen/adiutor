@@ -348,7 +348,8 @@ run tries again. `pnpm jobs:list` shows every job with its last and next run, an
 ## Attachments
 
 Files people attach to requests are kept in a storage the server's environment chooses
-([decision 0044](decisions/0044-attachments.md)). Without one, attachments are off. Set
+([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
+a folder on another server over SFTP. Without one, attachments are off. Set
 `ATTACHMENTS_STORAGE` to one of these, with what it needs:
 
 - **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
@@ -381,6 +382,17 @@ Files people attach to requests are kept in a storage the server's environment c
 
   Keep the bucket private: Adiutor serves every file itself, after checking who may read it. Its key
   only needs to read, write and delete objects in that bucket.
+
+- **`sftp`: a folder on another server, over SFTP** (`ATTACHMENTS_SFTP_HOST`, `ATTACHMENTS_SFTP_PORT`
+  (22 when unset), `ATTACHMENTS_SFTP_USERNAME`, `ATTACHMENTS_SFTP_PASSWORD` or
+  `ATTACHMENTS_SFTP_PRIVATE_KEY`, `ATTACHMENTS_SFTP_HOST_KEY` and `ATTACHMENTS_SFTP_DIR`). Any server
+  with SSH will do, a storage box or a NAS included, and it works from Vercel too. The private key
+  is the PEM file in base64 (`base64 < key`), so it fits on one line. The host key is required:
+  Adiutor connects only to the server whose key has that fingerprint, as
+  `ssh-keyscan <host> | ssh-keygen -lf -` prints it (`SHA256:…`; check it against the server's own
+  `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`, since a scan can't tell an impostor). The
+  folder must exist, with an absolute path, and like the local disk it gets the marker file.
+  Each upload or download opens its own connection, so it's slower than the others.
 
 **Back up the files with the database.** A file is found by its row in the database, and a row
 whose file is gone can't be downloaded. Files are kept at the same paths in every storage

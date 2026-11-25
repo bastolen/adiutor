@@ -4,6 +4,9 @@ allowBuilds:
   '@swc/core': false
   esbuild: true
   sharp: false
+  # The SFTP storage driver's optional native cipher code: it runs in plain JavaScript without it,
+  # and nothing is compiled on a server or in the Docker image.
+  ssh2: false
   unrs-resolver: false
 
 # Wait 3 days (in minutes) after a release before pnpm installs it, like Renovate's
@@ -28,3 +31,9 @@ auditConfig:
     # Renovate will propose.
     - GHSA-3g3m-2fjr-6pw4
     - GHSA-g3hv-75wg-m249
+
+# ssh2's optional cpu-features, which only picks the order of its ciphers: unbuilt (as nothing is
+# built here), its entry file requires a native file that isn't there, which keeps Next's
+# development server rebuilding and reloading every page that imports ssh2.
+ignoredOptionalDependencies:
+  - cpu-features
