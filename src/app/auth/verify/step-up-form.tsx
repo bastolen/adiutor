@@ -127,6 +127,7 @@ export default function StepUpForm({
   confirmedBefore = false,
 }: StepUpFormProps) {
   const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
   // An authenticator app and email codes never count at the same time (see `stepUpMethods`).
@@ -280,7 +281,7 @@ export default function StepUpForm({
   const signOut = async () => {
     setError(null);
     if (!(await signOutAndLeave())) {
-      setError(t('stepUp.signOutFailed'));
+      setError(tCommon('signOutFailed'));
     }
   };
 

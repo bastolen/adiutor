@@ -17,7 +17,6 @@
     "accountMenu": "Account menu:",
     "accountSettings": "Account settings",
     "signOut": "Sign out",
-    "signOutFailed": "Signing out failed. Please try again.",
     "signedInAs": {
       "label": "Signed in as someone else",
       "text": "You're signed in as {name} ({email}). You can work on their requests; everything else is read-only. It ends at {time}.",
