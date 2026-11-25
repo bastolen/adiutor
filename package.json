@@ -18,7 +18,7 @@
     "email:dev": "email dev --dir src/emails --port 3001",
     "start": "next start",
     "lint": "eslint . --max-warnings=0 && stylelint \"**/*.css\" --max-warnings=0 && pnpm lint:messages",
-    "lint:messages": "i18n-check --locales src/messages --source en-US --format next-intl && i18n-check --locales src/messages --source en-US --format next-intl --only unused undefined --unused src --ignore \"tables.*\" \"roles.*\" \"audit.*\" \"jobs.*\" \"auth.codes.*\" \"errors.*\" \"validation.*\" \"emails.*\"",
+    "lint:messages": "i18n-check --locales src/messages --source en-US --format next-intl && i18n-check --locales src/messages --source en-US --format next-intl --only unused undefined --unused src --ignore \"tables.*\" \"roles.*\" \"audit.*\" \"account.ownActivity.*\" \"jobs.*\" \"auth.codes.*\" \"errors.*\" \"validation.*\" \"emails.*\"",
     "lint:fix": "eslint . --fix && stylelint \"**/*.css\" --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

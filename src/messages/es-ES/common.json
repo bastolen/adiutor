@@ -199,6 +199,7 @@
         "invalid": "Escribe una dirección web completa que empiece por http:// o https://.",
         "staffPage": "La empresa lee este texto, así que no puede enlazar a una página para el personal."
       }
-    }
+    },
+    "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo."
   }
 }

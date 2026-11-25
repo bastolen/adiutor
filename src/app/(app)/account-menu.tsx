@@ -99,6 +99,7 @@ export default function AccountMenu({
   picture = null,
 }: AccountMenuProps) {
   const t = useTranslations('navigation');
+  const tCommon = useTranslations('common');
   const { goBack } = useBackToOwnAccount();
   const { preference, setPreference } = useThemePreference();
   const shownName = displayName({ name, email });
@@ -120,7 +121,7 @@ export default function AccountMenu({
   return (
     <div className="flex flex-col gap-2">
       <Alert tone="error" alsoToast onDismiss={() => setSignOutFailed(false)}>
-        {signOutFailed ? t('signOutFailed') : null}
+        {signOutFailed ? tCommon('signOutFailed') : null}
       </Alert>
       {/* The auth client is only needed to sign out: it starts loading when the menu opens. */}
       <MenuRoot

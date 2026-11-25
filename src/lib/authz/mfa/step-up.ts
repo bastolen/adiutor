@@ -30,14 +30,6 @@ export interface StepUpMethods {
   providersHeldBack?: readonly MfaProvider[];
 }
 
-/** No way to confirm a session at all. */
-export const NO_STEP_UP_METHODS: StepUpMethods = {
-  authenticator: false,
-  email: false,
-  passkey: false,
-  providers: [],
-};
-
 /**
  * Works out how a user can confirm their session on the step-up page (to
  * confirm a change to how they sign in, narrowed by
