@@ -3,7 +3,7 @@
  * where the focus goes when it opens and closes, and that an error it shows
  * stays inline, without a toast above the dialog, so one Escape closes it.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -191,10 +191,9 @@ describe('Modal', () => {
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('That password is incorrect.');
     expect(alert).toHaveFocus();
-    // Give a toast the moment it would take to show: it would be the newest layer.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    // Let the effects and what they queue run: a toast would be raised by now,
+    // as the newest layer.
+    await act(async () => {});
     expect(toastCount()).toBe(0);
 
     await user.keyboard('{Escape}');

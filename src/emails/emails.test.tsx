@@ -176,9 +176,7 @@ describe('company emails', () => {
     expect(email.text).toContain('Sam Doe invited you to join Adiutor Tests on Adiutor as Client.');
     expect(email.text).toContain('Raises requests, comments on them and approves work.');
     expect(email.text).toContain('expires in 7 days');
-    // The link has two query parameters, so the HTML escapes the `&`.
-    expect(email.html).toContain(`href="${url.replace('&', '&amp;')}"`);
-    expect(email.text.match(/https?:\/\/\S+/)?.[0]).toBe(url);
+    expectBasics(email, url);
   });
 
   it('escapes names, so they cannot add HTML', async () => {

@@ -4,73 +4,41 @@
  * collide, and that no two cards have the same anchor anywhere in the app,
  * whether it's a table's section or a `Card`'s fixed `id` in the source.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { isSectionId } from '@/lib/redirect';
 
+import sourceFiles from '../../../tests/source-files';
 import { type TableDefinition } from './table-state';
 import {
-  AUDIT_LOG_TABLE,
-  COMPANIES_TABLE,
   COMPANY_INVITATIONS_TABLE,
   COMPANY_INVITE_LINKS_TABLE,
   DEVICES_TABLE,
-  ERRORS_TABLE,
   FAILED_JOBS_TABLE,
   INVITATIONS_TABLE,
   INVITE_LINKS_TABLE,
   JOB_RUNS_TABLE,
   MEMBERS_TABLE,
-  REQUESTS_TABLE,
-  STAFF_REQUESTS_TABLE,
   STAFF_TABLE,
   USER_COMPANIES_TABLE,
   USER_DEVICES_TABLE,
-  USERS_TABLE,
 } from './tables';
+import * as tableModule from './tables';
 
-/** Every table, with its constant's name for the test's name. */
-const TABLES: { name: string; table: TableDefinition }[] = [
-  { name: 'USERS_TABLE', table: USERS_TABLE },
-  { name: 'STAFF_TABLE', table: STAFF_TABLE },
-  { name: 'MEMBERS_TABLE', table: MEMBERS_TABLE },
-  { name: 'COMPANIES_TABLE', table: COMPANIES_TABLE },
-  { name: 'USER_COMPANIES_TABLE', table: USER_COMPANIES_TABLE },
-  { name: 'INVITATIONS_TABLE', table: INVITATIONS_TABLE },
-  { name: 'COMPANY_INVITATIONS_TABLE', table: COMPANY_INVITATIONS_TABLE },
-  { name: 'INVITE_LINKS_TABLE', table: INVITE_LINKS_TABLE },
-  { name: 'COMPANY_INVITE_LINKS_TABLE', table: COMPANY_INVITE_LINKS_TABLE },
-  { name: 'DEVICES_TABLE', table: DEVICES_TABLE },
-  { name: 'USER_DEVICES_TABLE', table: USER_DEVICES_TABLE },
-  { name: 'AUDIT_LOG_TABLE', table: AUDIT_LOG_TABLE },
-  { name: 'ERRORS_TABLE', table: ERRORS_TABLE },
-  { name: 'REQUESTS_TABLE', table: REQUESTS_TABLE },
-  { name: 'STAFF_REQUESTS_TABLE', table: STAFF_REQUESTS_TABLE },
-  { name: 'JOB_RUNS_TABLE', table: JOB_RUNS_TABLE },
-  { name: 'FAILED_JOBS_TABLE', table: FAILED_JOBS_TABLE },
-];
+/**
+ * Every table `tables.ts` exports (its `*_TABLE` constants), with the
+ * constant's name for the test's name, so a new table is covered as soon as
+ * it's exported.
+ */
+const TABLES: { name: string; table: TableDefinition }[] = Object.entries(tableModule)
+  .filter(([name]) => name.endsWith('_TABLE'))
+  .map(([name, table]) => ({ name, table }));
 
 /** The repository root, so paths in messages read like `src/app/...`. */
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-
-/**
- * Lists the TypeScript files below a folder, tests left out.
- *
- * @param dir - The folder.
- * @returns Their absolute paths.
- */
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return sourceFiles(full);
-    }
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
-}
 
 /**
  * A file's source without its comments (block and JSX comments, and lines

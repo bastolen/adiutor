@@ -7,10 +7,10 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import confirmChangeUrl from '@/lib/sign-in/confirm-url';
 import { MFA_VERIFICATION_REQUIRED } from '@/lib/sign-in/sign-in-refusals';
 
+import ConfirmationWindow from '../../../../../tests/ui/confirmation-window';
 import useRefusalText from './use-refusal-text';
 
 /** Mocked router. */
@@ -25,9 +25,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
-/** The server's time at render, in milliseconds. */
-const SERVER_TIME = Date.UTC(2026, 0, 2, 10, 0, 0);
-
 /**
  * Wraps the hook in the provider the Security page renders.
  *
@@ -37,14 +34,9 @@ const SERVER_TIME = Date.UTC(2026, 0, 2, 10, 0, 0);
  */
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <RecentConfirmationProvider
-      returnTo="/account/security"
-      required
-      confirmedUntil={null}
-      serverTime={SERVER_TIME}
-    >
+    <ConfirmationWindow windowOpen={false} returnTo="/account/security">
       {children}
-    </RecentConfirmationProvider>
+    </ConfirmationWindow>
   );
 }
 

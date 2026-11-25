@@ -7,7 +7,6 @@
  * for a page the browser opened fresh and once a prerendered page is shown.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { Activity, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,6 +14,8 @@ import type { SignedInAccount } from '@/components/auth/account-summary';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import hiddenFields from '../../../../tests/ui/hidden-fields';
+import Page from '../../../../tests/ui/page';
 import RequestLinkForm from './request-link-form';
 
 /** The account the test link signs in to. */
@@ -43,21 +44,6 @@ afterEach(() => {
   window.location.hash = '';
   vi.restoreAllMocks();
 });
-
-/**
- * Reads the hidden fields the form sends on.
- *
- * @param form - The form.
- * @returns Field names and values.
- */
-function hiddenFields(form: HTMLFormElement): Record<string, string> {
-  return Object.fromEntries(
-    Array.from(form.querySelectorAll<HTMLInputElement>('input[type="hidden"]')).map((input) => [
-      input.name,
-      input.value,
-    ]),
-  );
-}
 
 describe('RequestLinkForm', () => {
   it('posts the link back to Better Auth only when the user continues, which no link can do', () => {
@@ -241,21 +227,14 @@ describe('RequestLinkForm going by itself', () => {
 
   it('sends it once per page load, also when the page is shown again or the form mounts again', async () => {
     const Form = await freshPageLoad();
-    /**
-     * The page, shown or kept hidden in `<Activity>` as Next.js does.
-     *
-     * @param mode - Whether it's shown.
-     * @returns The page.
-     */
-    const page = (mode: 'visible' | 'hidden'): ReactNode => (
-      <Activity mode={mode}>
+    const view = render(
+      <Page>
         <Form account={JANE} {...REQUEST} continueByItself signedIn={null} />
-      </Activity>
+      </Page>,
     );
-    const view = render(page('visible'));
-    view.rerender(page('hidden'));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
     await act(async () => {});
-    view.rerender(page('visible'));
+    fireEvent.click(screen.getByRole('button', { name: 'Return' }));
     view.unmount();
     render(<Form account={JANE} {...REQUEST} continueByItself signedIn={null} />);
 

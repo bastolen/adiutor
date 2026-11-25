@@ -11,6 +11,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { raiseRequest } from '@/server/requests';
 
+import form from '../../../../../tests/ui/form';
 import raiseRequestAction from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -26,22 +27,14 @@ vi.mock('@/server/requests', () => ({ raiseRequest: vi.fn() }));
 /** The Client raising the request. */
 const client = { id: 'client-1' } as Awaited<ReturnType<typeof getActor>>;
 
-/**
- * Builds the form as the page sends it.
- *
- * @returns The form data.
- */
-function form(): FormData {
-  const data = new FormData();
-  Object.entries({
-    company: 'adiutor-tests',
-    title: 'The printer is broken',
-    type: 'bug',
-    description: 'It prints blank pages.',
-    priority: '',
-  }).forEach(([name, value]) => data.set(name, value));
-  return data;
-}
+/** The fields of the form, as the page sends it. */
+const FIELDS = {
+  company: 'adiutor-tests',
+  title: 'The printer is broken',
+  type: 'bug',
+  description: 'It prints blank pages.',
+  priority: '',
+};
 
 beforeEach(() => {
   vi.mocked(refresh).mockClear();
@@ -54,7 +47,7 @@ describe('raiseRequestAction', () => {
   it('refreshes, then goes to the new request, which confirms it', async () => {
     vi.mocked(raiseRequest).mockResolvedValue({ id: 'request-1', number: 142 });
 
-    await expect(raiseRequestAction(null, form())).rejects.toThrow('NEXT_REDIRECT');
+    await expect(raiseRequestAction(null, form(FIELDS))).rejects.toThrow('NEXT_REDIRECT');
 
     expect(raiseRequest).toHaveBeenCalledWith({ name: 'app context' }, client, {
       companyId: 'adiutor-tests',
@@ -71,7 +64,10 @@ describe('raiseRequestAction', () => {
   it('says why a request was refused, and stays on the form as it is', async () => {
     vi.mocked(raiseRequest).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
 
-    expect(await raiseRequestAction(null, form())).toMatchObject({ ok: false });
+    expect(await raiseRequestAction(null, form(FIELDS))).toEqual({
+      ok: false,
+      message: "You don't have permission to do that.",
+    });
 
     expect(refresh).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();

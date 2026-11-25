@@ -4,26 +4,21 @@
  * and as a toast, and focus moves to the card's heading when the row goes.
  * With `confirmFirst`, nothing starts until the user has confirmed it's them.
  */
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { RecentConfirmationProvider } from '@/components/auth/recent-confirmation';
 import type { ActionResult } from '@/lib/action-result';
 import { defined } from '@/lib/defined';
 
+import ConfirmationWindow from '../../../tests/ui/confirmation-window';
+import nextFrames from '../../../tests/ui/next-frames';
+import toastRegion from '../../../tests/ui/toast-region';
 import Card from './card';
 import RowAction from './row-action';
 import { SignedInAsMarker } from './signed-in-as';
 import { Toaster } from './toast';
-
-/**
- * The toasts on screen.
- *
- * @returns The notifications region.
- */
-const toasts = () => screen.getByRole('region', { name: /^Notifications/ });
 
 describe('RowAction', () => {
   it('runs straight away without a confirmation', async () => {
@@ -58,16 +53,11 @@ describe('RowAction', () => {
     const user = userEvent.setup();
     const action = vi.fn().mockResolvedValue({ ok: true, message: 'Sent again.' });
     render(
-      <RecentConfirmationProvider
-        required
-        confirmedUntil={null}
-        serverTime={Date.now()}
-        returnTo="/admin/settings/staff?inv-page=2"
-      >
+      <ConfirmationWindow windowOpen={false} returnTo="/admin/settings/staff?inv-page=2">
         <Card id="invitations" title="Open invitations">
           <RowAction action={action} fields={{ invitationId: 'invitation-1' }} label="Resend" />
         </Card>
-      </RecentConfirmationProvider>,
+      </ConfirmationWindow>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Resend' }));
@@ -316,21 +306,15 @@ describe('RowAction', () => {
      */
     function renderAsking(windowOpen: boolean) {
       const action = vi.fn().mockResolvedValue({ ok: true });
-      const serverTime = Date.now();
       render(
-        <RecentConfirmationProvider
-          required
-          confirmedUntil={windowOpen ? serverTime + 10 * 60_000 : null}
-          serverTime={serverTime}
-          returnTo="/admin/users/user-1/manage"
-        >
+        <ConfirmationWindow windowOpen={windowOpen} returnTo="/admin/users/user-1/manage">
           <RowAction
             action={action}
             label="Reactivate"
             confirmFirst
             confirm={{ title: 'Reactivate Ada?', description: 'They can sign in again.' }}
           />
-        </RecentConfirmationProvider>,
+        </ConfirmationWindow>,
       );
       return action;
     }
@@ -373,7 +357,7 @@ describe('RowAction', () => {
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
       await waitFor(() =>
-        expect(toasts()).toHaveTextContent('Invitation to jane@adiutor.test revoked.'),
+        expect(toastRegion()).toHaveTextContent('Invitation to jane@adiutor.test revoked.'),
       );
       expect(screen.queryByText('Invitation revoked.')).not.toBeInTheDocument();
     });
@@ -391,7 +375,7 @@ describe('RowAction', () => {
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Only Admins can do that.');
-      expect(toasts()).toHaveTextContent('Only Admins can do that.');
+      expect(toastRegion()).toHaveTextContent('Only Admins can do that.');
     });
 
     it('moves focus to the card’s heading when the action removes its row', async () => {
@@ -429,14 +413,10 @@ describe('RowAction', () => {
 
       await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
-      await waitFor(() => expect(toasts()).toHaveTextContent('Invite link revoked.'));
-      await act(async () => {
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(resolve));
-        });
-      });
+      await waitFor(() => expect(toastRegion()).toHaveTextContent('Invite link revoked.'));
+      await nextFrames();
       expect(screen.getByRole('heading', { name: 'Invite links' })).toHaveFocus();
-      expect(within(toasts()).getByText('Invite link revoked.')).toBeInTheDocument();
+      expect(within(toastRegion()).getByText('Invite link revoked.')).toBeInTheDocument();
     });
   });
 });

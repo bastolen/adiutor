@@ -7,6 +7,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { Activity } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import toastRegion from '../../../tests/ui/toast-region';
 import { Toaster } from './toast';
 import ToastOnArrival from './toast-on-arrival';
 
@@ -29,13 +30,6 @@ function address(): string {
   return `${pathname}${search}${hash}`;
 }
 
-/**
- * The notifications region the toasts are in.
- *
- * @returns The region.
- */
-const notifications = () => screen.getByRole('region', { name: /^Notifications/ });
-
 afterEach(() => {
   vi.restoreAllMocks();
   arriveAt('/');
@@ -52,7 +46,7 @@ describe('ToastOnArrival', () => {
       </>,
     );
 
-    await waitFor(() => expect(notifications()).toHaveTextContent('Request raised.'));
+    await waitFor(() => expect(toastRegion()).toHaveTextContent('Request raised.'));
     expect(address()).toBe('/requests/12');
   });
 
@@ -102,7 +96,7 @@ describe('ToastOnArrival', () => {
       </>,
     );
 
-    await waitFor(() => expect(notifications()).toHaveTextContent('User deleted.'));
+    await waitFor(() => expect(toastRegion()).toHaveTextContent('User deleted.'));
     expect(replaceState).not.toHaveBeenCalled();
     expect(address()).toBe('/admin/users?page=2');
   });
@@ -127,7 +121,7 @@ describe('ToastOnArrival', () => {
       );
     }
     const { rerender } = render(<Page visible />);
-    await waitFor(() => expect(notifications()).toHaveTextContent('Request raised.'));
+    await waitFor(() => expect(toastRegion()).toHaveTextContent('Request raised.'));
 
     rerender(<Page visible={false} />);
     rerender(<Page visible />);

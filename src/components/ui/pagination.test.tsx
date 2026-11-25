@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageLinkItem, PaginationLinks } from '@/lib/tables/table-state';
 
 import renderInLocale from '../../../tests/i18n/render';
+import stubLayout from '../../../tests/ui/layout';
 import Pagination, { paginationFooter } from './pagination';
 
 // Next's Link only calls `onNavigate` once the app router is mounted, which it isn't in these
@@ -84,13 +85,8 @@ function named(expected: string) {
  *
  * @param screenSize - `small` hides the page numbers, as below the `sm` breakpoint.
  */
-function stubLayout(screenSize: 'small' | 'large') {
-  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function getClientRects(
-    this: Element,
-  ) {
-    const hidden = screenSize === 'small' && this.closest('li.hidden') !== null;
-    return (hidden ? [] : [{}]) as unknown as DOMRectList;
-  });
+function stubScreen(screenSize: 'small' | 'large') {
+  stubLayout((element) => screenSize === 'small' && element.closest('li.hidden') !== null);
 }
 
 /**
@@ -400,7 +396,7 @@ describe('Pagination', () => {
 
   describe('focus', () => {
     beforeEach(() => {
-      stubLayout('large');
+      stubScreen('large');
       document.addEventListener('click', stopNavigation);
     });
 
@@ -480,7 +476,7 @@ describe('Pagination', () => {
     });
 
     it('moves to a link that is shown when the page numbers are hidden on a small screen', async () => {
-      stubLayout('small');
+      stubScreen('small');
       const user = userEvent.setup();
       const { rerender } = render(<Pagination {...MIDDLE_PAGE} />);
 

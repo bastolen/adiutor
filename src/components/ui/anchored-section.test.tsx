@@ -4,22 +4,13 @@
  * view with focus on their heading, without taking focus from a control
  * that has it.
  */
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import stubLayout from '../../../tests/ui/layout';
+import nextFrames from '../../../tests/ui/next-frames';
 import { useSectionId } from './anchored-section';
 import Card from './card';
-
-/**
- * Runs the frame the section waits for before it lands.
- */
-async function nextFrame() {
-  await act(async () => {
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-  });
-}
 
 /**
  * Shows the section a control is in.
@@ -60,12 +51,7 @@ let scrolled: Element[] = [];
 
 beforeEach(() => {
   scrolled = [];
-  // jsdom has no layout: give every element a box, except the ones a test hides.
-  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function getClientRects(
-    this: Element,
-  ) {
-    return (hidden.has(this) ? [] : [{}]) as unknown as DOMRectList;
-  });
+  stubLayout((element) => hidden.has(element));
   vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function scrollIntoView(
     this: Element,
   ) {
@@ -104,7 +90,7 @@ describe('Card with an anchor', () => {
   it('lands on the card the URL names: in view, with focus on its heading', async () => {
     window.history.replaceState(null, '', '/admin/settings/staff?inv-page=2#invitations');
     render(<Page />);
-    await nextFrame();
+    await nextFrames();
 
     expect(scrolled).toEqual([sectionOf('Open invitations')]);
     expect(screen.getByRole('heading', { name: 'Open invitations' })).toHaveFocus();
@@ -115,7 +101,7 @@ describe('Card with an anchor', () => {
     async (hash) => {
       window.history.replaceState(null, '', `/admin/settings/staff${hash}`);
       render(<Page />);
-      await nextFrame();
+      await nextFrames();
 
       expect(scrolled).toEqual([]);
       expect(document.body).toHaveFocus();
@@ -128,7 +114,7 @@ describe('Card with an anchor', () => {
     const above = screen.getByRole('button', { name: 'Above' });
     above.focus();
     hidden.add(above);
-    await nextFrame();
+    await nextFrames();
 
     expect(screen.getByRole('heading', { name: 'Open invitations' })).toHaveFocus();
   });
@@ -138,7 +124,7 @@ describe('Card with an anchor', () => {
     render(<Page />);
     const above = screen.getByRole('button', { name: 'Above' });
     above.focus();
-    await nextFrame();
+    await nextFrames();
 
     expect(scrolled).toEqual([]);
     expect(above).toHaveFocus();
@@ -149,7 +135,7 @@ describe('Card with an anchor', () => {
     render(<Page />);
     const resend = screen.getByRole('button', { name: 'Resend' });
     resend.focus();
-    await nextFrame();
+    await nextFrames();
 
     expect(scrolled).toEqual([sectionOf('Open invitations')]);
     expect(resend).toHaveFocus();

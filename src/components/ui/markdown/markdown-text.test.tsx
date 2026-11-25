@@ -6,6 +6,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import UNLINKED_CASES from '../../../../tests/ui/unlinked-markdown';
 import MarkdownText from './markdown-text';
 
 // The texts are shown with Adiutor's own address, whose staff pages they don't link to.
@@ -255,19 +256,7 @@ describe('MarkdownText: links', () => {
     expect(named).not.toHaveAttribute('title');
   });
 
-  it.each([
-    ['a script address', '[click](javascript:alert(1))'],
-    ['a script address in capitals', '[click](JaVaScRiPt:alert(1))'],
-    ['a script address written with an entity', '[click](&#106;avascript:alert(1))'],
-    ['a script address between angle brackets', '<javascript:alert(1)>'],
-    ['a script address defined below the text', '[click][later]\n\n[later]: javascript:alert(1)'],
-    ['a data address', '[click](data:text/html,<script>alert(1)</script>)'],
-    ['a vbscript address', '[click](vbscript:msgbox(1))'],
-    ['a page of Adiutor itself', '[click](/admin/settings/staff)'],
-    ['an address without a scheme', '[click](//adiutor.dev/docs)'],
-    ['an email address behind a text', '[click](mailto:user@adiutor.dev)'],
-    ['an email address', 'Write to user@adiutor.dev today'],
-  ])('links nothing for %s', (_what, text) => {
+  it.each(UNLINKED_CASES)('links nothing for %s', (_what, text) => {
     const container = show(text);
 
     expect(container.querySelector('a')).not.toBeInTheDocument();

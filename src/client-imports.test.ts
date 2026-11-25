@@ -7,12 +7,14 @@
  * be part of a page's own JavaScript, naming the chain of imports that got
  * there.
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { defined } from '@/lib/defined';
+
+import sourceFiles from '../tests/source-files';
 
 /** The repository root, so paths in messages read like `src/app/...`. */
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -163,22 +165,6 @@ const RULES: ImportRule[] = [
  */
 function reaches(target: string, module: string): boolean {
   return target === module || target.startsWith(`${module}/`);
-}
-
-/**
- * Lists the source files under a folder, tests left out.
- *
- * @param dir - The folder.
- * @returns Their absolute paths.
- */
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return sourceFiles(full);
-    }
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
-  });
 }
 
 /**

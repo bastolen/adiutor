@@ -92,7 +92,7 @@ describe('deleteUserAction', () => {
 
     expect(
       await deleteUserAction(null, form({ userId: USER_ID, confirmEmail: 'sam@adiutor.test' })),
-    ).toMatchObject({ ok: false });
+    ).toEqual({ ok: false, message: "You don't have permission to do that." });
 
     expect(refresh).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
@@ -215,8 +215,9 @@ describe('reactivateUserAction', () => {
       new ServiceError('conflict', 'errors.users.alreadyActive'),
     );
 
-    expect(await reactivateUserAction(null, form({ userId: USER_ID }))).toMatchObject({
+    expect(await reactivateUserAction(null, form({ userId: USER_ID }))).toEqual({
       ok: false,
+      message: 'This account is already active.',
     });
     expect(redirect).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();

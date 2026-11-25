@@ -11,6 +11,7 @@ import type { SignedInAccount } from '@/components/auth/account-summary';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../tests/i18n/render';
+import hiddenFields from '../../../../tests/ui/hidden-fields';
 import EmailLinkForm from './email-link-form';
 
 /** The account the test link signs in to. */
@@ -34,21 +35,6 @@ vi.mock('next/navigation', () => ({
 afterEach(() => {
   searchParams = new URLSearchParams();
 });
-
-/**
- * Reads the hidden fields the form sends on.
- *
- * @param form - The form.
- * @returns Field names and values.
- */
-function hiddenFields(form: HTMLFormElement): Record<string, string> {
-  return Object.fromEntries(
-    Array.from(form.querySelectorAll<HTMLInputElement>('input[type="hidden"]')).map((input) => [
-      input.name,
-      input.value,
-    ]),
-  );
-}
 
 describe('EmailLinkForm', () => {
   it('posts the link to Better Auth only when the user continues', () => {

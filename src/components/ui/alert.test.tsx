@@ -8,6 +8,8 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import nextFrames from '../../../tests/ui/next-frames';
+import toastRegion from '../../../tests/ui/toast-region';
 import Alert from './alert';
 import { InsideDialog } from './inside-dialog';
 import { Toaster } from './toast';
@@ -94,11 +96,7 @@ describe('Alert', () => {
     render(<Page />);
 
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
-    await act(async () => {
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(resolve));
-      });
-    });
+    await nextFrames();
 
     expect(screen.getByRole('main')).toHaveFocus();
   });
@@ -112,7 +110,7 @@ describe('Alert', () => {
         </Alert>
       </>,
     );
-    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    const toasts = toastRegion();
     await waitFor(() => expect(toasts).toHaveTextContent('That code didn’t work.'));
 
     rerender(
@@ -139,11 +137,9 @@ describe('Alert', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveFocus();
-    // Give the toast the moment it would take to show.
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
-    const toasts = screen.getByRole('region', { name: /^Notifications/ });
+    // Let the effects and what they queue run: a toast would be raised by now.
+    await act(async () => {});
+    const toasts = toastRegion();
     expect(toasts).not.toHaveTextContent('That code didn’t work.');
     expect(toasts.querySelectorAll('li')).toHaveLength(0);
   });

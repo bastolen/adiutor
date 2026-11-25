@@ -10,6 +10,7 @@ import { concurrentChangeError, ServiceError } from '@/server/errors';
 import { type BulkInviteResult, inviteManyByEmail } from '@/server/people/invitations';
 
 import { testLocale } from '../../../../tests/i18n/next-intl-mocks';
+import form from '../../../../tests/ui/form';
 import { inviteAction } from './invitation-actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
@@ -26,18 +27,16 @@ vi.mock('@/server/people/invite-links', () => ({
 }));
 
 /**
- * Builds the invite form for a company.
+ * The invite form's fields for a company.
  *
  * @param emails - What was typed in the addresses field.
- * @returns The form data.
+ * @returns The fields.
  */
-function form(emails: string): FormData {
-  const data = new FormData();
-  data.set('companyId', '01890a5d-ac96-774b-bcce-b302099a8057');
-  data.set('emails', emails);
-  data.set('role', 'client');
-  return data;
-}
+const fields = (emails: string) => ({
+  companyId: '01890a5d-ac96-774b-bcce-b302099a8057',
+  emails,
+  role: 'client',
+});
 
 /**
  * Makes the service return these results.
@@ -67,13 +66,13 @@ beforeEach(() => {
 describe('inviteAction', () => {
   it('gives one address its own message', async () => {
     serviceReturns([{ email: 'a@adiutor.test', ok: true, status: 'sent' }]);
-    expect(await inviteAction(null, form('a@adiutor.test'))).toEqual({
+    expect(await inviteAction(null, form(fields('a@adiutor.test')))).toEqual({
       ok: true,
       message: 'Invitation sent to a@adiutor.test.',
     });
 
     serviceReturns([{ email: 'b@adiutor.test', ok: false, error: concurrentChangeError() }]);
-    expect(await inviteAction(null, form('b@adiutor.test'))).toEqual({
+    expect(await inviteAction(null, form(fields('b@adiutor.test')))).toEqual({
       ok: false,
       message: 'Someone changed this at the same moment. Try again.',
     });
@@ -82,7 +81,7 @@ describe('inviteAction', () => {
   it('sums up several addresses, with a line for each', async () => {
     serviceReturns(mixed);
     expect(
-      await inviteAction(null, form('a@adiutor.test, b@adiutor.test, c@adiutor.test')),
+      await inviteAction(null, form(fields('a@adiutor.test, b@adiutor.test, c@adiutor.test'))),
     ).toEqual({
       ok: true,
       message: 'Sent 1 of 3 invitations. Check the addresses below.',
@@ -107,7 +106,7 @@ describe('inviteAction', () => {
       { email: 'a@adiutor.test', ok: true, status: 'sent' },
       { email: 'b@adiutor.test', ok: true, status: 'sent' },
     ]);
-    expect(await inviteAction(null, form('a@adiutor.test, b@adiutor.test'))).toMatchObject({
+    expect(await inviteAction(null, form(fields('a@adiutor.test, b@adiutor.test')))).toMatchObject({
       ok: true,
       message: 'Sent 2 invitations.',
     });
@@ -131,7 +130,10 @@ describe('inviteAction', () => {
     testLocale.current = locale;
     serviceReturns(mixed);
 
-    const result = await inviteAction(null, form('a@adiutor.test, b@adiutor.test, c@adiutor.test'));
+    const result = await inviteAction(
+      null,
+      form(fields('a@adiutor.test, b@adiutor.test, c@adiutor.test')),
+    );
 
     expect(result).toMatchObject({ ok: true, message: summary });
     expect(result.ok && result.data?.lines.map((line) => line.message).slice(0, 2)).toEqual([
@@ -146,7 +148,7 @@ describe('inviteAction', () => {
       new ServiceError('invalid', 'validation.emailList.tooMany', { max: 20 }),
     );
 
-    expect(await inviteAction(null, form('a@adiutor.test'))).toEqual({
+    expect(await inviteAction(null, form(fields('a@adiutor.test')))).toEqual({
       ok: false,
       message:
         'Puedes invitar como máximo a 20 personas a la vez. Divide la lista y vuelve a intentarlo.',

@@ -5,7 +5,7 @@
  * action is shown in the dialog only, anew each time, and one Escape closes
  * the dialog.
  */
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -140,9 +140,7 @@ describe('ActionDialog', () => {
     expect(within(dialog).getByRole('alert')).toHaveFocus();
 
     // No toast above the dialog (the region is hidden from assistive technology meanwhile).
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await act(async () => {});
     expect(document.querySelectorAll('[role="region"] li')).toHaveLength(0);
     expect(screen.getAllByText('That password is incorrect.')).toHaveLength(1);
 

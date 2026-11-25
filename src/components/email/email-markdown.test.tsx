@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import renderEmail from '@/emails/render';
 import { storedMentionMarker } from '@/lib/requests';
 
+import UNLINKED_CASES from '../../../tests/ui/unlinked-markdown';
 import EmailMarkdown from './email-markdown';
 
 /** The ID of a mention's row, as a stored text's marker names it. */
@@ -192,16 +193,11 @@ describe('EmailMarkdown: links', () => {
     );
   });
 
-  it.each([
-    ['a script address', '[here](javascript:alert(1))'],
-    ['an address in the app', '[here](/admin/settings/staff)'],
-    ['an address without a scheme', '[here](adiutor.dev)'],
-    ['a mail address', '[here](mailto:user@adiutor.test)'],
-  ])('keeps the text of %s, and links nowhere', (_what, text) => {
+  it.each(UNLINKED_CASES)('keeps the text of %s, and links nowhere', (_what, text, shown) => {
     const container = show(text);
 
     expect(container.querySelector('a')).not.toBeInTheDocument();
-    expect(container).toHaveTextContent('here');
+    expect(container).toHaveTextContent(shown);
   });
 });
 
