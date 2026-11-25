@@ -39,7 +39,7 @@ How it works is in [Requests](../requests.md#mentions). The choices behind it:
   its link's text. Nothing is refused, so a text is never lost over a mention.
 - The `mention` scheme is allowed through the allow-list, but the link's element never links to
   it: it shows the person, or the link's text.
-- Changing `BETTER_AUTH_SECRET` changes the keys. Stored texts don't hold keys, so only a text
+- Changing the current auth secret changes the keys. Stored texts don't hold keys, so only a text
   that's still being written loses its mentions, which then show as text.
 - Emails and a "mentions you" filter can read `request_mention` later.
 

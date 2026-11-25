@@ -76,8 +76,9 @@ const envSchema = z
     /** PostgreSQL connection string for all of the app's data. */
     DATABASE_URL: z.url(),
     /**
-     * Secret used by Better Auth to sign and encrypt; at least 32 characters.
-     * With `BETTER_AUTH_SECRETS` set, it only decrypts older data.
+     * Secret used by Better Auth to sign and encrypt, and by Adiutor to work
+     * out its own secrets (`derivedSecret`); at least 32 characters. With
+     * `BETTER_AUTH_SECRETS` set, it only decrypts older data.
      */
     BETTER_AUTH_SECRET: z.string().min(32),
     /**

@@ -70,8 +70,8 @@ const VERSION_LENGTH = 16;
  * the provider's address can be guessed: a GitHub picture's address holds its
  * account's number (`https://avatars.githubusercontent.com/u/<number>?v=4`),
  * and with an unkeyed hash of it anyone who sees the version could try every
- * number until one matched. Without the app's secret, a version can't be
- * checked against any guess.
+ * number until one matched. Without the current auth secret, a version can't
+ * be checked against any guess.
  *
  * @param address - The provider's address.
  * @returns Sixteen hexadecimal digits.
