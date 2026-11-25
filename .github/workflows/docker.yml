@@ -3,13 +3,17 @@
 # arm64, tagged with the version (0.1.0), its minor line (0.1) and `latest`. Pull requests don't
 # build it.
 #
+# Each platform builds natively on a runner of its own, at the same time, and is pushed by its
+# digest only; a last job then joins the two into one multi-platform image under the tags, in each
+# registry. GitHub's Arm runners are free for public repositories (decision 0043).
+#
 # Release Please publishes releases with its app's token, and only events made with the built-in
 # GITHUB_TOKEN can't start other workflows, so its releases start this one. Running it by hand
 # (Actions → Docker image → Run workflow) publishes an existing release again, e.g. after a failed
 # push, without moving `latest`.
 #
 # Needs the repository variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN (a Docker Hub
-# access token with Read & Write on the repository); without them the job fails rather than
+# access token with Read & Write on the repository); without them the run fails rather than
 # releasing without an image. GitHub's registry uses the built-in token. See "Docker image" in
 # docs/ci-and-releases.md.
 #
@@ -26,7 +30,7 @@ on:
         required: true
         type: string
 
-# Nothing by default; the job asks for what it needs.
+# Nothing by default; each job asks for what it needs.
 permissions: {}
 
 # One run per release at a time; a second one waits instead of pushing over it.
@@ -35,17 +39,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Build and publish
-    # Forks can't push to these registries.
+  # One platform per runner, each pushed under both names by its digest alone (no tag), so nothing
+  # can pull half an image. When one platform fails, the other is cancelled and nothing is tagged.
+  build:
+    name: Build (${{ matrix.arch }})
+    # Forks can't push to these registries. The job that tags the image needs this one, so it's
+    # skipped too.
     if: ${{ github.repository == 'bastolen/adiutor' }}
-    runs-on: ubuntu-latest
-    # The arm64 half is built under emulation, which takes a while.
-    timeout-minutes: 60
+    runs-on: ${{ matrix.runner }}
+    # A native build takes a few minutes; this only ends a hung step.
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     permissions:
       contents: read
       # Pushes to GitHub's container registry.
       packages: write
+    # Each platform's digest under a name of its own, since a matrix's legs share the job's
+    # outputs. Both legs work out the same tags; the last job takes them from either.
+    outputs:
+      amd64: ${{ steps.digest.outputs.amd64 }}
+      arm64: ${{ steps.digest.outputs.arm64 }}
+      tags: ${{ steps.meta.outputs.tags }}
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
@@ -54,11 +74,6 @@ jobs:
           ref: ${{ env.TAG }}
           # Later steps don't push to git, so the token isn't kept in .git/config.
           persist-credentials: false
-
-      # The build runs on an amd64 runner, so arm64 is emulated.
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: arm64
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -91,20 +106,83 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ env.TAG }}
 
       # From the checked-out release, so .dockerignore applies. The build cache lives in the
-      # registry (the `buildcache` tag), not in GitHub Actions' cache: a release runs on its tag,
-      # and Actions caches are only readable from the ref that wrote them (and the default
-      # branch), so no later release could use what an earlier one wrote. Provenance and an SBOM
-      # are attached to the image.
-      - name: Build and push
+      # registry, a tag per platform (`buildcache-amd64`, `buildcache-arm64`) so the two legs don't
+      # overwrite each other's, not in GitHub Actions' cache: a release runs on its tag, and Actions
+      # caches are only readable from the ref that wrote them (and the default branch), so no later
+      # release could use what an earlier one wrote. Provenance and an SBOM are attached.
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/${{ matrix.arch }}
+          tags: |
+            docker.io/bastolen/adiutor
+            ghcr.io/bastolen/adiutor
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache
-          cache-to: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          cache-from: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache-${{ matrix.arch }}
+          cache-to: type=registry,ref=ghcr.io/bastolen/adiutor:buildcache-${{ matrix.arch }},mode=max,image-manifest=true,oci-mediatypes=true
           provenance: mode=max
           sbom: true
+
+      - id: digest
+        name: Note the digest
+        env:
+          ARCH: ${{ matrix.arch }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "$ARCH=$DIGEST" >> "$GITHUB_OUTPUT"
+
+  # Joins the two platforms into one image in each registry and tags it there. The platforms'
+  # provenance and SBOMs come along.
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Pushes to GitHub's container registry.
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub's container registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Each registry's image is made from the platforms pushed to that registry, under its own
+      # tags, then shown in the log. The digests are checked first, so a missing one fails here
+      # rather than in the tool.
+      - name: Tag the multi-platform image
+        env:
+          AMD64: ${{ needs.build.outputs.amd64 }}
+          ARM64: ${{ needs.build.outputs.arm64 }}
+          TAGS: ${{ needs.build.outputs.tags }}
+        run: |
+          for digest in "$AMD64" "$ARM64"; do
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Not a digest: '$digest'"; exit 1; }
+          done
+          for image in docker.io/bastolen/adiutor ghcr.io/bastolen/adiutor; do
+            tags=()
+            while IFS= read -r tag; do
+              if [[ "$tag" == "$image:"* ]]; then
+                tags+=("$tag")
+              fi
+            done <<< "$TAGS"
+            if [[ ${#tags[@]} -eq 0 ]]; then
+              echo "No tags for $image"
+              exit 1
+            fi
+            docker buildx imagetools create "${tags[@]/#/--tag=}" "$image@$AMD64" "$image@$ARM64"
+            docker buildx imagetools inspect "${tags[0]}"
+          done

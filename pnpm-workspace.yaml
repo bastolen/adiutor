@@ -6,6 +6,12 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
 
+# Wait 3 days (in minutes) after a release before pnpm installs it, like Renovate's
+# minimumReleaseAge, in case the release is pulled or compromised: for `pnpm add`, `pnpm update`
+# and Renovate's lockfile refreshes alike. A security fix that can't wait goes under
+# `minimumReleaseAgeExclude` until it's 3 days old.
+minimumReleaseAge: 4320
+
 # Advisories checked and found unreachable, so `pnpm audit` (and the CI step) stays quiet until a new
 # one appears. Remove an entry once its fix lands (see "Security advisories" in
 # docs/ci-and-releases.md).

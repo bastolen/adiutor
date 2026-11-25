@@ -28,14 +28,6 @@
   minimumReleaseAge: '3 days',
   /** Refresh the lockfile weekly, picking up updates to indirect dependencies. */
   lockFileMaintenance: { enabled: true },
-  /**
-   * Major updates wait for approval: Renovate lists them under "Pending Approval" in the
-   * Dependency Dashboard issue and opens the PR once its box is ticked. A major often waits on
-   * the tools around it (typescript-eslint for TypeScript, plugins for ESLint), and an open PR
-   * that can't pass yet reruns CI every time a merge changes the lockfile. Security fixes don't
-   * wait.
-   */
-  major: { dependencyDashboardApproval: true },
   /** Conventional Commit messages, matching commitlint. */
   semanticCommits: 'enabled',
   packageRules: [
@@ -63,8 +55,9 @@
        * default (`timestamp-required`) keeps the check pending forever. Here a
        * missing date passes instead. Digest PRs still wait: Renovate only opens
        * or updates them 3 days after Docker Hub pushed the tag. Lockfile
-       * refreshes get no wait from Renovate; pnpm's built-in default still
-       * skips versions younger than a day when it resolves them.
+       * refreshes get no wait from Renovate, but pnpm's `minimumReleaseAge`
+       * (pnpm-workspace.yaml) skips versions younger than 3 days when it
+       * resolves them.
        */
       matchUpdateTypes: ['digest', 'pinDigest', 'lockFileMaintenance'],
       minimumReleaseAgeBehaviour: 'timestamp-optional',
@@ -79,18 +72,22 @@
       allowedVersions: '~11.11.0',
     },
     {
-      /** Group all minor and patch updates into one PR. */
+      /**
+       * Group all other minor and patch updates into one PR. A major arrives in a PR of its own,
+       * also when its tools aren't ready for it yet: it stays open, and runs CI again, until they
+       * are.
+       */
       matchUpdateTypes: ['minor', 'patch'],
       groupName: 'all non-major dependencies',
       groupSlug: 'all-minor-patch',
     },
     {
       /**
-       * Major updates of Next.js, React and their type packages move together. Their minor and
-       * patch updates join the non-major group above, so most weeks bring one PR fewer.
+       * Next.js, React and their type packages move together, in a PR of their own for every
+       * kind of update, so a framework update is tested apart from the rest. Listed after the
+       * non-major group, so it takes their minor and patch updates from it.
        */
       matchPackageNames: ['next', 'react', 'react-dom', '@types/react', '@types/react-dom'],
-      matchUpdateTypes: ['major'],
       groupName: 'Next.js and React',
     },
   ],

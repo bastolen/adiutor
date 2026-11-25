@@ -1,16 +1,8 @@
 # CI: runs every check on pull requests and on pushes to main, as parallel jobs, and sums them up
 # in one result, "CI passed". That's the check protecting main requires
 # (.github/rulesets/main.json, "Protecting main" in docs/ci-and-releases.md), so jobs and shards
-# can change without touching the rules.
-#
-# The test jobs only run for code that hasn't passed them yet: the first job works out a fingerprint
-# of everything the tests can depend on and skips them when a passing run of this repository
-# recorded that fingerprint ("Skipping the tests" in docs/ci-and-releases.md). So main skips them
-# after merging a pull request that was tested against the current main, and a change to docs or
-# repository settings skips them once main's code passed. Release Please's draft pull request never
-# runs them (its code is main's); marked ready for review, it always runs every test. The static
-# checks run on every pull request; on main they run when the tests do, since a record means that
-# run's static checks passed too (decision 0039). Skipped jobs count as passed in "CI passed".
+# can change without touching the rules. Every job runs every time: the repository is public, so
+# GitHub's standard runners cost nothing (decision 0043).
 #
 # Actions and images are pinned to exact commits and digests (with the
 # version in a comment), so a moved tag can't change what runs; Dependabot
@@ -21,9 +13,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    # The default types, plus ready_for_review: marking the release pull request ready starts the
-    # full test run a release needs.
-    types: [opened, synchronize, reopened, ready_for_review]
 
 # Cancel an older run when new commits are pushed to the same branch or PR.
 concurrency:
@@ -43,125 +32,8 @@ env:
   BETTER_AUTH_URL: http://localhost:3000
 
 jobs:
-  # Whether the test jobs run. They're skipped when this exact code already passed them: the
-  # fingerprint below covers every tracked file the tests can depend on, and "CI passed" records it
-  # as an artifact after a run where every test job passed. A release pull request that's ready for
-  # review (not a draft) always runs them: that's the run a release needs. Its draft never does.
-  scope:
-    name: Decide what runs
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    # Reading the code, and the Artifacts API to look for a record of a passing run.
-    permissions:
-      contents: read
-      actions: read
-    outputs:
-      tests: ${{ steps.decide.outputs.tests }}
-      fingerprint: ${{ steps.fingerprint.outputs.value }}
-    steps:
-      # The code as it would land: on a pull request, GitHub's merge commit with main.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # A SHA-256 of every tracked file and its content, leaving out the files no test reads (docs,
-      # Markdown, the bots' and editors' settings, Release Please's files) and package.json's
-      # version, the only other thing a release changes. Workflows and local actions count, so a
-      # change to CI always runs the tests. "scheme" changes when this list does, so a record made
-      # under the old list can't skip a run.
-      - id: fingerprint
-        name: Fingerprint the code the tests depend on
-        run: |
-          {
-            echo 'scheme 2'
-            git ls-tree -r -z HEAD | while IFS= read -r -d '' entry; do
-              path="${entry#*$'\t'}"
-              case "$path" in
-                # Docs and every Markdown file (README, CHANGELOG, CLAUDE.md, the PR template, ...).
-                docs/* | *.md | LICENSE) continue ;;
-                # Repository settings for GitHub and the bots, which no test reads.
-                .github/ISSUE_TEMPLATE/* | .github/CODEOWNERS | .github/dependabot.yml) continue ;;
-                .github/rulesets/* | renovate.json5 | commitlint.config.mjs) continue ;;
-                # Editor and agent settings, and Vercel's deployment settings.
-                .vscode/* | .claude/* | vercel.json) continue ;;
-                # Release Please's version record and settings.
-                .release-please-manifest.json | release-please-config.json) continue ;;
-                # Counted without its version, which nothing in the app or its tests reads.
-                package.json)
-                  echo "package.json $(jq -S 'del(.version)' package.json | sha256sum | cut -d ' ' -f 1)"
-                  continue
-                  ;;
-              esac
-              echo "$entry"
-            done
-          } | sha256sum | cut -d ' ' -f 1 > fingerprint.txt
-          echo "value=$(cat fingerprint.txt)" >> "$GITHUB_OUTPUT"
-          echo "Fingerprint: $(cat fingerprint.txt)"
-      # Only looks: "CI passed" uploads the record. A record counts only when a run of this
-      # repository's own branches made it (main, or a pull request from a branch here), never a
-      # fork's pull request, whose run uses the fork's copy of this workflow and could upload
-      # anything. Records from pull requests are what let main skip the tests after a merge: the
-      # Actions cache would keep them out of main's reach. When the API can't answer, there's no
-      # record and the tests run.
-      - id: passed
-        name: Look for a passing run of this code
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          FINGERPRINT: ${{ steps.fingerprint.outputs.value }}
-        run: |
-          records=$(gh api "repos/$REPOSITORY/actions/artifacts?name=tests-passed-$FINGERPRINT&per_page=100" \
-            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | length') \
-            || records=0
-          echo "Records of a passing run: $records"
-          if [[ "$records" =~ ^[1-9][0-9]*$ ]]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-      # The event's values come in as environment variables, never pasted into the script, so a
-      # branch name can't run as code. A release pull request is one the release app opened from a
-      # branch in this repository named release-please--...; nobody else can open a pull request
-      # as that app. Its draft skips the tests: its code is main's (plus the changelog and version,
-      # which the fingerprint leaves out), which main's own run and the pull request that changed
-      # it test, and a draft can't be merged. Marked ready for review, it runs every test.
-      - id: decide
-        name: Decide whether the tests run
-        env:
-          EVENT: ${{ github.event_name }}
-          REPOSITORY: ${{ github.repository }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          PR_BRANCH: ${{ github.head_ref }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
-          ALREADY_PASSED: ${{ steps.passed.outputs.found }}
-        run: |
-          release_pr=false
-          if [[ "$EVENT" == pull_request && "$PR_AUTHOR" == 'adiutor-releases[bot]' \
-            && "$PR_REPOSITORY" == "$REPOSITORY" && "$PR_BRANCH" == release-please--* ]]; then
-            release_pr=true
-          fi
-          if [[ "$release_pr" == true && "$PR_DRAFT" == false ]]; then
-            echo "A release pull request ready for review: every test runs."
-            echo "tests=true" >> "$GITHUB_OUTPUT"
-          elif [[ "$release_pr" == true ]]; then
-            echo "Release Please's draft pull request: main's code, so the test jobs are skipped."
-            echo "tests=false" >> "$GITHUB_OUTPUT"
-          elif [[ "$ALREADY_PASSED" == true ]]; then
-            echo "This code already passed every test: the test jobs are skipped."
-            echo "tests=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "No passing run of this code yet: every test runs."
-            echo "tests=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  # Every pull request runs them: they also check what the fingerprint leaves out (docs and Markdown
-  # formatting) and audit the dependencies. On main they run only when the tests do: a record of a
-  # passing run is made only when every job passed, these included, so main's code passed them
-  # already when it skips the tests (decision 0039).
   checks:
     name: Static checks
-    needs: scope
-    if: ${{ github.event_name == 'pull_request' || needs.scope.outputs.tests == 'true' }}
     runs-on: ubuntu-latest
     # A normal run takes a few minutes; this only ends a hung step (GitHub's default is 6 hours).
     timeout-minutes: 15
@@ -206,8 +78,6 @@ jobs:
 
   unit:
     name: Unit tests
-    needs: scope
-    if: ${{ needs.scope.outputs.tests == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -222,8 +92,6 @@ jobs:
 
   integration:
     name: Integration tests
-    needs: scope
-    if: ${{ needs.scope.outputs.tests == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -261,8 +129,6 @@ jobs:
   # tests build on each other, stays in one shard.
   e2e:
     name: End-to-end tests (${{ matrix.shard }}/2)
-    needs: scope
-    if: ${{ needs.scope.outputs.tests == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -334,42 +200,24 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-  # The one result protecting main requires: fails when any job failed or was cancelled, passes
-  # when each passed or was skipped (the test jobs, for code that already passed them). When the
-  # test jobs ran and all passed, it records the code's fingerprint, so later runs of the same
-  # code (main after merging this pull request, a docs change) can skip them.
+  # The one result protecting main requires: passes only when every other job passed. It runs
+  # whatever they did (`always()`), since a required check that's skipped counts as passed, and
+  # fails when any of them failed, was cancelled or was skipped.
   passed:
     name: CI passed
     if: ${{ always() }}
-    needs: [scope, checks, unit, integration, e2e]
+    needs: [checks, unit, integration, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Check every job passed or was skipped
+      - name: Check every job passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "Job results: $RESULTS"
           for result in $RESULTS; do
             case "$result" in
-              success | skipped) ;;
+              success) ;;
               *) echo "A job ended as: $result"; exit 1 ;;
             esac
           done
-      # Only after a run where the tests ran: the previous step already failed if any job didn't
-      # pass, so here they all did.
-      - name: Note that this code passed every test
-        if: ${{ needs.scope.outputs.tests == 'true' }}
-        env:
-          FINGERPRINT: ${{ needs.scope.outputs.fingerprint }}
-        run: echo "$FINGERPRINT" > tests-passed.txt
-      # An artifact rather than a cache entry, so main can read a pull request's record (see the
-      # first job). Kept 7 days; a re-run of this run replaces it.
-      - name: Record the passing run
-        if: ${{ needs.scope.outputs.tests == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: tests-passed-${{ needs.scope.outputs.fingerprint }}
-          path: tests-passed.txt
-          retention-days: 7
-          overwrite: true

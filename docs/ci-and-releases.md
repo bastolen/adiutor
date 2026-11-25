@@ -6,11 +6,13 @@ releases are published and how dependencies are kept up to date. Back to the
 
 ## CI
 
-CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`, as jobs that run at
-the same time, with test-only auth settings. Its token is read-only, and checkout doesn't keep it in
-`.git`. Each job starts with the same setup, a local action (`.github/actions/setup/action.yml`,
-which the PR title check uses too): pnpm, Node from `.nvmrc` with pnpm's store cached, and
-`pnpm install --frozen-lockfile`.
+CI (`.github/workflows/ci.yml`) runs every job on every pull request and push to `main`, at the
+same time, with test-only auth settings. Nothing is skipped for code that passed before: the
+repository is public, so GitHub's standard runners cost nothing
+([decision 0043](decisions/0043-every-ci-job-runs-every-time.md)). Its token is read-only, and
+checkout doesn't keep it in `.git`. Each job starts with the same setup, a local action
+(`.github/actions/setup/action.yml`, which the PR title check uses too): pnpm, Node from `.nvmrc`
+with pnpm's store cached, and `pnpm install --frozen-lockfile`.
 
 | Job                           | What it runs                                                                                        | Database   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------- |
@@ -18,7 +20,7 @@ which the PR title check uses too): pnpm, Node from `.nvmrc` with pnpm's store c
 | Unit tests                    | `pnpm test`                                                                                         | none       |
 | Integration tests             | `pnpm test:integration`, then the migrations applied to a fresh database                            | PostgreSQL |
 | End-to-end tests (1/2), (2/2) | a production build, then half the specs each (`pnpm test:e2e --shard=1/2`), with a report per shard | PostgreSQL |
-| CI passed                     | fails when any other job failed or was cancelled, and records a run where every test passed         | none       |
+| CI passed                     | passes only when every other job passed; fails when any failed, was cancelled or was skipped        | none       |
 
 **Locally:** `pnpm ci:local` runs every job's checks one after another, in this order, and stops at
 the first failure: `pnpm check:schema` (the schema checks below), `pnpm audit --prod`, lint, format
@@ -40,46 +42,6 @@ and the first saves a new entry when the source changed. Pull requests start fro
 only write their own. Each shard then downloads only Playwright's Chromium, without `--with-deps`:
 the runner image ships Google Chrome, so the libraries Chromium needs are already installed, and
 installing them again with `apt-get` would fail whenever Ubuntu's package servers can't be reached.
-
-### Skipping the tests
-
-The unit, integration and end-to-end tests only run for code that hasn't passed them yet, and
-**CI passed** counts the skipped jobs as passed. The static checks run on every pull request, where
-they also check what the fingerprint leaves out (the formatting of docs and Markdown) and audit the
-dependencies. On `main` they run only when the tests do: a record is made only when every job
-passed, the static checks included, so code that skips the tests passed those too
-([decision 0039](decisions/0039-static-checks-follow-the-tests-on-main.md)).
-
-- **The fingerprint:** the first job (Decide what runs) hashes every tracked file and its content
-  (`git ls-tree -r HEAD`; on a pull request, GitHub's merge commit with `main`, so the code as it
-  would land). It leaves out the files no test reads: `docs/`, every Markdown file, `LICENSE`,
-  `.github/ISSUE_TEMPLATE/`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.github/rulesets/`,
-  `renovate.json5`, `commitlint.config.mjs`, `.vscode/`, `.claude/`, `vercel.json`,
-  `.release-please-manifest.json` and `release-please-config.json`. `package.json` counts without
-  its `version`, which nothing in the app or its tests reads. Workflows and the local actions count,
-  so a change to CI always runs the tests.
-- **The record:** after a run where every test job ran and passed, **CI passed** uploads a small
-  artifact named `tests-passed-<fingerprint>`. A failed, cancelled or skipped run uploads nothing.
-  The first job looks the name up through GitHub's Artifacts API and skips the tests when a record
-  counts (below). If the API can't answer, the tests run.
-- **What that skips:**
-  - `main`'s run after merging a pull request whose last run was against the current `main`: the
-    squash merge lands exactly the code that pull request tested, so the static checks are skipped
-    too. A merge of a pull request that fell behind `main` runs the tests and the static checks on
-    `main`.
-  - a change to docs or repository settings, once `main`'s code passed;
-  - a re-run of code that passed;
-  - the release commit that merging the release pull request puts on `main`.
-    When nothing recorded a pass of `main`'s code (its last run failed or was cancelled), the next
-    run of that code runs the tests.
-- **The draft release pull request** never runs the tests. Its code is `main`'s, plus the
-  changelog and version the fingerprint leaves out, and a draft can't be merged. Marked ready for
-  review, it runs every test.
-- **Who can use a record:** only records made by runs of this repository's own branches: `main`
-  and pull requests from branches here. A fork's pull request runs its own copy of the workflow and
-  could upload anything, so its records are ignored. It can still skip the tests when its code
-  matches a record made here. Records expire after 7 days, and the tests then run again. The
-  fingerprint starts with a scheme number, which changes when the list of files left out does.
 
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
@@ -180,16 +142,14 @@ in `.github/actions/`, which Dependabot updates along with the workflows.
 
 Releases (`.github/workflows/release-please.yml`): Release Please keeps a release pull request
 open that bumps the version and updates `CHANGELOG.md` from the commit messages. It opens it as a
-draft (`draft-pull-request` in `release-please-config.json`), which GitHub won't merge, so its
-updates after every merge to `main` skip the tests when `main`'s code passed them (see [Skipping
-the tests](#skipping-the-tests)). To release, mark it ready for review (`gh pr ready <number>`):
-CI then runs every test on it, whatever passed before, and again on each update while it stays
-ready. A release pull request is one the release app opened, from a branch in this repository whose
-name starts with `release-please--`. Merge it once **CI passed** is green; that publishes a GitHub
-release, and `.github/workflows/production-branch.yml` moves the `production` branch to it, which
-Vercel deploys as production (see [Vercel](deploying.md#vercel)). It works as a small GitHub App instead of the workflow's own token
-(which gets no access at all), so the repository doesn't have to let GitHub Actions create and
-approve pull requests, and CI runs on the release pull request. To set it up once:
+draft (`draft-pull-request` in `release-please-config.json`), which GitHub won't merge, so nothing
+is released by accident. CI runs every job on it after each update, like on any pull request. To
+release, mark it ready for review (`gh pr ready <number>`) and merge it once **CI passed** is
+green; that publishes a GitHub release, and `.github/workflows/production-branch.yml` moves the
+`production` branch to it, which Vercel deploys as production (see [Vercel](deploying.md#vercel)).
+It works as a small GitHub App instead of the workflow's own token (which gets no access at all),
+so the repository doesn't have to let GitHub Actions create and approve pull requests, and CI runs
+on the release pull request. To set it up once:
 
 1. Create a GitHub App (your settings → Developer settings → GitHub Apps → New GitHub App), e.g.
    "Adiutor releases": no webhook; repository permissions **Contents**, **Pull requests** and
@@ -238,14 +198,17 @@ Every release also publishes the Docker image (`.github/workflows/docker.yml`, b
 container registry as `ghcr.io/bastolen/adiutor`. Release Please publishes releases with its app's
 token, so they start this workflow (events made with the built-in token don't start workflows).
 
-- **Platforms:** `linux/amd64` and `linux/arm64`. The workflow builds both on one amd64 runner, so
-  the arm64 half is built under emulation and a release build takes a while (about 25 minutes).
-  GitHub also has native arm64 runners, should that ever need to be faster.
+- **Platforms:** `linux/amd64` and `linux/arm64`, each built natively and at the same time on a
+  runner of its own (`ubuntu-latest`, and GitHub's Arm runner `ubuntu-24.04-arm`, free for public
+  repositories), with a build cache each. Each is pushed to both registries by its digest only, so
+  there's nothing to pull until both are done. A last job then joins the two into one
+  multi-platform image in each registry and tags it (`docker buildx imagetools create`). If either
+  platform fails, nothing is tagged.
 - **Tags:** the version (`0.1.0`), its minor line (`0.1`, which moves to `0.1.1` when that's out)
   and `latest`. There's no `0` tag while Adiutor is below 1.0.0, since a new minor can break things.
-- **Build cache:** kept in GitHub's registry, as the `buildcache` tag of `ghcr.io/bastolen/adiutor`
-  (not in GitHub Actions' cache, which a release run on a tag can only read from its own tag), so
-  each release starts from the layers the last one built. It's a cache, not a release: nothing
+- **Build cache:** kept in GitHub's registry, as a tag per platform of `ghcr.io/bastolen/adiutor`
+  (`buildcache-amd64`, `buildcache-arm64`), not in GitHub Actions' cache, which a release run on a
+  tag can only read from its own tag. So each release starts from the layers the last one built. It's a cache, not a release: nothing
   pulls it.
 - **What's attached:** build provenance and an SBOM (the list of what's in the image), and the
   standard labels (source, version, commit).
@@ -284,15 +247,18 @@ Weekly on Monday morning, a few days after a release at the earliest:
   date that check can read, so `renovate.json5` lets it pass for them instead of leaving it pending
   forever. Digest pull requests still wait: Renovate opens or updates them only 3 days after Docker
   Hub pushed the image. If the check stays pending on another kind of update, Renovate's job log
-  (developer.mend.io) says why.
-- Renovate's pull requests come in groups: all minor and patch updates together (Next.js and React
-  included), and the major updates of Next.js, React and their types together.
-- Major updates wait for approval: Renovate lists them under "Pending Approval" in the Dependency
-  Dashboard issue and opens the pull request once you tick its box. A major often waits on the
-  tools around it (typescript-eslint for TypeScript, plugins for ESLint), and an open pull request
-  that can't pass yet runs CI again every time a merge changes the lockfile. Security fixes don't
-  wait. Closing a pull request makes Renovate skip that version; the dashboard lists it with a box
-  to open it again.
+  (developer.mend.io) says why. pnpm waits the same 3 days (`minimumReleaseAge` in
+  `pnpm-workspace.yaml`) for everything it installs, both a local `pnpm add` or `pnpm update` and
+  Renovate's lockfile refreshes; a security fix that can't wait goes under
+  `minimumReleaseAgeExclude` until it's old enough.
+- Renovate's pull requests come in groups: all other minor and patch updates together, and
+  Next.js, React and their types together, in a pull request of their own for every kind of
+  update (decision 0043).
+- Each other major update arrives in a pull request of its own. A major often waits on the tools
+  around it (typescript-eslint for TypeScript, plugins for ESLint): its pull request stays open,
+  and runs CI again on each update, until they're ready. Closing a pull request makes Renovate
+  skip that version; the Dependency Dashboard issue lists every update, with a box to open a closed
+  one again or to retry one.
 - Dependabot (`.github/dependabot.yml`, built into GitHub) updates the GitHub Actions, SHA and
   version comment together, in one pull request. Leave the repository's "Dependabot security
   updates" off, or it opens npm pull requests next to Renovate's.

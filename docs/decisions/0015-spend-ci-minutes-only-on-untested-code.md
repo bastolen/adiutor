@@ -1,6 +1,6 @@
 # 0015. Spend CI minutes only on untested code
 
-- **Status:** Accepted
+- **Status:** Superseded by [0043](0043-every-ci-job-runs-every-time.md)
 - **Date:** 2026-11-10
 
 ## Context
