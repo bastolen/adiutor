@@ -1,8 +1,9 @@
 # Deploying and running Adiutor
 
 What to set up on a server, and how to run and look after it: installing and upgrading, deploying
-on Vercel, the Docker image and health check, the client IP address, background jobs, logs, looking up the reference of
-an error, rotating the auth secret, and what to do after a suspected leak. Back to the
+on Vercel, the Docker image and health check, the client IP address, background jobs, where
+attached files are kept, logs, looking up the reference of an error, rotating the auth secret, and
+what to do after a suspected leak. Back to the
 [documentation](README.md).
 
 ## Installing and upgrading
@@ -140,7 +141,8 @@ docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
 
 The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
 changes it). The application's files belong to root and only `.next`, where Next.js keeps its
-caches, is writable by that user, so a flaw that lets the server write files can't change the
+caches, is writable by that user (and `/data/attachments`, for a volume of attached files: see
+[Attachments](#attachments)), so a flaw that lets the server write files can't change the
 application's own code. The settings are the same as without Docker (see the checklist below,
 including `EMAIL_FROM`, and finish setup right after the first start: until then whoever opens
 `/setup` first becomes the staff Admin); when the
@@ -243,6 +245,8 @@ What to set up on a server before sharing its address:
   a random `CRON_SECRET` of at least 32 characters too.
 - **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
+- **Attachments:** choose where files are kept, or leave them off, and back them up with the
+  database (see [Attachments](#attachments)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
   address an email failed for, a user's name, and so on (database values are left out, see
   [Logs](#logs)). Treat the app's output and the jobs log as personal data:
@@ -340,6 +344,51 @@ one does no harm. It exits with 1 when a job failed (after the others ran), so c
 monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
 run tries again. `pnpm jobs:list` shows every job with its last and next run, and
 `pnpm jobs:run <name>` runs one job now.
+
+## Attachments
+
+Files people attach to requests are kept in a storage the server's environment chooses
+([decision 0044](decisions/0044-attachments.md)). Without one, attachments are off. Set
+`ATTACHMENTS_STORAGE` to one of these, with what it needs:
+
+- **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
+  exists and the app can write to). It serves one server only, and never Vercel, whose disk doesn't
+  keep files. Adiutor writes a marker file in it (`.adiutor-attachments`) with the first file, and
+  refuses to read or delete files where it's missing, so a server started without the folder (or a
+  container without its volume) fails instead of taking every file for gone. Keep the marker with
+  the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
+  the app's container and on every container that runs the jobs:
+
+  ```bash
+  docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 \
+    -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor
+  docker run --rm --env-file .env -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor pnpm jobs:run
+  ```
+
+- **`s3`: a bucket of an S3-compatible service** (`ATTACHMENTS_S3_ENDPOINT`, `ATTACHMENTS_S3_REGION`,
+  `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID`, `ATTACHMENTS_S3_SECRET_ACCESS_KEY`, and
+  `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` for a path-style address). This is the way for Vercel, and
+  works anywhere. The endpoint must be `https` in production (a server on this computer aside):
+
+  | Service                        | Endpoint                                        | Region                              | Notes                                      |
+  | ------------------------------ | ----------------------------------------------- | ----------------------------------- | ------------------------------------------ |
+  | Cloudflare R2                  | `https://<account ID>.r2.cloudflarestorage.com` | `auto`                              | 10 GB free, and downloads cost nothing     |
+  | Backblaze B2                   | `https://s3.<region>.backblazeb2.com`           | the bucket's, e.g. `eu-central-003` | 10 GB free                                 |
+  | AWS S3                         | `https://s3.<region>.amazonaws.com`             | the bucket's                        | paid once its free plan ends               |
+  | Garage or SeaweedFS (your own) | your server's address                           | yours, or `us-east-1`               | set `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` |
+
+  Keep the bucket private: Adiutor serves every file itself, after checking who may read it. Its key
+  only needs to read, write and delete objects in that bucket.
+
+**Back up the files with the database.** A file is found by its row in the database, and a row
+whose file is gone can't be downloaded. Files are kept at the same paths in every storage
+(`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
+`attachments/` there as it is (with `rclone copy`, say), then switching.
+
+**`ATTACHMENTS_MAX_FILE_MB`** is the largest file anyone may attach, in megabytes: 1 to 50, and at
+most 4 on Vercel, which refuses a larger request body; 10 when unset.
 
 ## Logs
 

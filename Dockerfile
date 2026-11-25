@@ -50,6 +50,10 @@ ENV NODE_ENV=production
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /app /app
 COPY --from=build --chown=node:node /next /app/.next
+# Where attached files go with local disk (ATTACHMENTS_DIR=/data/attachments; "Attachments" in
+# docs/deploying.md): mount a volume here, on the app's container and the jobs' alike. Owned by
+# `node`, so a named volume mounted on it starts writable. Nothing is kept here without a volume.
+RUN mkdir -p /data/attachments && chown node:node /data/attachments
 USER node
 EXPOSE 3000
 # Healthy when the database answers and every migration is applied (src/app/api/health/route.ts).

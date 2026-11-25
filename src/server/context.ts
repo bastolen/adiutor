@@ -1,7 +1,7 @@
 /**
  * @file What services need to run: a database, a way to send email, the
- * app's public URL and, during a request, who's making it and in which
- * language.
+ * app's public URL, where attached files are kept and, during a request,
+ * who's making it and in which language.
  *
  * Services receive this explicitly instead of importing globals, so tests can
  * run them against a test database and capture emails.
@@ -10,6 +10,7 @@ import type { Database } from '@/db';
 import type { Email } from '@/lib/email';
 import type { Locale } from '@/lib/i18n/locales';
 import type { RequestInfo } from '@/lib/request/request-info';
+import type { FileStorage } from '@/server/storage';
 
 /**
  * Dependencies passed to every service function.
@@ -30,4 +31,10 @@ export interface ServiceContext {
    * default language stands in.
    */
   requestLocale?: () => Promise<Locale>;
+  /**
+   * The storage attached files go to now (`activeStorage`), or `null` when
+   * none is chosen; absent where files are never handled. Tests give a
+   * folder of their own.
+   */
+  storage?: () => Promise<FileStorage | null>;
 }

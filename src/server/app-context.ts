@@ -1,7 +1,7 @@
 /**
  * @file The service context for the running app: the real database, real
- * email sending, the configured URL and the current request's origin and
- * language.
+ * email sending, the configured URL, the file storage chosen now and the
+ * current request's origin and language.
  */
 import 'server-only';
 import { headers } from 'next/headers';
@@ -14,6 +14,7 @@ import ipAddressOptions from '@/lib/request/ip-address-options';
 import { requestInfoFromHeaders } from '@/lib/request/request-info';
 
 import type { ServiceContext } from './context';
+import { activeStorage } from './storage';
 
 /** Service context used by pages and server actions. */
 const appContext: ServiceContext = {
@@ -32,6 +33,7 @@ const appContext: ServiceContext = {
    * @returns The locale.
    */
   requestLocale,
+  storage: activeStorage,
 };
 
 export default appContext;

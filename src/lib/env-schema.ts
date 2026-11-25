@@ -5,12 +5,38 @@
  * imported, so the parsing rules can be tested on their own. With
  * `NODE_ENV=production`, it also refuses settings only fit for development:
  * an email outbox, an `http://` app URL and SMTP without TLS (both allowed on
- * this computer, where the end-to-end tests run a production build).
+ * this computer, where the end-to-end tests run a production build). It
+ * always checks a storage for attachments the environment chooses: what its
+ * driver needs, and where it may run (`src/lib/storage.ts`).
  */
 import { z } from 'zod';
 
 import isLocalHostname from './local-host';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
+import {
+  MAX_FILE_MB,
+  maxFileMbCeiling,
+  STORAGE_DRIVERS,
+  type StorageProblem,
+  storageFromEnvironment,
+  storageProblems,
+} from './storage';
+
+/** Where each storage problem points, and what it says, for an operator reading the error. */
+const STORAGE_PROBLEM_ISSUES: Record<StorageProblem, { path: string[]; message: string }> = {
+  local_on_vercel: {
+    path: ['ATTACHMENTS_STORAGE'],
+    message: "Vercel's disk doesn't keep files: use s3 (e.g. Cloudflare R2) instead.",
+  },
+  relative_folder: {
+    path: ['ATTACHMENTS_DIR'],
+    message: 'Use an absolute path, e.g. /data/attachments.',
+  },
+  insecure_endpoint: {
+    path: ['ATTACHMENTS_S3_ENDPOINT'],
+    message: 'Use an https:// address in production; http:// only works for localhost.',
+  },
+};
 
 /**
  * Treats empty strings (e.g. `GITHUB_CLIENT_ID=` in a `.env` file) as unset.
@@ -195,6 +221,44 @@ const envSchema = z
         )
         .pipe(z.array(z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]))),
     ),
+    /** `1` on Vercel, which sets it itself: its disk doesn't keep files, and it caps request bodies. */
+    VERCEL: optionalString,
+    /**
+     * Where attached files are kept (decision 0044, "Attachments" in
+     * `docs/deploying.md`): `local` (a folder, `ATTACHMENTS_DIR`), `s3` (a
+     * bucket, `ATTACHMENTS_S3_*`), or `off`. Set, it wins over Settings, which
+     * then only shows it; unset, Settings decides.
+     */
+    ATTACHMENTS_STORAGE: z.preprocess(
+      emptyToUndefined,
+      z.enum(['off', ...STORAGE_DRIVERS]).optional(),
+    ),
+    /** The folder for `local`, as an absolute path, e.g. `/data/attachments` (a volume in Docker). */
+    ATTACHMENTS_DIR: optionalString,
+    /** The S3-compatible service's address for `s3`, e.g. `https://<account>.r2.cloudflarestorage.com`. */
+    ATTACHMENTS_S3_ENDPOINT: z.preprocess(emptyToUndefined, z.url().optional()),
+    /** The region requests are signed for (`auto` on R2); `us-east-1` when unset. */
+    ATTACHMENTS_S3_REGION: optionalString,
+    /** The bucket for `s3`. */
+    ATTACHMENTS_S3_BUCKET: optionalString,
+    /** The access key's ID for `s3`. */
+    ATTACHMENTS_S3_ACCESS_KEY_ID: optionalString,
+    /** The access key's secret for `s3`. */
+    ATTACHMENTS_S3_SECRET_ACCESS_KEY: optionalString,
+    /** `true` to put the bucket in the path rather than the host name, as most servers of your own need. */
+    ATTACHMENTS_S3_FORCE_PATH_STYLE: z.preprocess(
+      emptyToUndefined,
+      z.enum(['true', 'false']).optional(),
+    ),
+    /**
+     * The largest file anyone may attach, in megabytes (1 to 50, at most 4 on
+     * Vercel). Set, it wins over Settings; unset, Settings decides (10 until
+     * it's changed).
+     */
+    ATTACHMENTS_MAX_FILE_MB: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number().int().min(1).max(MAX_FILE_MB).optional(),
+    ),
     /**
      * Node.js environment, set by Next.js (`development` for `next dev`,
      * `production` for `next build` and `next start`). Deliberately without a
@@ -202,6 +266,34 @@ const envSchema = z
      * fall back to development behaviour such as printing emails.
      */
     NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
+  })
+  .superRefine((value, ctx) => {
+    // The storage rules, everywhere: what a driver needs, and where it may run (`storageProblems`).
+    const vercel = value.VERCEL === '1';
+    const storage = storageFromEnvironment(value);
+    if (storage.state === 'incomplete') {
+      for (const name of storage.missing) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [name],
+          message: `Required when ATTACHMENTS_STORAGE is ${value.ATTACHMENTS_STORAGE}.`,
+        });
+      }
+    }
+    if (storage.state === 'set') {
+      const surroundings = { production: value.NODE_ENV === 'production', vercel };
+      for (const problem of storageProblems(storage.config, surroundings)) {
+        ctx.addIssue({ code: 'custom', ...STORAGE_PROBLEM_ISSUES[problem] });
+      }
+    }
+    const ceiling = maxFileMbCeiling(vercel);
+    if (value.ATTACHMENTS_MAX_FILE_MB && value.ATTACHMENTS_MAX_FILE_MB > ceiling) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ATTACHMENTS_MAX_FILE_MB'],
+        message: `At most ${ceiling} on Vercel, which refuses larger request bodies.`,
+      });
+    }
   })
   .superRefine((value, ctx) => {
     // The production rules; development, tests and scripts without NODE_ENV aren't affected.

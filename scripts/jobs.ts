@@ -33,6 +33,7 @@ import {
   runJobNow,
   runTick,
 } from '../src/server/jobs';
+import { activeStorage } from '../src/server/storage';
 import runScript from './run-script';
 
 /** How long one tick from the command line may keep starting runs: less than cron's 5 minutes. */
@@ -41,8 +42,12 @@ const TICK_MINUTES = 4;
 /** How long one job run by hand may take. */
 const RUN_NOW_MINUTES = 10;
 
-/** The service context for the jobs: the database, email and the app's address. */
-const ctx = { db, sendEmail, baseUrl: appUrl };
+/**
+ * The service context for the jobs: the database, email, the app's address
+ * and the file storage, which a jobs container must reach like the app does
+ * (the same volume, for local disk).
+ */
+const ctx = { db, sendEmail, baseUrl: appUrl, storage: activeStorage };
 
 /**
  * The moment some minutes from now.

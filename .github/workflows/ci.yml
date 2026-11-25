@@ -118,6 +118,11 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      # The S3-compatible server the storage tests use, as in compose.yaml (pinned there): started
+      # here rather than under `services:`, which can't give it its command.
+      - name: Start the S3 server
+        run: docker compose up --detach --wait s3
+
       - name: Integration tests
         run: pnpm test:integration
 
