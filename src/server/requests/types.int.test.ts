@@ -171,9 +171,14 @@ describe('managing request types', () => {
     await storeRequestType({ key: 'printers' });
     const raised = await storeRequest(company.id, { type: 'printers' });
 
-    expect(await archiveRequestType(ctx, admin, { type: 'printers' })).toEqual({ changed: true });
+    // Each answer names the type, for the confirmation.
+    expect(await archiveRequestType(ctx, admin, { type: 'printers' })).toEqual({
+      changed: true,
+      name: 'Printers',
+    });
     expect(await archiveRequestType(ctx, admin, { type: 'printers' })).toEqual({
       changed: false,
+      name: 'Printers',
     });
 
     // Still on its request, by name, and in the list's filter.
@@ -188,7 +193,14 @@ describe('managing request types', () => {
       archived: true,
     });
 
-    expect(await restoreRequestType(ctx, admin, { type: 'printers' })).toEqual({ changed: true });
+    expect(await restoreRequestType(ctx, admin, { type: 'printers' })).toEqual({
+      changed: true,
+      name: 'Printers',
+    });
+    expect(await restoreRequestType(ctx, admin, { type: 'printers' })).toEqual({
+      changed: false,
+      name: 'Printers',
+    });
     expect((await listRequestTypes(ctx, client)).at(-1)).toMatchObject({ archived: false });
     expect((await events()).map(({ action }) => action)).toEqual([
       'request_type_archived',

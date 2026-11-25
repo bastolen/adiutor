@@ -123,11 +123,10 @@ export async function moveRequestTypeAction(
 }
 
 /**
- * Archives a request type. The confirmation names it from the hidden `name`
- * field the row sends along.
+ * Archives a request type. The confirmation names it as the service found it.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `type` (its key) and `name` (for the confirmation).
+ * @param formData - Field `type` (its key).
  * @returns A confirmation, or why it failed.
  */
 export async function archiveRequestTypeAction(
@@ -136,18 +135,19 @@ export async function archiveRequestTypeAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await archiveRequestType(appContext, actor, { type: field(formData, 'type') });
+    const { name } = await archiveRequestType(appContext, actor, { type: field(formData, 'type') });
     refresh();
     const t = await getTranslations('admin.settings.requests.requestTypes');
-    return { ok: true, message: t('archivedDone', { name: field(formData, 'name') }) };
+    return { ok: true, message: t('archivedDone', { name }) };
   });
 }
 
 /**
- * Restores an archived request type.
+ * Restores an archived request type. The confirmation names it as the
+ * service found it.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `type` (its key) and `name` (for the confirmation).
+ * @param formData - Field `type` (its key).
  * @returns A confirmation, or why it failed.
  */
 export async function restoreRequestTypeAction(
@@ -156,9 +156,9 @@ export async function restoreRequestTypeAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await restoreRequestType(appContext, actor, { type: field(formData, 'type') });
+    const { name } = await restoreRequestType(appContext, actor, { type: field(formData, 'type') });
     refresh();
     const t = await getTranslations('admin.settings.requests.requestTypes');
-    return { ok: true, message: t('restored', { name: field(formData, 'name') }) };
+    return { ok: true, message: t('restored', { name }) };
   });
 }
