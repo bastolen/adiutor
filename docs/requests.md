@@ -620,8 +620,9 @@ A description, a reply or a note can mention people. Why it's built this way is 
   stands for them. Once the text is stored it's `[@](mention:ID)`, where the ID is the mention's
   row in `request_mention` (the request, the reply or `null` for the description, the person, and
   the side they were on). The stored text holds no name and no user ID.
-- **The key** (`mentionKey`) is a keyed hash of the person and the company, made from
-  `BETTER_AUTH_SECRET` through a secret of its own. It's the same every time, means nothing in
+- **The key** (`mentionKey`) is a keyed hash of the person and the company, made from the
+  current auth secret through a secret of its own (`derivedSecret`; see
+  [Rotating the auth secret](deploying.md#rotating-the-auth-secret)). It's the same every time, means nothing in
   another company, and can't be turned back into a person: when a text is sent, the server makes
   the keys of the people who may be mentioned again and compares. So no user ID reaches someone
   at a company.

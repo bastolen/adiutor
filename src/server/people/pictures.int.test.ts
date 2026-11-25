@@ -161,6 +161,20 @@ describe('loadPictures', () => {
     expect(otherVersion).toMatch(/^[0-9a-f]{16}$/);
     expect(otherVersion).not.toBe(version);
   });
+
+  it('versions the address anew once the secret is rotated, so the old one is no use', async () => {
+    const { userId } = await personWithTwoPictures();
+    const version = versionOf((await loadPictures(db, [userId])).get(userId));
+
+    // The same picture, in the app after a rotation: the old secret stays, a new one comes first.
+    vi.resetModules();
+    vi.stubEnv('BETTER_AUTH_SECRETS', '1:adiutor-tests-rotated-secret-0123456789');
+    const rotated = await import('./pictures');
+    const rotatedVersion = versionOf((await rotated.loadPictures(db, [userId])).get(userId));
+
+    expect(rotatedVersion).toMatch(/^[0-9a-f]{16}$/);
+    expect(rotatedVersion).not.toBe(version);
+  });
 });
 
 describe('choosing a picture', () => {

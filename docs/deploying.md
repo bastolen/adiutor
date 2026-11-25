@@ -399,6 +399,9 @@ it without losing that data, use versioned secrets:
    version only when nothing encrypted with it is left.
 
 Changing the current secret signs everyone out once, because session cookies are signed with it.
+It also changes what Adiutor works out from it (`derivedSecret`): the keys that stand for people
+in a text being written, and the versions in the addresses of people's pictures, so each picture
+is fetched once more.
 
 ## After a suspected leak
 
@@ -410,7 +413,8 @@ Changing the current secret signs everyone out once, because session cookies are
   `pnpm sessions:revoke-all --yes` (nobody is emailed: tell users yourself if needed). Authenticator secrets and backup codes are encrypted with the secret, and
   passwords are hashed.
 - **`BETTER_AUTH_SECRET`:** add a new secret as described above (which signs everyone out), then
-  run `pnpm sessions:revoke-all --yes`. Ask users with an authenticator app to set it up again if
+  run `pnpm sessions:revoke-all --yes`. The mention keys and picture versions follow the new
+  secret, so the old one can no longer check a guess at who they stand for. Ask users with an authenticator app to set it up again if
   the database may have leaked too, since its secrets were encrypted with the old secret.
 
 Both are recorded in the audit log, with how many sessions were ended.
