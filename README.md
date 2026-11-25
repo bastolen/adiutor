@@ -14,6 +14,11 @@ Adiutor gives the companies you support one place to raise requests and work the
 staff, without chasing emails. Each request is one conversation, from the first question to the
 solution the company approves. Your staff see every company's requests; each company sees its own.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-request-dark.png" />
+  <img src="docs/images/readme-request-light.png" width="880" alt="A request in Adiutor: the company's description, then a conversation in which the staff reply that the problem is fixed and mark it done, and the company answers that part of it isn't and reopens the request. Beside it, the details: status, assignee, subscribers, type and priority." />
+</picture>
+
 ## Why Adiutor
 
 - **One conversation per request.** Replies, decisions and status changes stay together, and your
@@ -30,6 +35,11 @@ solution the company approves. Your staff see every company's requests; each com
   reader's own time zone.
 
 ## Features
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-board-dark.png" />
+  <img src="docs/images/readme-board-light.png" width="880" alt="The requests board in Adiutor, across companies: search, filters and sort above lanes for Open, To do, In progress and Waiting, each card showing a request's number, type, title, company, priority, who it's assigned to and a Move button." />
+</picture>
 
 - **Requests.** Companies raise requests, and both sides work each one through in one
   conversation, with replies written in Markdown, mentions, and internal notes and priorities only
