@@ -3,8 +3,7 @@
  * session cookie, only when the cookie's signature checks out (as Better
  * Auth itself does), for the checks before a request (`auth-guards/`, the
  * re-verify marker) and the reactions after it (`auth-events/`), where
- * Better Auth hasn't loaded the session: the database alone (e.g. a leaked
- * copy) must not be enough to pass for a session. Never touches the session.
+ * Better Auth hasn't loaded the session. Never touches the session.
  */
 import { and, eq, gt, sql } from 'drizzle-orm';
 
@@ -29,8 +28,8 @@ export interface SessionCookieContext {
 
 /**
  * Reads the session token from the request's session cookie, only when its
- * signature checks out, as Better Auth itself does: the database alone (e.g.
- * a leaked copy) must not be enough to pass for a session.
+ * signature checks out, as Better Auth itself does, so the database alone
+ * (e.g. a leaked copy) is not enough to pass for a session.
  *
  * @param ctx - The endpoint context.
  * @returns The token, or `null` without a validly signed session cookie.

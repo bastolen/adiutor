@@ -407,7 +407,7 @@ export type CreateAccountResult =
  * on purpose, so a token that can't be used (or an address that has an
  * account) is answered before it costs one; nor does anyone without a usable
  * token get the name and password they sent checked. Only someone holding
- * the emailed token can get the `account_exists` answer, as before.
+ * the emailed token can get the `account_exists` answer.
  *
  * @param ctx - Service context.
  * @param token - The token from the link.

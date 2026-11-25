@@ -26,7 +26,7 @@ export interface ServiceContext {
   /**
    * Reads the current request's language, for an email to the person making
    * the request (`requesterLocale`, e.g. an invite link's confirmation);
-   * absent outside requests (tests, scripts, the hourly job), where Adiutor's
+   * absent outside requests (tests, scripts, background jobs), where Adiutor's
    * default language stands in.
    */
   requestLocale?: () => Promise<Locale>;

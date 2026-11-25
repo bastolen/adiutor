@@ -2,8 +2,7 @@
  * @file Every setting Adiutor keeps in the `setting` table (decision 0034):
  * its key, the schema its value must pass and its fallback, the value it has
  * while its row is missing or holds something the schema refuses. Also the
- * checks that compare settings with each other, which the database used to
- * make (`SETTING_CHECKS`). Free of database code, so it can be tested alone.
+ * checks that compare settings with each other (`SETTING_CHECKS`). Free of database code, so it can be tested alone.
  */
 import { z } from 'zod';
 
@@ -173,8 +172,7 @@ export interface SettingCheck {
 
 /**
  * The checks between settings, made in the transaction that writes them
- * (`writeSettings`), which the database made while the settings were columns
- * of one row. Each setting's own rules (a known language, at least one
+ * (`writeSettings`), since no database constraint spans the settings' rows. Each setting's own rules (a known language, at least one
  * offered) are in its schema.
  */
 export const SETTING_CHECKS: readonly SettingCheck[] = [

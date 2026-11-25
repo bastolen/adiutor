@@ -157,13 +157,15 @@ async function findTargetInvitation(
  * and Support still can't accept it (`isFromInviteLink`), and the pending
  * list still says where it came from.
  *
+ * The new invitation keeps the language the invitation was sent in
+ * (`invitation.locale`); an invitee who has an account with a saved language
+ * gets that instead.
+ *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `members:manage`, or `staff:manage` for staff.
  * @param input - Which invitation.
  * @param input.companyId - The company, or `null` for staff.
  * @param input.invitationId - The invitation.
- * The new invitation keeps the language the invitation was sent in (`invitation.locale`); an
- * invitee who has an account with a saved language gets that instead.
  */
 export async function resendInvitation(
   ctx: ServiceContext,

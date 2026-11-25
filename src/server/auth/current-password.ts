@@ -92,7 +92,7 @@ export async function checkCurrentPassword(
     targetUserId: actor.id,
     details: { purpose },
   });
-  // The wording each form used before: `errors.wrongPassword.change_password` on the Security
-  // page's password form, `errors.wrongPassword.deactivate` in its "Deactivate account" dialog.
+  // `errors.wrongPassword.change_password` is for the Security page's password form,
+  // `errors.wrongPassword.deactivate` for its "Deactivate account" dialog.
   throw new ServiceError('invalid', `errors.wrongPassword.${purpose}`);
 }

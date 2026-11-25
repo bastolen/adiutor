@@ -19,14 +19,9 @@ const TRUST_DEVICE_PREFIX = 'trust-device-';
 
 /**
  * Forgets every device a user trusted, so their next password sign-in asks
- * for the code step again. Used when their MFA is reset or two-step
- * verification turned off, an authenticator app is set up next to email
- * codes, their password is changed or reset, they sign out one or all of
- * their other devices on the Security page, their account is deactivated, or
- * they're signed out everywhere (by an Admin or from the command line). Each
- * of these calls `forgetSecondStepSkips` (`./second-step-skips.ts`), which
- * also ends the links in emails about requests; most go through
- * `endSessionsOf` in `./sessions.ts`, which ends the sessions too.
+ * for the code step again. Callers use `forgetSecondStepSkips`
+ * (`./second-step-skips.ts`), which lists when and also ends the links in
+ * emails about requests.
  *
  * @param db - Database client or transaction.
  * @param userId - The user.

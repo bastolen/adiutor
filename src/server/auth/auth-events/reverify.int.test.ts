@@ -244,7 +244,7 @@ describe('refusing a re-verify with another account', () => {
   it("doesn't ask GitHub about a refused re-verify, and still forgets tokens left behind", async () => {
     const fetchSpy = mockGitHubApi({ 'jane-token': true });
     const jane = await createUser(db, 'jane@adiutor.test');
-    // A token an earlier request left (the hourly clean-up would clear it).
+    // A token an earlier request left (the clean-up job would clear it).
     const leftOver = await connectGitHubAccount(jane, 1, { accessToken: 'jane-token' });
     const current = await createSession(db, jane);
     markReverify(jane, current);

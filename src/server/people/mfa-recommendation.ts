@@ -1,8 +1,8 @@
 /**
  * @file Whether a user dismissed the dashboard's recommendation to add a
  * passkey or two-step verification. It's saved with the account, so the
- * dashboard knows on the server and shows the notice from the first paint (it
- * no longer pops in once the browser has checked), and it stays dismissed on
+ * dashboard knows on the server and shows the notice from the first paint
+ * (it doesn't pop in once the browser has checked), and it stays dismissed on
  * every device. Each user dismisses only their own. Not a security change: no
  * audit event or notice.
  */

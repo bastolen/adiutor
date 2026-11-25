@@ -522,8 +522,7 @@ interface NewsReader {
 /**
  * Works out whether someone gets an email about a request now: not when
  * their account is deactivated, they turned emails about requests off in
- * their account (a row from before the setting existed counts as on), they
- * can no longer read the request, or they're no longer on it.
+ * their account, they can no longer read the request, or they're no longer on it.
  *
  * @param db - Database client.
  * @param found - The request.

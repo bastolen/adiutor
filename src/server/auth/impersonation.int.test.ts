@@ -2,7 +2,7 @@
  * @file Integration tests for signing in as a user: starting it (the rules,
  * the strong MFA and confirmation it needs, the limit, the record and the
  * email), whom a request acts as while it lasts, the own-account changes it
- * refuses, ending it, and the hourly job ending those that are over. Which
+ * refuses, ending it, and the background job ending those that are over. Which
  * staff roles may start it at all, and the refusal of every change in the
  * matrix, are in the authorization matrix.
  */
@@ -531,7 +531,7 @@ describe('endFinishedImpersonations', () => {
     expect(events[0]?.at).toEqual(expiredAt);
   });
 
-  it('ends those whose staff session is gone, in the hourly clean-up', async () => {
+  it('ends those whose staff session is gone, in the clean-up job', async () => {
     const staff = await confirmedStaff('platform_admin');
     const userId = await companyUser();
     await startImpersonation(ctx, staff, { userId });

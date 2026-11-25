@@ -1,6 +1,8 @@
 /**
- * @file The app's own rate limits, for actions that send email or check
- * codes or passwords. Better Auth limits its own endpoints separately.
+ * @file The app's own rate limits, by purpose (`RATE_LIMITS`): sending email,
+ * checking codes and passwords, request work, stored errors, link lookups and
+ * the jobs endpoint. Also the lock for one sign-in change at a time. Better
+ * Auth limits its own endpoints separately.
  */
 import { and, eq, gt, sql } from 'drizzle-orm';
 
