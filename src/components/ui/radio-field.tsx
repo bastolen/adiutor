@@ -3,10 +3,8 @@
  * front of the label (a preview, such as an avatar), for a choice among a
  * few options in a fieldset.
  *
- * A client component: its ids come from `useId`, and only the browser's one
- * React tree keeps them unique. Rendered on the server, they would start
- * again in every request, so a tab kept alive and the one loaded next could
- * share them (labels and card names would point at the wrong element).
+ * A client component because its ids come from `useId` (why: "Ids stay unique
+ * across pages kept alive" in docs/design.md).
  */
 'use client';
 
@@ -36,15 +34,6 @@ type RadioFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * button is 20px, level with the label's first line, at least 24px to tap
  * with its label (WCAG 2.5.8). A disabled option's label is muted, not
  * faded, so it stays readable.
- *
- * @param props - Radio props.
- * @param props.label - Label text.
- * @param props.description - Help text.
- * @param props.leading - What stands before the label.
- * @param props.id - Radio button ID. Generated when omitted.
- * @param props.className - Extra classes for the radio button.
- * @param props.disabled - Whether the option can't be chosen.
- * @returns The labelled radio button.
  */
 export default function RadioField({
   label,

@@ -57,19 +57,6 @@ interface ConfirmDialogProps {
  * inside while it's open, Escape cancels, and focus returns to the trigger
  * when it closes. Without a trigger, the caller controls it with `open` and
  * `onOpenChange`, and returns focus itself (`onCloseAutoFocus`).
- *
- * @param props - Dialog props.
- * @param props.trigger - Element that opens it.
- * @param props.open - Whether it's open, when the caller controls it.
- * @param props.onOpenChange - Called when it opens or closes.
- * @param props.onCloseAutoFocus - Called as it closes, before focus moves.
- * @param props.title - The question.
- * @param props.description - What will happen.
- * @param props.confirmLabel - Confirm button text.
- * @param props.cancelLabel - Text of the button that closes it without confirming.
- * @param props.onConfirm - Called on confirm.
- * @param props.tone - Confirm button style.
- * @returns The dialog with its trigger.
  */
 export default function ConfirmDialog({
   trigger = undefined,

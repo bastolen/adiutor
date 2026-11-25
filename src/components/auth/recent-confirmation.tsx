@@ -112,7 +112,6 @@ const RecentConfirmationContext = createContext<RecentConfirmationValue>({
  * @param props.returnTo - The page to come back to after confirming.
  * @param props.mode - Which step-up page to send them to; `change` by default.
  * @param props.children - The forms and cards.
- * @returns The provider.
  */
 export function RecentConfirmationProvider({
   required,

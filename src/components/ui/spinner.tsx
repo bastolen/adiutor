@@ -11,7 +11,6 @@ import cn from '@/lib/cn';
  *
  * @param props - Spinner props.
  * @param props.className - Extra classes, e.g. a size.
- * @returns The spinner.
  */
 export default function Spinner({ className = '' }: { className?: string }) {
   return (

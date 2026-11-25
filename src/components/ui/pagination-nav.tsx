@@ -35,15 +35,6 @@ type PaginationNavProps = Pick<
  * show a spinner while the next page loads. After going to another page from
  * here, focus stays in the navigation: when the control used is gone (Next
  * on the last page), the current page's link (or another link here) gets it.
- *
- * @param props - Navigation props.
- * @param props.label - The landmark's name.
- * @param props.page - The page shown.
- * @param props.pageCount - How many pages there are.
- * @param props.previousHref - The previous page, or `null`.
- * @param props.nextHref - The next page, or `null`.
- * @param props.pages - Page numbers and gaps.
- * @returns The navigation.
  */
 export default function PaginationNav({
   label,

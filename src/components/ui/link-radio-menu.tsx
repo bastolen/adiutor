@@ -40,7 +40,6 @@ interface LinkRadioMenuProps {
    * What the button says after its icon.
    *
    * @param current - The current choice, if any.
-   * @returns The button's content.
    */
   renderTrigger: (current: SortOption | undefined) => ReactNode;
   /**
@@ -52,27 +51,20 @@ interface LinkRadioMenuProps {
    * instead: the open menu would read it along with what the button shows.
    *
    * @param current - The current choice, if any.
-   * @returns The button's name.
    */
   triggerLabel?: (current: SortOption | undefined) => string;
 }
 
 /**
  * A secondary small button that opens a menu with one link per choice, the
- * current one checked (Radix brings the keyboard behaviour). The menu closes
- * as soon as a choice is made, and until the new page arrives the button is
- * busy (a spinner and `aria-busy`). The menu is named by its button (Radix's
+ * current one checked (Radix brings the keyboard behaviour: arrow keys, Escape, focus back on the
+ * button; the page doesn't scroll). The menu closes as soon as a choice is
+ * made, and until the new page arrives the button is busy (a spinner and
+ * `aria-busy`). The menu is named by its button (Radix's
  * `aria-labelledby`): by `triggerLabel` when there is one, else by what the
  * button shows. The menu's open state is transient, so it isn't still open
  * when the user comes back to the page.
  *
- * @param props - Menu props.
- * @param props.icon - The button's icon.
- * @param props.align - Which side the menu lines up with.
- * @param props.menuLabel - The menu's heading.
- * @param props.options - The choices.
- * @param props.renderTrigger - The button's content after the icon.
- * @param props.triggerLabel - The button's name, when it shows less than it says.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function LinkRadioMenu({

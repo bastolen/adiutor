@@ -37,11 +37,6 @@ interface ActivityListProps {
 /**
  * An ordered list of activity: what happened on the left; when, the device
  * and the IP address on the right (below it on phones).
- *
- * @param props - List props.
- * @param props.items - The entries.
- * @param props.label - Accessible name.
- * @returns The list.
  */
 export default function ActivityList({ items, label }: ActivityListProps) {
   const t = useTranslations('common');

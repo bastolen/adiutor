@@ -112,7 +112,6 @@ interface ActionDialogProps {
  * @param props.onCancel - Called when Cancel is pressed.
  * @param props.leaving - Whether a page is loading afresh after the action, which keeps it busy.
  * @param props.children - Form fields.
- * @returns The form.
  */
 function ActionDialogForm({
   action,
@@ -165,7 +164,7 @@ function ActionDialogForm({
 /**
  * Opens a {@link Modal} with a form posting to a server action. A failed
  * result is shown in the dialog, which stays open: inline only, without a
- * toast (a toast above the dialog would take the first Escape), in a new
+ * toast (see `InsideDialog`), in a new
  * alert each time, so the same refusal twice is announced and takes focus
  * twice. A successful one closes it, and its message is a toast in
  * the signed-in app (shown as soon as the action returns) or else shown next
@@ -173,26 +172,6 @@ function ActionDialogForm({
  * returns to the button; if the action removed the button (e.g. "Make staff"
  * becoming "Remove staff access"), focus moves to its card's heading. With
  * `loadOnSuccess`, a successful result loads that page afresh instead.
- *
- * @param props - Dialog props.
- * @param props.action - The server action.
- * @param props.fields - Hidden fields.
- * @param props.triggerLabel - Opening button text.
- * @param props.triggerAriaLabel - The opening button's name for screen readers, when it differs.
- * @param props.triggerVariant - Opening button style.
- * @param props.title - Title.
- * @param props.description - What will happen.
- * @param props.confirmLabel - Submit button text.
- * @param props.tone - Submit button style.
- * @param props.children - Form fields.
- * @param props.disabled - Disable the opening button.
- * @param props.focusableWhenDisabled - Keep the opening button focusable while disabled.
- * @param props.describedBy - ID of the text that explains the opening button.
- * @param props.onTriggerClick - Runs before the dialog opens; can keep it closed.
- * @param props.confirmFirst - Send the user to confirm it's them first when needed.
- * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
- * @param props.loadOnSuccess - A page to load afresh after a successful result.
- * @returns The button and dialog.
  */
 export default function ActionDialog({
   action,

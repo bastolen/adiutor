@@ -17,10 +17,6 @@ interface EmailCodeProps {
 /**
  * The code centred in a bordered box on the email's background colour, in
  * large, widely spaced monospace digits.
- *
- * @param props - Code props.
- * @param props.code - The code.
- * @returns The code block.
  */
 export default function EmailCode({ code }: EmailCodeProps) {
   return (

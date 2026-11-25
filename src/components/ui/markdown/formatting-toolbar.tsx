@@ -133,10 +133,9 @@ const HEADING_CHOICES = [0, 1, 2, LOWEST_OFFERED_HEADING];
  *
  * @param props - Component props.
  * @param props.current - The address of the link at the cursor, or `null`.
- * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @param props.onSave - Called with the address to link to.
  * @param props.onRemove - Called to remove the link.
- * @returns The dialog's content.
  */
 function LinkForm({
   current,
@@ -229,7 +228,6 @@ function LinkForm({
  * @param props.onLarge - Called to open the editor large, or to bring it back; without it the button is switched off.
  * @param props.appUrl - Adiutor's own address, for a text the company reads: the link dialog
  *   refuses a page for the staff there. `null` (the default) for a text only the staff read.
- * @returns The toolbar.
  */
 export default function FormattingToolbar({
   state,

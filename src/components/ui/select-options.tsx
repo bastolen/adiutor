@@ -118,7 +118,6 @@ export function MatchedText({ text, query }: { text: string; query: string }) {
  * @param props - Component props.
  * @param props.option - The option.
  * @param props.query - What's typed in the search, to mark the part of the label it matches.
- * @returns The label.
  */
 export function OptionLabel({ option, query = '' }: { option: SelectOption; query?: string }) {
   const text = query ? <MatchedText text={option.label} query={query} /> : option.label;

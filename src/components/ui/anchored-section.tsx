@@ -53,13 +53,6 @@ interface AnchoredSectionProps {
  *   only scrolls into view;
  * - with focus anywhere else, it leaves the page alone, so it never takes
  *   focus from a control the user is using.
- *
- * @param props - Section props.
- * @param props.id - The anchor.
- * @param props.labelledBy - The heading's ID.
- * @param props.className - The card's classes.
- * @param props.children - The card's content.
- * @returns The section.
  */
 export default function AnchoredSection({
   id,

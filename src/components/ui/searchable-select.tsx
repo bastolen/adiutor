@@ -102,19 +102,6 @@ interface SearchableSelectProps {
  * The panel and what's typed are gone when the user comes back to the page
  * (`useTransientState`), and the search starts empty each time it opens.
  *
- * @param props - Component props.
- * @param props.id - The closed field's ID.
- * @param props.labelId - The visible label's ID.
- * @param props.descriptionId - The help text's ID.
- * @param props.options - The choices.
- * @param props.name - Field name.
- * @param props.defaultValue - Initial value.
- * @param props.value - Current value.
- * @param props.placeholder - Text shown while nothing is chosen.
- * @param props.onValueChange - Called when a different choice is picked.
- * @param props.disabled - Disabled state.
- * @param props.busy - Busy state.
- * @param props.className - Extra classes for the closed field.
  * @returns The closed field, its hidden input and, while open, the panel.
  */
 export default function SearchableSelect({

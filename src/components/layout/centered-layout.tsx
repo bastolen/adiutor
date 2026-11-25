@@ -25,10 +25,6 @@ interface CenteredLayoutProps {
  * shows it, and the content centered on the page. These pages have no account
  * menu, so the theme and language button is here, last in tab order: floating
  * in the corner from tablet width, and at the end of the page below that.
- *
- * @param props - Layout props.
- * @param props.children - The page content.
- * @returns The layout.
  */
 export default function CenteredLayout({ children }: CenteredLayoutProps) {
   return (

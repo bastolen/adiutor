@@ -2,7 +2,9 @@
  * @file Whether a staff member is signed in as the user in this tab ("Sign in
  * as", see docs/decisions/0017-staff-sign-in-as-users.md), for the controls
  * that change something: they render disabled while it lasts, since the
- * server refuses every change then (`assertNotSignedInAs`). The banner
+ * server refuses every change then except the user's own request work
+ * (`assertNotSignedInAs`, decision 0028; `allowedWhileSignedInAs` on
+ * `RowAction` and `ActionDialog`). The banner
  * (`SignedInAsBanner`, in the signed-in app's layout) mounts
  * {@link SignedInAsMarker}; controls read {@link useSignedInAs}. Forms pass
  * it as `disabled` to each field, select and submit button, and wrap their
@@ -40,7 +42,6 @@ const listeners = new Set<() => void>();
  * Subscribes a component to changes of {@link mountedMarkers}.
  *
  * @param listener - Called on every change.
- * @returns The unsubscribe function.
  */
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
@@ -171,7 +172,6 @@ export function useChangeButtonState({
  *
  * @param props - Component props.
  * @param props.children - The form's contents.
- * @returns The fieldset.
  */
 export function ChangesFieldset({ children }: { children: ReactNode }) {
   const changesOff = useSignedInAs();

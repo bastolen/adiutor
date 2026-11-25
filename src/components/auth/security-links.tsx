@@ -14,7 +14,6 @@ import { SECURITY_PAGE } from '@/lib/redirect';
  * Renders a message's link tag as a link to the reader's Security page.
  *
  * @param chunks - The link's text, where the sentence places it.
- * @returns The link.
  */
 export function securityLink(chunks: ReactNode) {
   return <TextLink href={SECURITY_PAGE}>{chunks}</TextLink>;
@@ -25,7 +24,6 @@ export function securityLink(chunks: ReactNode) {
  * reader's Security page.
  *
  * @param chunks - The link's text, where the sentence places it.
- * @returns The link.
  */
 export function passkeysLink(chunks: ReactNode) {
   return <TextLink href={`${SECURITY_PAGE}#passkeys`}>{chunks}</TextLink>;

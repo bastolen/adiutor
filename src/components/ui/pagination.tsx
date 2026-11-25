@@ -49,13 +49,6 @@ interface PageSizeLinksProps {
  * a spinner while the new size loads. It's part of {@link Pagination}, and a
  * view with a number of rows but no pages (the board's cards per lane) uses
  * it alone.
- *
- * @param props - Component props.
- * @param props.label - What the choice is.
- * @param props.groupLabel - The group's name.
- * @param props.optionLabel - Names one size.
- * @param props.sizes - The sizes.
- * @returns The group.
  */
 export function PageSizeLinks({ label, groupLabel, optionLabel, sizes }: PageSizeLinksProps) {
   return (
@@ -98,19 +91,6 @@ export function PageSizeLinks({ label, groupLabel, optionLabel, sizes }: PageSiz
  * `showsPagination`). The row count is a status message, so screen readers
  * hear it change after going to another page; the landmark and group names
  * include `label`, so several tables on one page can be told apart.
- *
- * @param props - The pagination's content, from `TableLinks.pagination()`.
- * @param props.label - What the rows are, in the plural.
- * @param props.page - The page shown.
- * @param props.pageCount - How many pages there are.
- * @param props.total - How many rows there are.
- * @param props.first - The first row shown.
- * @param props.last - The last row shown.
- * @param props.previousHref - The previous page.
- * @param props.nextHref - The next page.
- * @param props.pages - Page numbers and gaps.
- * @param props.sizes - The page sizes.
- * @returns The pagination.
  */
 export default function Pagination({
   label,

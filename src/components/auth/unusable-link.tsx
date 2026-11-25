@@ -19,7 +19,6 @@ import IconTile from '@/components/ui/icon-tile';
  *   default, for invitations: "It may have expired, been used already or been
  *   revoked. …").
  * @param props.href - Where "Go to sign in" goes (by default, the sign-in page).
- * @returns The message.
  */
 export default function UnusableLink({
   description = null,

@@ -18,9 +18,6 @@ export type RowLinkProps = Omit<ComponentProps<typeof Link>, 'className'>;
  * link stretches over, `group` underlines the name when the row is hovered.
  * On its own the link is 2px taller above and below too, like every text link
  * (at least 24px).
- *
- * @param props - The props of a `Link`, without `className`.
- * @returns The link.
  */
 export default function RowLink(props: RowLinkProps) {
   return (

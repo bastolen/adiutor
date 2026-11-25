@@ -1,8 +1,7 @@
 /**
  * @file "Skip to main content" link: the first thing keyboard users reach.
- * A client component, so its text comes from the root provider: layouts
- * are in each route's static shell, which Partial Prefetching prefetches
- * without reading the request (docs/i18n.md).
+ * A client component, so its text comes from the root provider: it sits in a
+ * route's static shell (docs/i18n.md).
  */
 'use client';
 
@@ -16,8 +15,6 @@ import { focusMainContent } from '@/components/ui/focus-fallback';
  * the main content from script (`focusMainContent`, which makes it focusable
  * just then) and leaves the address as it is; before the script has loaded,
  * the link still jumps there, and Tab carries on from it.
- *
- * @returns The skip link.
  */
 export default function SkipLink() {
   const t = useTranslations('common');

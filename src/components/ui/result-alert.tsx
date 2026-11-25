@@ -36,7 +36,7 @@ interface ResultAlertProps {
  * without toasts), a failure as an inline error that moves keyboard focus to
  * itself, so the user lands on what went wrong, and as a toast. Each result
  * is toasted once, also when the page is shown again; a failure inside a
- * dialog isn't toasted at all, so one Escape closes the dialog.
+ * dialog isn't toasted at all (see `InsideDialog`).
  *
  * The alert is keyed on the result: `useActionState` keeps the previous
  * result on screen until the next one arrives, so a second failure with the
@@ -44,15 +44,12 @@ interface ResultAlertProps {
  * new alert in its place, which screen readers announce and which takes
  * focus, however alike the two messages are.
  *
- * @param props - Component props.
- * @param props.result - The action's result, or `null` for nothing.
- * @param props.errorsOnly - Show failures only.
  * @returns The inline alert, or nothing when there's no result or message,
  * or the result is a success that's a toast or `errorsOnly` leaves out.
  */
 export default function ResultAlert({ result, errorsOnly = false }: ResultAlertProps) {
   const showToast = useToast();
-  // In a dialog a failure stays inline: a toast above it would take the first Escape.
+  // In a dialog a failure stays inline (see `InsideDialog`).
   const insideDialog = useInsideDialog();
   // The result last toasted, so a page kept alive doesn't toast it again when shown.
   const toasted = useRef<ActionResult<unknown> | null>(null);

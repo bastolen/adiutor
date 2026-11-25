@@ -69,20 +69,6 @@ interface MarkdownFieldProps {
  * - **The editor can be opened large** from its toolbar, in a dialog named
  *   by the label. What the field says about a text that's too long shows
  *   there as well.
- *
- * @param props - Field props.
- * @param props.label - Visible label text.
- * @param props.name - The name the form sends the Markdown under.
- * @param props.description - Help text.
- * @param props.rows - The least height, in lines.
- * @param props.maxLength - The most characters the Markdown may have.
- * @param props.required - Whether a text is required.
- * @param props.disabled - Whether the field is switched off.
- * @param props.mentions - Gives the people the text can mention.
- * @param props.defaultValue - The text the field starts with.
- * @param props.autoFocus - Whether the field takes focus when it appears.
- * @param props.staffOnly - Whether only the staff read the text.
- * @returns The field.
  */
 export default function MarkdownField({
   label,

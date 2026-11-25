@@ -24,7 +24,6 @@ export const writtenLinkClasses = cn(
  * @param props - Component props.
  * @param props.href - Where it links to: a whole `http` or `https` address.
  * @param props.children - The link's text.
- * @returns The link.
  */
 export default function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
   const t = useTranslations('common.externalLink');

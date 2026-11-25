@@ -28,8 +28,6 @@ const LANGUAGE_OPTIONS: SelectOption[] = LOCALES.map((locale) => ({
 /**
  * The Default choice's picture, in the flags' place and at their size: a
  * globe, so it doesn't look like one of the languages.
- *
- * @returns The decorative icon.
  */
 export function FollowDefaultIcon() {
   return (
@@ -42,8 +40,6 @@ export function FollowDefaultIcon() {
 /**
  * The languages Adiutor offers as options (`useOfferedLocales`), in menu
  * order: a language that's turned off isn't offered (decision 0029).
- *
- * @returns The options.
  */
 export function useOfferedLanguageOptions(): SelectOption[] {
   const offered = useOfferedLocales();
@@ -57,7 +53,6 @@ export function useOfferedLanguageOptions(): SelectOption[] {
  * from the root provider.
  *
  * @param defaultLocale - Adiutor's default language, as chosen in Settings.
- * @returns The options.
  */
 export function useLanguageChoiceOptions(defaultLocale: Locale): SelectOption[] {
   const t = useTranslations('common.language');

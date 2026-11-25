@@ -6,8 +6,6 @@ import type { OAuthProvider } from '@/lib/sign-in/oauth-providers';
 
 /**
  * The GitHub mark, in the current text colour. Decorative.
- *
- * @returns The icon.
  */
 function GitHubIcon() {
   return (
@@ -19,8 +17,6 @@ function GitHubIcon() {
 
 /**
  * The Google "G" in its brand colours. Decorative.
- *
- * @returns The icon.
  */
 function GoogleIcon() {
   return (

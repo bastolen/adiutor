@@ -35,8 +35,6 @@ interface DateRangeFormProps {
  * The Apply button. While the results load it shows a spinner and is busy
  * (`aria-busy`, with the wait cursor), but stays enabled, so keyboard focus
  * stays on it.
- *
- * @returns The button.
  */
 function ApplyButton() {
   const t = useTranslations('common');
@@ -53,14 +51,6 @@ function ApplyButton() {
  * Two labelled date fields and Apply, built on `next/form`: the dates go in
  * the `from` and `to` query parameters of the same page, which loads within
  * the app. Either may be left empty. Clear removes both.
- *
- * @param props - Form props.
- * @param props.label - The form's name.
- * @param props.from - The current first day.
- * @param props.to - The current last day.
- * @param props.hiddenFields - Query parameters to keep.
- * @param props.clearHref - The list without the dates.
- * @returns The form.
  */
 export default function DateRangeForm({
   label,

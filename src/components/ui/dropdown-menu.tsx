@@ -35,13 +35,6 @@ const itemClasses = cn(
 
 /**
  * The menu panel, rendered in a portal above the page.
- *
- * @param props - Content props.
- * @param props.className - Extra classes.
- * @param props.sideOffset - Distance from the trigger.
- * @param props.collisionPadding - The least distance from the screen's edges when the panel would
- *   otherwise run off it; the page's side gutter by default.
- * @returns The panel.
  */
 export function MenuContent({
   className = '',
@@ -66,10 +59,6 @@ export function MenuContent({
 
 /**
  * A menu item. Use `asChild` with a link for navigation.
- *
- * @param props - Item props.
- * @param props.className - Extra classes.
- * @returns The item.
  */
 export function MenuItem({ className = '', ...props }: ComponentProps<typeof DropdownMenu.Item>) {
   return <DropdownMenu.Item className={cn(itemClasses, className)} {...props} />;
@@ -77,8 +66,6 @@ export function MenuItem({ className = '', ...props }: ComponentProps<typeof Dro
 
 /**
  * The check shown at the right of the selected radio item.
- *
- * @returns The indicator.
  */
 function RadioIndicator() {
   return (
@@ -91,11 +78,6 @@ function RadioIndicator() {
 /**
  * A radio item, showing a check when selected. For a choice that navigates,
  * use {@link MenuRadioLinkItem}.
- *
- * @param props - Radio item props.
- * @param props.className - Extra classes.
- * @param props.children - Label (and icon).
- * @returns The radio item.
  */
 export function MenuRadioItem({
   className = '',
@@ -126,12 +108,6 @@ type MenuRadioLinkItemProps = Omit<ComponentProps<typeof Link>, 'children'> & {
  * rows sorted that way. It looks like {@link MenuRadioItem}, check included,
  * and keeps the menu's keyboard behaviour; choosing it follows the link and
  * closes the menu.
- *
- * @param props - Item props.
- * @param props.value - The item's value.
- * @param props.className - Extra classes.
- * @param props.children - The label.
- * @returns The radio item.
  */
 export function MenuRadioLinkItem({
   value,
@@ -179,15 +155,6 @@ interface MenuCheckboxItemProps extends Omit<
  * and keeps the menu open, so several can be ticked in a row; Escape or Tab
  * closes the menu. The item's name is its label alone, and the hint
  * describes it.
- *
- * @param props - Item props.
- * @param props.label - The item's name.
- * @param props.hint - A line below the name.
- * @param props.checked - Whether it's ticked.
- * @param props.included - Whether it's ticked along with another choice.
- * @param props.onCheckedChange - Called when it's toggled.
- * @param props.className - Extra classes.
- * @returns The checkbox item.
  */
 export function MenuCheckboxItem({
   label,
@@ -297,14 +264,6 @@ interface MenuRadioRowProps {
  * segmented row of icons on the right (styled like `SegmentedNav`). ArrowUp
  * and ArrowDown go through the icons in order like any other items;
  * ArrowLeft and ArrowRight also move between them.
- *
- * @param props - Row props.
- * @param props.label - Visible name of the choice.
- * @param props.icon - Decorative icon before the label.
- * @param props.value - Value of the checked item.
- * @param props.onValueChange - Called when an item is chosen.
- * @param props.children - The icon items.
- * @returns The row.
  */
 export function MenuRadioRow({
   label,
@@ -350,12 +309,6 @@ interface MenuIconRadioItemProps extends Omit<
  * An icon-only radio item for a {@link MenuRadioRow}. The checked one is
  * raised and its icon coloured; choosing one keeps the menu open, so the
  * result can be seen and another option tried.
- *
- * @param props - Item props.
- * @param props.label - The item's name.
- * @param props.icon - The icon shown.
- * @param props.className - Extra classes.
- * @returns The item.
  */
 export function MenuIconRadioItem({
   label,
@@ -383,10 +336,6 @@ export function MenuIconRadioItem({
 
 /**
  * A small heading inside the menu.
- *
- * @param props - Label props.
- * @param props.className - Extra classes.
- * @returns The label.
  */
 export function MenuLabel({ className = '', ...props }: ComponentProps<typeof DropdownMenu.Label>) {
   return (
@@ -399,8 +348,6 @@ export function MenuLabel({ className = '', ...props }: ComponentProps<typeof Dr
 
 /**
  * A divider between groups of items.
- *
- * @returns The separator.
  */
 export function MenuSeparator() {
   return <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />;

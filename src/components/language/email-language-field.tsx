@@ -37,10 +37,6 @@ interface EmailLanguageFieldProps {
  * flags), Default first when the form offers it, and a hint saying what the
  * language is for; nothing with only one language offered.
  *
- * @param props - Field props.
- * @param props.purpose - What the language is for, which the hint says.
- * @param props.defaultLocale - Adiutor's default language, to offer Default.
- * @param props.disabled - Turn the field off.
  * @returns The field, or nothing.
  */
 export default function EmailLanguageField({

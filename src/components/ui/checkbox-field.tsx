@@ -1,10 +1,8 @@
 /**
  * @file Labelled checkbox with optional help text.
  *
- * A client component: its ids come from `useId`, and only the browser's one
- * React tree keeps them unique. Rendered on the server, they would start
- * again in every request, so a tab kept alive and the one loaded next could
- * share them (labels and card names would point at the wrong element).
+ * A client component because its ids come from `useId` (why: "Ids stay unique
+ * across pages kept alive" in docs/design.md).
  */
 'use client';
 
@@ -30,13 +28,6 @@ type CheckboxFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * is 20px, level with the label's first line, and the label reaches 2px above
  * and below its text, so box and label together are at least 24px to tap
  * (WCAG 2.5.8) without moving anything.
- *
- * @param props - Checkbox props.
- * @param props.label - Label text.
- * @param props.description - Help text.
- * @param props.id - Checkbox ID. Generated when omitted.
- * @param props.className - Extra classes for the checkbox.
- * @returns The labelled checkbox.
  */
 export default function CheckboxField({
   label,

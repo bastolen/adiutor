@@ -67,24 +67,12 @@ interface ModalProps {
  * stays there, Escape or the close button closes it, and focus returns to
  * what opened it (also when it's opened from code rather than a trigger).
  * An error shown in it (`ResultAlert`, `Alert`'s `alsoToast`) stays inline,
- * without a toast: a toast would be a layer above the dialog and take the
- * first Escape, so one Escape always closes the dialog.
+ * without a toast (see `InsideDialog`), so one Escape always closes the dialog.
  * Use `ConfirmDialog` for yes/no questions instead.
  *
  * A caller can say what gets the focus instead, when it opens
  * (`initialFocus`) and when it closes (`finalFocus`); focus never stays
  * behind on the page, or on nothing.
- *
- * @param props - Dialog props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.title - Title.
- * @param props.description - Explanation.
- * @param props.size - The panel's size.
- * @param props.initialFocus - What takes the focus when it opens.
- * @param props.finalFocus - What takes the focus when it closes.
- * @param props.children - Content.
- * @returns The dialog.
  */
 export default function Modal({
   open,

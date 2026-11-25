@@ -36,13 +36,6 @@ interface InvitationViewProps {
  * The heading and the step: Finance and Support can't use what an invite link
  * sent (`InviteLinksNotAllowed`); a role that needs MFA sets it up first
  * (`SetUpMfaFirst`); otherwise the form.
- *
- * @param props - View props.
- * @param props.preview - What the link offers.
- * @param props.actor - The signed-in user, if any.
- * @param props.linkBased - Whether it came from an invite link.
- * @param props.children - The form.
- * @returns The page content.
  */
 export default function InvitationView({
   preview,

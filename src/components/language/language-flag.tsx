@@ -59,7 +59,6 @@ const FLAGS: Record<Locale, ReactNode> = {
  *
  * @param props - Flag props.
  * @param props.locale - The language.
- * @returns The flag.
  */
 export default function LanguageFlag({ locale }: { locale: Locale }) {
   return (

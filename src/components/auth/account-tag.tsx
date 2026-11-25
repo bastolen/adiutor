@@ -9,7 +9,6 @@ import type { ReactNode } from 'react';
  * `<account>` tag of `auth.invite.signedInAs` and `auth.join.joinAs`).
  *
  * @param chunks - The address, where the sentence places it.
- * @returns The emphasised address.
  */
 export default function accountTag(chunks: ReactNode) {
   return <span className="font-medium text-foreground">{chunks}</span>;

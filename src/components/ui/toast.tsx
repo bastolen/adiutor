@@ -80,7 +80,6 @@ function notify(): void {
  * Subscribes to changes of the toasts or the toasters.
  *
  * @param listener - Called on every change.
- * @returns A function that unsubscribes.
  */
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
@@ -201,8 +200,6 @@ export function useToast(): ShowToast | null {
  * layout, next to its content; toasts are offered while it's mounted, and
  * cleared when the last one goes. Once mounted, it shows the toast an action
  * left for this page ({@link showToastAfterLoad}).
- *
- * @returns The toasts.
  */
 export function Toaster() {
   const t = useTranslations('common.actions');

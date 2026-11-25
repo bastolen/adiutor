@@ -5,10 +5,8 @@
  * is where users land when they come back to the page (see
  * `anchored-section.tsx`).
  *
- * A client component: its ids come from `useId`, and only the browser's one
- * React tree keeps them unique. Rendered on the server, they would start
- * again in every request, so a tab kept alive and the one loaded next could
- * share them (labels and card names would point at the wrong element).
+ * A client component because its ids come from `useId` (why: "Ids stay unique
+ * across pages kept alive" in docs/design.md).
  */
 'use client';
 
@@ -55,17 +53,6 @@ interface CardProps {
  * and scrolling to it leaves room for the sticky header on small screens and
  * for the signed-in-as banner (the page's `scroll-padding-top` in
  * `globals.css`, plus a little room of the card's own).
- *
- * @param props - Card props.
- * @param props.id - The card's anchor.
- * @param props.title - Heading text.
- * @param props.description - Short explanation.
- * @param props.actions - Controls next to the heading.
- * @param props.footer - Bottom content.
- * @param props.tone - Visual tone.
- * @param props.flush - Remove the content padding.
- * @param props.children - Content.
- * @returns The card.
  */
 export default function Card({
   id = undefined,

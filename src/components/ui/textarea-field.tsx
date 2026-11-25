@@ -2,10 +2,8 @@
  * @file Labelled multi-line text input with an optional description; the
  * multi-line sibling of `TextField`.
  *
- * A client component: its ids come from `useId`, and only the browser's one
- * React tree keeps them unique. Rendered on the server, they would start
- * again in every request, so a tab kept alive and the one loaded next could
- * share them (labels and card names would point at the wrong element).
+ * A client component because its ids come from `useId` (why: "Ids stay unique
+ * across pages kept alive" in docs/design.md).
  */
 'use client';
 
@@ -28,14 +26,6 @@ type TextAreaFieldProps = ComponentProps<'textarea'> & {
 /**
  * A textarea with a visible label. The description is linked with
  * `aria-describedby`, so screen readers announce it with the field.
- *
- * @param props - Textarea props.
- * @param props.label - Visible label text.
- * @param props.description - Help text.
- * @param props.id - Textarea ID. Generated when omitted.
- * @param props.className - Extra classes for the textarea.
- * @param props.rows - Visible lines. Defaults to 3.
- * @returns The labelled textarea.
  */
 export default function TextAreaField({
   label,

@@ -36,8 +36,6 @@ interface SearchFormProps {
  * (`aria-busy`, with the wait cursor), but stays enabled, so keyboard focus
  * stays on it; pressing it again just searches again. On phones it has a
  * little less padding, so the field keeps room for its placeholder.
- *
- * @returns The button.
  */
 function SearchButton() {
   const t = useTranslations('common.actions');
@@ -62,14 +60,6 @@ function SearchButton() {
  * text and the pages kept alive stay, and the page doesn't scroll). Without
  * JavaScript it's a normal GET request, so the results can be bookmarked
  * either way.
- *
- * @param props - Form props.
- * @param props.id - Field ID.
- * @param props.label - Label and landmark name.
- * @param props.placeholder - Placeholder text.
- * @param props.defaultValue - Current search text.
- * @param props.hiddenFields - Query parameters to keep.
- * @returns The form.
  */
 export default function SearchForm({
   id,

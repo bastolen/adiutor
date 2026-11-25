@@ -11,8 +11,6 @@ import Button from '@/components/ui/button';
 
 /**
  * Explains that MFA comes first, with a way to set it up.
- *
- * @returns The explanation.
  */
 export default function SetUpMfaFirst() {
   const t = useTranslations('auth');

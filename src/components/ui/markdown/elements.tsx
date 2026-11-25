@@ -94,7 +94,7 @@ function alignment(align: unknown): string {
  * @param props - The image's attributes.
  * @param props.src - The image's address.
  * @param props.alt - Its description.
- * @param props.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns A link to the image, or only its description when the address can't be linked.
  */
 function MarkdownImage({ src, alt, appUrl }: ComponentProps<'img'> & { appUrl: string | null }) {
@@ -112,10 +112,6 @@ function MarkdownImage({ src, alt, appUrl }: ComponentProps<'img'> & { appUrl: s
  * The checkbox of a task ("- [x] done"), as a mark with its meaning in
  * words for screen readers. It isn't a form control: nobody ticks a task in
  * a text that was sent.
- *
- * @param props - The checkbox's attributes.
- * @param props.checked - Whether the task is done.
- * @returns The mark.
  */
 function TaskMark({ checked }: ComponentProps<'input'>) {
   const t = useTranslations('common.markdown');
@@ -132,10 +128,6 @@ function TaskMark({ checked }: ComponentProps<'input'>) {
  * A table, in a box that scrolls sideways when the table is wider than the
  * text. The box can be reached and scrolled with the keyboard, and says
  * what it holds.
- *
- * @param props - The table's attributes.
- * @param props.children - Its head and body.
- * @returns The table.
  */
 function MarkdownTable({ children = null }: ComponentProps<'table'>) {
   const t = useTranslations('common.markdown');
@@ -154,10 +146,6 @@ function MarkdownTable({ children = null }: ComponentProps<'table'>) {
 
 /**
  * A paragraph, in its own writing direction.
- *
- * @param props - The paragraph's attributes.
- * @param props.children - Its text.
- * @returns The paragraph.
  */
 function MarkdownParagraph({ children = null }: ComponentProps<'p'>) {
   return <p dir="auto">{children}</p>;
@@ -166,11 +154,6 @@ function MarkdownParagraph({ children = null }: ComponentProps<'p'>) {
 /**
  * A list with bullets, or a list of things to do (which the parser marks
  * with a class).
- *
- * @param props - The list's attributes.
- * @param props.className - The parser's class: set on a list of things to do.
- * @param props.children - Its items.
- * @returns The list.
  */
 function MarkdownBulletList({ className, children = null }: ComponentProps<'ul'>) {
   return (
@@ -180,11 +163,6 @@ function MarkdownBulletList({ className, children = null }: ComponentProps<'ul'>
 
 /**
  * A numbered list, starting at the number it was written with.
- *
- * @param props - The list's attributes.
- * @param props.start - The first item's number.
- * @param props.children - Its items.
- * @returns The list.
  */
 function MarkdownOrderedList({ start, children = null }: ComponentProps<'ol'>) {
   return (
@@ -197,12 +175,6 @@ function MarkdownOrderedList({ start, children = null }: ComponentProps<'ol'>) {
 /**
  * A list item. A footnote keeps the ID its reference points at, and a thing
  * to do (which the parser marks with a class) leaves room for its mark.
- *
- * @param props - The item's attributes.
- * @param props.id - A footnote's ID.
- * @param props.className - The parser's class: set on a thing to do.
- * @param props.children - What the item holds.
- * @returns The item.
  */
 function MarkdownListItem({ id, className, children = null }: ComponentProps<'li'>) {
   return (
@@ -218,10 +190,6 @@ function MarkdownListItem({ id, className, children = null }: ComponentProps<'li
 
 /**
  * A quotation.
- *
- * @param props - The quotation's attributes.
- * @param props.children - What's quoted.
- * @returns The quotation.
  */
 function MarkdownQuote({ children = null }: ComponentProps<'blockquote'>) {
   return <blockquote className={markdownStyles.quote}>{children}</blockquote>;
@@ -229,8 +197,6 @@ function MarkdownQuote({ children = null }: ComponentProps<'blockquote'>) {
 
 /**
  * A line between two parts of a text.
- *
- * @returns The line.
  */
 function MarkdownRule() {
   return <hr className={markdownStyles.rule} />;
@@ -238,11 +204,6 @@ function MarkdownRule() {
 
 /**
  * Code: in a sentence, or the content of a block (which drops this look).
- *
- * @param props - The code's attributes.
- * @param props.className - The language a block of code names, as the parser's class.
- * @param props.children - The code.
- * @returns The code.
  */
 function MarkdownCode({ className, children = null }: ComponentProps<'code'>) {
   return <code className={cn(markdownStyles.inlineCode, className)}>{children}</code>;
@@ -284,7 +245,6 @@ function namedLanguage(block: Element | undefined): string | null {
  * @param props.node - The block's node in the text's tree, for its language and its code.
  * @param props.note - What to say above the code when it's copied, a line each.
  * @param props.children - Its code element.
- * @returns The block.
  */
 function MarkdownCodeBlock({
   node,
@@ -339,7 +299,6 @@ function MarkdownCodeBlock({
  *
  * @param props - Component props.
  * @param props.mention - Who is mentioned, as the page names them.
- * @returns The mention.
  */
 function MarkdownMention({ mention }: { mention: ShownMention }) {
   const classes = mention.isViewer ? markdownStyles.mentionOfViewer : markdownStyles.mention;
@@ -365,10 +324,6 @@ function MarkdownMention({ mention }: { mention: ShownMention }) {
 
 /**
  * A table's row.
- *
- * @param props - The row's attributes.
- * @param props.children - Its cells.
- * @returns The row.
  */
 function MarkdownRow({ children = null }: ComponentProps<'tr'>) {
   return <Tr>{children}</Tr>;
@@ -376,11 +331,6 @@ function MarkdownRow({ children = null }: ComponentProps<'tr'>) {
 
 /**
  * A table's header cell.
- *
- * @param props - The cell's attributes.
- * @param props.align - How its column is aligned.
- * @param props.children - Its text.
- * @returns The cell.
  */
 function MarkdownHeaderCell({ align, children = null }: ComponentProps<'th'>) {
   return (
@@ -392,11 +342,6 @@ function MarkdownHeaderCell({ align, children = null }: ComponentProps<'th'>) {
 
 /**
  * A table's cell.
- *
- * @param props - The cell's attributes.
- * @param props.align - How its column is aligned.
- * @param props.children - Its text.
- * @returns The cell.
  */
 function MarkdownCell({ align, children = null }: ComponentProps<'td'>) {
   return (
@@ -408,10 +353,6 @@ function MarkdownCell({ align, children = null }: ComponentProps<'td'>) {
 
 /**
  * The notes at the end of a text.
- *
- * @param props - The section's attributes.
- * @param props.children - The notes' heading and list.
- * @returns The section.
  */
 function MarkdownFootnotes({ children = null }: ComponentProps<'section'>) {
   return <section className={markdownStyles.footnotes}>{children}</section>;
@@ -426,7 +367,7 @@ function MarkdownFootnotes({ children = null }: ComponentProps<'section'>) {
  * @param options.highestHeading - How many `#` that heading was written with.
  * @param options.codeNote - What to say above a block's code when it's copied.
  * @param options.mentions - The people the text mentions.
- * @param options.appUrl - Adiutor's own address, for a text the company reads; `null` otherwise.
+ * @param options.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
  * @returns The components to render the text's tree with.
  */
 export default function markdownElements({
@@ -446,16 +387,10 @@ export default function markdownElements({
    * and its ID gets the text's name.
    *
    * @param depth - How many `#` the heading was written with.
-   * @returns The heading's component.
    */
   const heading = (depth: number) =>
     /**
      * A heading of the text.
-     *
-     * @param props - The heading's attributes.
-     * @param props.id - The parser's ID: set on the footnotes' label only.
-     * @param props.children - Its text.
-     * @returns The heading.
      */
     function MarkdownHeading({ id: headingId, children = null }: ComponentProps<'h1'>) {
       if (headingId === FOOTNOTE_LABEL_ID) {
@@ -482,9 +417,6 @@ export default function markdownElements({
    * it's one of the staff's pages in a text the company reads
    * (`textLinkTarget`).
    *
-   * @param props - The link's attributes.
-   * @param props.href - Where it points.
-   * @param props.children - Its text.
    * @returns The link, or its text.
    */
   function MarkdownLink({ href, children = null, ...props }: MarkdownLinkProps) {
@@ -521,9 +453,6 @@ export default function markdownElements({
   /**
    * An image in this text ({@link MarkdownImage}).
    *
-   * @param props - The image's attributes.
-   * @param props.src - The image's address.
-   * @param props.alt - Its description.
    * @returns The image's link, or its description.
    */
   function TextImage({ src = undefined, alt = undefined }: ComponentProps<'img'>) {
@@ -532,11 +461,6 @@ export default function markdownElements({
 
   /**
    * A block of code in this text, copied below the text's note.
-   *
-   * @param props - The block's attributes.
-   * @param props.node - The block's node in the text's tree.
-   * @param props.children - Its code element.
-   * @returns The block.
    */
   function NotedCodeBlock({ node, children = null }: ComponentProps<'pre'> & ExtraProps) {
     return (

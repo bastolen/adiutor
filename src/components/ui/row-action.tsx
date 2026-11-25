@@ -90,22 +90,6 @@ interface RowActionProps {
  * row; an error is shown next to the button and as a toast. If the action
  * removed the button while it had focus, focus moves to its card's heading
  * (`restoreFocusIfLost`). Elsewhere, the result is shown next to the button.
- *
- * @param props - Action props.
- * @param props.action - The server action.
- * @param props.fields - Hidden fields.
- * @param props.label - Button text.
- * @param props.ariaLabel - Accessible name.
- * @param props.variant - Button style.
- * @param props.confirm - Confirmation dialog text.
- * @param props.disabled - Disable the button.
- * @param props.focusableWhenDisabled - Keep it focusable while disabled.
- * @param props.onClick - Runs on click, before the action starts.
- * @param props.confirmFirst - Send the user to confirm it's them first when needed.
- * @param props.describedBy - ID of the text that explains the button.
- * @param props.doneMessage - The toast after it worked; defaults to the action's message.
- * @param props.allowedWhileSignedInAs - Keep it enabled while signed in as the user (their own work).
- * @returns The form.
  */
 export default function RowAction({
   action,

@@ -1,8 +1,7 @@
 /**
  * @file The logo link to the home page, at the top of the layouts without
  * the app's navigation. A client component, so its name comes from the root
- * provider: layouts are in each route's static shell, which Partial
- * Prefetching prefetches without reading the request (docs/i18n.md).
+ * provider: it sits in a route's static shell (docs/i18n.md).
  */
 'use client';
 
@@ -20,11 +19,6 @@ interface HomeLinkProps {
 
 /**
  * A link to `/` named "Adiutor home" for screen readers.
- *
- * @param props - The link's classes and content.
- * @param props.className - Classes for the link.
- * @param props.children - What the link shows.
- * @returns The link.
  */
 export default function HomeLink({ className, children }: HomeLinkProps) {
   const t = useTranslations('common');

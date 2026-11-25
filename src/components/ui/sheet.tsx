@@ -49,14 +49,6 @@ interface SheetProps {
  * corner, after the content in the tab order. Close it from the content too
  * where that's expected, e.g. after following a link.
  *
- * @param props - Sheet props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.trigger - The button that opens it.
- * @param props.title - Name for screen readers.
- * @param props.description - Description for screen readers.
- * @param props.closeLabel - The close button's name.
- * @param props.children - Content.
  * @returns The trigger, and the sheet while it's open.
  */
 export default function Sheet({

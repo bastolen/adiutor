@@ -28,7 +28,6 @@ import type { ReactNode } from 'react';
  *
  * @param props - Component props.
  * @param props.children - The page: its header and what follows.
- * @returns The page's wrapper.
  */
 export default function WidePage({ children }: { children: ReactNode }) {
   return (
