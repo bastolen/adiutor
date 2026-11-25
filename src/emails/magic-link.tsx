@@ -22,13 +22,6 @@ export interface MagicLinkEmailProps extends EmailBaseProps {
 /**
  * Asks the recipient to sign in with the button. The link works once and
  * expires in 5 minutes.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.url - The sign-in link.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function MagicLinkEmail({
   appUrl,

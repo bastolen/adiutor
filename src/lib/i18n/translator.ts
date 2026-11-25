@@ -1,6 +1,6 @@
 /**
  * @file Translations for a given language outside React and outside a
- * Next.js request: emails, services, the sign-in guards, the hourly job and
+ * Next.js request: emails, services, the sign-in guards, jobs and
  * scripts. Pages, components and server actions use next-intl's
  * `useTranslations` and `getTranslations` instead.
  * @see https://next-intl.dev/docs/environments/core-library

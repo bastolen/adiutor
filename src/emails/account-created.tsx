@@ -33,16 +33,6 @@ export interface AccountCreatedEmailProps extends EmailBaseProps {
 /**
  * Says who created the account and lets the recipient choose a password.
  * Signing in with an email link always works too.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.creatorName - Who created it.
- * @param props.staffName - The staff's name shown to users.
- * @param props.url - Link to choose a password.
- * @param props.validDays - Days the link stays valid.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function AccountCreatedEmail({
   appUrl,

@@ -30,11 +30,6 @@ export interface AdminChange {
  * Checks whether a role change or removal would take away the last admin of
  * a company or of the staff.
  *
- * @param change - The admin role and the change.
- * @param change.adminRole - The role that manages the people.
- * @param change.adminCount - How many admins it has now.
- * @param change.currentRole - The member's current role.
- * @param change.newRole - The new role, or `null` when removing.
  * @returns Whether the change must be refused.
  */
 export function wouldLeaveNoAdmin({
@@ -149,10 +144,6 @@ export interface RoleGrant {
  * Stepping down, removing someone, and the company's Client and Watcher roles
  * need nothing.
  *
- * @param grant - The grant.
- * @param grant.target - The staff or a company.
- * @param grant.role - The role given.
- * @param grant.from - The role they have there now, if any; left out for invitations.
  * @returns Whether the giver must have confirmed recently.
  */
 export function grantNeedsConfirmation({ target, role, from = null }: RoleGrant): boolean {
@@ -176,9 +167,6 @@ export interface KeptRoles {
  * one of them back, as if given anew: a deactivated account can't use them,
  * so it has none of them until then (no `from`).
  *
- * @param kept - The roles the account kept.
- * @param kept.staffRole - Its staff role, if any.
- * @param kept.companyRoles - Its roles in companies.
  * @returns One grant per role.
  */
 export function reactivationGrants({ staffRole, companyRoles }: KeptRoles): RoleGrant[] {

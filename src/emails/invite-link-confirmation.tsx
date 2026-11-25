@@ -34,16 +34,6 @@ export interface InviteLinkConfirmationEmailProps extends EmailBaseProps {
 /**
  * Sent after someone opens a single-use invite link and enters their email
  * address: joining proves they own it.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.companyName - The company.
- * @param props.role - The role.
- * @param props.url - Join link.
- * @param props.validDays - Days the link stays valid.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function InviteLinkConfirmationEmail({
   appUrl,

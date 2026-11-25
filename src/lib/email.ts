@@ -102,11 +102,6 @@ async function withinSendTimeout(sending: Promise<unknown>): Promise<void> {
  * Sends an email. Over SMTP, the whole send takes at most
  * {@link SEND_TIMEOUT_MS}.
  *
- * @param email - The email to send.
- * @param email.to - Recipient address.
- * @param email.subject - Subject line.
- * @param email.text - Plain-text body.
- * @param email.html - HTML body.
  * @throws {Error} When the mail server refuses the email or doesn't accept it
  *   in time; outside development and tests, when neither an outbox nor SMTP
  *   is configured.

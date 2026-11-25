@@ -162,7 +162,7 @@ export const rateLimitBucket = pgTable(
  * the audit log keeps the history (`impersonation_started` and
  * `impersonation_ended`). When the staff member's session goes (signing out,
  * being signed out, its end), `session_id` is cleared rather than the row
- * deleted, so the hourly job still records how it ended
+ * deleted, so the job that ends them still records how it ended
  * (`endFinishedImpersonations` in `src/server/auth/impersonation.ts`).
  */
 export const impersonation = pgTable(

@@ -122,7 +122,6 @@ function strongTag(chunks: ReactNode) {
  * The link to the request, for the `<link>` tag of a message.
  *
  * @param href - The request's address.
- * @returns The tag's renderer.
  */
 function requestLinkTag(href: string) {
   return function linkTag(chunks: ReactNode) {
@@ -144,7 +143,6 @@ export const REQUEST_EMAILS_PATH = '/account/preferences#request-emails';
  * The link to the account's setting, for the `<account>` tag of the footer.
  *
  * @param href - The setting's address.
- * @returns The tag's renderer.
  */
 function accountLinkTag(href: string) {
   return function accountTag(chunks: ReactNode) {
@@ -166,7 +164,6 @@ function accountLinkTag(href: string) {
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address, for a text the company reads (its links to the
  *   staff's pages show as text); `null` for an internal note.
- * @returns The text.
  */
 function WrittenText({
   text,
@@ -202,7 +199,6 @@ function WrittenText({
  * @param props.audience - How to word the request's statuses for the reader.
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address.
- * @returns The news.
  */
 function UpdateItem({
   item,
@@ -280,20 +276,6 @@ function UpdateItem({
  * that work once and only for them) take its place. A note says replies to
  * the email aren't read. The links to the request sign the reader in (`url`,
  * decision 0036), so a last note says so, and not to forward the email.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.reference - The request's number as people see it.
- * @param props.title - The request's title.
- * @param props.companyName - The request's company.
- * @param props.url - The reader's link that signs them in and opens the request.
- * @param props.role - Why the reader gets the email.
- * @param props.audience - How to word the statuses.
- * @param props.items - What happened.
- * @param props.answerLinks - The reader's links that answer the solution, if they may.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function RequestUpdateEmail({
   appUrl,

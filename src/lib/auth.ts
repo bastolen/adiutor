@@ -489,6 +489,8 @@ export const auth = betterAuth({
       }
       return (await loadAuthEvents()).checkIncomingUser({ user, source }, toHookContext(ctx));
     },
+    // Every field here is `input: false`: Better Auth's endpoints never set it; the service named in
+    // its comment does.
     additionalFields: {
       /** When the account was deactivated (by the user or an Admin); it can't sign in then. */
       deactivatedAt: { type: 'date', required: false, input: false },
@@ -522,22 +524,21 @@ export const auth = betterAuth({
       mfaRecommendationDismissedAt: { type: 'date', required: false, input: false },
       /**
        * Whether staff may sign in as the user ("Sign in as"); on unless the
-       * user turned it off on their Security page. Never set through Better
-       * Auth's endpoints (`setStaffSignInAllowed`).
+       * user turned it off on their Security page.
+       * (`setStaffSignInAllowed`).
        */
       allowStaffSignIn: { type: 'boolean', required: true, defaultValue: true, input: false },
       /**
        * Which picture the user shows: their initials, or the picture of
        * their account with a provider (`AVATAR_SOURCES`). Empty until they
        * choose, which shows the picture of the account they connected first
-       * (`pictureAccount`). Never set through Better Auth's endpoints
-       * (`setOwnPicture`).
+       * (`pictureAccount`); set by
+       * `setOwnPicture`.
        */
       avatarSource: { type: [...AVATAR_SOURCES], required: false, input: false },
       /**
        * Whether the user gets emails about requests (`readRequestUpdate`); on
-       * unless they turned it off on their account's Profile page. Never set
-       * through Better Auth's endpoints (`setOwnRequestEmails`).
+       * unless they turned it off on their account's Profile page (`setOwnRequestEmails`).
        */
       requestEmails: { type: 'boolean', required: true, defaultValue: true, input: false },
       /**

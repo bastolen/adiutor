@@ -1,7 +1,8 @@
 /**
  * @file Proxy (formerly middleware): every page requires a signed-in user,
- * except the public ones listed below (sign-in, invitations, invite links and
- * first-run setup).
+ * except the public ones in `PUBLIC_PATHS` (sign-in, invitations, invite links,
+ * first-run setup, the links in emails that answer a solution, the health
+ * check and the jobs' tick).
  *
  * Signed-out visitors are sent to the sign-in page (API routes get a 401).
  * This only checks that a session cookie exists, which is fast but not secure
@@ -65,7 +66,6 @@ export default function proxy(request: NextRequest) {
   /**
    * Adds the policy to a response.
    *
-   * @param response - The response.
    * @returns The same response.
    */
   const withPolicy = (response: NextResponse) => {

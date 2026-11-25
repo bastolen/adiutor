@@ -38,18 +38,6 @@ export interface StaffAdminAddedEmailProps extends EmailBaseProps {
  * Names the new staff Admin and how they became one, says what to do if the
  * recipient doesn't recognise it, and links to the staff settings. Without the
  * device or IP address of whoever made the change.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.newAdminName - The new Admin's name.
- * @param props.newAdminEmail - The new Admin's email address.
- * @param props.how - How they became one.
- * @param props.byName - Who gave the role, sent the invitation or reactivated the account, if
- *   known.
- * @param props.url - Link to the staff settings.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function StaffAdminAddedEmail({
   appUrl,

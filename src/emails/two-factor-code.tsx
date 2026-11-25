@@ -23,13 +23,6 @@ export interface TwoFactorCodeEmailProps extends EmailBaseProps {
 /**
  * Shows the code in a large box (`EmailCode`). It expires in
  * `EMAIL_CODE_MINUTES` minutes.
- *
- * @param props - Template props.
- * @param props.appUrl - Public app URL.
- * @param props.code - The code.
- * @param props.locale - The recipient's language.
- * @param props.logoSrc - Logo URL override.
- * @returns The email.
  */
 export default function TwoFactorCodeEmail({
   appUrl,
