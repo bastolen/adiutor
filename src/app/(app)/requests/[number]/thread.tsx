@@ -64,7 +64,6 @@ const CHANGE_ICONS: Record<Exclude<RequestEntryView['kind'], WrittenEntryKind>, 
  * @param props.afterTime - What follows the time: a note's badge, the mark of work done while
  *   signed in as its author, and "Edited" for an edited text.
  * @param props.children - What they wrote or changed.
- * @returns The list item.
  */
 function Entry({
   id,
@@ -119,7 +118,6 @@ function Entry({
  * @param props - Component props.
  * @param props.entry - The change.
  * @param props.audience - Who reads it, for the wording of a status.
- * @returns The sentence.
  */
 function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: RequestAudience }) {
   const t = useTranslations('requests');

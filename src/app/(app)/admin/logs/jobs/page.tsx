@@ -46,7 +46,6 @@ export const maxDuration = 60;
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the two tables' states.
- * @returns The page content.
  */
 async function Jobs({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await requireGlobalPermission('jobs:view');
@@ -89,10 +88,6 @@ async function Jobs({ searchParams }: { searchParams: Promise<SearchParams> }) {
 
 /**
  * The Jobs page.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function JobsPage({ searchParams }: PageProps<'/admin/logs/jobs'>) {
   return (

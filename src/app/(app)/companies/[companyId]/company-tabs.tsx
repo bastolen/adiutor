@@ -17,11 +17,6 @@ import { COMPANY_BOARD_SEGMENT } from '@/lib/requests';
  * company's board (`COMPANY_BOARD_SEGMENT`), its other view of the same
  * requests: there, it's handed the board's segment, so `SegmentTabNav`
  * marks it current (`aria-current="page"`) as on the list.
- *
- * @param props - The tabs' props, as `SegmentTabNav` takes them.
- * @param props.label - Landmark name.
- * @param props.items - The tabs; the one without a segment is Requests.
- * @returns The navigation.
  */
 export default function CompanyTabs({ label, items }: ComponentProps<typeof SegmentTabNav>) {
   const current = useSelectedLayoutSegment();

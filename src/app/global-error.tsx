@@ -62,8 +62,6 @@ function savedLocale(): Locale {
 
 /**
  * The language on the server, which can't read the cookie here.
- *
- * @returns The default locale.
  */
 function serverLocale(): Locale {
   return DEFAULT_LOCALE;
@@ -71,8 +69,6 @@ function serverLocale(): Locale {
 
 /**
  * The time zone on the server, which knows nobody's zone here.
- *
- * @returns The default zone.
  */
 function serverTimeZone(): string {
   return DEFAULT_TIME_ZONE;
@@ -100,11 +96,6 @@ function ErrorTitle() {
 
 /**
  * The document with the root error page in it.
- *
- * @param props - Props from Next.js.
- * @param props.error - What was thrown.
- * @param props.retry - Fetches and renders the page again.
- * @returns The error document.
  */
 export default function GlobalError({ error, retry }: ErrorPageProps) {
   // English while hydrating (what the server rendered), then the cookie's language (which doesn't

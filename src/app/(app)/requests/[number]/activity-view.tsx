@@ -101,7 +101,6 @@ function useActivityView(): ActivityViewContextValue {
  * @param props.view - The view as the reader saved it, applied to them (`RequestDetail.activity`).
  * @param props.offered - The groups the reader is offered.
  * @param props.children - The card.
- * @returns The provider.
  */
 export function ActivityViewProvider({
   view,
@@ -274,8 +273,6 @@ function OrderMenu() {
  * The two menus for the Conversation card's heading: what the activity shows
  * and its order. Off while a staff member is signed in as the reader: it's
  * the reader's own choice, which the server refuses to change then.
- *
- * @returns The menus' buttons.
  */
 export function ActivityControls() {
   return (
@@ -311,7 +308,6 @@ export function ActivityError() {
  *
  * @param props - Component props.
  * @param props.children - The button's text.
- * @returns The button.
  */
 export function ShowEverythingButton({ children }: { children: ReactNode }) {
   const { changesOff, save } = useActivityView();

@@ -14,8 +14,6 @@ import Button from '@/components/ui/button';
 
 /**
  * The page's `h1`: "Signing in didn't work".
- *
- * @returns The heading.
  */
 export function SignInErrorHeading() {
   const t = useTranslations('common');

@@ -19,8 +19,6 @@ import SignInErrorDetails from './sign-in-error-details';
 /**
  * Page metadata: "Sign-in problem", in the request's language. The page is
  * only reached through a failed sign-in, so it's kept out of search engines.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -32,8 +30,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Placeholder while the error is recorded: the message and the reference box.
- *
- * @returns The placeholder.
  */
 function DetailsSkeleton() {
   return (
@@ -48,10 +44,6 @@ function DetailsSkeleton() {
  * The sign-in error page. The heading and the buttons are in its static
  * shell (`shell-text.tsx`); what went wrong and the reference come per
  * request.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters: Better Auth's `error` and `error_description`.
- * @returns The page.
  */
 export default function SignInErrorPage({ searchParams }: PageProps<'/sign-in-error'>) {
   return (

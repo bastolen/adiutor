@@ -23,10 +23,6 @@ interface ProviderMfaWarningProps {
  * the users without MFA. It isn't dismissible: it stays until the provider is
  * configured again or they've set up other MFA. Its text comes from the
  * `dashboard` namespace.
- *
- * @param props - Component props.
- * @param props.warning - How many users, and which providers.
- * @returns The banner.
  */
 export default function ProviderMfaWarning({ warning }: ProviderMfaWarningProps) {
   const t = useTranslations('dashboard.providerMfaWarning');

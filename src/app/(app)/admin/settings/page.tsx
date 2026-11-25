@@ -31,8 +31,6 @@ export const generateMetadata = globalPermissionMetadata('staff:manage', 'admin.
  * Loads and shows the general settings. Its text comes from
  * `admin.settings.general`, which the forms (`StaffNameForm`, `LanguagesForm`
  * and `DefaultTimeZoneForm`) also get through `ClientMessages`.
- *
- * @returns The page content.
  */
 async function GeneralSettings() {
   const t = await getTranslations('admin.settings.general');
@@ -60,8 +58,6 @@ async function GeneralSettings() {
 
 /**
  * The General tab of Settings.
- *
- * @returns The page.
  */
 export default function GeneralSettingsPage() {
   return (

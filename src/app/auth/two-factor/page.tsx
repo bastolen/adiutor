@@ -14,8 +14,6 @@ import TwoFactorForm from './two-factor-form';
 
 /**
  * Page metadata: "Confirm it’s you", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -24,8 +22,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * The code step page. The form's text comes with it (`auth`).
- *
- * @returns The page.
  */
 export default function TwoFactorPage() {
   return (

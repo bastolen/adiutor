@@ -15,7 +15,6 @@ import TextLink from '@/components/ui/text-link';
  * "Last active:" before a time in a column that doesn't say it.
  *
  * @param chunks - The tag's text.
- * @returns The visually hidden text.
  */
 export function hiddenTag(chunks: ReactNode) {
   return <span className="sr-only">{chunks}</span>;

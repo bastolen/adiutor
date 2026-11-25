@@ -24,7 +24,6 @@ export type SignedInAsKind = 'work' | 'edit';
  * @param staff - The staff member's name, or `null`.
  * @param author - The person the work shows as theirs.
  * @param names - The names of the two sides.
- * @returns The sentence.
  */
 function markText(
   t: ReturnType<typeof useTranslations<'requests.signedInAs'>>,

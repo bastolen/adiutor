@@ -31,8 +31,6 @@ import TimeZoneForm from './time-zone-form';
 
 /**
  * Page metadata: "Preferences · Account", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('account');
@@ -44,7 +42,6 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters; set after saving the language or time zone.
- * @returns The page content.
  */
 async function Preferences({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
@@ -100,10 +97,6 @@ async function Preferences({ searchParams }: { searchParams: Promise<AccountPara
 
 /**
  * The Preferences tab of the account.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function PreferencesPage({ searchParams }: PageProps<'/account/preferences'>) {
   return (

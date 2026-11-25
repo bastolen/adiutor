@@ -37,7 +37,6 @@ const SECTION = 'connected-accounts';
  * @param link - The connected account.
  * @param locale - The reader's language, for the date.
  * @param timeZone - The reader's time zone, for the date.
- * @returns The description.
  */
 function describeLink(
   t: ReturnType<typeof useTranslations<'account'>>,
@@ -146,17 +145,6 @@ interface ConnectedAccountsCardProps {
  * the MFA the user's role requires are disabled, with the reason below (only
  * while a disabled control it explains is shown, and pointed at only by those
  * controls).
- *
- * @param props - Card props.
- * @param props.message - How connecting an account went, if the user just came back.
- * @param props.providers - Configured providers.
- * @param props.connected - Connected accounts.
- * @param props.disconnectBlocked - Accounts that can't be disconnected.
- * @param props.disconnectBlockedReason - Why.
- * @param props.connectBlocked - Whether connecting another account is refused.
- * @param props.confirmBlocked - Accounts connected at sign-in that can't be confirmed.
- * @param props.connectBlockedReason - Why those can't be connected or confirmed.
- * @returns The card.
  */
 export default function ConnectedAccountsCard({
   message,

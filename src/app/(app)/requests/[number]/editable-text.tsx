@@ -47,12 +47,6 @@ interface EditableTextProps {
  * Whether the reader may edit the text is decided on the server: the page
  * only renders this for a text they may edit.
  *
- * @param props - Component props.
- * @param props.request - The request's number.
- * @param props.entry - The reply's or note's ID, or `null` for the description.
- * @param props.note - Whether it's an internal note.
- * @param props.edit - What the editor starts from.
- * @param props.children - The text as it reads.
  * @returns The text and its button, or the editor.
  */
 export default function EditableText({

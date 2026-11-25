@@ -64,13 +64,6 @@ interface RaiseRequestFormProps {
  * for. The staff also get a priority, which the type sets unless they choose
  * one; nobody else sees a priority. A refused request keeps what was typed;
  * a raised one opens its page.
- *
- * @param props - Form props.
- * @param props.types - The types to choose from.
- * @param props.companies - The companies to choose from.
- * @param props.company - The company to start with.
- * @param props.choosesPriority - Whether to show the priority.
- * @returns The form.
  */
 export default function RaiseRequestForm({
   types,

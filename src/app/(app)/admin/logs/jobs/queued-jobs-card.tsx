@@ -72,11 +72,6 @@ interface QueuedJobsCardProps {
 
 /**
  * The kinds of queued job.
- *
- * @param props - Component props.
- * @param props.kinds - The kinds.
- * @param props.canManage - Whether the viewer may act on them.
- * @returns The card.
  */
 export default function QueuedJobsCard({ kinds, canManage }: QueuedJobsCardProps) {
   const t = useTranslations('admin.jobs.queued');

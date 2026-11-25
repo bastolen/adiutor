@@ -43,11 +43,6 @@ interface RequestTypeDialogProps {
  * starting priority: "Add type" for a new one (starting at Normal), or
  * "Edit" (named with the type for screen readers) for one that's there. A
  * success is a toast; a refusal stays in the dialog, with what was typed.
- *
- * @param props - Component props.
- * @param props.type - The type to edit, if any.
- * @param props.priorities - The priorities to choose from.
- * @returns The button and dialog.
  */
 export default function RequestTypeDialog({
   type = undefined,

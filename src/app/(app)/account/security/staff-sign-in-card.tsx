@@ -20,7 +20,6 @@ import { staffSignInAction } from './actions';
  *
  * @param props - Component props.
  * @param props.allowed - Whether staff may sign in as the user now.
- * @returns The card.
  */
 export default function StaffSignInCard({ allowed }: { allowed: boolean }) {
   const t = useTranslations('account.security.staffSignIn');

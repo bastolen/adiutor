@@ -37,7 +37,6 @@ import { PeopleAvatars, personName } from './request-person';
  * @param props - Component props.
  * @param props.company - The URL name of the company to raise it in, when the list is one company's.
  * @param props.label - The button's text.
- * @returns The button.
  */
 export function NewRequestButton({
   company = undefined,
@@ -133,12 +132,6 @@ function emptyKindOf(status: RequestStatusFilter, narrowed: boolean): EmptyKind 
  * search or a filter emptied it, offers "New request" to whoever may raise
  * one.
  *
- * @param props - Component props.
- * @param props.path - The page the list is on.
- * @param props.searchParams - The page's query parameters.
- * @param props.actor - The viewer.
- * @param props.company - The company whose list this is, on its own page.
- * @param props.renderHeader - Renders what comes before the list, from what the list loaded.
  * @returns The header, if any, the filters and the table (or an empty state).
  */
 export default async function RequestList({
@@ -185,7 +178,6 @@ export default async function RequestList({
    * Assigned to column never widens the table past a tablet's width.
    *
    * @param request - The request.
-   * @returns The linked avatars.
    */
   const avatarsOf = (request: RequestListItem) => (
     <Link

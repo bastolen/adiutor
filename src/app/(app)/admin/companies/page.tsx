@@ -43,7 +43,6 @@ export const generateMetadata = globalPermissionMetadata('company:view', 'admin.
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `q` is the search text; the
  *   table's sort and page (see `COMPANIES_TABLE`).
- * @returns The page content.
  */
 async function CompanyList({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const [locale, timeZone] = await Promise.all([getLocale(), getTimeZone()]);
@@ -167,10 +166,6 @@ async function CompanyList({ searchParams }: { searchParams: Promise<SearchParam
 
 /**
  * The companies page.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function CompaniesPage({ searchParams }: PageProps<'/admin/companies'>) {
   return (

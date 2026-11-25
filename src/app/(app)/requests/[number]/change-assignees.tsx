@@ -36,7 +36,6 @@ export interface AssigneeChoice {
  * @param props - Component props.
  * @param props.choices - The staff members to offer.
  * @param props.assigned - The user IDs of those assigned now.
- * @returns The fields.
  */
 function AssigneeFields({
   choices,
@@ -91,7 +90,6 @@ function AssigneeFields({
  * @param props.request - The request's number.
  * @param props.choices - The staff members who can be assigned, and anyone assigned now.
  * @param props.assigned - The user IDs of those assigned now.
- * @returns The button and dialog.
  */
 export default function ChangeAssignees({
   request,

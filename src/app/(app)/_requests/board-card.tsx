@@ -78,12 +78,6 @@ interface BoardCardProps {
  * dragged, the card left behind shows its place with a dashed border; it
  * can't be dragged while it's being moved.
  *
- * @param props - Card props.
- * @param props.card - The card.
- * @param props.names - Each lane's name.
- * @param props.busy - Whether it's being moved.
- * @param props.drag - The board's drag and drop, once loaded.
- * @param props.onChoose - Called with the lane picked.
  * @returns The card, as a list item.
  */
 export default function BoardCard({ card, names, busy, drag, onChoose }: BoardCardProps) {

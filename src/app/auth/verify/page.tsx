@@ -48,8 +48,6 @@ import StepUpForm from './step-up-form';
 
 /**
  * Page metadata: "Confirm it’s you", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -65,7 +63,6 @@ export async function generateMetadata(): Promise<Metadata> {
  *   from the Security page or `for=strong` before signing in as someone, and
  *   after "Confirm with GitHub" didn't sign in: `error` and the `provider` it
  *   named).
- * @returns The form.
  */
 async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
@@ -121,10 +118,6 @@ async function StepUp({ searchParams }: { searchParams: Promise<SearchParams> })
 
 /**
  * The step-up page. The form's text comes with it (`auth`).
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function VerifyPage({ searchParams }: PageProps<'/auth/verify'>) {
   return (

@@ -32,11 +32,6 @@ interface DefaultTimeZoneFormProps {
  * The form isn't cleared after a save (`resetOnSuccess: false`): it edits a
  * saved setting, and clearing would put the select back on the zone it
  * showed when the page loaded, not the one just saved.
- *
- * @param props - Form props.
- * @param props.defaultTimeZone - Adiutor's default zone now.
- * @param props.options - The zones to pick from.
- * @returns The form.
  */
 export default function DefaultTimeZoneForm({
   defaultTimeZone,

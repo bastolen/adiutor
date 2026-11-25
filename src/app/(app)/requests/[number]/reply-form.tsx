@@ -39,7 +39,6 @@ type ReplyButton = 'send' | 'sendAndWait' | 'sendAsSolution';
  * @param props.request - The request's number.
  * @param props.canWait - Whether to offer "Send and wait for the company".
  * @param props.canPropose - Whether to offer "Send as solution".
- * @returns The form.
  */
 export default function ReplyForm({
   request,

@@ -35,7 +35,6 @@ import {
  *
  * @param props - Component props.
  * @param props.job - The job.
- * @returns The wording.
  */
 function NextRun({ job }: { job: RecurringJobOverview }) {
   const t = useTranslations('admin.jobs.recurring');
@@ -87,7 +86,6 @@ function timeTag(at: Date, locale: Locale, timeZone: string) {
  *
  * @param props - Component props.
  * @param props.at - When the last tick started, if one did.
- * @returns The wording.
  */
 function LastTick({ at }: { at: Date | null }) {
   const t = useTranslations('admin.jobs.recurring');
@@ -114,7 +112,6 @@ function LastTick({ at }: { at: Date | null }) {
  * @param props - Component props.
  * @param props.job - The job.
  * @param props.canLookUp - Whether the viewer may look up errors.
- * @returns The wording.
  */
 function LastRun({ job, canLookUp }: { job: RecurringJobOverview; canLookUp: boolean }) {
   const t = useTranslations('admin.jobs.recurring');
@@ -143,7 +140,6 @@ function LastRun({ job, canLookUp }: { job: RecurringJobOverview; canLookUp: boo
  *
  * @param props - Component props.
  * @param props.job - The job.
- * @returns The buttons.
  */
 function Controls({ job }: { job: RecurringJobOverview }) {
   const t = useTranslations('admin.jobs.actions');
@@ -177,13 +173,6 @@ interface RecurringJobsCardProps {
 
 /**
  * The scheduled jobs.
- *
- * @param props - Component props.
- * @param props.jobs - The recurring jobs.
- * @param props.lastTickAt - When the last tick started, if one did.
- * @param props.canLookUp - Whether the viewer may look up errors.
- * @param props.canManage - Whether the viewer may run, pause and resume jobs.
- * @returns The card.
  */
 export default function RecurringJobsCard({
   jobs,

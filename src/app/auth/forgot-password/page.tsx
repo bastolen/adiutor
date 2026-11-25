@@ -13,8 +13,6 @@ import ForgotPasswordForm from './forgot-password-form';
 
 /**
  * Page metadata: "Forgot password", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -24,8 +22,6 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The forgot-password page. The form's text is in the request's language
  * (`auth`), so it renders behind a Suspense boundary.
- *
- * @returns The page.
  */
 export default function ForgotPasswordPage() {
   return (

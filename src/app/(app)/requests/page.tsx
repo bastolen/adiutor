@@ -21,8 +21,6 @@ import RequestsHeader from '../_requests/requests-header';
 
 /**
  * Page metadata: "Requests · Adiutor", for everyone signed in.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('requests.list');
@@ -38,7 +36,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the search, the filters, and the table's sort and
  *   page (see `RequestList`).
- * @returns The page content.
  */
 async function Requests({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor();
@@ -56,10 +53,6 @@ async function Requests({ searchParams }: { searchParams: Promise<SearchParams> 
 
 /**
  * The requests page, as wide as the board on a wide screen (`WidePage`).
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function RequestsPage({ searchParams }: PageProps<'/requests'>) {
   return (

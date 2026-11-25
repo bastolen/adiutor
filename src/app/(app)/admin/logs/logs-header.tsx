@@ -22,11 +22,6 @@ interface LogsHeaderProps {
  * section the viewer may see: the errors (staff Admins) and the background
  * jobs (staff Admins and Managers, so everyone who sees the logs). Its text
  * comes from `admin.logs.header`.
- *
- * @param props - Header props.
- * @param props.canViewErrors - Whether the viewer may see recorded errors.
- * @param props.canViewJobs - Whether the viewer may see the background jobs.
- * @returns The header.
  */
 export default function LogsHeader({ canViewErrors, canViewJobs }: LogsHeaderProps) {
   const t = useTranslations('admin.logs.header');

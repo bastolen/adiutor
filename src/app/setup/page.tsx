@@ -19,8 +19,6 @@ import SetupForm from './setup-form';
 
 /**
  * Shows the setup form on a fresh install, or the 404 page.
- *
- * @returns The page content.
  */
 async function Setup() {
   await connection();
@@ -39,8 +37,6 @@ async function Setup() {
 
 /**
  * The setup page. The form's text comes with it (`auth`).
- *
- * @returns The page.
  */
 export default function SetupPage() {
   return (

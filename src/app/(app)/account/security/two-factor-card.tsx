@@ -60,15 +60,6 @@ interface TwoFactorCardProps {
  * the inbox alone can't get past the app. For roles that require MFA (staff
  * Admins and Managers, company Admins) email codes don't count, so they're
  * not offered.
- *
- * @param props - Card props.
- * @param props.email - The user's email address.
- * @param props.enabled - Whether it's on.
- * @param props.authenticatorSetUp - Whether an authenticator app is set up.
- * @param props.emailCodes - How email codes stand.
- * @param props.hasPassword - Ask for the password to confirm changes.
- * @param props.turnOffBlockedReason - Why turning off isn't allowed, if so.
- * @returns The card.
  */
 export default function TwoFactorCard({
   email,

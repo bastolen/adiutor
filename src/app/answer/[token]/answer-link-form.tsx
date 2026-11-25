@@ -23,7 +23,6 @@ import { answerLinkAction } from './actions';
  * @param props - Component props.
  * @param props.token - The link's token.
  * @param props.answers - The answers to offer, the main one first.
- * @returns The form.
  */
 export default function AnswerLinkForm({
   token,

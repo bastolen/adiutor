@@ -26,7 +26,6 @@ export const REQUEST_VIEW_PATHS: RequestViewPaths = { list: '/requests', board: 
  * company's first page) and its board.
  *
  * @param company - The company's URL name.
- * @returns The paths.
  */
 export function companyViewPaths(company: string): RequestViewPaths {
   const list = `/companies/${company}`;
@@ -45,7 +44,6 @@ export function companyViewPaths(company: string): RequestViewPaths {
  * @param props.view - The view the page shows.
  * @param props.filters - The page's filters.
  * @param props.paths - Where the views are; the requests across companies' unless it's given.
- * @returns The navigation.
  */
 export default function RequestViewToggle({
   view,
@@ -64,7 +62,6 @@ export default function RequestViewToggle({
    * The address of a view, with the filters kept.
    *
    * @param to - The view.
-   * @returns The address.
    */
   const hrefOf = (to: RequestView) => {
     const page = createPageUrl(paths[to], params, tTables);

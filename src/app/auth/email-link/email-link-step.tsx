@@ -28,7 +28,6 @@ import EmailLinkForm from './email-link-form';
  * @param props - Component props.
  * @param props.message - What's wrong.
  * @param props.signInHref - The sign-in page, returning to where the link would have.
- * @returns The message.
  */
 function LinkProblem({ message, signInHref }: { message: string; signInHref: string }) {
   const t = useTranslations('auth');
@@ -63,7 +62,6 @@ function refusalMessage(t: AuthTranslator, code: string | undefined): string | n
  *
  * @param props - Component props.
  * @param props.searchParams - The page's query string.
- * @returns The page content.
  */
 export default async function EmailLinkStep({
   searchParams,

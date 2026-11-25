@@ -15,7 +15,6 @@ import useBackToOwnAccount from './use-back-to-own-account';
  *
  * @param props - Component props.
  * @param props.label - The button's text, e.g. "Back to my account".
- * @returns The button.
  */
 export default function BackToOwnAccountButton({ label }: { label: string }) {
   const { goBack, pending } = useBackToOwnAccount();

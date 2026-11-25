@@ -23,7 +23,6 @@ import ReplyForm from './reply-form';
  * @param props.request - The request's number.
  * @param props.canWait - Whether the reply form offers "Send and wait for the company".
  * @param props.canPropose - Whether the reply form offers "Send as solution".
- * @returns The tabs.
  */
 export default function WriteTabs({
   request,

@@ -17,8 +17,6 @@ import { staffSectionKeys } from './staff-sections';
  * picture in the account menu, and for an account without a time zone (not
  * while signed in as the user) the first visit's save of the browser's zone.
  * Render it inside a Suspense boundary.
- *
- * @returns The navigation.
  */
 export default async function Navigation() {
   const actor = await getActor({ allowMissingMfa: true });

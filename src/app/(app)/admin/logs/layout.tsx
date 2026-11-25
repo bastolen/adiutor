@@ -23,8 +23,6 @@ export const generateMetadata = globalPermissionMetadata('audit:view');
 /**
  * Checks the viewer may see the logs (the 404 page otherwise) and shows the
  * header, with tabs for the other sections they may see.
- *
- * @returns The header.
  */
 async function LogsHeaderLoader() {
   const actor = await requireGlobalPermission('audit:view');
@@ -39,10 +37,6 @@ async function LogsHeaderLoader() {
 
 /**
  * The Logs header above its pages.
- *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
- * @returns The layout.
  */
 export default function LogsLayout({ children }: LayoutProps<'/admin/logs'>) {
   return (

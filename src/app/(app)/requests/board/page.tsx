@@ -20,8 +20,6 @@ import RequestBoard from '../../_requests/request-board';
 
 /**
  * Page metadata: "Request board · Adiutor", for everyone signed in.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('requests.board');
@@ -36,7 +34,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * @param props - Component props.
  * @param props.searchParams - Query parameters: the search, the filters, the sort and the cards
  *   per lane (see `RequestBoard`).
- * @returns The page content.
  */
 async function Board({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await getActor();
@@ -50,10 +47,6 @@ async function Board({ searchParams }: { searchParams: Promise<SearchParams> }) 
 
 /**
  * The board page, as wide as a request's page on a wide screen (`WidePage`).
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function RequestBoardPage({ searchParams }: PageProps<'/requests/board'>) {
   // Lanes side by side: on a wide screen the board gets the room a request's page gets, so

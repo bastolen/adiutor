@@ -26,8 +26,6 @@ import { authErrorText } from '@/lib/sign-in/auth-error-messages';
  * keeps the page alive (React's `<Activity>`), and the next person on the
  * browser mustn't find the last address typed here, its confirmation, or a
  * button still busy.
- *
- * @returns The form.
  */
 export default function ForgotPasswordForm() {
   const t = useTranslations('auth');

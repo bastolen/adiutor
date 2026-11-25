@@ -31,7 +31,6 @@ import RequestTypeDialog from './request-type-dialog';
  *
  * @param props - Component props.
  * @param props.types - Every type, in order, with its starting priority (staff Admins get it).
- * @returns The card.
  */
 export default function RequestTypesCard({ types }: { types: readonly RequestTypeView[] }) {
   const t = useTranslations('admin.settings.requests.requestTypes');

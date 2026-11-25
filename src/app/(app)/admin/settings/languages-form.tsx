@@ -35,7 +35,6 @@ import { saveLanguagesAction } from './actions';
  * @param props - Form props.
  * @param props.defaultLocale - Adiutor's default language now.
  * @param props.offered - The languages it offers now.
- * @returns The form.
  */
 export default function LanguagesForm({
   defaultLocale,

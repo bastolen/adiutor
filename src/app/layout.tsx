@@ -21,8 +21,6 @@ import './globals.css';
 /**
  * Default page metadata, in the request's language. Pages set their own
  * title, which the template ends with the product name ("Users · Adiutor").
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common');
@@ -61,10 +59,6 @@ export const instant = false;
  * reads the path, which isn't known while Next prerenders a route with
  * dynamic parameters, so it waits behind its own `<Suspense>` (rendering
  * nothing meanwhile).
- *
- * @param props - Layout props from Next.js.
- * @param props.children - The page or nested layout to render.
- * @returns The document shell.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
   const [nonce, locale, messages, timeZone, languages] = await Promise.all([

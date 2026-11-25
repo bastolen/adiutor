@@ -117,15 +117,6 @@ export interface StepUpFormProps {
  * Errors are worded in the reader's language from their code
  * (`authErrorText`), except the refusals the server words itself (too many
  * attempts, with how long to wait).
- *
- * @param props - Form props.
- * @param props.methods - Available methods.
- * @param props.callbackURL - Where to go afterwards.
- * @param props.initialError - Error to show first.
- * @param props.roleRequiresMfa - Whether the role requires MFA, for the wording.
- * @param props.accountHasMfa - Whether the account has MFA, for the wording.
- * @param props.confirmedBefore - Whether the session was confirmed before, for the wording.
- * @returns The form.
  */
 export default function StepUpForm({
   methods,

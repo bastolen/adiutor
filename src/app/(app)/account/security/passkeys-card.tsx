@@ -66,7 +66,6 @@ function passkeyName(passkey: PasskeySummary, fallback: string): string {
  * @param props.initialName - The name to start with.
  * @param props.submitLabel - Submit button text.
  * @param props.onSubmit - Saves the name; resolves to an error code, or `null` when it worked.
- * @returns The dialog.
  */
 function NameDialog({
   open,
@@ -135,11 +134,6 @@ function NameDialog({
  * Adding asks the browser to create a passkey with the device's fingerprint,
  * face or PIN. Adding and removing need a recent confirmation with the second
  * step (see `useRecentConfirmation`); renaming only a confirmed session.
- *
- * @param props - Card props.
- * @param props.passkeys - The passkeys.
- * @param props.removeLastBlockedReason - Why the only passkey can't be removed, if so.
- * @returns The card.
  */
 export default function PasskeysCard({ passkeys, removeLastBlockedReason }: PasskeysCardProps) {
   const t = useTranslations('account');

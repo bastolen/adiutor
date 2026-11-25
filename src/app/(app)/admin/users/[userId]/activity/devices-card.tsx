@@ -37,14 +37,6 @@ interface DevicesCardProps {
 
 /**
  * The user's signed-in devices.
- *
- * @param props - Component props.
- * @param props.userId - The user's ID.
- * @param props.userName - The name shown for the user.
- * @param props.sessions - The page of devices to show.
- * @param props.table - The table's links.
- * @param props.canSignOut - Whether the viewer may sign them out everywhere.
- * @returns The card.
  */
 export default function DevicesCard({
   userId,

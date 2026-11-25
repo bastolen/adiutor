@@ -63,7 +63,6 @@ const WORDED_STATUSES: readonly RequestStatus[] = ['waiting', 'proposed'];
  * @param props.reference - Its number as people see it.
  * @param props.showsCompany - Whether to name its company.
  * @param props.audience - The words its lane is in.
- * @returns The content.
  */
 function CardBody({
   card,
@@ -121,7 +120,6 @@ function CardBody({
  * @param props.card - The card's request.
  * @param props.names - The names that stand in for someone without one.
  * @param props.locale - The reader's language, to list the names.
- * @returns The footer.
  */
 function CardMeta({ card, names, locale }: { card: BoardCard; names: SideNames; locale: Locale }) {
   const t = useTranslations('requests');
@@ -196,11 +194,6 @@ interface RequestBoardProps {
  * takes part in a company), and a card whose company addresses them
  * otherwise says its status in its own words.
  *
- * @param props - Component props.
- * @param props.searchParams - The page's query parameters.
- * @param props.actor - The viewer.
- * @param props.company - The company whose board this is, on its own page.
- * @param props.paths - Where the board and its list are.
  * @returns The header (or the toggle), the filters and the board.
  */
 export default async function RequestBoard({

@@ -58,15 +58,6 @@ type PasswordActionFormProps = Pick<
  * (such as a wrong password), Cancel and the confirm button. It's the
  * dialog's content, which Radix unmounts when the dialog closes, so each
  * opening starts with an empty field and no error.
- *
- * @param props - Form props.
- * @param props.confirmLabel - Confirm button text.
- * @param props.confirmVariant - Confirm button style.
- * @param props.hasPassword - Ask for the password.
- * @param props.action - The change to run.
- * @param props.onDone - Called after it worked.
- * @param props.onCancel - Closes the dialog.
- * @returns The form.
  */
 function PasswordActionForm({
   confirmLabel,
@@ -125,18 +116,6 @@ function PasswordActionForm({
  * A short form in a dialog: the password field (for users who have one) and a
  * confirm button. Errors such as a wrong password are shown in the dialog,
  * and the form starts afresh each time it opens ({@link PasswordActionForm}).
- *
- * @param props - Dialog props.
- * @param props.open - Open state.
- * @param props.onOpenChange - Open state handler.
- * @param props.title - Title.
- * @param props.description - Explanation.
- * @param props.confirmLabel - Confirm button text.
- * @param props.confirmVariant - Confirm button style.
- * @param props.hasPassword - Ask for the password.
- * @param props.action - The change to run.
- * @param props.onDone - Called after it worked.
- * @returns The dialog.
  */
 export default function PasswordActionDialog({
   open,

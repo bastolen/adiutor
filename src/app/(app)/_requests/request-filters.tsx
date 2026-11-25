@@ -116,7 +116,6 @@ export interface RequestFilters {
  *
  * @param internal - Whether the viewer is the staff.
  * @param contributes - Whether they take part in requests in any company.
- * @returns The audience.
  */
 function viewerAudience(internal: boolean, contributes: boolean): RequestAudience {
   if (internal) {
@@ -140,7 +139,6 @@ function viewerAudience(internal: boolean, contributes: boolean): RequestAudienc
  * @param input.companies - The companies the viewer sees.
  * @param input.types - Every request type.
  * @param input.assignable - The staff who can be assigned.
- * @returns The filters.
  */
 export function parseRequestFilters({
   searchParams,
@@ -259,18 +257,6 @@ interface RequestFilterBarProps {
  * the priority and the assignee (Me, for those who can be assigned, Not
  * assigned, or one staff member), next to the Sort menu and whatever else
  * the view adds as children.
- *
- * @param props - Component props.
- * @param props.filters - The filters.
- * @param props.table - The links of the view's table.
- * @param props.actor - The viewer.
- * @param props.companies - The companies to choose from.
- * @param props.types - The types to choose from.
- * @param props.assignable - The staff to choose from.
- * @param props.showStatusTabs - Whether to show the status links.
- * @param props.sortable - Whether to show the Sort menu.
- * @param props.children - One more control.
- * @returns The bar.
  */
 export function RequestFilterBar({
   filters,
@@ -296,7 +282,6 @@ export function RequestFilterBar({
    * @param allLabel - The text of the option that removes the filter.
    * @param chosen - The value the view is filtered by now, if any.
    * @param items - The values to choose from, with their labels.
-   * @returns The menu's options.
    */
   const filterOptions = (
     param: 'company' | 'type' | 'priority' | 'assignee',

@@ -37,7 +37,6 @@ interface ConnectProviderButtonProps {
  *
  * @param returnTo - The page and card.
  * @param provider - The provider being connected.
- * @returns The address.
  */
 function connectedUrl(returnTo: string, provider: OAuthProvider): string {
   const url = new URL(returnTo, window.location.origin);
@@ -57,13 +56,6 @@ function connectedUrl(returnTo: string, provider: OAuthProvider): string {
  * (which trying again never fixes), the rule for a role that requires MFA,
  * another change still running, too many requests. Only a failure without a
  * message of its own says "Connecting failed. Please try again."
- *
- * @param props - Button props.
- * @param props.provider - The provider.
- * @param props.label - Its display name.
- * @param props.disabled - Disable the button.
- * @param props.describedBy - ID of the text that explains the button.
- * @returns The button.
  */
 export default function ConnectProviderButton({
   provider,

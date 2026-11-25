@@ -30,7 +30,6 @@ export interface SideNames {
  *
  * @param person - The person.
  * @param names - The names of the two sides.
- * @returns The name.
  */
 export function personName(person: RequestPerson, names: SideNames): string {
   return person.name ?? names[person.side];
@@ -44,7 +43,6 @@ export function personName(person: RequestPerson, names: SideNames): string {
  * @param props.person - The person.
  * @param props.names - The names of the two sides.
  * @param props.size - Its size: `sm` next to what someone wrote, `xs` in a list of names.
- * @returns The avatar.
  */
 export function PersonAvatar({
   person,
@@ -81,7 +79,6 @@ export function PersonAvatar({
  * @param props.more - What the block after the avatars says, e.g. "+3"; no block when left out.
  * @param props.wrap - Let a long row wrap, as in a table's Assigned to column at tablet width,
  *   which would otherwise widen the table.
- * @returns The row of avatars.
  */
 export function PeopleAvatars({
   people,
@@ -136,7 +133,6 @@ export function PeopleAvatars({
  * @param props.sideLabel - Whether a staff member gets the label with the staff's name; left
  *   out where everyone listed is staff anyway (the assignees).
  * @param props.children - What follows the name, e.g. a time.
- * @returns The line.
  */
 export default function PersonLine({
   person,

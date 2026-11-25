@@ -55,13 +55,6 @@ interface MoveMenuProps {
  * so pressing it never opens the request. The menu's open state is
  * transient, so it isn't still open when the reader comes back to the page.
  *
- * @param props - Menu props.
- * @param props.id - The card's request ID.
- * @param props.reference - The request's number as people see it.
- * @param props.moves - The lanes it may go to.
- * @param props.names - Each lane's name.
- * @param props.busy - Whether it's being moved.
- * @param props.onChoose - Called with the lane picked.
  * @returns The menu's button (the menu itself opens in a portal).
  */
 export default function MoveMenu({ id, reference, moves, names, busy, onChoose }: MoveMenuProps) {

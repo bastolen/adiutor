@@ -30,8 +30,6 @@ import { authErrorText, signInErrorText } from '@/lib/sign-in/auth-error-message
  * keeps the page alive (React's `<Activity>`), and the next person on the
  * browser mustn't find the passwords typed here, a button still busy, or
  * the confirmation of someone else's change.
- *
- * @returns The form.
  */
 export default function ResetPasswordForm() {
   const t = useTranslations('auth');

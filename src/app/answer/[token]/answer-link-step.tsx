@@ -43,7 +43,6 @@ const HOME_PATH = '/dashboard';
  * @param props.description - What it means, or what to do.
  * @param props.href - Where the button goes.
  * @param props.label - The button's text.
- * @returns The message.
  */
 function Outcome({
   icon,
@@ -76,7 +75,6 @@ function Outcome({
  *
  * @param props - Component props.
  * @param props.message - What's wrong.
- * @returns The message.
  */
 function LinkProblem({ message }: { message: string }) {
   const t = useTranslations('requests.answerLink');
@@ -101,7 +99,6 @@ function LinkProblem({ message }: { message: string }) {
  * @param props - Component props.
  * @param props.params - Route parameters: the link's token.
  * @param props.searchParams - The query string: the answer the email's button stood for.
- * @returns The page content.
  */
 export default async function AnswerLinkStep({
   params,

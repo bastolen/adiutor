@@ -93,14 +93,6 @@ function linkDetails(
  * The form to create a single-use invite link (for people who manage them)
  * and the list of links with their status, sortable by when they were
  * created and paginated.
- *
- * @param props - Card props.
- * @param props.links - The links.
- * @param props.table - The table's links.
- * @param props.canManage - Show the form and Revoke.
- * @param props.companyId - The company, or `null` for staff.
- * @param props.roles - Roles to choose from.
- * @returns The card.
  */
 export default function InviteLinksCard({
   links,

@@ -90,14 +90,6 @@ interface AccountMenuProps {
  * while it's open: this way the theme keeps following the system on every app
  * page. The sidebar's copy is always mounted, even while hidden on small
  * screens.
- *
- * @param props - Menu props.
- * @param props.name - The user's name.
- * @param props.email - Their email address.
- * @param props.signedInAs - Whether a staff member is signed in as the user.
- * @param props.onNavigate - Called when "Account settings" is chosen.
- * @param props.picture - Their picture.
- * @returns The account menu.
  */
 export default function AccountMenu({
   name,

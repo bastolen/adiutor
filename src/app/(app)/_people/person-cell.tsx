@@ -42,19 +42,6 @@ interface PersonCellProps {
  * their own row, any other badges, and their address unless it is the name.
  * Below 768px the role follows, and below 1280px their activity, where the
  * table has no column for them. Long names and addresses break anywhere.
- *
- * @param props - Cell props.
- * @param props.name - The name to show.
- * @param props.email - Their address.
- * @param props.isSelf - Whether it's the user's own row.
- * @param props.brand - Brand colours for the avatar.
- * @param props.picture - Their picture.
- * @param props.href - Where the name links to.
- * @param props.badges - More badges.
- * @param props.role - The role, for narrow screens.
- * @param props.lastActiveAt - When they were last active.
- * @param props.joinedAt - When they joined.
- * @returns The cell.
  */
 export default function PersonCell({
   name,

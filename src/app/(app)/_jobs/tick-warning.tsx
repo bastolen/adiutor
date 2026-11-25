@@ -27,11 +27,6 @@ interface TickWarningProps {
  * Says how long ago the last tick started, or that none did, what that means
  * and where the ticks come from. It isn't dismissible: it goes once a tick
  * runs.
- *
- * @param props - Component props.
- * @param props.lastTickAt - When the last tick started, if one did.
- * @param props.linkToJobs - Whether to link to the Jobs page.
- * @returns The banner.
  */
 export default function TickWarning({ lastTickAt, linkToJobs = false }: TickWarningProps) {
   const t = useTranslations('admin.jobs.tickWarning');

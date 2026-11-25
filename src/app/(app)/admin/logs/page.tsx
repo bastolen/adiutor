@@ -177,7 +177,6 @@ function Origin({ event }: { event: AuditEntry }) {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `q`, `group`, `from`, `to` and the table's state.
- * @returns The page content.
  */
 async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('admin.logs');
@@ -348,10 +347,6 @@ async function AuditLog({ searchParams }: { searchParams: Promise<SearchParams> 
 
 /**
  * The audit log page.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function AuditLogPage({ searchParams }: PageProps<'/admin/logs'>) {
   return (

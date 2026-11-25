@@ -36,10 +36,6 @@ interface YourCompaniesProps {
  * role. The name is the link, which covers the whole row. The card is called
  * "Your company" when there's one. Its text comes from
  * `dashboard.yourCompanies` and the `roles` namespace.
- *
- * @param props - Card props.
- * @param props.companies - The user's companies.
- * @returns The card.
  */
 export default function YourCompanies({ companies }: YourCompaniesProps) {
   const t = useTranslations('dashboard.yourCompanies');

@@ -26,7 +26,6 @@ const EXAMPLE_NUMBER = 142;
  *
  * @param props - Form props.
  * @param props.prefix - The saved prefix.
- * @returns The form.
  */
 export default function RequestPrefixForm({ prefix }: { prefix: string }) {
   const t = useTranslations('admin.settings.requests.requestNumbers');

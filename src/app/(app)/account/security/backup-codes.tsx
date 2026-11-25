@@ -16,7 +16,6 @@ import CopyButton from '@/components/ui/copy-button';
  * @param props - Component props.
  * @param props.codes - The codes.
  * @param props.onDone - Called when the user confirms they've saved them.
- * @returns The codes.
  */
 export default function BackupCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
   const t = useTranslations('account');

@@ -55,8 +55,6 @@ async function Register() {
 
 /**
  * The add-user page.
- *
- * @returns The page.
  */
 export default function NewUserPage() {
   return (

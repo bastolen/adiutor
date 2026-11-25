@@ -42,11 +42,6 @@ interface DeactivateCardProps {
  * while they're the only Admin of a company. Without a recent confirmation
  * with their second step, the button sends them to confirm first instead of
  * opening the dialog (the server refuses it too).
- *
- * @param props - Card props.
- * @param props.hasPassword - Ask for the password to confirm.
- * @param props.blockedReason - Why deactivating is blocked, if it is.
- * @returns The card.
  */
 export default function DeactivateCard({ hasPassword, blockedReason }: DeactivateCardProps) {
   const t = useTranslations('account');

@@ -22,8 +22,6 @@ import SignInForm from './sign-in-form';
 
 /**
  * Page metadata: "Sign in", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth');
@@ -46,7 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * @param props - Component props.
  * @param props.searchParams - Query parameters (`callbackURL`; the form reads
  *   the others in the browser).
- * @returns The sign-in form.
  */
 async function SignInOptions({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await connection();
@@ -61,10 +58,6 @@ async function SignInOptions({ searchParams }: { searchParams: Promise<SearchPar
 
 /**
  * The sign-in page. The form's text comes with it (`auth`).
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - The query string.
- * @returns The page.
  */
 export default function SignInPage({ searchParams }: PageProps<'/auth'>) {
   return (

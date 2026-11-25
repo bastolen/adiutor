@@ -59,7 +59,6 @@ export const generateMetadata = globalPermissionMetadata('users:view', 'admin.us
  *
  * @param props - Component props.
  * @param props.companies - The companies, by name.
- * @returns The links.
  */
 function CompanyLinks({ companies }: { companies: UserListItem['companies'] }) {
   const t = useTranslations('admin.users');
@@ -94,7 +93,6 @@ function CompanyLinks({ companies }: { companies: UserListItem['companies'] }) {
  * @param props.searchParams - Query parameters: `q` is the search text, `filter` the filter and
  *   `deleted=1` (set after deleting a user) shows a toast; the table's sort and page (see
  *   `USERS_TABLE`).
- * @returns The page content.
  */
 async function UserList({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await requireGlobalPermission('users:view');
@@ -292,10 +290,6 @@ async function UserList({ searchParams }: { searchParams: Promise<SearchParams> 
 /**
  * The users page, as wide as the lists of requests on a wide screen
  * (`WidePage`).
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function UsersPage({ searchParams }: PageProps<'/admin/users'>) {
   return (

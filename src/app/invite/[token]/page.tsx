@@ -21,7 +21,6 @@ import AcceptInvitation from './accept-invitation';
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The page content.
  */
 async function Invitation({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -42,10 +41,6 @@ async function Invitation({ params }: { params: Promise<{ token: string }> }) {
 
 /**
  * The invitation page. Its forms' text comes with it (`auth`).
- *
- * @param props - Page props from Next.js.
- * @param props.params - Route parameters.
- * @returns The page.
  */
 export default function InvitationPage({ params }: PageProps<'/invite/[token]'>) {
   return (

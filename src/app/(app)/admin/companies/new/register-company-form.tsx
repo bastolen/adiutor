@@ -39,7 +39,6 @@ import registerCompanyAction from './actions';
  *
  * @param props - Component props.
  * @param props.defaultLocale - Adiutor's default language, named in the Default option.
- * @returns The form.
  */
 export default function RegisterCompanyForm({ defaultLocale }: { defaultLocale: Locale }) {
   const t = useTranslations('admin.addCompany.form');

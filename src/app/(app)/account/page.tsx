@@ -34,8 +34,6 @@ import SignedInAsNote from './signed-in-as-note';
 
 /**
  * Page metadata: "Account", in the request's language.
- *
- * @returns The metadata.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('account');
@@ -47,7 +45,6 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters; set after verifying the email.
- * @returns The page content.
  */
 async function AccountSettings({ searchParams }: { searchParams: Promise<AccountParams> }) {
   const actor = await getActor({ allowMissingMfa: true });
@@ -134,10 +131,6 @@ async function AccountSettings({ searchParams }: { searchParams: Promise<Account
 
 /**
  * The Profile tab of the account.
- *
- * @param props - Page props from Next.js.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function AccountPage({ searchParams }: PageProps<'/account'>) {
   return (

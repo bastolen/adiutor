@@ -25,12 +25,6 @@ interface AccountHeaderProps {
  * The "Account" heading with the user's avatar, and tabs for Profile,
  * Preferences, Security and Activity, the current one (from the URL) marked
  * `aria-current="page"`.
- *
- * @param props - Header props.
- * @param props.name - The user's name.
- * @param props.email - Their email address.
- * @param props.picture - Their picture.
- * @returns The header.
  */
 export default function AccountHeader({ name, email, picture = null }: AccountHeaderProps) {
   const t = useTranslations('account');

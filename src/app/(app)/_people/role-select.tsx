@@ -84,16 +84,6 @@ interface RoleSelectProps {
  *
  * Its own text comes from the `people` namespace: the page passes it with
  * `ClientMessages`.
- *
- * @param props - Select props.
- * @param props.action - The saving server action.
- * @param props.fields - Hidden fields.
- * @param props.memberName - The member's name.
- * @param props.currentRole - Current role.
- * @param props.roles - Roles to choose from.
- * @param props.confirmChange - The question to ask before saving, if any.
- * @param props.target - Staff or company roles, for the recent confirmation some need.
- * @returns The form.
  */
 export default function RoleSelect({
   action,

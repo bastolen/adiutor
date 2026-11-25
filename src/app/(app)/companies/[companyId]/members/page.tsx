@@ -63,7 +63,6 @@ export const generateMetadata = companyPermissionMetadata(
  * @param props.params - Route parameters.
  * @param props.searchParams - Query parameters: each table's sort and page (see
  *   `MEMBERS_TABLE`, `COMPANY_INVITATIONS_TABLE` and `COMPANY_INVITE_LINKS_TABLE`).
- * @returns The page content.
  */
 async function Members({
   params,
@@ -248,11 +247,6 @@ async function Members({
 
 /**
  * The members page.
- *
- * @param props - Page props from Next.js.
- * @param props.params - Route parameters.
- * @param props.searchParams - Query parameters.
- * @returns The page.
  */
 export default function MembersPage({
   params,

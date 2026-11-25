@@ -27,7 +27,6 @@ import { userLink } from '../_people/rich-tags';
  * @param props.shown - Which personal details the pages show.
  * @param props.onSecurityPage - Whether it's the Security page, where users who must set up MFA
  *   are sent.
- * @returns The note.
  */
 export default async function SignedInAsNote({
   actor,

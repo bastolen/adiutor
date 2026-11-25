@@ -32,7 +32,6 @@ export const generateMetadata = globalPermissionMetadata('users:view');
  * The link to the staff settings inside the "your own account" notice.
  *
  * @param chunks - The link's text.
- * @returns The link.
  */
 function staffLink(chunks: ReactNode) {
   return <TextLink href="/admin/settings/staff">{chunks}</TextLink>;
@@ -44,7 +43,6 @@ function staffLink(chunks: ReactNode) {
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The header.
  */
 async function UserHeaderLoader({ params }: { params: Promise<{ userId: string }> }) {
   const actor = await requireGlobalPermission('users:view');
@@ -76,11 +74,6 @@ async function UserHeaderLoader({ params }: { params: Promise<{ userId: string }
 
 /**
  * The user's header above the tab's page.
- *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
- * @param props.params - Route parameters.
- * @returns The layout.
  */
 export default function UserLayout({ children, params }: LayoutProps<'/admin/users/[userId]'>) {
   return (

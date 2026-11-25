@@ -34,7 +34,6 @@ import CompanyHeader from './company-header';
  *
  * @param props - Layout props from Next.js.
  * @param props.params - Route parameters.
- * @returns The title template and default.
  */
 export async function generateMetadata({
   params,
@@ -59,7 +58,6 @@ export async function generateMetadata({
  *
  * @param props - Component props.
  * @param props.params - Route parameters.
- * @returns The header.
  */
 async function CompanyHeaderLoader({ params }: { params: Promise<{ companyId: string }> }) {
   const { companyId } = await params;
@@ -77,11 +75,6 @@ async function CompanyHeaderLoader({ params }: { params: Promise<{ companyId: st
  * The company's header above its pages, all of them as wide as a request's
  * page on a wide screen: the list and the board have the room, and a tab
  * that widened on its own would move the header and tabs from tab to tab.
- *
- * @param props - Layout props from Next.js.
- * @param props.children - The page.
- * @param props.params - Route parameters.
- * @returns The layout.
  */
 export default function CompanyLayout({ children, params }: LayoutProps<'/companies/[companyId]'>) {
   return (

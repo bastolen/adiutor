@@ -64,8 +64,6 @@ async function Register() {
 
 /**
  * The add-company page.
- *
- * @returns The page.
  */
 export default function NewCompanyPage() {
   return (

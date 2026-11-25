@@ -33,8 +33,6 @@ export const generateMetadata = globalPermissionMetadata(
  * Loads and shows the request settings. Its text comes from
  * `admin.settings.requests`, which `RequestPrefixForm` and the request type
  * dialog also get through `ClientMessages`.
- *
- * @returns The page content.
  */
 async function RequestSettings() {
   const t = await getTranslations('admin.settings.requests');
@@ -56,8 +54,6 @@ async function RequestSettings() {
 
 /**
  * The Requests tab of Settings.
- *
- * @returns The page.
  */
 export default function RequestSettingsPage() {
   return (

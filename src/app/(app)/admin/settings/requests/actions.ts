@@ -123,8 +123,8 @@ export async function moveRequestTypeAction(
 }
 
 /**
- * Archives a request type. The row's button names it in its own message
- * (`doneMessage`); this one is for anything else that runs it.
+ * Archives a request type. The confirmation names it from the hidden `name`
+ * field the row sends along.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `type` (its key) and `name` (for the confirmation).
