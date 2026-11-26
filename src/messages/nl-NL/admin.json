@@ -260,7 +260,6 @@
         "staff": "Medewerkers",
         "requests": "Verzoeken",
         "webhooks": "Webhooks",
-        "appearance": "Weergave",
         "attachments": "Bijlagen",
         "email": "E-mail"
       },
@@ -520,7 +519,6 @@
         "removedToast": "Webhook verwijderd."
       },
       "appearance": {
-        "title": "Weergave",
         "chooseFirst": "Kies eerst een afbeelding.",
         "choose": "Afbeelding kiezen",
         "noneChosen": "Geen afbeelding gekozen",

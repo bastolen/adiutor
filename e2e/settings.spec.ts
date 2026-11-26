@@ -137,7 +137,7 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
   const palette = derivePalette(chosen);
   try {
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
     const accent = page.getByRole('textbox', { name: 'Accent', exact: true });
     const accentDark = page.getByRole('textbox', { name: 'Accent in dark mode', exact: true });
@@ -204,7 +204,7 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
 
     // Back to Adiutor's own: the page has no colours of its own any more.
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     await page.getByRole('button', { name: 'Use Adiutor’s colours' }).click();
     await expect(accent).toHaveValue(ADIUTOR_COLOURS.accent);
     await expect(accentDark).toHaveValue(ADIUTOR_COLOURS.accentDark);
@@ -228,7 +228,7 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
   const visitor = await browser.newPage();
   try {
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     // The file input itself: the "Choose image" button opens it.
     const logoField = page.getByLabel('Logo image', { exact: true }).and(page.locator('input'));
     const upload = page.getByRole('button', { name: 'Upload logo' });
@@ -321,6 +321,17 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
     await visitor.close();
     await removeBrandImages();
   }
+});
+
+test('the address of a tab merged into another leads to its first card', async ({ page }) => {
+  await signIn(page, PLATFORM_ADMIN);
+  const tabs = page.getByRole('navigation', { name: 'Settings sections' });
+
+  // Appearance is on the General tab now, from its logo on.
+  await page.goto('/admin/settings/appearance');
+  await expect(page).toHaveURL('/admin/settings#logo');
+  await expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('region', { name: 'Logo' })).toBeInViewport();
 });
 
 test('the staff’s name shows instead of Adiutor everywhere, with Powered by Adiutor', async ({

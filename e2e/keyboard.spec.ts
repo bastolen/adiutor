@@ -571,7 +571,7 @@ test.describe('signed in', () => {
     page,
   }) => {
     // Only browsed with Tab: nothing is saved.
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     const text = page.getByRole('textbox', { name: 'Accent', exact: true });
     const swatch = page.getByLabel('Pick the accent', { exact: true });
     // The swatch is an invisible colour input; the square after it shows its focus ring.
@@ -593,7 +593,7 @@ test.describe('signed in', () => {
     page,
   }) => {
     // Only browsed with Tab: nothing is chosen or uploaded.
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     const choose = page.getByRole('button', { name: 'Choose image Logo image' });
     // Clicking the help text under the field starts the keyboard from there.
     await page.getByText(/^A PNG or JPEG of at most 1 MB, at least 32 pixels high/).click();

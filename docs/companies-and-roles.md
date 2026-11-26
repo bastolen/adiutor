@@ -138,7 +138,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
     users see who's helping them), the languages Adiutor offers and its default language (for
     everyone who hasn't chosen one; see [Offered languages](i18n.md#offered-languages)), and its
     time zone (for signed-out pages and everyone whose zone isn't known yet; see
-    [Time zones](i18n.md#time-zones)).
+    [Time zones](i18n.md#time-zones)); then the logo, the browser tab icon and the brand colours
+    (see [Brand colours](design.md#brand-colours)). The old Appearance tab's address leads to the
+    logo (`#logo`).
   - **Staff** (`/admin/settings/staff`): see the staff with their role, when they were last active
     and when their account was created ("Joined"), change roles, remove people from staff (their
     account stays), and invite staff by email or single-use invite link. Staff invitations and

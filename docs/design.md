@@ -720,8 +720,9 @@ keeps it. The tests (`src/lib/branding/palette.test.ts`) work out palettes for t
 every hue, greys, black, white and yellow, and check that each keeps every rule in `PALETTE_RULES`,
 and that the theme's own ink as a tint gives the theme's greys back.
 
-Staff Admins choose them on the **Appearance** tab of Settings (`/admin/settings/appearance`,
-`setBrandColours` in `src/server/branding/`, recorded in the audit log as `brand_colours_changed`):
+Staff Admins choose them on the **Brand colours** card of Settings' General tab
+(`/admin/settings#colours`, `setBrandColours` in `src/server/branding/`, recorded in the audit log
+as `brand_colours_changed`):
 three `ColourField`s (`src/components/ui/colour-field.tsx`: a text field for the hex digits, with a
 swatch before it that is the browser's own colour picker, an invisible `<input type="color">` over
 a square of the colour, which shows the focus ring), and a preview
@@ -751,7 +752,7 @@ document and can't reach the database, keeps the theme's colours, and shows no l
 ### The logo and the browser tab icon
 
 A staff Admin uploads the operator's logo, and optionally an own browser tab icon, on Settings ›
-Appearance ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)). Only a
+General ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)). Only a
 PNG or JPEG of at most 1 MB is taken, checked by its header (`imageFacts`, `brandImageProblem` in
 `src/lib/branding/images.ts`): a logo at least 32 pixels high and at most 8 times as wide as it's
 high, an icon about square and at least 32 pixels. It's drawn again with Next's `ImageResponse`
@@ -761,7 +762,7 @@ the `brand_image` table (`src/server/branding/brand-images.ts`) and served.
 - **Where the logo shows:** `Logo` reads it from `BrandLogoProvider` / `useBrandLogo()`
   (`src/components/brand/brand-logo.tsx`, handed down by the root layout from
   `requestBrandImages()`), at the usual heights (24, 26 and 32 pixels) and its own width, shrinking
-  where the room is narrower. It's one image for both modes, so the Appearance tab previews it on
+  where the room is narrower. It's one image for both modes, so the Logo card previews it on
   the light and the dark palette. Emails link it, 32 pixels high and at most 200 wide
   (`emailLogo`).
 - **The browser tab icon** is made from the brand (`brandIconSource`,

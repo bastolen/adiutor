@@ -1,33 +1,21 @@
 /**
- * @file The Appearance tab of Settings, served at `/admin/settings/appearance`:
- * the logo and the browser tab icon (decision 0052) and the brand colours
+ * @file The appearance cards of Settings' General tab (`../page.tsx`): the
+ * logo and the browser tab icon (decision 0052) and the brand colours
  * (decision 0049) every page and email shows. Platform Admins only
- * (`staff:manage`). The heading and tabs come from the Settings layout.
+ * (`staff:manage`). They were the Appearance tab, whose address now leads to
+ * the logo's card (decision 0055).
  */
 import { getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
 
 import Card from '@/components/ui/card';
-import { PageSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
 import { getBrandColours, getBrandImageSettings } from '@/server/branding';
-import { globalPermissionMetadata } from '@/server/page-metadata';
 
 import ColoursForm from './colours-form';
 import IconForm from './icon-form';
 import LogoForm from './logo-form';
-
-/**
- * Page metadata: "Appearance · Settings · Adiutor" for those who may see the
- * page (`staff:manage`), and the 404 page's title for everyone else, who get the 404 page.
- */
-// i18n-check t('admin.settings.appearance.title')
-export const generateMetadata = globalPermissionMetadata(
-  'staff:manage',
-  'admin.settings.appearance.title',
-);
 
 /**
  * Loads and shows the logo, the browser tab icon and the brand colours, each
@@ -35,7 +23,7 @@ export const generateMetadata = globalPermissionMetadata(
  * forms also get through `ClientMessages`, with `errors.branding` for the
  * files the browser refuses.
  */
-async function AppearanceSettings() {
+export default async function AppearanceSettings() {
   const t = await getTranslations('admin.settings.appearance');
   const actor = await requireGlobalPermission('staff:manage');
   const [colours, images] = await Promise.all([
@@ -56,16 +44,5 @@ async function AppearanceSettings() {
         <ColoursForm saved={colours} />
       </Card>
     </ClientMessages>
-  );
-}
-
-/**
- * The Appearance tab of Settings.
- */
-export default function AppearanceSettingsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton header={false} />}>
-      <AppearanceSettings />
-    </Suspense>
   );
 }

@@ -260,7 +260,6 @@
         "staff": "Personal",
         "requests": "Solicitudes",
         "webhooks": "Webhooks",
-        "appearance": "Apariencia",
         "attachments": "Archivos adjuntos",
         "email": "Correo"
       },
@@ -520,7 +519,6 @@
         "removedToast": "Webhook eliminado."
       },
       "appearance": {
-        "title": "Apariencia",
         "chooseFirst": "Elige primero una imagen.",
         "choose": "Elegir imagen",
         "noneChosen": "Ninguna imagen elegida",

@@ -260,7 +260,6 @@
         "staff": "Staff",
         "requests": "Requests",
         "webhooks": "Webhooks",
-        "appearance": "Appearance",
         "attachments": "Attachments",
         "email": "Email"
       },
@@ -520,7 +519,6 @@
         "removedToast": "Webhook removed."
       },
       "appearance": {
-        "title": "Appearance",
         "chooseFirst": "Choose an image first.",
         "choose": "Choose image",
         "noneChosen": "No image chosen",

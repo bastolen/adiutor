@@ -104,7 +104,6 @@ const APP_PATHS = [
   '/admin/settings/attachments',
   '/admin/settings/email',
   '/admin/settings/webhooks',
-  '/admin/settings/appearance',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',

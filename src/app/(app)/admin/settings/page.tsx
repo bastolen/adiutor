@@ -1,8 +1,11 @@
 /**
- * @file The General tab of Settings, served at `/admin/settings`: the name
- * the staff shows users, Adiutor's languages (the default and the ones it
- * offers) and its default time zone. Platform Admins only (`staff:manage`).
- * The heading and tabs come from the Settings layout.
+ * @file The General tab of Settings, served at `/admin/settings`: how users
+ * see the staff and what they read in. First the name the staff shows users,
+ * Adiutor's languages (the default and the ones it offers) and its default
+ * time zone, then the appearance cards (`appearance/`: the logo, the browser
+ * tab icon and the brand colours). Platform Admins only (`staff:manage`).
+ * The heading and tabs come from the Settings layout; decision 0055 says
+ * which settings go on this tab.
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -16,6 +19,7 @@ import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 import { getStaffSettings } from '@/server/people/staff';
 
+import AppearanceSettings from './appearance/appearance-cards';
 import DefaultTimeZoneForm from './default-time-zone-form';
 import LanguagesForm from './languages-form';
 import StaffNameForm from './staff-name-form';
@@ -61,12 +65,14 @@ async function GeneralSettings() {
 }
 
 /**
- * The General tab of Settings.
+ * The General tab of Settings: the general cards, then the appearance
+ * cards, which load side by side and show together.
  */
 export default function GeneralSettingsPage() {
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
       <GeneralSettings />
+      <AppearanceSettings />
     </Suspense>
   );
 }

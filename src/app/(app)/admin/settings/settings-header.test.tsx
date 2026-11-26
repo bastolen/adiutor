@@ -1,6 +1,6 @@
 /**
  * @file Tests for the heading and tabs of the Settings pages: General, Staff,
- * Requests, Attachments, Email, Webhooks and Appearance, in that order, the
+ * Requests, Attachments, Email and Webhooks, in that order, the
  * open one marked as current.
  */
 import { render, screen, within } from '@testing-library/react';
@@ -35,7 +35,6 @@ describe('SettingsHeader', () => {
       ['Attachments', '/admin/settings/attachments'],
       ['Email', '/admin/settings/email'],
       ['Webhooks', '/admin/settings/webhooks'],
-      ['Appearance', '/admin/settings/appearance'],
     ]);
   });
 
