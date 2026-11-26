@@ -352,6 +352,7 @@ const bracesConfig = [{ name: 'adiutor/braces', rules: { curly: ['error', 'all']
  */
 const FOLDER_MODULES = [
   'lib/authz/mfa',
+  'lib/branding',
   'lib/requests',
   'server/auth/auth-events',
   'server/auth/auth-guards',

@@ -317,7 +317,15 @@ keyboard support.
 
   Layers that float above the page use `raised`, a step lighter than `surface` in dark mode so they
   stand apart (white in light mode), and fills inside them `raised-muted`, not `muted`, which would
-  vanish on them. `src/styles/theme.test.ts` checks their contrast in both modes.
+  vanish on them.
+
+  The rules every palette keeps are data, `PALETTE_RULES` in `src/lib/branding/rules.ts`: text
+  4.5:1 on every surface and on the buttons it's written on, input borders and focus rings 3:1,
+  highlighted code 4.5:1 on `background`, and in dark mode raised layers lighter than the surfaces
+  under them. Code reads the theme's colours from a copy, `THEME_PALETTE`
+  (`src/lib/branding/theme-colours.ts`); `src/styles/theme.test.ts` checks that the copy has the
+  same tokens and values as `theme.css`, and that the theme keeps every rule in both modes. A new
+  colour token goes in both, and a rule for it in `PALETTE_RULES` when it stands on another.
 
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
@@ -325,9 +333,8 @@ keyboard support.
   Highlighted code has its own tokens (`code-comment`, `code-keyword`, `code-string`,
   `code-number`, `code-title`, `code-type`, `code-attribute`), which `src/styles/code.css` gives
   to the classes highlight.js puts on the parts of a block of code. Code stands on `background`,
-  in a block and in a sentence; each token is 6:1 or more on it in both modes, and
-  `src/styles/theme.test.ts` checks that. A new kind of token gets its colour there, never a
-  fixed one in a component.
+  in a block and in a sentence; each token is 6:1 or more on it in both modes, and the rules check
+  4.5:1. A new kind of token gets its colour there, never a fixed one in a component.
 
 - **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
