@@ -1,17 +1,22 @@
 /**
- * @file React hook for reading and changing the light/dark preference.
+ * @file React hook for reading and changing the light/dark preference. While
+ * a staff Admin keeps every page in one mode (decision 0053), it applies
+ * nothing: the root layout has rendered that mode on `<html>`.
  */
 'use client';
 
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 
 import {
   DARK_MEDIA_QUERY,
   isThemePreference,
   resolveTheme,
+  THEME_FORCED_ATTRIBUTE,
   THEME_STORAGE_KEY,
   type ThemePreference,
 } from '@/lib/theme';
+
+import { useForcedTheme } from './forced-theme';
 
 /** Event fired in this tab when the preference changes. */
 const CHANGE_EVENT = 'adiutor-theme-change';
@@ -31,11 +36,16 @@ function readPreference(): ThemePreference {
 }
 
 /**
- * Shows the theme for a preference by setting `data-theme` on `<html>`.
+ * Shows the theme for a preference by setting `data-theme` on `<html>`,
+ * unless a staff Admin keeps every page in one mode: the page then keeps the
+ * one the root layout rendered, and the preference waits.
  *
  * @param preference - The preference to apply.
  */
 function applyPreference(preference: ThemePreference) {
+  if (document.documentElement.hasAttribute(THEME_FORCED_ATTRIBUTE)) {
+    return;
+  }
   const systemPrefersDark = window.matchMedia(DARK_MEDIA_QUERY).matches;
   document.documentElement.dataset.theme = resolveTheme(preference, systemPrefersDark);
 }
@@ -79,11 +89,23 @@ const getServerPreference = (): ThemePreference => 'system';
  * Returns the stored light/dark preference and a function to change it. The
  * choice is saved in `localStorage`, applied immediately, and kept in sync
  * across tabs. While set to `system`, the theme follows system changes live.
+ * While a staff Admin keeps every page in one mode, nothing is applied (the
+ * theme choices are hidden then), and the stored choice applies again once
+ * both modes come back.
  *
  * @returns The current preference and a setter.
  */
 export default function useThemePreference() {
   const preference = useSyncExternalStore(subscribe, readPreference, getServerPreference);
+  const forced = useForcedTheme();
+
+  useLayoutEffect(() => {
+    // Once both modes come back (the root layout no longer renders one), the stored choice applies,
+    // before the page paints, so the system's mode never shows in between.
+    if (!forced) {
+      applyPreference(readPreference());
+    }
+  }, [forced]);
 
   const setPreference = useCallback((next: ThemePreference) => {
     try {

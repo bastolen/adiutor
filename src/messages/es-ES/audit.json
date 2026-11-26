@@ -49,6 +49,7 @@
       "brand_logo_removed": "Quitó el logotipo",
       "brand_icon_changed": "Cambió el icono de la pestaña",
       "brand_icon_removed": "Quitó el icono de la pestaña subido",
+      "brand_theme_changed": "Cambió el modo claro y oscuro",
       "attachment_storage_changed": "Cambió dónde se guardan los archivos adjuntos",
       "attachment_storage_set_up": "Configuró dónde se guardan los archivos adjuntos",
       "smtp_settings_changed": "Cambió el servidor de correo",

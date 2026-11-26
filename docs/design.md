@@ -638,6 +638,17 @@ device), **Light** or **Dark**:
 
 Choosing a theme keeps the menu open, so the result shows at once.
 
+A staff Admin may keep every page in **light mode only** or **dark mode only** instead (Settings ›
+Appearance, `brand.forced_theme`; [decision 0053](decisions/0053-light-or-dark-mode-only.md)).
+The root layout then renders `data-theme` on `<html>` itself, with the `data-theme-forced` marker
+(`THEME_FORCED_ATTRIBUTE`), so the mode holds before any script and without JavaScript; the theme
+script and `useThemePreference` leave it alone, the account menu drops its theme row, and the corner
+button offers the language alone ("Language: English (US)"), or isn't there with one language. A
+person's stored choice is kept and applies again once both modes come back. Client components read
+the kept mode with `useForcedTheme()` (`ForcedThemeProvider` in
+`src/components/theme/forced-theme.tsx`). Emails stay light either way, and `global-error.tsx`,
+which can't reach the database, keeps the person's or the system's mode.
+
 Both use the same hook (`useThemePreference`) and the same row (`ThemeMenuRow` in
 `src/components/theme/theme-menu-row.tsx`, with its labels in `common.theme` and its icons in
 `src/components/theme/theme-options.ts`: half sun, half moon for **System**, so it reads as a
@@ -738,6 +749,9 @@ tint, or a dark accent equal to the accent. So pages keep no colours of their ow
 later change to the theme still reaches them; the preview takes the colours through the same rule,
 so it shows what will be saved. A colour that isn't six hex digits is refused with a message that
 names its field. It isn't part of setup: setup is one narrow form, with no room for a preview.
+While every page is kept in one mode ([decision 0053](decisions/0053-light-or-dark-mode-only.md)),
+the previews (and the logo's) show that mode only; in light mode only, the dark accent's field is
+hidden, but its value is still sent as it is, so saving the colours never clears it.
 
 The root layout reads the settings once per request (`pageBrandCss` in
 `src/server/branding/page-colours.ts`, the theme's colours when the database can't be read) and adds

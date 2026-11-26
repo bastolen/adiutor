@@ -49,6 +49,7 @@
       "brand_logo_removed": "Logo verwijderd",
       "brand_icon_changed": "Tabbladicoon gewijzigd",
       "brand_icon_removed": "Geüpload tabbladicoon verwijderd",
+      "brand_theme_changed": "Lichte en donkere modus gewijzigd",
       "attachment_storage_changed": "Gewijzigd waar bijlagen worden bewaard",
       "attachment_storage_set_up": "Ingesteld waar bijlagen worden bewaard",
       "smtp_settings_changed": "Mailserver gewijzigd",

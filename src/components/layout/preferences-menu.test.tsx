@@ -7,7 +7,8 @@ import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
-import { THEME_STORAGE_KEY } from '@/lib/theme';
+import { ForcedThemeProvider } from '@/components/theme/forced-theme';
+import { THEME_FORCED_ATTRIBUTE, THEME_STORAGE_KEY } from '@/lib/theme';
 
 import renderInLocale from '../../../tests/i18n/render';
 import setLanguageAction from './language-action';
@@ -51,6 +52,7 @@ afterEach(() => {
   document.cookie = 'adiutor.locale=; max-age=0; path=/';
   localStorage.clear();
   delete document.documentElement.dataset.theme;
+  document.documentElement.removeAttribute(THEME_FORCED_ATTRIBUTE);
   vi.unstubAllGlobals();
   reload.mockClear();
   vi.mocked(setLanguageAction).mockClear();
@@ -305,6 +307,49 @@ describe('PreferencesMenu', () => {
 
       expect(screen.getAllByRole('menuitemradio')).toHaveLength(3);
       expect(screen.queryByText('Language')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('while a staff Admin keeps every page in one mode', () => {
+    /**
+     * Shows the page as the root layout does under a kept dark mode.
+     *
+     * @param offered - The languages Adiutor offers.
+     */
+    function renderKeptDark(offered: ('en-US' | 'nl-NL')[]) {
+      document.documentElement.dataset.theme = 'dark';
+      document.documentElement.setAttribute(THEME_FORCED_ATTRIBUTE, '');
+      return render(
+        <OfferedLanguagesProvider offered={offered}>
+          <ForcedThemeProvider theme="dark">
+            <PreferencesMenu />
+          </ForcedThemeProvider>
+        </OfferedLanguagesProvider>,
+      );
+    }
+
+    it('offers only the language, named for it alone, and keeps the stored theme', async () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'light');
+      const user = userEvent.setup();
+      renderKeptDark(['en-US', 'nl-NL']);
+
+      await user.click(screen.getByRole('button', { name: 'Language: English (US)' }));
+
+      expect(screen.queryByRole('group', { name: 'Theme' })).not.toBeInTheDocument();
+      expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+        'Default',
+        'English (US)',
+        'Nederlands',
+      ]);
+      // The kept mode stays, and the person's own choice waits for both modes to come back.
+      expect(document.documentElement.dataset.theme).toBe('dark');
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    });
+
+    it('shows no button with just one language on', () => {
+      renderKeptDark(['en-US']);
+
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
   });
 });

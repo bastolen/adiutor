@@ -28,6 +28,7 @@ import {
   generateToken,
   hashToken,
 } from '../../src/lib/sign-in/tokens';
+import type { ForcedTheme } from '../../src/lib/theme';
 import { readSettings, writeSettings } from '../../src/server/settings';
 import { attachmentKey, storageFor } from '../../src/server/storage';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
@@ -690,6 +691,19 @@ export async function setBrandColours(
         'brand.tint': colours.tint ?? null,
       }),
     );
+  });
+}
+
+/**
+ * Keeps every page in one mode, or lets each person choose again, straight in
+ * the database: a test that keeps one mode puts both back with no argument,
+ * or every later light and dark run would see the one mode.
+ *
+ * @param theme - The mode to keep every page in; none for both.
+ */
+export async function setForcedTheme(theme: ForcedTheme | null = null): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction((tx) => writeSettings(tx, { 'brand.forced_theme': theme }));
   });
 }
 
