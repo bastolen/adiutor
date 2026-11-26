@@ -586,7 +586,7 @@ test('the staff and a company work a request through, and close and reopen it', 
   // The staff are shown by name, with the name the company knows them by.
   await expect(staffReply).toContainText(SUPPORT_STAFF.name);
   await expect(staffReply).toContainText(STAFF_NAME);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Yes, it is. Floor 3.');
+  await (await markdownEditor(page, 'Your reply')).fill('Yes, it is. Floor 3.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await expect(main(page).getByText('In progress', { exact: true })).toBeVisible();
@@ -624,7 +624,7 @@ test('the staff and a company work a request through, and close and reopen it', 
   await expect(main(page).getByText('Reopened', { exact: true })).toHaveCount(0);
   await expect(conversation(page)).toContainText('Cancelled this request.');
   // A reply to a cancelled request leaves it cancelled.
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Thanks anyway.');
+  await (await markdownEditor(page, 'Your reply')).fill('Thanks anyway.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await expect(main(page).getByText('Cancelled', { exact: true })).toBeVisible();
@@ -843,7 +843,7 @@ test('people subscribe to a request, and the staff change who else follows it', 
   await expect(page.getByRole('region', { name: 'Conversation' })).toContainText('No replies yet.');
 
   // A reply subscribes its writer.
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('We’re looking into it.');
+  await (await markdownEditor(page, 'Your reply')).fill('We’re looking into it.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await expect(avatars(3)).toBeVisible();
@@ -898,7 +898,7 @@ test('a reply and the status it sets reach the other side’s inbox as one email
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
   // Their answer goes to the staff member, who replied and so follows it too.
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Yes, and the light is on.');
+  await (await markdownEditor(page, 'Your reply')).fill('Yes, and the light is on.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   const answer = await waitForEmailAbout(SUPPORT_STAFF.email, title);
@@ -916,7 +916,7 @@ test('an internal note reaches the staff on the request by email, and no one at 
   // A staff Admin replies, and so follows the request.
   await signIn(page, PLATFORM_ADMIN);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Looking into it.');
+  await (await markdownEditor(page, 'Your reply')).fill('Looking into it.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await signOut(page);
@@ -953,7 +953,7 @@ test('the staff send a solution, and the client approves it on the request', asy
 
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed: the toner was empty.');
+  await (await markdownEditor(page, 'Your reply')).fill('Fixed: the toner was empty.');
   await page.getByRole('button', { name: 'Send as solution' }).click();
   await expect(toasts(page)).toContainText('Solution sent.');
   await expect(detail(page, 'Status')).toContainText('Waiting for approval');
@@ -983,7 +983,7 @@ test('the client denies a solution and says what’s still wrong, which goes bac
   const number = await storeOwnRequest({ title, status: 'in_progress' });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed, I think.');
+  await (await markdownEditor(page, 'Your reply')).fill('Fixed, I think.');
   await page.getByRole('button', { name: 'Send as solution' }).click();
   await expect(toasts(page)).toContainText('Solution sent.');
   await signOut(page);
@@ -1014,7 +1014,7 @@ test('the email’s Approve button answers on a click, and a mail scanner only g
   const number = await storeOwnRequest({ title, status: 'in_progress' });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Fixed: a new toner is in.');
+  await (await markdownEditor(page, 'Your reply')).fill('Fixed: a new toner is in.');
   await page.getByRole('button', { name: 'Send as solution' }).click();
   await expect(toasts(page)).toContainText('Solution sent.');
   await signOut(page);
@@ -1051,7 +1051,7 @@ test('an email’s link signs its reader in and opens the request at the reply i
   const number = await storeOwnRequest({ title, status: 'in_progress', earlierReplies: 15 });
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('The reply the email links to.');
+  await (await markdownEditor(page, 'Your reply')).fill('The reply the email links to.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await signOut(page);
@@ -1110,7 +1110,7 @@ test('turning emails about requests off stops them, and turning them on brings t
   const replyAsStaff = async (body: string) => {
     await signIn(page, SUPPORT_STAFF);
     await page.goto(`/requests/${number}`);
-    await page.getByRole('textbox', { name: 'Your reply' }).fill(body);
+    await (await markdownEditor(page, 'Your reply')).fill(body);
     await page.getByRole('button', { name: 'Send reply' }).click();
     await expect(toasts(page)).toContainText('Reply sent.');
     await expect
@@ -1996,7 +1996,7 @@ test('the staff edit their own reply, which the company sees was edited', async 
 
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Restart the router.');
+  await (await markdownEditor(page, 'Your reply')).fill('Restart the router.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   const reply = conversation(page).getByRole('listitem').filter({ hasText: 'Restart the router' });
@@ -2052,7 +2052,7 @@ test('nothing is edited once a request is done', async ({ context, page }) => {
   await context.addCookies(clientCookies());
   await page.goto(`/requests/${number}`);
   // A reply can still be sent, but neither it nor the description can be edited.
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Thanks, it works now.');
+  await (await markdownEditor(page, 'Your reply')).fill('Thanks, it works now.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await expect(conversation(page)).toContainText('Thanks, it works now.');
@@ -2072,7 +2072,7 @@ test('the staff write an internal note, which Finance reads and the company neve
   await page.goto(`/requests/${number}`);
   await expect(write.getByRole('tab', { name: 'Reply' })).toHaveAttribute('aria-selected', 'true');
   // A reply that's started stays on its own tab.
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Not sent yet.');
+  await (await markdownEditor(page, 'Your reply')).fill('Not sent yet.');
   await write.getByRole('tab', { name: 'Internal note' }).click();
   await expect(page.getByRole('textbox', { name: 'Your reply' })).toBeHidden();
   await expect(main(page).getByText('Only the staff see internal notes.')).toBeVisible();
@@ -2205,7 +2205,7 @@ test('a staff member signed in as a user replies for them, and only that user an
   await expect(main(page).getByText(/priority/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Mark as done' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Edit description' })).toBeEnabled();
-  await page.getByRole('textbox', { name: 'Your reply' }).fill(reply);
+  await (await markdownEditor(page, 'Your reply')).fill(reply);
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   const sent = conversation(page).getByRole('listitem').filter({ hasText: reply });
