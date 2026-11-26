@@ -1041,3 +1041,15 @@ export async function resetActivityView(email: string): Promise<void> {
       .where(eq(schema.user.email, email));
   });
 }
+
+/**
+ * Removes the webhooks a spec added, by name, so later specs' request changes
+ * queue no deliveries to a receiver that's gone.
+ *
+ * @param names - The webhooks' names.
+ */
+export async function removeWebhooks(names: readonly string[]): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.delete(schema.webhook).where(inArray(schema.webhook.name, [...names]));
+  });
+}

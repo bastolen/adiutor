@@ -51,6 +51,9 @@ solution the company approves. Your staff see every company's requests; each com
   its status, with links that open it in one click. The staff can send a reply as the solution,
   which the company approves or denies. See [Emails](docs/requests.md#emails) and
   [Solutions](docs/requests.md#solutions).
+- **Webhooks.** Send what happens to requests to your own systems as signed JSON, or to a chat
+  channel as a message, per request type and event, retried when a receiver is down. See
+  [Webhooks](docs/webhooks.md).
 - **Companies, users and roles.** Staff add companies and invite each company's first Admin, who
   invites the rest. Users can belong to several companies, with a role in each (Admin, Client or
   Watcher), and the staff have roles of their own. There's no public sign-up. See

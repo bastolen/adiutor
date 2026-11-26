@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, and how requests are numbered and typed.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where webhooks send.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",
         "staff": "Staff",
-        "requests": "Requests"
+        "requests": "Requests",
+        "webhooks": "Webhooks"
       },
       "general": {
         "name": {
@@ -369,6 +370,66 @@
           "restoreLabel": "Restore {name}",
           "restored": "{name} restored."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Send what happens to requests to your own systems as signed JSON, or to a chat channel as a message. Each webhook picks the request types and events it gets.",
+          "listLabel": "Webhooks",
+          "empty": "No webhooks yet. Add one to send what happens to requests to a system of yours or a chat channel."
+        },
+        "status": {
+          "on": "On",
+          "manual": "Off",
+          "failing": "Off: kept failing",
+          "gone": "Off: receiver gone",
+          "unreadable": "Off: can’t be read"
+        },
+        "format": {
+          "json": "Signed JSON",
+          "chat": "Chat message"
+        },
+        "allTypes": "All request types",
+        "events": {
+          "raised": "Requests raised",
+          "reply": "Replies",
+          "note": "Internal notes",
+          "status": "Status changes",
+          "assignee": "Assignees",
+          "details": "Title, type and priority"
+        },
+        "summary": "To {host} · {types}",
+        "fields": {
+          "nameLabel": "Name",
+          "nameHint": "What the staff call it, e.g. Procurement or Staff chat.",
+          "urlLabel": "Address",
+          "urlHint": "Where to send it: an https:// address. It may hold a token, so Adiutor keeps it secret and shows only its host.",
+          "urlKeepHint": "Leave it empty to keep the saved address, which Adiutor never shows again.",
+          "formatLabel": "Format",
+          "formatJsonHint": "Signed as Standard Webhooks describes, with every detail, for a system of yours.",
+          "formatChatHint": "A short message that Slack, Google Chat, Mattermost and Discord show as it is, in Adiutor’s default language.",
+          "typesLegend": "Request types",
+          "allTypesHint": "Every type, also the ones added later.",
+          "chosenTypes": "Chosen types",
+          "eventsLegend": "Send",
+          "staffOnly": "Internal notes and priorities are only for the staff: send them only to a place that the staff alone read."
+        },
+        "add": {
+          "button": "Add webhook",
+          "title": "Add a webhook",
+          "description": "From now on, what you choose here is sent to this address.",
+          "confirm": "Add webhook",
+          "added": "Webhook added."
+        },
+        "secret": {
+          "title": "Copy the signing secret",
+          "description": "Adiutor won’t show it again. The receiver checks each delivery’s signature with it.",
+          "label": "Signing secret",
+          "copy": "Copy secret",
+          "done": "Done"
+        },
+        "confirmFirst": "Confirm it’s you with your second step before adding or changing a webhook."
       }
     },
     "companies": {

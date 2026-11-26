@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Instellingen",
-      "description": "Hoe gebruikers jullie zien, wie er medewerker is, en hoe verzoeken worden genummerd en ingedeeld.",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, en waar webhooks naartoe sturen.",
       "sections": "Onderdelen van de instellingen",
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
-        "requests": "Verzoeken"
+        "requests": "Verzoeken",
+        "webhooks": "Webhooks"
       },
       "general": {
         "name": {
@@ -369,6 +370,66 @@
           "restoreLabel": "{name} terugzetten",
           "restored": "{name} teruggezet."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Stuur wat er met verzoeken gebeurt naar je eigen systemen als ondertekende JSON, of naar een chatkanaal als bericht. Elke webhook kiest welke verzoektypen en gebeurtenissen hij krijgt.",
+          "listLabel": "Webhooks",
+          "empty": "Nog geen webhooks. Voeg er een toe om wat er met verzoeken gebeurt naar een systeem van je of een chatkanaal te sturen."
+        },
+        "status": {
+          "on": "Aan",
+          "manual": "Uit",
+          "failing": "Uit: bleef mislukken",
+          "gone": "Uit: ontvanger weg",
+          "unreadable": "Uit: niet te lezen"
+        },
+        "format": {
+          "json": "Ondertekende JSON",
+          "chat": "Chatbericht"
+        },
+        "allTypes": "Alle verzoektypen",
+        "events": {
+          "raised": "Ingediende verzoeken",
+          "reply": "Reacties",
+          "note": "Interne notities",
+          "status": "Statuswijzigingen",
+          "assignee": "Toegewezen medewerkers",
+          "details": "Titel, type en prioriteit"
+        },
+        "summary": "Naar {host} · {types}",
+        "fields": {
+          "nameLabel": "Naam",
+          "nameHint": "Hoe de medewerkers hem noemen, bijvoorbeeld Inkoop of Chat van de medewerkers.",
+          "urlLabel": "Adres",
+          "urlHint": "Waar het naartoe gaat: een https://-adres. Er kan een token in staan, dus Adiutor houdt het geheim en laat alleen de host zien.",
+          "urlKeepHint": "Laat het leeg om het opgeslagen adres te houden, dat Adiutor nooit meer laat zien.",
+          "formatLabel": "Vorm",
+          "formatJsonHint": "Ondertekend zoals Standard Webhooks het beschrijft, met alle details, voor een systeem van je.",
+          "formatChatHint": "Een kort bericht dat Slack, Google Chat, Mattermost en Discord laten zien zoals het is, in de standaardtaal van Adiutor.",
+          "typesLegend": "Verzoektypen",
+          "allTypesHint": "Elk type, ook de typen die later worden toegevoegd.",
+          "chosenTypes": "Gekozen typen",
+          "eventsLegend": "Versturen",
+          "staffOnly": "Interne notities en prioriteiten zijn alleen voor de medewerkers: stuur ze alleen naar een plek die alleen de medewerkers lezen."
+        },
+        "add": {
+          "button": "Webhook toevoegen",
+          "title": "Een webhook toevoegen",
+          "description": "Vanaf nu wordt wat je hier kiest naar dit adres gestuurd.",
+          "confirm": "Webhook toevoegen",
+          "added": "Webhook toegevoegd."
+        },
+        "secret": {
+          "title": "Kopieer het ondertekeningsgeheim",
+          "description": "Adiutor laat het niet meer zien. De ontvanger controleert er de handtekening van elke levering mee.",
+          "label": "Ondertekeningsgeheim",
+          "copy": "Geheim kopiëren",
+          "done": "Klaar"
+        },
+        "confirmFirst": "Bevestig met je tweede stap dat jij het bent, voordat je een webhook toevoegt of wijzigt."
       }
     },
     "companies": {

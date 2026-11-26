@@ -36,7 +36,7 @@
       },
       "settings": {
         "title": "Instellingen",
-        "description": "Beheer de medewerkers, talen, tijdzone en verzoektypes."
+        "description": "Beheer de medewerkers, talen, tijdzone, verzoektypes en webhooks."
       },
       "logs": {
         "title": "Logs",

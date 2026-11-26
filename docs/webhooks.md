@@ -9,7 +9,11 @@ Why it works this way is in [decision 0046](decisions/0046-webhooks.md).
 ## Who sets them up
 
 The staff who manage request types (`staff:manage`: staff Admins) add, change, turn off and on and
-remove webhooks, and renew their signing secrets (`src/server/webhooks/manage.ts`). Nobody else
+remove webhooks, and renew their signing secrets, on **Settings › Webhooks**
+(`/admin/settings/webhooks`; the services in `src/server/webhooks/manage.ts`). The tab lists each
+webhook with whether it's on (or why it's off), its format, the host it sends to, its request
+types and its events; **Add webhook** opens a dialog with its fields, after the Admin confirms it's
+them when they haven't in the last 15 minutes, and then shows its signing secret once. Nobody else
 sees them, and a staff member signed in as a user can't change them
 ([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)).
 

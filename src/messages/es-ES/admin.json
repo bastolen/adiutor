@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal y cómo se numeran y clasifican las solicitudes.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes y adónde envían los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
         "staff": "Personal",
-        "requests": "Solicitudes"
+        "requests": "Solicitudes",
+        "webhooks": "Webhooks"
       },
       "general": {
         "name": {
@@ -369,6 +370,66 @@
           "restoreLabel": "Restaurar {name}",
           "restored": "{name} restaurado."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Envía lo que pasa con las solicitudes a tus propios sistemas como JSON firmado, o a un canal de chat como mensaje. Cada webhook elige los tipos de solicitud y los eventos que recibe.",
+          "listLabel": "Webhooks",
+          "empty": "Aún no hay webhooks. Añade uno para enviar lo que pasa con las solicitudes a un sistema tuyo o a un canal de chat."
+        },
+        "status": {
+          "on": "Activado",
+          "manual": "Desactivado",
+          "failing": "Desactivado: seguía fallando",
+          "gone": "Desactivado: el receptor ya no existe",
+          "unreadable": "Desactivado: no se puede leer"
+        },
+        "format": {
+          "json": "JSON firmado",
+          "chat": "Mensaje de chat"
+        },
+        "allTypes": "Todos los tipos de solicitud",
+        "events": {
+          "raised": "Solicitudes creadas",
+          "reply": "Respuestas",
+          "note": "Notas internas",
+          "status": "Cambios de estado",
+          "assignee": "Personal asignado",
+          "details": "Título, tipo y prioridad"
+        },
+        "summary": "A {host} · {types}",
+        "fields": {
+          "nameLabel": "Nombre",
+          "nameHint": "Cómo lo llama el personal, por ejemplo Compras o Chat del personal.",
+          "urlLabel": "Dirección",
+          "urlHint": "Adónde enviarlo: una dirección https://. Puede contener un token, así que Adiutor la guarda en secreto y solo muestra su host.",
+          "urlKeepHint": "Déjala vacía para conservar la dirección guardada, que Adiutor nunca vuelve a mostrar.",
+          "formatLabel": "Formato",
+          "formatJsonHint": "Firmado como describe Standard Webhooks, con todos los detalles, para un sistema tuyo.",
+          "formatChatHint": "Un mensaje breve que Slack, Google Chat, Mattermost y Discord muestran tal cual, en el idioma predeterminado de Adiutor.",
+          "typesLegend": "Tipos de solicitud",
+          "allTypesHint": "Todos los tipos, también los que se añadan más adelante.",
+          "chosenTypes": "Tipos elegidos",
+          "eventsLegend": "Enviar",
+          "staffOnly": "Las notas internas y las prioridades son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
+        },
+        "add": {
+          "button": "Añadir webhook",
+          "title": "Añadir un webhook",
+          "description": "A partir de ahora, lo que elijas aquí se envía a esta dirección.",
+          "confirm": "Añadir webhook",
+          "added": "Webhook añadido."
+        },
+        "secret": {
+          "title": "Copia el secreto de firma",
+          "description": "Adiutor no lo volverá a mostrar. El receptor comprueba con él la firma de cada envío.",
+          "label": "Secreto de firma",
+          "copy": "Copiar secreto",
+          "done": "Listo"
+        },
+        "confirmFirst": "Confirma que eres tú con tu segundo paso antes de añadir o cambiar un webhook."
       }
     },
     "companies": {

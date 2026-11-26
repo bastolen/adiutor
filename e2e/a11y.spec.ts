@@ -25,6 +25,7 @@ import { requestLinkPagePath } from '../src/lib/sign-in/request-link';
 import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import expectAccessible from './support/axe';
 import {
+  backdateMfaConfirmation,
   findCompanyId,
   findUserId,
   storeAuditEvent,
@@ -97,6 +98,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
+  '/admin/settings/webhooks',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',
@@ -924,6 +926,22 @@ test.describe('in forced-colours mode', () => {
           .click();
         const dialog = page.getByRole('dialog', { name: 'Add a request type' });
         await expect(dialog).toBeVisible();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+      });
+
+      test('the dialog that adds a webhook', async ({ page }) => {
+        // Only opened and closed: nothing is added. Opening it needs a recent second step.
+        await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
+        await page.goto('/admin/settings/webhooks');
+        await page
+          .getByRole('region', { name: 'Webhooks' })
+          .getByRole('button', { name: 'Add webhook' })
+          .click();
+        const dialog = page.getByRole('dialog', { name: 'Add a webhook' });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole('radio', { name: 'Chosen types' }).check();
         await expectAccessible(page, '[role="dialog"]');
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
