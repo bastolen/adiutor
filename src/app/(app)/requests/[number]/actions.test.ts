@@ -1,7 +1,7 @@
 /**
- * @file Tests for the actions that reply, add a note, and change a
- * request's details, its assignees and its subscribers. A reply and a note
- * send the files uploaded for them by their IDs. The details action passes on what the form
+ * @file Tests for the actions that reply, add a note, edit a text, and
+ * change a request's details, its assignees and its subscribers. A reply, a
+ * note and an edit send the files uploaded for them by their IDs. The details action passes on what the form
  * started from, and refreshes the page also when a colleague changed the
  * same detail meanwhile, so the dialog starts from the request as it is when
  * it's opened again. The assignees and subscribers actions add and remove
@@ -19,6 +19,8 @@ import {
   changeAssignees,
   changeRequestStatus,
   changeSubscribers,
+  editReply,
+  editRequestDescription,
   replyToRequest,
   setActivityView,
   subscribe,
@@ -32,6 +34,7 @@ import {
   changeSubscribersAction,
   changeStatusAction,
   changeSubscriptionAction,
+  editTextAction,
   noteAction,
   replyAction,
   saveActivityViewAction,
@@ -46,6 +49,8 @@ vi.mock('@/server/requests', () => ({
   changeAssignees: vi.fn(),
   changeRequestStatus: vi.fn(),
   changeSubscribers: vi.fn(),
+  editReply: vi.fn(),
+  editRequestDescription: vi.fn(),
   replyToRequest: vi.fn(),
   setActivityView: vi.fn(),
   subscribe: vi.fn(),
@@ -106,6 +111,43 @@ describe('noteAction', () => {
     });
     expect(result).toMatchObject({ ok: true });
     expect(refresh).toHaveBeenCalled();
+  });
+});
+
+describe('editTextAction', () => {
+  it('edits a reply with the files added to it, and says how many were', async () => {
+    vi.mocked(editReply).mockResolvedValue({ changed: true, attached: 2 });
+    const sent = form({ request: '142', entry: 'reply-1', text: 'On it.', edits: '1' });
+    sent.append('attachment', 'attachment-1');
+    sent.append('attachment', 'attachment-2');
+
+    const result = await editTextAction(null, sent);
+
+    expect(editReply).toHaveBeenCalledExactlyOnceWith({ name: 'app context' }, support, {
+      request: '142',
+      entry: 'reply-1',
+      text: 'On it.',
+      edits: 1,
+      attachments: ['attachment-1', 'attachment-2'],
+    });
+    expect(result).toEqual({ ok: true, message: 'Saved, with 2 files added.' });
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('edits the description, and says when nothing changed', async () => {
+    vi.mocked(editRequestDescription).mockResolvedValue({ changed: false, attached: 0 });
+
+    const result = await editTextAction(
+      null,
+      form({ request: '142', entry: '', text: 'Same.', edits: '0' }),
+    );
+
+    expect(editRequestDescription).toHaveBeenCalledExactlyOnceWith(
+      { name: 'app context' },
+      support,
+      { request: '142', text: 'Same.', edits: 0, attachments: [] },
+    );
+    expect(result).toEqual({ ok: true, message: 'Nothing changed.' });
   });
 });
 

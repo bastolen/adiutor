@@ -37,13 +37,15 @@ function textFile(text: string): Uint8Array<ArrayBuffer> {
  *
  * @param page - The browser page.
  * @param files - The files: name, type and bytes.
+ * @param within - Where the button is, when the page has more than one (a text being edited).
  */
 async function chooseFiles(
   page: Page,
   files: { name: string; mimeType: string; buffer: Buffer }[],
+  within: Page | Locator = page,
 ): Promise<void> {
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Attach files' }).click();
+  await within.getByRole('button', { name: 'Attach files' }).click();
   await (await chooser).setFiles(files);
 }
 
@@ -267,4 +269,36 @@ test('a company raises a request with a screenshot on its description', async ({
       .getByRole('region', { name: 'Description' })
       .getByRole('link', { name: /^Download error\.png/ }),
   ).toBeVisible();
+});
+
+test('a company adds a file to its reply while editing it, which doesn’t mark it edited', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'A file added in an edit' });
+  await storeEntries(number, [
+    { by: REQUESTS_CLIENT.email, side: 'company', kind: 'comment', text: 'The log follows.' },
+  ]);
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+  const conversation = page.getByRole('region', { name: 'Conversation' });
+
+  await conversation.getByRole('button', { name: 'Edit reply' }).click();
+  // The editor's form: the reply form below has an Attach files button of its own.
+  const editing = page
+    .locator('form')
+    .filter({ has: page.getByRole('textbox', { name: 'Reply', exact: true }) });
+  await chooseFiles(
+    page,
+    [{ name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printer offline') }],
+    editing,
+  );
+  await expect(editing.getByRole('list', { name: '1 file to send' })).toBeVisible();
+  await editing.getByRole('button', { name: 'Save' }).click();
+
+  await expect(toasts(page)).toContainText('Saved, with 1 file added.');
+  await expect(
+    conversation.getByRole('link', { name: 'Download printer.log, 15 bytes' }),
+  ).toBeVisible();
+  await expect(conversation.getByText('Edited', { exact: true })).toHaveCount(0);
 });

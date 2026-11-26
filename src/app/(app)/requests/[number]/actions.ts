@@ -221,8 +221,8 @@ export async function changeAssigneesAction(
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `request` (its number), `entry` (a reply's ID; empty for the
- *   description), `text` and `edits`.
- * @returns A confirmation, or why it failed.
+ *   description), `text`, `edits`, and an `attachment` for each file added with the edit.
+ * @returns A confirmation (which says how many files were added), or why it failed.
  */
 export async function editTextAction(
   _previous: ActionResult | null,
@@ -237,15 +237,19 @@ export async function editTextAction(
       text: field(formData, 'text'),
       // A count that isn't one can't match: the edit is refused as made meanwhile.
       edits: Number.isSafeInteger(counted) ? counted : -1,
+      attachments: fieldValues(formData, 'attachment'),
     };
-    const { changed } = await refreshOnConflict(
+    const { changed, attached } = await refreshOnConflict(
       entry
         ? editReply(appContext, actor, { ...input, entry })
         : editRequestDescription(appContext, actor, input),
     );
     refresh();
     const t = await getTranslations('requests.saved');
-    return { ok: true, message: t('text', { changed: changed ? 'yes' : 'no' }) };
+    return {
+      ok: true,
+      message: t('text', { changed: changed ? 'yes' : 'no', files: attached }),
+    };
   });
 }
 

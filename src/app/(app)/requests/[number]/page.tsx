@@ -74,7 +74,7 @@ import {
   type RequestDetail,
 } from '@/server/requests';
 
-import AttachmentList from '../../_requests/attachment-list';
+import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
@@ -226,7 +226,13 @@ async function RequestContent({
   // the reply form again: a reply that's half written stays.
   const newestFirst = detail.activity.order === 'newest';
   const thread = (
-    <Thread key="thread" detail={detail} address={address} earlierHref={earlierHref} />
+    <Thread
+      key="thread"
+      detail={detail}
+      address={address}
+      earlierHref={earlierHref}
+      attaching={attaching}
+    />
   );
   const writing = contributes && (
     <div
@@ -326,7 +332,13 @@ async function RequestContent({
                 </PersonLine>
               </div>
               {detail.description.edit ? (
-                <EditableText request={detail.number} entry={null} edit={detail.description.edit}>
+                <EditableText
+                  request={detail.number}
+                  entry={null}
+                  edit={detail.description.edit}
+                  attaching={attaching}
+                  attached={attachedCount(detail.description.attachments)}
+                >
                   {descriptionText}
                 </EditableText>
               ) : (

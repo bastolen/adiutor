@@ -1,6 +1,7 @@
 /**
  * @file Tests for an editable description or reply: the Edit button, the
- * editor it opens with the text, saving and cancelling, and where focus goes.
+ * editor it opens with the text, saving and cancelling, where focus goes,
+ * and adding files while people can attach them.
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -43,6 +44,51 @@ function renderEditable(entry: string | null = 'reply-1') {
 }
 
 describe('EditableText', () => {
+  it('offers to add files while people can attach them, counting the files the text has', async () => {
+    const user = userEvent.setup();
+    renderInLocale(
+      'en-US',
+      <EditableText
+        request={142}
+        entry="reply-1"
+        edit={{ markdown: 'On it.', edits: 0 }}
+        attaching={{ maxFileMb: 10 }}
+        attached={3}
+      >
+        <p>On it.</p>
+      </EditableText>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit reply' }));
+    expect(screen.getByRole('button', { name: 'Attach files' })).toBeInTheDocument();
+    expect(
+      screen.getByText('You can also drop or paste files: up to 7 of at most 10 MB each.'),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no files for a text that has as many as it may, nor while attaching is off', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderInLocale(
+      'en-US',
+      <EditableText
+        request={142}
+        entry="reply-1"
+        edit={{ markdown: 'On it.', edits: 0 }}
+        attaching={{ maxFileMb: 10 }}
+        attached={10}
+      >
+        <p>On it.</p>
+      </EditableText>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Edit reply' }));
+    expect(screen.queryByRole('button', { name: 'Attach files' })).toBeNull();
+    unmount();
+
+    renderEditable();
+    await user.click(screen.getByRole('button', { name: 'Edit reply' }));
+    expect(screen.queryByRole('button', { name: 'Attach files' })).toBeNull();
+  });
+
   it('shows the text with an Edit button named for what it edits', () => {
     renderEditable();
 

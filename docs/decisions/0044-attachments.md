@@ -39,6 +39,9 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
 - **Only the uploader sends an upload:** a text takes only its writer's own unsent uploads (with the
   same staff member signed in as them, if one was), and a file that isn't theirs refuses the whole
   text without naming it.
+- **Files can be added to a text later, in an edit:** an edit that only adds files keeps no version
+  and doesn't mark the text edited, since versions keep what a text said, and the files show with
+  it.
 - **A storage is tried before it's saved** (a small file written, read back and deleted), with the
   staff Admin's second step from the last 15 minutes and a record in the audit log: it decides
   where every company's files go, and holds credentials.

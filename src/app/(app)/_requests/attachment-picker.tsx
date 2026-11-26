@@ -78,13 +78,17 @@ function carriesFiles(data: DataTransfer | null): data is DataTransfer {
  *
  * @param props - Picker props.
  * @param props.maxFileMb - The largest file, in megabytes.
+ * @param props.attached - How many files the text has already (one that's edited), which count
+ *   towards the most it may have.
  * @param props.onUploadingChange - Told whether a file is uploading.
  */
 export default function AttachmentPicker({
   maxFileMb,
+  attached = 0,
   onUploadingChange = undefined,
 }: {
   maxFileMb: number;
+  attached?: number;
   onUploadingChange?: (uploading: boolean) => void;
 }) {
   const t = useTranslations('requests.attachments');
@@ -143,7 +147,7 @@ export default function AttachmentPicker({
    */
   const add = (chosen: readonly File[]) => {
     let refused = '';
-    const room = MAX_ATTACHMENTS_PER_TEXT - current.current.length;
+    const room = MAX_ATTACHMENTS_PER_TEXT - attached - current.current.length;
     const started: WaitingFile[] = [];
     chosen.forEach((file, index) => {
       const name = cleanAttachmentName(file.name) ?? file.name;
@@ -320,7 +324,7 @@ export default function AttachmentPicker({
         <p className="text-xs text-muted-foreground">
           {dropping
             ? t('dropHere')
-            : t('hint', { count: MAX_ATTACHMENTS_PER_TEXT, maximum: maxFileMb })}
+            : t('hint', { count: MAX_ATTACHMENTS_PER_TEXT - attached, maximum: maxFileMb })}
         </p>
       </div>
       {files.length > 0 && (

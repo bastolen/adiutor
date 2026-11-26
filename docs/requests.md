@@ -576,6 +576,10 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
 - **No edit is lost:** the editor sends how many times the text was edited when they started; an
   edit made meanwhile is refused (`errors.requests.textChanged`) and the page shows the text as it
   is. An unchanged text saves nothing.
+- **Files:** while people can attach files, the editor can add files to the text too (see
+  [Attachments](#attachments)), up to the 10 a text may have. The version check comes first, then
+  the files are claimed, then the text is saved; an edit that only adds files keeps no version
+  and doesn't mark the text edited, and the toast says how many were added.
 - **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
   conversation.
 - **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
@@ -719,7 +723,8 @@ in [Attachments](deploying.md#attachments).
   filtered like its mentions; `loadAttachment` checks the same for a download).
 - **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
   files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
-  request, reply and write a note have an "Attach files" button, take files dropped on the form,
+  request, reply and write a note, and a text's editor (see [Editing a text](#editing-a-text)),
+  have an "Attach files" button, take files dropped on the form,
   and take files or a screenshot pasted into it (a paste that also holds text, such as a copy from
   a document, stays a paste of the text). The browser checks each file's kind, its size and how
   many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it at once with its progress
@@ -727,7 +732,8 @@ in [Attachments](deploying.md#attachments).
   `attachment` field; the file never rides along with the form. While a file uploads, the send
   buttons wait, still focusable, and say why. A text still needs its words: files don't replace
   them.
-- **Sending** (`claimAttachments`, in the transaction that stores the text, after the text's row):
+- **Sending** (`claimAttachments`, in the transaction that stores or edits the text, after the
+  text's row):
   only the writer's own finished uploads that no text has claimed yet, from the last 24 hours, and
   with the same staff member signed in as them if one was, so a file uploaded while signed in as
   someone isn't theirs alone to send. A file that can't be sent, or more than 10 on the text,

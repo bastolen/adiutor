@@ -241,7 +241,7 @@
       "assignedYou": "Dit verzoek is aan je toegewezen.",
       "subscribers": "{changed, plural, =0 {Er is niets gewijzigd.} other {Abonnees opgeslagen.}}",
       "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}",
-      "text": "{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}"
+      "text": "{files, plural, =0 {{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}} one {Opgeslagen, met # bestand erbij.} other {Opgeslagen, met # bestanden erbij.}}"
     },
     "edit": {
       "editDescription": "Beschrijving bewerken",

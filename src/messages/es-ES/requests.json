@@ -241,7 +241,7 @@
       "assignedYou": "Ahora tienes asignada esta solicitud.",
       "subscribers": "{changed, plural, =0 {No ha cambiado nada.} other {Suscriptores guardados.}}",
       "subscription": "{change, select, subscribed {Te has suscrito a esta solicitud.} other {Has cancelado tu suscripción a esta solicitud.}}",
-      "text": "{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}"
+      "text": "{files, plural, =0 {{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}} one {Guardado, con # archivo más.} other {Guardado, con # archivos más.}}"
     },
     "edit": {
       "editDescription": "Editar descripción",

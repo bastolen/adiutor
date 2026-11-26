@@ -241,7 +241,7 @@
       "assignedYou": "You’re assigned to this request.",
       "subscribers": "{changed, plural, =0 {Nothing changed.} other {Subscribers saved.}}",
       "subscription": "{change, select, subscribed {You’re subscribed to this request.} other {You’re no longer subscribed to this request.}}",
-      "text": "{changed, select, yes {Changes saved.} other {Nothing changed.}}"
+      "text": "{files, plural, =0 {{changed, select, yes {Changes saved.} other {Nothing changed.}}} one {Saved, with # file added.} other {Saved, with # files added.}}"
     },
     "edit": {
       "editDescription": "Edit description",

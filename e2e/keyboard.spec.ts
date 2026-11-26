@@ -1634,15 +1634,19 @@ test.describe('requests', () => {
       const description = page.getByRole('region', { name: 'Description' });
       const edit = description.getByRole('button', { name: 'Edit description' });
       const editor = description.getByRole('textbox', { name: 'Description' });
+      const attach = description.getByRole('button', { name: 'Attach files' });
       const save = description.getByRole('button', { name: 'Save' });
       const cancel = description.getByRole('button', { name: 'Cancel' });
 
-      // Edit opens the editor with focus in the text; Tab goes on to Save, then Cancel.
+      // Edit opens the editor with focus in the text; Tab goes on to Attach files (people can
+      // attach files), then Save, then Cancel.
       await edit.focus();
       await page.keyboard.press('Enter');
       await expect(editor).toHaveAttribute('contenteditable', 'true');
       await expect(editor).toBeFocused();
       await page.keyboard.type(' Not kept.');
+      await page.keyboard.press('Tab');
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(save).toBeFocused();
       await page.keyboard.press('Tab');
@@ -1659,6 +1663,8 @@ test.describe('requests', () => {
       await expect(editor).toBeFocused();
       await page.keyboard.type(' Kept.');
       await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await expect(save).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(toasts(page)).toContainText('Changes saved.');
       await expect(description).toContainText('Kept.');

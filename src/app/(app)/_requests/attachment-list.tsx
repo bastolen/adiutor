@@ -14,6 +14,17 @@ import type { RequestAttachmentView } from '@/server/requests';
 import attachmentIcon from './attachment-icon';
 
 /**
+ * How many files a text has that aren't removed: what counts towards the
+ * most it may have.
+ *
+ * @param attachments - The text's files, as the service gave them.
+ * @returns How many.
+ */
+export function attachedCount(attachments: readonly RequestAttachmentView[] | undefined): number {
+  return attachments?.filter((attachment) => attachment.removed === null).length ?? 0;
+}
+
+/**
  * A text's files as a list of tiles, or nothing without any.
  *
  * @param props - List props.
