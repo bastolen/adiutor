@@ -562,13 +562,34 @@
           "removeDescription": "La pestaña vuelve a mostrar el icono hecho a partir del logotipo, o el de Adiutor si no hay logotipo.",
           "removed": "Icono subido quitado."
         },
+        "theme": {
+          "title": "Modo claro y oscuro",
+          "description": "Si cada persona elige el modo claro u oscuro, o si todas las páginas muestran uno de ellos. Los correos son siempre claros.",
+          "legend": "Mostrar las páginas en",
+          "both": {
+            "label": "Modo claro y oscuro",
+            "description": "Cada persona elige en el menú de la cuenta o con el botón de la esquina; hasta entonces, las páginas siguen a su dispositivo."
+          },
+          "light": {
+            "label": "Solo modo claro",
+            "description": "Todas las páginas son claras, prefiera lo que prefiera el dispositivo, y no hay nada que elegir."
+          },
+          "dark": {
+            "label": "Solo modo oscuro",
+            "description": "Todas las páginas son oscuras, prefiera lo que prefiera el dispositivo, y no hay nada que elegir."
+          },
+          "save": "Guardar",
+          "saved": "Modo claro y oscuro guardado."
+        },
         "colours": {
           "title": "Colores de marca",
           "description": "Los colores de cada página y correo, para usuarios y personal. El texto siempre se puede leer: un color demasiado claro u oscuro para ello se ajusta, y la vista previa muestra el que se usará.",
           "accent": {
             "label": "Color de acento",
             "description": "Botones, enlaces y contornos de foco, también en el tema oscuro si no tiene un color de acento propio.",
-            "pick": "Elige el color de acento"
+            "pick": "Elige el color de acento",
+            "descriptionDarkOnly": "Los correos y el icono de la pestaña, que siguen siendo claros.",
+            "descriptionLightOnly": "Botones, enlaces y contornos de foco."
           },
           "accentDark": {
             "label": "Color de acento en el tema oscuro",
@@ -578,7 +599,8 @@
           "tint": {
             "label": "Tono",
             "description": "El matiz que toma cada gris, también los fondos del tema oscuro; un gris da grises neutros.",
-            "pick": "Elige el tono"
+            "pick": "Elige el tono",
+            "descriptionLightOnly": "El matiz que toma cada gris; un gris da grises neutros."
           },
           "useAdiutor": "Usar los colores de Adiutor",
           "save": "Guardar colores",

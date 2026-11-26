@@ -1,10 +1,11 @@
 /**
  * @file End-to-end tests for Settings: the staff's name, the brand colours,
- * the logo and the icon made from it, the request number prefix, request
- * types, where attached files are kept (and the storage chosen kept through
- * confirming it's you), inviting staff, staff roles and the last-Admin
- * guard, and confirming it's you before giving a staff role or a company's
- * Admin role. A test that changes a setting puts it back.
+ * the logo and the icon made from it, light and dark mode, the request
+ * number prefix, request types, where attached files are kept (and the
+ * storage chosen kept through confirming it's you), inviting staff, staff
+ * roles and the last-Admin guard, and confirming it's you before giving a
+ * staff role or a company's Admin role. A test that changes a setting puts
+ * it back.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -20,6 +21,7 @@ import {
   attachmentSettingRows,
   backdateMfaConfirmation,
   removeBrandImages,
+  setForcedTheme,
   restoreAttachmentSettings,
   restoreSmtpSetting,
   setBrandColours,
@@ -320,6 +322,46 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
   } finally {
     await visitor.close();
     await removeBrandImages();
+  }
+});
+
+test('an Admin keeps every page in light mode, which hides the dark accent, and lets people choose again', async ({
+  page,
+}) => {
+  try {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/appearance');
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect(page.getByRole('radio', { name: /^Light and dark mode/ })).toBeChecked();
+
+    await page.getByRole('radio', { name: /^Light mode only/ }).check();
+    await page.locator('#theme').getByRole('button', { name: 'Save' }).click();
+    await expect(toasts(page)).toContainText('Light and dark mode saved.');
+
+    // Light on a dark system, with nothing to choose and no dark accent to set.
+    await expect(html).toHaveAttribute('data-theme', 'light');
+    await expect(page.getByRole('radio', { name: /^Light mode only/ })).toBeChecked();
+    await expect(
+      page.getByRole('textbox', { name: 'Accent in dark mode', exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByTestId('preview-dark')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Account menu/ }).click();
+    await expect(page.getByRole('group', { name: 'Theme' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expectAccessible(page);
+
+    // Both modes again: the system's dark, and the dark accent, are back.
+    await page.getByRole('radio', { name: /^Light and dark mode/ }).check();
+    await page.locator('#theme').getByRole('button', { name: 'Save' }).click();
+    await expect(toasts(page)).toContainText('Light and dark mode saved.');
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect(
+      page.getByRole('textbox', { name: 'Accent in dark mode', exact: true }),
+    ).toBeVisible();
+  } finally {
+    await setForcedTheme();
   }
 });
 

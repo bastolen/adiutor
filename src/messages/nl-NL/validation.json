@@ -122,6 +122,7 @@
       "accentDark": "Vul de accentkleur voor het donkere thema in als zes hexadecimale tekens, bijvoorbeeld #25dc89.",
       "tint": "Vul de tint in als zes hexadecimale tekens, bijvoorbeeld #0e0e2d."
     },
+    "themeMode": "Kies lichte en donkere modus, alleen lichte modus of alleen donkere modus.",
     "storage": {
       "driver": "Kies waar bestanden worden bewaard.",
       "folder": "Geef het absolute pad van de map, bijvoorbeeld /data/attachments.",

@@ -25,6 +25,7 @@ import {
   type ThemeMode,
 } from '@/lib/branding';
 import { BRAND_IMAGE_MAX_MB, BRAND_LOGO_MIN_HEIGHT } from '@/lib/input-rules';
+import type { ForcedTheme } from '@/lib/theme';
 
 import { removeBrandImageAction, uploadBrandImageAction } from './actions';
 import { BrandImageField, fileIn, useChosenImage, useImageRefusal } from './brand-image-field';
@@ -43,13 +44,22 @@ const ADIUTOR_LOGOS: Readonly<Record<ThemeMode, string>> = {
  * @param props - Preview props.
  * @param props.src - The image to show, or `null` for Adiutor's.
  * @param props.colours - The saved brand colours, for each mode's page.
+ * @param props.modes - The modes to show: both, or the one every page is kept in.
  */
-function LogoPreview({ src, colours }: { src: string | null; colours: BrandColours }) {
+function LogoPreview({
+  src,
+  colours,
+  modes,
+}: {
+  src: string | null;
+  colours: BrandColours;
+  modes: readonly ThemeMode[];
+}) {
   const t = useTranslations('admin.settings.appearance.logo');
   const brand = useMemo(() => derivePalette(colours), [colours]);
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {THEME_MODES.map((mode) => (
+      {modes.map((mode) => (
         <figure key={mode} className="flex flex-col gap-2">
           <div
             inert
@@ -81,13 +91,16 @@ function LogoPreview({ src, colours }: { src: string | null; colours: BrandColou
  * @param props - Form props.
  * @param props.logo - The uploaded logo, or `null` while it's Adiutor's.
  * @param props.colours - The saved brand colours, for the preview.
+ * @param props.forced - The mode every page is kept in, which alone is previewed; `null` for both.
  */
 export default function LogoForm({
   logo,
   colours,
+  forced = null,
 }: {
   logo: BrandLogo | null;
   colours: BrandColours;
+  forced?: ForcedTheme | null;
 }) {
   const t = useTranslations('admin.settings.appearance.logo');
   const formId = useId();
@@ -131,7 +144,11 @@ export default function LogoForm({
           </Alert>
           <input type="hidden" name="kind" value="logo" />
           <section aria-label={t('preview')} className="flex flex-col gap-2">
-            <LogoPreview src={chosen?.url ?? logo?.src ?? null} colours={colours} />
+            <LogoPreview
+              src={chosen?.url ?? logo?.src ?? null}
+              colours={colours}
+              modes={forced ? [forced] : THEME_MODES}
+            />
             {caption ? <p className="text-xs text-muted-foreground">{caption}</p> : null}
           </section>
           <BrandImageField

@@ -122,6 +122,7 @@
       "accentDark": "Escribe el color de acento del tema oscuro con seis dígitos hexadecimales, por ejemplo #25dc89.",
       "tint": "Escribe el tono con seis dígitos hexadecimales, por ejemplo #0e0e2d."
     },
+    "themeMode": "Elige modo claro y oscuro, solo modo claro o solo modo oscuro.",
     "storage": {
       "driver": "Elige dónde se guardan los archivos.",
       "folder": "Indica la ruta absoluta de la carpeta, por ejemplo /data/attachments.",

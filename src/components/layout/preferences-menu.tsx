@@ -17,6 +17,7 @@ import { useState, useTransition } from 'react';
 import LanguageFlag from '@/components/language/language-flag';
 import { FollowDefaultIcon } from '@/components/language/language-options';
 import { useOfferedLocales } from '@/components/language/offered-languages';
+import { useForcedTheme } from '@/components/theme/forced-theme';
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import { THEME_ICONS } from '@/components/theme/theme-options';
 import useThemePreference from '@/components/theme/use-theme-preference';
@@ -55,7 +56,10 @@ import setLanguageAction from './language-action';
  * flag, named in itself and marked with its `lang` so screen readers
  * pronounce it right. With only one language offered there's nothing to
  * choose: the language group and the flag go, and the button is named for
- * the theme alone ("Theme: System").
+ * the theme alone ("Theme: System"). While a staff Admin keeps every page in
+ * one mode (decision 0053), the theme goes instead and the button is named
+ * for the language alone ("Language: English (US)"); with one language too,
+ * there's no button at all.
  *
  * Arrow keys move through the items (left and right also within the theme
  * row), Enter or Space chooses, and Escape closes the menu and returns focus
@@ -75,10 +79,20 @@ export default function PreferencesMenu({ className = '' }: { className?: string
   const offered = useOfferedLocales();
   const chooses = offered.length > 1;
   const { preference, setPreference } = useThemePreference();
+  const forced = useForcedTheme();
   const [pending, startTransition] = useTransition();
   // The browser's choice: read when the menu opens, as the cookie isn't known while rendering.
   const [choice, setChoice] = useState<LanguageChoice>(FOLLOW_DEFAULT);
   const ThemeIcon = THEME_ICONS[preference];
+  if (forced && !chooses) {
+    return null;
+  }
+  let label = t('preferences.themeOnly', { theme: preference });
+  if (forced) {
+    label = t('preferences.languageOnly', { language: LOCALE_NAMES[locale] });
+  } else if (chooses) {
+    label = t('preferences.button', { theme: preference, language: LOCALE_NAMES[locale] });
+  }
 
   return (
     <MenuRoot
@@ -91,11 +105,7 @@ export default function PreferencesMenu({ className = '' }: { className?: string
       }}
     >
       <MenuTrigger
-        aria-label={
-          chooses
-            ? t('preferences.button', { theme: preference, language: LOCALE_NAMES[locale] })
-            : t('preferences.themeOnly', { theme: preference })
-        }
+        aria-label={label}
         aria-busy={pending || undefined}
         className={cn(
           'flex h-11 w-fit items-center gap-3 rounded-full border border-border bg-surface px-3.5 text-foreground shadow-lg transition-colors hover:bg-muted aria-busy:cursor-wait data-[state=open]:bg-muted md:fixed md:right-4 md:bottom-4 md:z-40 md:m-0',
@@ -103,20 +113,20 @@ export default function PreferencesMenu({ className = '' }: { className?: string
           className,
         )}
       >
-        <ThemeIcon aria-hidden="true" className="size-5" />
+        {forced ? null : <ThemeIcon aria-hidden="true" className="size-5" />}
         {chooses && (
           <>
             {/* The line between the two halves: the theme, then the language. */}
-            <span aria-hidden="true" className="h-5 w-px bg-border" />
+            {forced ? null : <span aria-hidden="true" className="h-5 w-px bg-border" />}
             {pending ? <Spinner /> : <LanguageFlag locale={locale} />}
           </>
         )}
       </MenuTrigger>
       <MenuContent side="top" align="end" className="min-w-56">
-        <ThemeMenuRow preference={preference} onChange={setPreference} />
+        {forced ? null : <ThemeMenuRow preference={preference} onChange={setPreference} />}
         {chooses && (
           <>
-            <MenuSeparator />
+            {forced ? null : <MenuSeparator />}
             <MenuLabel>{t('language.label')}</MenuLabel>
             <MenuRadioGroup
               value={choice}

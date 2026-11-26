@@ -51,6 +51,7 @@ import {
   PRIVATE_KEY_MAX_LENGTH,
   STORAGE_FIELD_MAX_LENGTH,
 } from './storage';
+import { FORCED_THEMES, type ForcedTheme, THEME_MODE_CHOICES } from './theme';
 import {
   WEBHOOK_EVENTS,
   WEBHOOK_FORMATS,
@@ -201,6 +202,17 @@ export const brandColoursSchema = z.object({
   accentDark: chosenBrandColourSchema('validation.brandColour.accentDark'),
   tint: chosenBrandColourSchema('validation.brandColour.tint'),
 });
+
+/** A mode a staff Admin keeps every page in, as `brand.forced_theme` keeps it (decision 0053). */
+export const forcedThemeSchema = z.enum(FORCED_THEMES, { error: 'validation.themeMode' });
+
+/**
+ * The choice on the Appearance tab of Settings: both modes, kept as none
+ * (`null`), or one only.
+ */
+export const themeModeChoiceSchema = z
+  .enum(THEME_MODE_CHOICES, { error: 'validation.themeMode' })
+  .transform((choice): ForcedTheme | null => (choice === 'both' ? null : choice));
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });
