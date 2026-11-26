@@ -447,8 +447,9 @@ does, to check what isn't working for them. The reasons are in
   note at the top. Their controls are off, like everywhere outside requests. They show only the personal details
   the staff member sees on the user's page (`personalDataShown` in
   `src/lib/authz/impersonation.ts`, from `signedInAs.staffPermissions`), which the services that
-  load them for the actor leave out, not the pages (`listOwnActivity`, `getSecurityOverview` and
-  `listOwnSessions`; the user's page loads the same details by ID, for staff Admins):
+  load them for the actor leave out, not the pages (`listOwnActivity`, `getSecurityOverview`,
+  `listOwnSessions` and `ownPictureChoices`; the user's page loads the same details by ID, for
+  staff Admins):
   - the signed-in devices and the passkeys' names: staff Admins only (`users:manage`);
   - the provider accounts' names: staff Admins only (`users:manage`);
   - the IP address and browser in the recent activity: staff who see the audit log

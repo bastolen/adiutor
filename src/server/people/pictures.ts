@@ -20,6 +20,7 @@ import { asc, eq, inArray } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { account, user } from '@/db/schema';
+import { personalDataShown } from '@/lib/authz/impersonation';
 import {
   isOAuthProvider,
   isProviderImageUrl,
@@ -204,7 +205,11 @@ export async function loadPictures(
 export interface PictureChoice {
   /** The provider whose account's picture it is. */
   providerId: OAuthProvider;
-  /** The account's name at the provider (a GitHub username), when it's known. */
+  /**
+   * The account's name at the provider (a GitHub username), when it's known
+   * and the reader gets it: the user, and a staff member signed in as them
+   * who sees it on the user's page (`personalDataShown`: staff Admins).
+   */
   accountName: string | null;
   /**
    * Whether the account has a picture to choose: not yet when it was
@@ -224,7 +229,8 @@ export interface PictureChoice {
  * card: each provider's first connected confirmed account, with its picture
  * (or none yet), what they chose, and what they show by that. A staff member
  * signed in as them gets the address of the picture in use only, as the
- * route serves them (`loadPicture`).
+ * route serves them (`loadPicture`), and the accounts' names only when the
+ * user's page shows them the names (`personalDataShown`: staff Admins).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -242,9 +248,10 @@ export async function ownPictureChoices(
   const source = sources.get(actor.id) ?? null;
   const shownAccount = pictureAccount(source, rows);
   const getsOthers = getsOtherChoices(actor, actor.id);
+  const { accountNames } = personalDataShown(actor);
   const choices = choiceAccounts(rows).map(({ providerId, row }) => ({
     providerId,
-    accountName: row.accountName,
+    accountName: accountNames ? row.accountName : null,
     hasPicture: row.image !== null,
     picture:
       row.image && (getsOthers || row.id === shownAccount?.id)
