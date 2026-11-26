@@ -455,13 +455,19 @@ export const auth = betterAuth({
     /**
      * Runs before every Better Auth request; see `beforeAuthRequest`. For
      * the endpoints that label a new authenticator entry or passkey, it then
-     * hands Better Auth the label as that request's app name
-     * (`signInAppNameFor`, decision 0050).
+     * sets the label as that request's app name (`signInAppNameFor`,
+     * decision 0050), on the request's own context. Never return a context
+     * change from here: Better Auth would hand the endpoint a new context
+     * object and lose the state the guards keep under this one
+     * (`src/server/auth/request-state.ts`).
      */
     before: createAuthMiddleware(async (ctx) => {
       const guards = await loadAuthGuards();
       await guards.beforeAuthRequest(ctx);
-      return guards.signInAppNameFor(ctx);
+      const appName = await guards.signInAppNameFor(ctx);
+      if (appName) {
+        ctx.context.appName = appName;
+      }
     }),
     /** Runs after every Better Auth request; see `afterAuthRequest`. */
     after: createAuthMiddleware(async (ctx) => {

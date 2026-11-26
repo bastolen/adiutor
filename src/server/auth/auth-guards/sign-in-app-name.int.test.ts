@@ -37,16 +37,12 @@ describe('signInAppNameFor', () => {
     async (path) => {
       await saveSettings(db, { 'staff.name': 'Adiutor Tests Support' });
 
-      expect(await signInAppNameFor(request(path))).toEqual({
-        context: { context: { appName: 'Adiutor Tests Support (Adiutor)' } },
-      });
+      expect(await signInAppNameFor(request(path))).toBe('Adiutor Tests Support (Adiutor)');
     },
   );
 
   it('labels it just Adiutor while that’s the staff’s name', async () => {
-    expect(await signInAppNameFor(request('/two-factor/enable'))).toEqual({
-      context: { context: { appName: 'Adiutor' } },
-    });
+    expect(await signInAppNameFor(request('/two-factor/enable'))).toBe('Adiutor');
   });
 
   it('leaves every other endpoint alone', async () => {
@@ -56,9 +52,14 @@ describe('signInAppNameFor', () => {
     expect(await signInAppNameFor(request('/passkey/verify-registration'))).toBeUndefined();
   });
 
-  it('leaves Better Auth’s own label when the staff’s name can’t be read', async () => {
+  it('leaves Better Auth’s own label when the staff’s name can’t be read, and says so', async () => {
     nameRead.fails = true;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     expect(await signInAppNameFor(request('/two-factor/enable'))).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      'The staff’s name could not be read; a new sign-in entry is labelled Adiutor.',
+    );
+    warn.mockRestore();
   });
 });

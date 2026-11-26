@@ -14,6 +14,7 @@ import { Suspense } from 'react';
 
 import WidePage from '@/components/layout/wide-page';
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
+import { forTitleTemplate } from '@/lib/branding';
 import notFoundMetadata from '@/lib/not-found-metadata';
 import { findCompanyAccess, requireCompanyAccess } from '@/server/authz';
 import { requestStaffName } from '@/server/branding';
@@ -51,7 +52,10 @@ export async function generateMetadata({
   const [t, staff] = await Promise.all([getTranslations('companies'), requestStaffName()]);
   return {
     title: {
-      template: t('titleTemplate', { company: company.name, staff }),
+      template: t('titleTemplate', {
+        company: forTitleTemplate(company.name),
+        staff: forTitleTemplate(staff),
+      }),
       default: company.name,
     },
   };

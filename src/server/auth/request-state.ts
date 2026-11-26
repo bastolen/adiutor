@@ -120,7 +120,14 @@ interface AuthRequestState {
   heldSignInChangeLock?: SignInChangeLock;
 }
 
-/** Each request's state, by its `ctx.context`. */
+/**
+ * Each request's state, by its `ctx.context`. A before-hook must never
+ * return a context change (`{ context: … }`): Better Auth would then hand
+ * the endpoint and the after-hooks a new context object, and the state
+ * stored under this one would be lost. A hook that needs to change the
+ * request sets it on `ctx.context` itself, as the label of new authenticator
+ * entries and passkeys is (`src/lib/auth.ts`).
+ */
 const states = new WeakMap<object, AuthRequestState>();
 
 /**

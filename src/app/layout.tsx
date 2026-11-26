@@ -8,6 +8,7 @@ import { Suspense } from 'react';
 
 import { StaffNameProvider } from '@/components/brand/staff-name';
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
+import { forTitleTemplate } from '@/lib/branding';
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import { pickMessages } from '@/lib/i18n/messages';
@@ -28,7 +29,10 @@ import './globals.css';
 export async function generateMetadata(): Promise<Metadata> {
   const [t, staff] = await Promise.all([getTranslations('common'), requestStaffName()]);
   return {
-    title: { template: t('documentTitle', { page: '%s', staff }), default: staff },
+    title: {
+      template: t('documentTitle', { page: '%s', staff: forTitleTemplate(staff) }),
+      default: staff,
+    },
     description: t('app.description'),
   };
 }
