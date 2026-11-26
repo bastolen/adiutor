@@ -1,8 +1,9 @@
 /**
  * @file Tests for the palette worked out from brand colours: nothing chosen
  * is the theme, the theme's own ink as a tint gives the theme's greys back,
- * every tint and accent keeps every rule in both modes, and the accent moves
- * only when the rules need it.
+ * every tint and accent keeps every rule in both modes, the accent moves
+ * only when the rules need it, and a dark accent on its own changes dark
+ * mode only.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -228,9 +229,13 @@ describe('derivePalette', () => {
     },
   );
 
-  it('ignores a dark accent without an accent', () => {
-    expect(derivePalette({ accent: null, accentDark: '#ff80ab', tint: null })).toEqual(
-      derivePalette(NO_BRAND_COLOURS),
-    );
+  it('changes only dark mode for a dark accent without an accent', () => {
+    const theme = derivePalette(NO_BRAND_COLOURS);
+    const result = derivePalette({ ...NO_BRAND_COLOURS, accentDark: '#ff80ab' });
+
+    expect(result.palette.light).toEqual(THEME_PALETTE.light);
+    expect(result.palette.dark.primary).toBe('#ff80ab');
+    expect(result.adjusted).toEqual({ light: false, dark: false });
+    expect(result.panel).toEqual({ ...theme.panel, glow: result.palette.dark.primary });
   });
 });

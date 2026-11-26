@@ -4,8 +4,9 @@
  * browser asks for it (`loadPicture` in `src/server/people/pictures.ts`), so
  * browsers never contact the provider and the Content Security Policy keeps
  * images to Adiutor's own address. Only for someone signed in (the proxy
- * protects it like every page), and only while the account is the picture
- * its owner shows; anything else is "not found". See decision 0022.
+ * protects it like every page): the picture its owner shows to everyone,
+ * and the other pictures they can choose to its owner alone, for the
+ * account page; anything else is "not found". See decision 0051.
  */
 import type { NextRequest } from 'next/server';
 
@@ -14,10 +15,11 @@ import { getOptionalActor } from '@/server/authz';
 import { loadPicture } from '@/server/people/pictures';
 
 /**
- * Serves a picture. Browsers keep it for a day; its address changes when
- * the picture does (`?v=`), so a new one is fetched right away. The version
- * is only for browsers' caches: whatever it says, the account's ID alone
- * picks what's served.
+ * Serves a picture. Browsers keep it for a day, privately, since some are
+ * only for their owner; its address changes when the picture does (`?v=`),
+ * so a new one is fetched right away. The version is only for browsers'
+ * caches: whatever it says, the account's ID and who asks pick what's
+ * served.
  *
  * @param _request - The request (unused).
  * @param context - The route's parameters: the account's ID.
@@ -28,10 +30,11 @@ export async function GET(
   context: RouteContext<'/avatars/[account]'>,
 ): Promise<Response> {
   const notFound = new Response(null, { status: 404, headers: { 'Cache-Control': 'no-store' } });
-  if (!(await getOptionalActor())) {
+  const viewer = await getOptionalActor();
+  if (!viewer) {
     return notFound;
   }
-  const picture = await loadPicture(appContext, (await context.params).account);
+  const picture = await loadPicture(appContext, viewer, (await context.params).account);
   if (!picture) {
     return notFound;
   }

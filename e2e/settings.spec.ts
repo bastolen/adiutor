@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 import { type Page } from '@playwright/test';
 
-import { derivePalette, type HexColour, THEME_PALETTE } from '../src/lib/branding';
+import { ADIUTOR_COLOURS, derivePalette, type HexColour, THEME_PALETTE } from '../src/lib/branding';
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import expectAccessible from './support/axe';
 import {
@@ -140,23 +140,36 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
     const accent = page.getByRole('textbox', { name: 'Accent', exact: true });
     const accentDark = page.getByRole('textbox', { name: 'Accent in dark mode', exact: true });
-    await expect(accent).toHaveValue('');
+    const tint = page.getByRole('textbox', { name: 'Tint', exact: true });
+    // The fields show Adiutor's own colours, and the dark accent follows the accent.
+    await expect(accent).toHaveValue(ADIUTOR_COLOURS.accent);
+    await expect(accentDark).toHaveValue(ADIUTOR_COLOURS.accentDark);
+    await expect(tint).toHaveValue(ADIUTOR_COLOURS.tint);
     expect(await shownColour(page, 'primary', 'light')).toBe(rgbOf(THEME_PALETTE.light.primary));
+    await accent.fill('#1d63dc');
+    await expect(accentDark).toHaveValue('#1d63dc');
+    await accent.fill(ADIUTOR_COLOURS.accent);
+    await expect(accentDark).toHaveValue(ADIUTOR_COLOURS.accentDark);
 
-    // A dark accent needs an accent; refused, what was typed stays.
+    // A dark accent on its own changes dark mode only.
+    const darkOnly = derivePalette({ accent: null, accentDark: '#ff80ab', tint: null });
     await accentDark.fill('#ff80ab');
     await page.getByRole('button', { name: 'Save colours' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
-      'Choose an accent before an accent for dark mode.',
-    );
-    await expect(accentDark).toHaveValue('#ff80ab');
+    await expect(toasts(page)).toContainText('Colours saved.');
+    await expect
+      .poll(() => shownColour(page, 'primary', 'dark'))
+      .toBe(rgbOf(darkOnly.palette.dark.primary));
+    expect(await shownColour(page, 'primary', 'light')).toBe(rgbOf(THEME_PALETTE.light.primary));
+    await expect(accent).toHaveValue(ADIUTOR_COLOURS.accent);
 
+    // Emptied, the dark accent follows the accent again once saved.
     await accentDark.fill('');
     await accent.fill('C2185B');
-    await page.getByRole('textbox', { name: 'Tint', exact: true }).fill(chosen.tint);
+    await tint.fill(chosen.tint);
     await page.getByRole('button', { name: 'Save colours' }).click();
     await expect(toasts(page)).toContainText('Colours saved.');
     await expect(accent).toHaveValue(chosen.accent);
+    await expect(accentDark).toHaveValue(chosen.accent);
 
     // This page shows them at once, in both modes, and so does every other page.
     await expect
@@ -192,7 +205,9 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/admin/settings/appearance');
     await page.getByRole('button', { name: 'Use Adiutor’s colours' }).click();
-    await expect(accent).toHaveValue('');
+    await expect(accent).toHaveValue(ADIUTOR_COLOURS.accent);
+    await expect(accentDark).toHaveValue(ADIUTOR_COLOURS.accentDark);
+    await expect(tint).toHaveValue(ADIUTOR_COLOURS.tint);
     await page.getByRole('button', { name: 'Save colours' }).click();
     await expect(toasts(page)).toContainText('Colours saved.');
     await expect

@@ -25,7 +25,16 @@ export interface PictureOption {
   providerId: OAuthProvider;
   /** Its name at the provider (a GitHub username), when it's known. */
   accountName: string | null;
-  /** Its picture's address in Adiutor, or `null` while it has none yet. */
+  /**
+   * Whether it has a picture to choose: not yet when it was connected before
+   * pictures were kept.
+   */
+  hasPicture: boolean;
+  /**
+   * Its picture's address in Adiutor for the preview, or `null` for initials:
+   * while it has none yet, or for a staff member signed in as the user, a
+   * picture the user doesn't show.
+   */
   picture: string | null;
 }
 
@@ -44,7 +53,9 @@ interface PictureFormProps {
 /**
  * A choice of picture, each option with its preview, and a save button. An
  * account without a picture yet (connected before pictures were kept) is
- * offered disabled, with what gives it one. Without any connected account,
+ * offered disabled, with what gives it one. A staff member signed in as the
+ * user sees initials in the previews of the pictures the user doesn't show,
+ * which they don't get. Without any connected account,
  * only the initials are offered, with where to connect one. The choice
  * stays as saved after saving (`resetOnSuccess: false`), and the page shows
  * the new picture wherever the user appears.
@@ -65,7 +76,7 @@ export default function PictureForm({ name, options, shown, chosen }: PictureFor
           <legend className="mb-3 text-sm font-medium text-foreground">
             {t('profile.pictureLabel')}
           </legend>
-          {options.map(({ providerId, accountName, picture }) => (
+          {options.map(({ providerId, accountName, hasPicture, picture }) => (
             <RadioField
               key={providerId}
               name="picture"
@@ -76,11 +87,13 @@ export default function PictureForm({ name, options, shown, chosen }: PictureFor
                 account: accountName ?? '',
               })}
               description={
-                picture ? '' : t('profile.pictureNotYet', { provider: PROVIDER_LABELS[providerId] })
+                hasPicture
+                  ? ''
+                  : t('profile.pictureNotYet', { provider: PROVIDER_LABELS[providerId] })
               }
               leading={<Avatar name={name} size="sm" src={picture} />}
               defaultChecked={shown === providerId}
-              disabled={changesOff || !picture}
+              disabled={changesOff || !hasPicture}
             />
           ))}
           <RadioField

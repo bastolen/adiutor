@@ -50,6 +50,7 @@ export {
   STORED_BOX,
 } from './images';
 export { ADIUTOR_NAME, forTitleTemplate, isOwnName, poweredByShown, signInAppName } from './name';
+export { ADIUTOR_COLOURS, followedDarkAccent, storedBrandColours } from './own-colours';
 export {
   ACCENT_TOKENS,
   type BrandColours,

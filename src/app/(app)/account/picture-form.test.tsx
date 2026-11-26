@@ -1,7 +1,8 @@
 /**
  * @file Tests for the account's Picture form: the pictures of the connected
  * accounts and the initials, each with its preview, an account without a
- * picture yet, the default until someone chooses, and saving a choice.
+ * picture yet, a picture the reader doesn't get, the default until someone
+ * chooses, and saving a choice.
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -23,6 +24,7 @@ afterEach(() => {
 const GITHUB: PictureOption = {
   providerId: 'github',
   accountName: 'adiutor-tests',
+  hasPicture: true,
   picture: '/avatars/github?v=1',
 };
 
@@ -30,6 +32,15 @@ const GITHUB: PictureOption = {
 const GOOGLE_WITHOUT_PICTURE: PictureOption = {
   providerId: 'google',
   accountName: 'ada@adiutor.test',
+  hasPicture: false,
+  picture: null,
+};
+
+/** A Google account with a picture the reader doesn't get (a staff member signed in as the user). */
+const GOOGLE_NOT_FOR_READER: PictureOption = {
+  providerId: 'google',
+  accountName: null,
+  hasPicture: true,
   picture: null,
 };
 
@@ -120,5 +131,28 @@ describe('PictureForm', () => {
 
     expect(screen.getByRole('radio', { name: 'Initials' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save picture' })).toHaveAttribute('disabled');
+  });
+
+  it('shows initials for a picture the reader doesn’t get, without saying it has none', () => {
+    const { container } = renderInLocale(
+      'en-US',
+      <>
+        <PictureForm
+          name="Ada Tester"
+          options={[GITHUB, GOOGLE_NOT_FOR_READER]}
+          shown="github"
+          chosen
+        />
+        <SignedInAsMarker />
+      </>,
+    );
+
+    // Only the picture in use loads; the other preview is the initials.
+    expect([...container.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual([
+      '/avatars/github?v=1',
+    ]);
+    expect(screen.getByRole('radio', { name: 'Google' })).not.toHaveAccessibleDescription(
+      'Sign in with Google once to use its picture.',
+    );
   });
 });

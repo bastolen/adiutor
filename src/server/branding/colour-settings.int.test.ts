@@ -1,13 +1,15 @@
 /**
  * @file Integration tests for the brand colours on the Appearance tab of
- * Settings, against the test database: saving and reading them, clearing
- * them back to the theme's, the colours it refuses, the audit event, and who
+ * Settings, against the test database: saving and reading them, a dark
+ * accent on its own, clearing them back to the theme's, Adiutor's own
+ * colours stored as none, the colours it refuses, the audit event, and who
  * may save them.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { NO_BRAND_COLOURS } from '@/lib/branding';
+import { setting } from '@/db/schema';
+import { ADIUTOR_COLOURS, NO_BRAND_COLOURS } from '@/lib/branding';
 
 import { auditEvents, setupTestContext, staffActor } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
@@ -52,6 +54,35 @@ describe('setBrandColours', () => {
     expect(await getBrandColours(ctx, admin)).toEqual(NO_BRAND_COLOURS);
   });
 
+  it('saves an accent for dark mode on its own, light mode keeping the theme’s', async () => {
+    expect(
+      await setBrandColours(ctx, admin, { accent: '', accentDark: '#FF80AB', tint: '' }),
+    ).toEqual({ ...NO_BRAND_COLOURS, accentDark: '#ff80ab' });
+
+    expect(await loadBrandColours(db)).toEqual({ ...NO_BRAND_COLOURS, accentDark: '#ff80ab' });
+  });
+
+  it('stores Adiutor’s own colours, and a dark accent equal to the accent, as none', async () => {
+    await setBrandColours(ctx, admin, { accent: '#c2185b', accentDark: '', tint: '#2e7d32' });
+
+    expect(
+      await setBrandColours(ctx, admin, {
+        accent: '#0E5655',
+        accentDark: ADIUTOR_COLOURS.accentDark,
+        tint: ADIUTOR_COLOURS.tint,
+      }),
+    ).toEqual(NO_BRAND_COLOURS);
+    expect(await db.$count(setting)).toBe(0);
+
+    expect(
+      await setBrandColours(ctx, admin, { accent: '#c2185b', accentDark: '#C2185B', tint: '' }),
+    ).toEqual({ ...NO_BRAND_COLOURS, accent: '#c2185b' });
+    const events = await auditEvents(db, { action: 'brand_colours_changed' });
+    expect(events.map(({ details }) => details)).toContainEqual(
+      expect.objectContaining({ to: NO_BRAND_COLOURS }),
+    );
+  });
+
   it('records the change in the audit log, with the colours it replaced', async () => {
     await setBrandColours(ctx, admin, { accent: '#c2185b', accentDark: '', tint: '' });
     await setBrandColours(ctx, admin, { accent: '#c2185b', accentDark: '', tint: '#2e7d32' });
@@ -74,7 +105,6 @@ describe('setBrandColours', () => {
       { accent: '', accentDark: '', tint: '#2e7d32;}body{color:red' },
       'validation.brandColour.tint',
     ],
-    [{ accent: '', accentDark: '#ff80ab', tint: '' }, 'validation.brandColour.darkNeedsAccent'],
   ])('refuses %j, saving nothing', async (input, message) => {
     await expect(setBrandColours(ctx, admin, input)).rejects.toThrow(ZodError);
     await expect(setBrandColours(ctx, admin, input)).rejects.toThrow(message);

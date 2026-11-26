@@ -565,17 +565,17 @@
           "description": "Los colores de cada página y correo, para usuarios y personal. El texto siempre se puede leer: un color demasiado claro u oscuro para ello se ajusta, y la vista previa muestra el que se usará.",
           "accent": {
             "label": "Color de acento",
-            "description": "Botones, enlaces y contornos de foco. Déjalo vacío para el verde azulado y el verde de Adiutor.",
+            "description": "Botones, enlaces y contornos de foco, también en el tema oscuro si no tiene un color de acento propio.",
             "pick": "Elige el color de acento"
           },
           "accentDark": {
             "label": "Color de acento en el tema oscuro",
-            "description": "Solo si el tema oscuro debe tener otro color de acento. Déjalo vacío para calcularlo a partir del color de acento.",
+            "description": "Sigue al color de acento hasta que elijas otro para el tema oscuro. Vacía el campo para que vuelva a seguirlo.",
             "pick": "Elige el color de acento del tema oscuro"
           },
           "tint": {
             "label": "Tono",
-            "description": "El matiz que toma cada gris, también los fondos del tema oscuro; un gris da grises neutros. Déjalo vacío para el azul marino de Adiutor.",
+            "description": "El matiz que toma cada gris, también los fondos del tema oscuro; un gris da grises neutros.",
             "pick": "Elige el tono"
           },
           "useAdiutor": "Usar los colores de Adiutor",

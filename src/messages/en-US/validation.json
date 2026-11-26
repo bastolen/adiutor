@@ -120,8 +120,7 @@
       "invalid": "Enter a colour as six hex digits, e.g. #0e5655.",
       "accent": "Enter the accent as six hex digits, e.g. #0e5655.",
       "accentDark": "Enter the accent for dark mode as six hex digits, e.g. #25dc89.",
-      "tint": "Enter the tint as six hex digits, e.g. #0e0e2d.",
-      "darkNeedsAccent": "Choose an accent before an accent for dark mode."
+      "tint": "Enter the tint as six hex digits, e.g. #0e0e2d."
     },
     "storage": {
       "driver": "Choose where files are kept.",
