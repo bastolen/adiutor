@@ -30,7 +30,10 @@ import {
   requestMention,
   user,
 } from '@/db/schema';
-import { getStaffPermissionsInCompanies } from '@/lib/authz/permissions';
+import {
+  getInternalRequestPermissions,
+  getStaffPermissionsInCompanies,
+} from '@/lib/authz/permissions';
 import { visibleName } from '@/lib/display-name';
 import {
   MAX_MENTIONS_PER_TEXT,
@@ -43,6 +46,7 @@ import {
 import { assertPermission, getCompanyAccess } from '../access';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
+import { notFoundError } from '../errors';
 import { getRequestAccess, READING_STAFF_ROLES } from './access';
 import mentionKey, { byNameThenKey } from './mention-key';
 import { ASSIGNED } from './participants';
@@ -195,21 +199,24 @@ async function mentionable(
 
 /**
  * Lists who the actor can mention in a text: a reply to a request, or the
- * description of a new request for a company. For the list at "@": names,
- * the staff's label and a key each, by name; never an ID or an address.
+ * description of a new request for a company or of a new internal request.
+ * For the list at "@": names, the staff's label and a key each, by name;
+ * never an ID or an address.
  *
  * @param ctx - Service context.
- * @param actor - The acting user; needs `requests:contribute` in the company.
- * @param where - The request the text is a reply to (its number or ID), or
- *   the company a new request is raised for (its ID or URL name).
+ * @param actor - The acting user; needs `requests:contribute` in the company (or, for an
+ *   internal request, from their staff role).
+ * @param where - The request the text is a reply to (its number or ID), the company a new
+ *   request is raised for (its ID or URL name), or a new internal request (`internal`).
  * @returns The people; nobody for a deactivated company, where nothing is written.
  * @throws {ServiceError} `not_found` when the actor may not see the request or
- *   the company, `forbidden` without `requests:contribute`.
+ *   the company (or isn't on the staff, for a new internal request), `forbidden` without
+ *   `requests:contribute`.
  */
 export async function listMentionable(
   ctx: ServiceContext,
   actor: Actor,
-  where: { request: string } | { company: string },
+  where: { request: string } | { company: string } | { internal: true },
 ): Promise<MentionablePerson[]> {
   let requestId: string | null = null;
   let access;
@@ -217,8 +224,15 @@ export async function listMentionable(
     const found = await getRequestAccess(ctx.db, actor, where.request);
     requestId = found.request.id;
     access = found;
-  } else {
+  } else if ('company' in where) {
     access = await getCompanyAccess(ctx.db, actor, where.company);
+  } else {
+    const permissions = getInternalRequestPermissions(actor);
+    // Like a company they can't see, for anyone who isn't on the staff.
+    if (!permissions.has('requests:view')) {
+      throw notFoundError();
+    }
+    access = { company: null, permissions };
   }
   const { company, permissions } = access;
   assertPermission(permissions, 'requests:contribute');

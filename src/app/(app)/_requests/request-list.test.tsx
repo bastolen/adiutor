@@ -27,7 +27,7 @@ import RequestList from './request-list';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 // The viewer's staff permissions: none by default, as for someone at a company.
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 vi.mock('@/server/requests', () => ({
   getRequestSettings: vi.fn(),
   listAssignableStaff: vi.fn(),

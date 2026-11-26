@@ -32,6 +32,7 @@ import { createPageUrl } from '@/lib/tables/page-url';
 import { PAGE_SIZES } from '@/lib/tables/table-state';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
+import { getInternalRequestPermissions } from '@/server/authz';
 import { type BoardCard, listBoard } from '@/server/requests';
 
 import Board from './board';
@@ -264,7 +265,10 @@ export default async function RequestBoard({
       };
     }),
   }));
-  const canRaise = companies.some(({ canRaise: may }) => may);
+  // The staff who work on requests may also raise an internal one.
+  const canRaise =
+    companies.some(({ canRaise: may }) => may) ||
+    (!company && getInternalRequestPermissions(actor).has('requests:contribute'));
 
   return (
     <>

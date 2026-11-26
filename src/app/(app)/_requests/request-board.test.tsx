@@ -27,7 +27,7 @@ import RequestBoard from './request-board';
 import { companyViewPaths } from './request-view-toggle';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 vi.mock('@/server/requests', () => ({
   getRequestSettings: vi.fn(),
   listAssignableStaff: vi.fn(),

@@ -79,10 +79,11 @@
     },
     "new": {
       "title": "Nieuw verzoek",
-      "description": "{audience, select, staff {Dien een verzoek in voor een bedrijf, of voor iemand daar die het je vroeg, bijvoorbeeld telefonisch.} other {Vertel {staff} wat je nodig hebt. Ze reageren op de pagina van het verzoek.}}",
+      "description": "{audience, select, staff {Dien een verzoek in voor een bedrijf, voor iemand daar die het je vroeg, bijvoorbeeld telefonisch, of een intern verzoek dat alleen medewerkers zien.} other {Vertel {staff} wat je nodig hebt. Ze reageren op de pagina van het verzoek.}}",
       "back": "Verzoeken",
       "company": "Bedrijf",
-      "companyPlaceholder": "Kies een bedrijf",
+      "companyPlaceholder": "{internal, select, yes {Kies een bedrijf, of Intern} other {Kies een bedrijf}}",
+      "internalHint": "Alleen medewerkers zien een intern verzoek.",
       "titleLabel": "Titel",
       "titleHint": "Eén regel die zegt waar het over gaat.",
       "typeLabel": "Type",

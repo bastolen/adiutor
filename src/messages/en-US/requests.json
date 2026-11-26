@@ -79,10 +79,11 @@
     },
     "new": {
       "title": "New request",
-      "description": "{audience, select, staff {Raise a request for a company, or for someone there who asked you, for example by phone.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
+      "description": "{audience, select, staff {Raise a request for a company, for someone there who asked you, for example by phone, or an internal one that only the staff see.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
       "back": "Requests",
       "company": "Company",
-      "companyPlaceholder": "Choose a company",
+      "companyPlaceholder": "{internal, select, yes {Choose a company, or Internal} other {Choose a company}}",
+      "internalHint": "Only the staff see an internal request.",
       "titleLabel": "Title",
       "titleHint": "One line that says what it’s about.",
       "typeLabel": "Type",

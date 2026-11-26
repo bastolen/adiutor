@@ -48,6 +48,7 @@ import {
 } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
+import { INTERNAL_CHOICE } from '@/lib/requests';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
@@ -689,6 +690,19 @@ function listOperations(): Operation[] {
     ['look up a request (internal)', (w) => findRequest(ctx, w.actor, w.requests.internal)],
     ['view request (internal)', (w) => getRequest(ctx, w.actor, w.requests.internal)],
     [
+      'raise request (internal)',
+      (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: INTERNAL_CHOICE }),
+    ],
+    [
+      'raise request for someone (internal)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: INTERNAL_CHOICE,
+          raisedFor: w.raiseFor.own,
+        }),
+    ],
+    [
       'reply to request (internal)',
       (w) => replyToRequest(ctx, w.actor, { request: w.requests.internal, body: 'Any news?' }),
     ],
@@ -738,6 +752,10 @@ function listOperations(): Operation[] {
     [
       'list who can be mentioned in a request (internal)',
       (w) => listMentionable(ctx, w.actor, { request: w.requests.internal }),
+    ],
+    [
+      'list who can be mentioned in a new request (internal)',
+      (w) => listMentionable(ctx, w.actor, { internal: true }),
     ],
     [
       'subscribe to request (internal)',
@@ -1004,6 +1022,7 @@ const READS: ReadonlySet<string> = new Set([
   'look up a request (internal)',
   'view request (internal)',
   'list who can be mentioned in a request (internal)',
+  'list who can be mentioned in a new request (internal)',
   'list who can be subscribed to a request (internal)',
   'list staff to assign',
   'list who can be mentioned in a request (own)',
@@ -1054,6 +1073,8 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'change request subscribers (own)',
   'change request subscribers (other)',
   // And on internal requests, which only a staff role's own rights reach (decision 0048).
+  'raise request (internal)',
+  'raise request for someone (internal)',
   'reply to request (internal)',
   'send a reply as the solution (internal)',
   'answer a solution (internal)',
@@ -1305,6 +1326,9 @@ const EXPECTED: Record<string, string> = {
   // company finds one, as with a company they aren't in; Finance reads them and works on none.
   'look up a request (internal)': 'NNNAAAA',
   'view request (internal)': 'NNNAAAA',
+  'raise request (internal)': 'NNNAFAA',
+  // An internal request is the staff's own, never raised for someone at a company.
+  'raise request for someone (internal)': 'NNNFFFF',
   'reply to request (internal)': 'NNNAFAA',
   // Nobody could approve a solution on an internal request, so nobody sends or answers one.
   'send a reply as the solution (internal)': 'NNNFFFF',
@@ -1315,6 +1339,7 @@ const EXPECTED: Record<string, string> = {
   'edit request description (internal)': 'NNNAFAA',
   'add internal note (internal)': 'NNNAFAA',
   'list who can be mentioned in a request (internal)': 'NNNAFAA',
+  'list who can be mentioned in a new request (internal)': 'NNNAFAA',
   'subscribe to request (internal)': 'NNNAAAA',
   'unsubscribe from request (internal)': 'NNNAAAA',
   'change request subscribers (internal)': 'NNNAFAA',

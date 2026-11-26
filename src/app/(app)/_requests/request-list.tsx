@@ -25,6 +25,7 @@ import type { SearchParams } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
+import { getInternalRequestPermissions } from '@/server/authz';
 import { listRequests, type RequestListItem } from '@/server/requests';
 
 import InternalLabel from './internal-label';
@@ -164,9 +165,11 @@ export default async function RequestList({
     filters.definition,
     { ...requested, page: requests.page },
   );
+  // Across companies, the staff who work on requests may also raise an internal one.
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
-    : companies.some(({ canRaise: may }) => may);
+    : companies.some(({ canRaise: may }) => may) ||
+      getInternalRequestPermissions(actor).has('requests:contribute');
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
   // What an empty list says, and whether it invites a request: only where one would show up.
   const emptyKind = emptyKindOf(status, filters.narrowed);

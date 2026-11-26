@@ -760,6 +760,14 @@ Adiutor itself ([decision 0048](decisions/0048-internal-requests-have-no-company
   and `mayReplyWithStatus` take where the request is, `RequestPlace`).
 - **Links to the staff's pages** stay links in every text of one, as in a note: only the staff
   read it (see [Text](#text)).
+- **Raising one:** the new-request form offers "Internal" first in its Company select to the
+  staff who work on requests, also when there's one company to choose from or none
+  (`INTERNAL_CHOICE`, `_internal`, a value no URL name can take). Choosing it hides "Raise it for"
+  (an internal request is the staff's own, never raised for someone: `raiseRequest` refuses
+  `raisedFor` with it), lists only the staff at "@", says only the staff see it, and lets the
+  description link to the staff's pages from then on (the editor follows the choice, and what's
+  written already stays as it is). `?company=_internal` opens the form with it chosen, and so
+  does an Adiutor without companies yet.
 - **Finding them:** on the staff's lists and board, a request without a company shows "Internal"
   with a lock where its company would be (`InternalLabel`): in the request's header and its
   Details, and in the list and on a card wherever those name companies. The Active and Waiting lists keep them (they have no
@@ -907,8 +915,9 @@ says so with a "Show everything" button.
 - **`/companies/<URL name>/board`**: that company's requests as a board, for everyone who may see
   them (its people and the staff), under the company's header with its Requests tab still current
   (see [The board](#the-board)).
-- **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
-  type with what each is for, and a description. The staff also choose who it's for, themselves
+- **`/requests/new`**: the company (only when there's more than one to choose from; for the staff
+  who work on requests always, with "Internal" first, see [Internal requests](#internal-requests)),
+  a title, a type with what each is for, and a description. The staff also choose who it's for, themselves
   ("Yourself") or someone at the company (see
   [Raising a request for someone](#raising-a-request-for-someone)), and a priority, or leave it to
   the type. The people come with a company that's chosen already; choosing another asks for its

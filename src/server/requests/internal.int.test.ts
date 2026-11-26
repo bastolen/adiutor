@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import { queuedJob, requestEntry } from '@/db/schema';
 import { appUrl } from '@/lib/env';
+import { INTERNAL_CHOICE, writtenMentionMarker } from '@/lib/requests';
 
 import {
   actorFor,
@@ -25,6 +26,8 @@ import { getRequest } from './detail';
 import { editReply, editRequestDescription } from './edits';
 import { listRequests } from './list';
 import mentionKey from './mention-key';
+import { listMentionable } from './mentions';
+import raiseRequest from './raise';
 import replyToRequest from './reply';
 import { changeSubscribers, listSubscribable } from './subscribers';
 import {
@@ -144,6 +147,91 @@ describe('the lists and the board', () => {
     await storeAssignees(internal.id, [support.id]);
 
     expect(await countAssignedRequests(ctx, support)).toBe(1);
+  });
+});
+
+describe('raising an internal request', () => {
+  it('is for the staff who work on requests: theirs, without a company, and followed', async () => {
+    const support = await staffActor(db, 'support');
+
+    const raised = await raiseRequest(ctx, support, {
+      companyId: INTERNAL_CHOICE,
+      title: 'Renew the certificates',
+      description: withStaffLink(support.id),
+      type: 'support',
+      priority: 'high',
+    });
+
+    expect(await storedRequest(raised.id)).toMatchObject({
+      companyId: null,
+      createdBy: support.id,
+      createdBySide: 'staff',
+      priority: 'high',
+      // Only the staff read it: a link to one of their pages stays a link.
+      description: withStaffLink(support.id),
+    });
+    const detail = await getRequest(ctx, support, raised.id);
+    expect(detail.subscribed).toBe(true);
+  });
+
+  it('is refused to Finance, who reads them, and not there for anyone at a company', async () => {
+    const company = await createCompany(db);
+    const input = {
+      companyId: INTERNAL_CHOICE,
+      title: 'Renew the certificates',
+      description: 'They run out on Friday.',
+      type: 'support',
+    };
+
+    await expect(raiseRequest(ctx, await staffActor(db, 'finance'), input)).rejects.toMatchObject({
+      code: 'forbidden',
+    });
+    await expect(
+      raiseRequest(ctx, await memberActor(db, company.id, 'admin'), input),
+    ).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('is never raised for someone at a company', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, await staffActor(db, 'support'), {
+        companyId: INTERNAL_CHOICE,
+        title: 'Renew the certificates',
+        description: 'They run out on Friday.',
+        type: 'support',
+        raisedFor: mentionKey(company.id, client.id),
+      }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('mentions only the staff, by keys of the internal requests’ own', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const manager = await staffActor(db, 'manager', 'morgan@adiutor.test');
+
+    const people = await listMentionable(ctx, support, { internal: true });
+    expect(people).toContainEqual({
+      key: mentionKey(null, manager.id),
+      name: 'morgan',
+      staff: true,
+    });
+    expect(people.map(({ name }) => name)).not.toContain(client.name);
+
+    // A key made in a company stands for nobody in an internal request.
+    const { number } = await raiseRequest(ctx, support, {
+      companyId: INTERNAL_CHOICE,
+      title: 'Renew the certificates',
+      description: `${writtenMentionMarker('Morgan', mentionKey(null, manager.id))} and ${writtenMentionMarker('Casey', mentionKey(company.id, client.id))}`,
+      type: 'support',
+    });
+    const raised = await getRequest(ctx, manager, String(number));
+    expect(raised.subscribed).toBe(true);
+    expect(Object.values(raised.description.mentions ?? {}).map(({ name }) => name)).toEqual([
+      'morgan',
+    ]);
   });
 });
 

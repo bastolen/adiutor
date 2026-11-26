@@ -133,6 +133,8 @@ const APP_PATHS = [
   '/requests/board',
   '/requests/board?q=no-such-request',
   '/requests/new',
+  // The form with an internal request chosen: its hint, and no "Raise it for".
+  '/requests/new?company=_internal',
   // A request with a conversation: replies from both sides, a link, and changes.
   `/requests/${SEEDED_REQUESTS.waiting.number}`,
   // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
