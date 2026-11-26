@@ -8,7 +8,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { queuedJob, requestEntry } from '@/db/schema';
+import { requestEntry } from '@/db/schema';
 import { appUrl } from '@/lib/env';
 import { INTERNAL_CHOICE, writtenMentionMarker } from '@/lib/requests';
 
@@ -30,11 +30,11 @@ import { listMentionable } from './mentions';
 import raiseRequest from './raise';
 import { readRequestUpdate } from './read-request-update';
 import replyToRequest from './reply';
-import type { QueuedRequestNews } from './request-update';
 import { changeSubscribers, listSubscribable } from './subscribers';
 import {
   ctx,
   db,
+  newsFor,
   storeAssignees,
   storeRequest,
   storeSubscribers,
@@ -49,25 +49,6 @@ import {
  */
 const withStaffLink = (userId: string) =>
   `Ask [Sam Support](${appUrl}/admin/users/${userId}) about the toner.`;
-
-/**
- * The news queued for one person, as the batch hands it over.
- *
- * @param userId - The person.
- * @returns Their news.
- */
-async function newsFor(userId: string): Promise<QueuedRequestNews[]> {
-  const jobs = await db
-    .select({ id: queuedJob.id, payload: queuedJob.payload })
-    .from(queuedJob)
-    .where(eq(queuedJob.kind, 'request-update'));
-  return jobs.flatMap(({ id, payload }) => {
-    const news = payload as { userId: string } & Omit<QueuedRequestNews, 'jobId'>;
-    return news.userId === userId
-      ? [{ jobId: id, event: news.event, entryId: news.entryId, byUserId: news.byUserId }]
-      : [];
-  });
-}
 
 describe('who reads an internal request', () => {
   it('is every staff role, as the staff', async () => {

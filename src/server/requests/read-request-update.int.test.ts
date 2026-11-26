@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   membership,
-  queuedJob,
   requestAttachment,
   requestEntry,
   requestMention,
@@ -34,26 +33,15 @@ import { readRequestUpdate } from './read-request-update';
 import replyToRequest from './reply';
 import type { QueuedRequestNews } from './request-update';
 import { changeSubscribers, unsubscribe } from './subscribers';
-import { ctx, db, storage, storeEntry, storeRequest, storeSubscribers } from './test-helpers';
-
-/**
- * The queued news for one person, as the batch hands it over.
- *
- * @param userId - The person.
- * @returns Their news.
- */
-async function newsFor(userId: string): Promise<QueuedRequestNews[]> {
-  const jobs = await db
-    .select({ id: queuedJob.id, payload: queuedJob.payload })
-    .from(queuedJob)
-    .where(eq(queuedJob.kind, 'request-update'));
-  return jobs.flatMap(({ id, payload }) => {
-    const news = payload as { userId: string } & Omit<QueuedRequestNews, 'jobId'>;
-    return news.userId === userId
-      ? [{ jobId: id, event: news.event, entryId: news.entryId, byUserId: news.byUserId }]
-      : [];
-  });
-}
+import {
+  ctx,
+  db,
+  newsFor,
+  storage,
+  storeEntry,
+  storeRequest,
+  storeSubscribers,
+} from './test-helpers';
 
 describe('what one person’s email may show', () => {
   it('tells what happened in order, with names, the reply and its mentions', async () => {
