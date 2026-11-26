@@ -26,6 +26,7 @@ const FALLBACKS: SettingValues = {
   'brand.accent': null,
   'brand.accent_dark': null,
   'brand.tint': null,
+  'brand.forced_theme': null,
   'requests.last_number': 0,
   'jobs.last_tick': null,
   'setup.completed_at': null,
