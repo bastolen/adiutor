@@ -405,8 +405,9 @@ network, or the cloud's metadata service and the credentials it hands out. So
   allowed the network (`WEBHOOK_ALLOWED_NETWORKS`, see [Webhooks](deploying.md#webhooks)): private,
   loopback, link-local, shared (CGNAT), multicast, reserved, documentation and benchmarking ranges,
   in IPv4 and IPv6 (unique local and link-local addresses included), and an IPv4 address written
-  inside IPv6 (`::ffff:…`, NAT64's `64:ff9b::…`) is judged as the IPv4 it holds. A name with any
-  internal address is refused as a whole.
+  inside IPv6 (`::ffff:…`, NAT64's `64:ff9b::…`) is judged as the IPv4 it holds, never by an
+  allowed IPv6 range (each allowed range holds its own family only). A name with any internal
+  address is refused as a whole.
 - **What's sent and read:** a signed `POST` that follows no redirect, goes through no proxy, gives up
   after 3 seconds when the connection doesn't open and after 10 in all (look-up, connection,
   encryption and the answer's headers), and reads at most 4 KB of the answer, which it drops. Only the status, the time it took and a kind of failure

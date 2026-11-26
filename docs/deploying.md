@@ -353,7 +353,9 @@ must be `https://`.
 For a receiver on your own network, such as an on-premises system, allow its network with
 `WEBHOOK_ALLOWED_NETWORKS`: IP addresses or CIDR ranges, comma-separated, e.g. `10.20.0.0/16`.
 Allow as little as you can: every address in it can be reached by anyone who can add a webhook.
-Only the server's environment sets it, never anyone in the app.
+Only the server's environment sets it, never anyone in the app. Each range allows its own family
+only: an IPv6 range never allows an IPv4 address, written in IPv6 (`::ffff:10.0.0.1`) or not, so
+allow an IPv4 network in IPv4.
 
 ## Logs
 

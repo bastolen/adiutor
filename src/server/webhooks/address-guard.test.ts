@@ -89,6 +89,8 @@ describe('isRefusedAddress', () => {
       '2002:7f00:1::1',
       '64:ff9b:1::1',
       '100::1',
+      '::ffff:0:808:808',
+      '::ffff:0:10.0.0.1',
     ].forEach((address) => {
       expect(isRefusedAddress(address, none), address).toBe(true);
     });
@@ -104,9 +106,11 @@ describe('isRefusedAddress', () => {
   });
 
   it('lets public addresses through', () => {
-    ['93.184.216.34', '8.8.8.8', '172.32.0.1', '2606:4700::6810:84e5'].forEach((address) => {
-      expect(isRefusedAddress(address, none), address).toBe(false);
-    });
+    ['93.184.216.34', '8.8.8.8', '1.1.1.1', '172.32.0.1', '2606:4700::6810:84e5'].forEach(
+      (address) => {
+        expect(isRefusedAddress(address, none), address).toBe(false);
+      },
+    );
   });
 
   it('refuses anything that isn’t an IP address', () => {
@@ -123,6 +127,20 @@ describe('isRefusedAddress', () => {
     expect(isRefusedAddress('10.21.0.1', rules)).toBe(true);
     expect(isRefusedAddress('fd00:1::5', rules)).toBe(false);
     expect(isRefusedAddress('fd00:2::5', rules)).toBe(true);
+  });
+
+  it('keeps each allowed network to its own family', () => {
+    const everyIpv6 = addressRules(['::/0']);
+    expect(isRefusedAddress('fd00::1', everyIpv6)).toBe(false);
+    expect(isRefusedAddress('10.0.0.1', everyIpv6)).toBe(true);
+    expect(isRefusedAddress('::ffff:10.0.0.1', everyIpv6)).toBe(true);
+    expect(isRefusedAddress('127.0.0.1', everyIpv6)).toBe(true);
+
+    const everyIpv4 = addressRules(['0.0.0.0/0']);
+    expect(isRefusedAddress('10.0.0.1', everyIpv4)).toBe(false);
+    expect(isRefusedAddress('::ffff:10.0.0.1', everyIpv4)).toBe(false);
+    expect(isRefusedAddress('fd00::1', everyIpv4)).toBe(true);
+    expect(isRefusedAddress('::1', everyIpv4)).toBe(true);
   });
 });
 

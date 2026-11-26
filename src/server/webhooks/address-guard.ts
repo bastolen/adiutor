@@ -41,11 +41,11 @@ const REFUSED_IPV4: readonly (readonly [string, number])[] = [
 /**
  * IPv6 ranges a webhook never reaches, as network and prefix length.
  * IPv4-mapped addresses (`::ffff:0:0/96`) aren't listed: they're judged as
- * the IPv4 they hold, and Node.js's `BlockList` would match every IPv4
- * address against such a range.
+ * the IPv4 they hold.
  */
 const REFUSED_IPV6: readonly (readonly [string, number])[] = [
   ['::', 96], // unspecified (::), loopback (::1) and the deprecated IPv4-compatible form
+  ['::ffff:0:0:0', 96], // IPv4-translated (SIIT), never routed on the internet
   ['64:ff9b:1::', 48], // NAT64 for local use
   ['100::', 64], // discard-only
   ['2001::', 23], // IETF protocol assignments, among them Teredo and benchmarking
@@ -58,18 +58,46 @@ const REFUSED_IPV6: readonly (readonly [string, number])[] = [
   ['ff00::', 8], // multicast
 ];
 
-/** The ranges above, as one list Node.js checks addresses against. */
-const REFUSED = (() => {
-  const list = new BlockList();
-  REFUSED_IPV4.forEach(([network, prefix]) => list.addSubnet(network, prefix, 'ipv4'));
-  REFUSED_IPV6.forEach(([network, prefix]) => list.addSubnet(network, prefix, 'ipv6'));
-  return list;
-})();
+/** An IP address family, as Node.js names them. */
+type Family = 'ipv4' | 'ipv6';
+
+/**
+ * Lists of addresses that Node.js checks addresses against, one per family.
+ * Never one list for both: Node.js's `BlockList` matches an IPv4 address
+ * against an IPv6 range by its IPv4-mapped form and the other way round, so
+ * `::/0` would hold every IPv4 address, and `0.0.0.0/0` every IPv4-mapped one.
+ */
+type Lists = Readonly<Record<Family, BlockList>>;
+
+/**
+ * Lists of networks, each in the list of its own family.
+ *
+ * @param networks - Each network's address, prefix length (`undefined` for a
+ *   single address) and family.
+ * @returns The lists.
+ */
+function listsOf(networks: readonly (readonly [string, number | undefined, Family])[]): Lists {
+  const lists = { ipv4: new BlockList(), ipv6: new BlockList() };
+  networks.forEach(([address, prefix, family]) => {
+    if (prefix === undefined) {
+      lists[family].addAddress(address, family);
+    } else {
+      lists[family].addSubnet(address, prefix, family);
+    }
+  });
+  return lists;
+}
+
+/** The ranges above, in the lists Node.js checks addresses against. */
+const REFUSED = listsOf([
+  ...REFUSED_IPV4.map(([network, prefix]) => [network, prefix, 'ipv4'] as const),
+  ...REFUSED_IPV6.map(([network, prefix]) => [network, prefix, 'ipv6'] as const),
+]);
 
 /** Where webhooks may send: the networks an operator allowed inside the refused ranges. */
 export interface AddressRules {
-  /** The allowed networks, which win over the refused ranges. */
-  allowed: BlockList;
+  /** The allowed networks, one list per family, which win over the refused ranges. */
+  allowed: Lists;
 }
 
 /**
@@ -79,17 +107,15 @@ export interface AddressRules {
  * @returns The rules.
  */
 export function addressRules(networks: readonly string[]): AddressRules {
-  const allowed = new BlockList();
-  networks.forEach((network) => {
-    const [address = '', prefix] = network.split('/');
-    const type = isIP(address) === 6 ? 'ipv6' : 'ipv4';
-    if (prefix === undefined) {
-      allowed.addAddress(address, type);
-    } else {
-      allowed.addSubnet(address, Number(prefix), type);
-    }
-  });
-  return { allowed };
+  return {
+    allowed: listsOf(
+      networks.map((network) => {
+        const [address = '', prefix] = network.split('/');
+        const family = isIP(address) === 6 ? 'ipv6' : 'ipv4';
+        return [address, prefix === undefined ? undefined : Number(prefix), family] as const;
+      }),
+    ),
+  };
 }
 
 /** The server's own rules, from its environment, made once. */
@@ -154,8 +180,10 @@ function embeddedIpv4(address: string): string | null {
 
 /**
  * Whether a webhook may not connect to an address: it's in a refused range
- * and not in a network the operator allowed. Anything that isn't an IP
- * address is refused.
+ * and not in a network the operator allowed. An IPv6 address that holds an
+ * IPv4 address is judged as that IPv4 address only, so allowing an IPv6
+ * range never lets an internal IPv4 address through. Anything that isn't an
+ * IP address is refused.
  *
  * @param address - The IP address, as a lookup gives it or the URL holds it.
  * @param rules - The allowed networks.
@@ -167,12 +195,12 @@ export function isRefusedAddress(address: string, rules: AddressRules): boolean 
   if (family === 0) {
     return true;
   }
-  const type = family === 4 ? 'ipv4' : 'ipv6';
-  if (rules.allowed.check(bare, type)) {
-    return false;
-  }
   const inside = family === 6 ? embeddedIpv4(bare) : null;
-  return inside === null ? REFUSED.check(bare, type) : isRefusedAddress(inside, rules);
+  if (inside !== null) {
+    return isRefusedAddress(inside, rules);
+  }
+  const type = family === 4 ? 'ipv4' : 'ipv6';
+  return !rules.allowed[type].check(bare, type) && REFUSED[type].check(bare, type);
 }
 
 /** A webhook's address that points inside Adiutor's own network: the connection is never made. */
