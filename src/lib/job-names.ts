@@ -83,6 +83,8 @@ const JOB_SUMMARY_KEYS = [
   'signInErrors',
   'jobRuns',
   'queuedJobs',
+  /** Deliveries to webhooks deleted after 30 days. */
+  'webhookDeliveries',
 ] as const;
 
 /** One count a run can report. */

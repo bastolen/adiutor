@@ -36,13 +36,13 @@ A tick runs every recurring job that's due, one after another, then the queued j
 
 ## The jobs
 
-| Job                          | Schedule (UTC)  | What it does                                                                                                                                  |
-| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                           |
-| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                     |
-| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                      |
-| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                              |
-| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs and finished queued jobs after 30 days |
+| Job                          | Schedule (UTC)  | What it does                                                                                                                                                          |
+| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                                                   |
+| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                                             |
+| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                                              |
+| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                                                      |
+| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days |
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.

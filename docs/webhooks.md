@@ -50,7 +50,8 @@ A webhook is a recipient of the news about requests, like a person on a request
   what it tells of (`webhook_delivery`), its result and the receiver's status, never its answer. A
   receiver that fails is recorded, never thrown: it fails no job and records no error in the app.
   An attempt goes on only while the delivery is still at the attempt before it, and records only
-  if that still holds, so an attempt run twice never records twice.
+  if that still holds, so an attempt run twice never records twice. Deliveries are kept for 30
+  days (the `retention` job, see [Background jobs](jobs.md#the-jobs)).
 - **At least once:** a job that ran but couldn't be noted as done is run again, and its news can
   then go out in a second delivery, as an email can arrive twice. A receiver drops what it already
   has by an event's `id`.

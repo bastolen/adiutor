@@ -5,7 +5,7 @@
       "finished-sign-ins-as-users": "Ends the sign-ins as a user whose time is up, and records it in the audit log.",
       "expired-sign-in-data": "Deletes expired sign-in links, codes and sessions, the links in emails about requests that ended, and rate limits that are over.",
       "invitation-reminders": "Reminds people of invitations they haven’t accepted, once, two days before they expire.",
-      "retention": "Deletes audit events after a year, errors after 7 days, and the history of jobs after 30 days.",
+      "retention": "Deletes audit events after a year, errors after 7 days, and the history of jobs and the deliveries to webhooks after 30 days.",
       "security-notice": "Tells people about changes to the security of their account.",
       "added-to-company": "Tells people that staff added them to a company.",
       "staff-admin-added": "Tells the staff Admins that someone became a staff Admin.",
@@ -29,7 +29,8 @@
       "appErrors": "{count, plural, one {# error deleted} other {# errors deleted}}",
       "signInErrors": "{count, plural, one {# sign-in error deleted} other {# sign-in errors deleted}}",
       "jobRuns": "{count, plural, one {# run deleted} other {# runs deleted}}",
-      "queuedJobs": "{count, plural, one {# queued job deleted} other {# queued jobs deleted}}"
+      "queuedJobs": "{count, plural, one {# queued job deleted} other {# queued jobs deleted}}",
+      "webhookDeliveries": "{count, plural, one {# delivery to a webhook deleted} other {# deliveries to webhooks deleted}}"
     }
   }
 }
