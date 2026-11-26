@@ -14,6 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
+import { isHexColour } from './branding';
 import { hasControlCharacter, hasHiddenCharacter, hasVisibleCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
@@ -143,6 +144,17 @@ export const languageChoiceSchema = z.enum([FOLLOW_DEFAULT, ...LOCALES], {
 export const timeZoneSchema = z
   .string()
   .refine(isTimeZone, { error: 'validation.timeZone' satisfies ValidationMessageKey });
+
+/**
+ * A brand colour (decision 0047), e.g. from the Appearance tab of Settings:
+ * six hex digits, with or without `#`, in any case. Stored as `#` and six
+ * lower-case digits, the only colour format branding writes into CSS.
+ */
+export const brandColourSchema = z
+  .string()
+  .trim()
+  .transform((value) => (value.startsWith('#') ? value : `#${value}`).toLowerCase())
+  .refine(isHexColour, { error: 'validation.brandColour' satisfies ValidationMessageKey });
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });

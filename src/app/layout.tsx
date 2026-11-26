@@ -13,6 +13,7 @@ import { pickMessages } from '@/lib/i18n/messages';
 import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
+import pageBrandCss from '@/server/branding/page-colours';
 
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 
@@ -54,6 +55,11 @@ export const instant = false;
  * expected to differ from the server-rendered HTML. It carries the request's
  * nonce, or the Content Security Policy would block it.
  *
+ * When a staff Admin chose brand colours, a `<style>` sets the palette worked
+ * out from them over the theme's (decision 0047), for every page including
+ * the signed-out and error pages. It holds only hex colours branding wrote
+ * (`paletteCss`), and the policy allows inline styles.
+ *
  * Every page loads afresh when another tab of this browser signs in or out,
  * or starts or ends a sign-in as a user (`ReloadWhenActingAsChanges`). It
  * reads the path, which isn't known while Next prerenders a route with
@@ -61,12 +67,13 @@ export const instant = false;
  * nothing meanwhile).
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages, timeZone, languages] = await Promise.all([
+  const [nonce, locale, messages, timeZone, languages, brandCss] = await Promise.all([
     headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
     getLocale(),
     getMessages(),
     getTimeZone(),
     requestLanguageSettings(),
+    pageBrandCss(),
   ]);
   return (
     <html
@@ -78,6 +85,10 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
       <head>
         {/* eslint-disable-next-line react/no-danger -- Static script from our own code; it must run before the first paint. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {brandCss ? (
+          // eslint-disable-next-line react/no-danger -- Hex colours and custom property names only, written and checked by paletteCss.
+          <style dangerouslySetInnerHTML={{ __html: brandCss }} />
+        ) : null}
       </head>
       <body className="bg-background text-foreground antialiased">
         <IntlClientProvider

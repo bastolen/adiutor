@@ -1,7 +1,8 @@
 /**
  * @file Turns a worked-out palette into CSS. For the page (`paletteCss`):
  * one `:root:root` rule that sets every token differing from the theme with
- * `light-dark()`, like `theme.css` does, so it follows the colour scheme.
+ * `light-dark()`, like `theme.css` does, so it follows the colour scheme
+ * (the brand panel's colours, the same in both modes, without it).
  * The doubled `:root` outranks `theme.css` wherever the two end up in the
  * page. For a preview of one mode (`paletteVariables`): the tokens as inline
  * custom properties.
@@ -9,7 +10,7 @@
  * Only colours this module wrote in hex go into CSS, and every value is
  * checked again before it does: nothing else could close the rule.
  */
-import type { BrandPalette } from './palette';
+import { type BrandPalette, type BrandPanelColours, THEME_PANEL } from './palette';
 import { THEME_MODES, THEME_PALETTE, THEME_TOKENS, type ThemeMode } from './theme-colours';
 
 /** A colour as the CSS takes it: six hex digits, or eight with how see-through it is. */
@@ -17,6 +18,13 @@ const CSS_COLOUR = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/;
 
 /** The theme's overlay, written the same way, to tell whether a palette changed it. */
 const THEME_OVERLAY = { light: '#0e0e2d80', dark: '#03030cb8' } as const;
+
+/** The brand panel's custom properties, which are the same in both modes. */
+const PANEL_PROPERTIES: Readonly<Record<keyof BrandPanelColours, string>> = {
+  background: '--brand-panel',
+  glow: '--brand-panel-glow',
+  glowDeep: '--brand-panel-glow-deep',
+};
 
 /**
  * Checks a value before it goes into CSS.
@@ -51,6 +59,11 @@ export function paletteCss(brand: BrandPalette): string {
       `--overlay:light-dark(${cssColour(brand.overlay.light)},${cssColour(brand.overlay.dark)});`,
     );
   }
+  (Object.keys(PANEL_PROPERTIES) as (keyof BrandPanelColours)[])
+    .filter((part) => brand.panel[part] !== THEME_PANEL[part])
+    .forEach((part) => {
+      declarations.push(`${PANEL_PROPERTIES[part]}:${cssColour(brand.panel[part])};`);
+    });
   return declarations.length === 0 ? '' : `:root:root{${declarations.join('')}}`;
 }
 

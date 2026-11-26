@@ -22,8 +22,10 @@ export {
   ACCENT_TOKENS,
   type BrandColours,
   type BrandPalette,
+  type BrandPanelColours,
   derivePalette,
   NO_BRAND_COLOURS,
+  THEME_PANEL,
   TINTED_TOKENS,
 } from './palette';
 export {

@@ -89,6 +89,7 @@
     "requestStatus": "Elige un estado.",
     "requestPrefix": "Usa de una a cinco letras o cifras para el prefijo, empezando por una letra, por ejemplo AD.",
     "locale": "Elige uno de los idiomas.",
-    "timeZone": "Elige una de las zonas horarias."
+    "timeZone": "Elige una de las zonas horarias.",
+    "brandColour": "Escribe un color con seis dígitos hexadecimales, por ejemplo #0e5655."
   }
 }

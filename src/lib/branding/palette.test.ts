@@ -13,6 +13,7 @@ import {
   type BrandColours,
   derivePalette,
   NO_BRAND_COLOURS,
+  THEME_PANEL,
   TINTED_TOKENS,
 } from './palette';
 import { brokenRules } from './rules';
@@ -65,6 +66,7 @@ describe('derivePalette', () => {
     expect(derivePalette(NO_BRAND_COLOURS)).toEqual({
       palette: THEME_PALETTE,
       overlay: { light: '#0e0e2d80', dark: '#03030cb8' },
+      panel: THEME_PANEL,
       adjusted: { light: false, dark: false },
     });
   });
@@ -192,5 +194,24 @@ describe('derivePalette', () => {
     expect(overlay.light).toMatch(/^#[0-9a-f]{6}80$/);
     expect(overlay.dark).toMatch(/^#[0-9a-f]{6}b8$/);
     expect(overlay.light).not.toBe('#0e0e2d80');
+  });
+
+  it('gives the brand panel the darkest grey, with glows in the accent of each mode', () => {
+    const { palette, panel } = derivePalette({
+      accent: '#c2185b',
+      accentDark: '#ff80ab',
+      tint: '#2e7d32',
+    });
+    expect(panel).toEqual({
+      background: palette.light.foreground,
+      glow: palette.dark.primary,
+      glowDeep: palette.light.primary,
+    });
+    expect(derivePalette({ ...NO_BRAND_COLOURS, tint: '#2e7d32' }).panel.glow).toBe(
+      THEME_PANEL.glow,
+    );
+    expect(derivePalette({ ...NO_BRAND_COLOURS, accent: '#c2185b' }).panel.background).toBe(
+      THEME_PANEL.background,
+    );
   });
 });

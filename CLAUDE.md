@@ -81,6 +81,7 @@
 
 - Every UI change must work in light and dark mode. Use the semantic colours instead of fixed ones like `white` or `ink` (ESLint enforces it in `src/app` and `src/components`; a deliberate exception gets an `eslint-disable` with its reason), and the `dark:` variant for anything else.
 - Never read the theme on the server (cookies would make every page dynamic); it is applied by the inline `themeScript` in the root layout.
+- A staff Admin's brand colours replace the theme's (decision 0047): components never use the brand colours (`brand-*`, `ink`) directly, and a colour that should follow the brand is a token. A new colour token goes in `theme.css` and `THEME_PALETTE` (`src/lib/branding/theme-colours.ts`, which `theme.test.ts` keeps the same), with a rule in `PALETTE_RULES` when it stands on another colour, and in `TINTED_TOKENS` or `ACCENT_TOKENS` when the brand colours should change it. Only `paletteCss` writes colours into the page's CSS.
 
 ## Authentication and permissions
 

@@ -89,6 +89,7 @@
     "requestStatus": "Choose a status.",
     "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",
     "locale": "Choose one of the languages.",
-    "timeZone": "Choose one of the time zones."
+    "timeZone": "Choose one of the time zones.",
+    "brandColour": "Enter a colour as six hex digits, e.g. #0e5655."
   }
 }

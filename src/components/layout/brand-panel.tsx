@@ -1,6 +1,8 @@
 /**
  * @file The decorative brand panel of the public pages: an example request
- * and the product pitch, on the fixed ink background. A client component, so
+ * and the product pitch, on a dark background that stays the same in both
+ * modes, with two glows in the accent colours (`--brand-panel*` in
+ * `theme.css`, which brand colours a staff Admin chose replace). A client component, so
  * its text comes from the root provider (`common.brandPanel`), as it sits in
  * a page's static shell (docs/i18n.md).
  */
@@ -20,11 +22,10 @@ export default function BrandPanel() {
   return (
     <div
       aria-hidden="true"
-      // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- The brand panel is the same dark ink in light and dark mode.
-      className="relative hidden overflow-hidden bg-ink lg:flex lg:flex-col lg:justify-between lg:p-12"
+      className="relative hidden overflow-hidden bg-brand-panel lg:flex lg:flex-col lg:justify-between lg:p-12"
     >
-      <div className="absolute -top-40 -right-40 size-[36rem] rounded-full bg-brand-green/20 blur-3xl" />
-      <div className="absolute -bottom-48 -left-32 size-[32rem] rounded-full bg-brand-teal/50 blur-3xl" />
+      <div className="absolute -top-40 -right-40 size-[36rem] rounded-full bg-brand-panel-glow/20 blur-3xl" />
+      <div className="absolute -bottom-48 -left-32 size-[32rem] rounded-full bg-brand-panel-glow-deep/50 blur-3xl" />
       <div
         className="absolute inset-0 opacity-[0.07]"
         style={{
@@ -37,11 +38,11 @@ export default function BrandPanel() {
       <div className="h-8" />
       <RequestPreview />
       <div className="relative flex max-w-md flex-col gap-4">
-        {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- White on the ink brand panel, which doesn't change with the mode. */}
+        {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- White on the brand panel's dark background, which doesn't change with the mode. */}
         <p className="text-3xl font-semibold tracking-tight text-white">
           {t('brandPanel.headline')}
         </p>
-        {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- On the fixed ink panel, white at 75% still has a contrast of about 10:1. */}
+        {/* eslint-disable-next-line better-tailwindcss/no-restricted-classes -- On the panel's background, as dark as the light mode's text in any brand colours, white at 75% still has a contrast of about 10:1. */}
         <p className="text-base text-white/75">{t('brandPanel.pitch')}</p>
       </div>
     </div>

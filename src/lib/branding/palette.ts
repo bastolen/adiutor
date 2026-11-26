@@ -47,9 +47,28 @@ export type BrandPalette = Readonly<{
   palette: Palette;
   /** The dim behind dialogs, in each mode, as `#rrggbbaa`. */
   overlay: Readonly<Record<ThemeMode, string>>;
+  /** The decorative brand panel of the signed-out pages, the same in both modes. */
+  panel: BrandPanelColours;
   /** Whether the accent had to change lightness to keep the rules, per mode. */
   adjusted: Readonly<Record<ThemeMode, boolean>>;
 }>;
+
+/** The colours of the signed-out pages' brand panel (`--brand-panel*` in `theme.css`). */
+export type BrandPanelColours = Readonly<{
+  /** Its background, the darkest grey (white text stands on it). */
+  background: HexColour;
+  /** The bright glow in one corner: the dark mode's accent. */
+  glow: HexColour;
+  /** The deep glow in the other: the light mode's accent. */
+  glowDeep: HexColour;
+}>;
+
+/** The theme's brand panel: ink, with glows in the brand's green and teal. */
+export const THEME_PANEL: BrandPanelColours = {
+  background: '#0e0e2d',
+  glow: '#25dc89',
+  glowDeep: '#0e5655',
+};
 
 /** The tokens the tint rebuilds: the greys, and the dark text on light fills. */
 export const TINTED_TOKENS = [
@@ -296,7 +315,8 @@ function accentMode(
  * Works out the palette for a set of brand colours.
  *
  * @param brand - The brand colours; `null` for the theme's own.
- * @returns The palette in both modes, the overlay, and whether the accent had to move.
+ * @returns The palette in both modes, the overlay and the brand panel, and
+ *   whether the accent had to move.
  */
 export function derivePalette(brand: BrandColours): BrandPalette {
   const adjusted: Record<ThemeMode, boolean> = { light: false, dark: false };
@@ -326,9 +346,16 @@ export function derivePalette(brand: BrandColours): BrandPalette {
    */
   const byMode = <T>(pick: (entry: (typeof modes)[number]) => T) =>
     Object.fromEntries(modes.map((entry) => [entry.mode, pick(entry)])) as Record<ThemeMode, T>;
+  const palette = byMode(({ colours }) => colours);
   return {
-    palette: byMode(({ colours }) => colours),
+    palette,
     overlay: byMode(({ overlay }) => overlay),
+    panel: {
+      // The light mode's text, which white reads on as well as it reads on white.
+      background: brand.tint ? palette.light.foreground : THEME_PANEL.background,
+      glow: brand.accent ? palette.dark.primary : THEME_PANEL.glow,
+      glowDeep: brand.accent ? palette.light.primary : THEME_PANEL.glowDeep,
+    },
     adjusted,
   };
 }

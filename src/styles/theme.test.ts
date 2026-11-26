@@ -1,11 +1,11 @@
 /**
  * @file Checks the colour tokens in `theme.css`: the copy code reads
- * (`THEME_PALETTE` in `src/lib/branding`) has the same tokens and values, and
- * the theme keeps every rule a palette keeps (`PALETTE_RULES`), in light and
- * dark mode: text readable (WCAG AA) on every surface and on the fills it's
- * written on, borders of controls and focus rings visible, highlighted code
- * readable, and in dark mode raised layers a step lighter than the surfaces
- * they open over.
+ * (`THEME_PALETTE` and `THEME_PANEL` in `src/lib/branding`) has the same
+ * tokens and values, and the theme keeps every rule a palette keeps
+ * (`PALETTE_RULES`), in light and dark mode: text readable (WCAG AA) on
+ * every surface and on the fills it's written on, borders of controls and
+ * focus rings visible, highlighted code readable, and in dark mode raised
+ * layers a step lighter than the surfaces they open over.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PALETTE_RULES,
+  THEME_PANEL,
   type PaletteRule,
   ruleHolds,
   THEME_MODES,
@@ -81,6 +82,24 @@ describe('the colour tokens code reads', () => {
       THEME_PALETTE.dark,
     );
     expect(MODE_AWARE.map(({ token }) => token)).toEqual([...THEME_TOKENS]);
+  });
+});
+
+describe('the brand panel’s colours code reads', () => {
+  it('are the ones theme.css gives it', () => {
+    /**
+     * Reads one of the brand panel's custom properties as `#rrggbb`.
+     *
+     * @param name - The property, without its `--`.
+     * @returns Its colour.
+     */
+    const panel = (name: string) =>
+      resolve(defined(THEME.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1], `--${name}`));
+    expect({
+      background: panel('brand-panel'),
+      glow: panel('brand-panel-glow'),
+      glowDeep: panel('brand-panel-glow-deep'),
+    }).toEqual(THEME_PANEL);
   });
 });
 

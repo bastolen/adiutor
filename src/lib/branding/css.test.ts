@@ -24,6 +24,14 @@ describe('paletteCss', () => {
     expect(css).not.toContain('--overlay:');
   });
 
+  it('sets the brand panel’s colours without light-dark(), as they’re the same in both modes', () => {
+    const brand = derivePalette({ ...NO_BRAND_COLOURS, accent: '#c2185b', tint: '#2e7d32' });
+    const css = paletteCss(brand);
+    expect(css).toContain(`--brand-panel:${brand.panel.background};`);
+    expect(css).toContain(`--brand-panel-glow:${brand.panel.glow};`);
+    expect(css).toContain(`--brand-panel-glow-deep:${brand.panel.glowDeep};`);
+  });
+
   it('sets the greys and the overlay for a tint', () => {
     const css = paletteCss(derivePalette({ ...NO_BRAND_COLOURS, tint: '#f13800' }));
     expect(css).toContain('--background:light-dark(');
@@ -34,7 +42,7 @@ describe('paletteCss', () => {
   it('holds nothing but custom properties set to hex colours', () => {
     const css = paletteCss(derivePalette({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' }));
     expect(css).toMatch(
-      /^:root:root\{(--[a-z-]+:light-dark\(#[0-9a-f]{6,8},#[0-9a-f]{6,8}\);)+\}$/,
+      /^:root:root\{(--[a-z-]+:(light-dark\(#[0-9a-f]{6,8},#[0-9a-f]{6,8}\)|#[0-9a-f]{6});)+\}$/,
     );
   });
 
