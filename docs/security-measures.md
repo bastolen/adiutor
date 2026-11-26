@@ -506,7 +506,10 @@ The brand colours a staff Admin chose reach every page as CSS ([decision
 reach it: a colour is six hex digits when it's saved (`brandColourSchema`) and when it's read back
 (the registry gives the fallback for anything else, `loadBrandColours` checks again), the CSS holds
 only colours `derivePalette` worked out and wrote in hex, and `paletteCss` checks every value once
-more before it writes a declaration.
+more before it writes a declaration (emails' colours too, in `emailColoursOf`). `derivePalette`
+takes anything that isn't six hex digits as the theme's own and caps its search for the accent's
+lightness, so no stored value can hang a page or an email, and a page whose palette can't be worked
+out keeps the theme's colours (`pageBrandCss`, logged without any value).
 
 Permission checks (the authorization matrix, and pages protected by default) are described under
 [Roles and permissions](companies-and-roles.md#roles-and-permissions).

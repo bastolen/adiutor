@@ -214,4 +214,23 @@ describe('derivePalette', () => {
       THEME_PANEL.background,
     );
   });
+
+  it.each(['#abc', '#zzzzzz', '#0e5655;}', 'teal'])(
+    'takes %s as the theme’s own, wherever it’s given',
+    (bad) => {
+      const theme = derivePalette(NO_BRAND_COLOURS);
+      const asBad = bad as HexColour;
+      expect(derivePalette({ accent: asBad, accentDark: null, tint: null })).toEqual(theme);
+      expect(derivePalette({ accent: null, accentDark: null, tint: asBad })).toEqual(theme);
+      expect(derivePalette({ accent: '#c2185b', accentDark: asBad, tint: null })).toEqual(
+        derivePalette({ ...NO_BRAND_COLOURS, accent: '#c2185b' }),
+      );
+    },
+  );
+
+  it('ignores a dark accent without an accent', () => {
+    expect(derivePalette({ accent: null, accentDark: '#ff80ab', tint: null })).toEqual(
+      derivePalette(NO_BRAND_COLOURS),
+    );
+  });
 });

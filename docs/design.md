@@ -700,7 +700,8 @@ equally light in every hue:
   in dark mode, until links, focus rings and the text on buttons keep the rules. The text on it is
   white or the darkest grey, whichever reads better, and hover is a step darker (light mode) or
   lighter (dark mode). Without a dark accent, dark mode starts from the accent. `adjusted` says
-  when a mode's accent had to move.
+  when a mode's accent had to move. With a tint alone, the theme's own accent is moved the same way,
+  should a tinted grey ever need it. Anything that isn't six hex digits counts as the theme's own.
 - **Kept:** `danger`, `success`, `warning` and their fills, and the code colours other than comments.
 
 A grey that would still break a rule is nudged in lightness, away from what it stands on, until it

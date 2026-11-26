@@ -16,7 +16,7 @@
  * Errors, statuses and highlighted code keep the theme's colours. Every
  * result keeps the rules in `rules.ts`, which the tests check for every hue.
  */
-import { hexToOklch, maxChroma, type Oklch, oklchToHex } from './colour-space';
+import { hexToOklch, isHexColour, maxChroma, type Oklch, oklchToHex } from './colour-space';
 import { contrast, type HexColour } from './contrast';
 import { brokenRules, colourIn, PALETTE_RULES, type PaletteRule, ruleHolds } from './rules';
 import {
@@ -284,10 +284,14 @@ function withAccent(colours: ThemeColours, mode: ThemeMode, base: Oklch, l: numb
   };
 }
 
+/** The most steps the accent's lightness can take: from where it starts to black or white. */
+const MAX_ACCENT_STEPS = Math.ceil(1 / LIGHTNESS_STEP);
+
 /**
  * Sets the accent of one mode: the chosen colour, made darker (light mode)
  * or lighter (dark mode) only as far as the rules need. Black and white
- * keep them all, so it always ends.
+ * keep them all, so it ends there at the latest, within
+ * {@link MAX_ACCENT_STEPS}.
  *
  * @param colours - The mode's colours, greys already set.
  * @param mode - The mode.
@@ -301,7 +305,7 @@ function accentMode(
 ): { colours: ThemeColours; adjusted: boolean } {
   const base = hexToOklch(accent);
   const direction = mode === 'light' ? -1 : 1;
-  for (let step = 0; ; step += 1) {
+  for (let step = 0; step < MAX_ACCENT_STEPS; step += 1) {
     const l = base.l + direction * step * LIGHTNESS_STEP;
     const candidate = withAccent(colours, mode, base, l);
     const reachedEnd = direction < 0 ? l <= 0 : l >= 1;
@@ -309,16 +313,37 @@ function accentMode(
       return { colours: candidate, adjusted: step > 0 };
     }
   }
+  return { colours: withAccent(colours, mode, base, direction < 0 ? 0 : 1), adjusted: true };
 }
 
 /**
- * Works out the palette for a set of brand colours.
+ * A brand colour as the palette takes it: one in six hex digits, or `null`
+ * (the theme's own) for anything else. Callers check their colours already;
+ * this makes sure nothing else can reach the lightness search or the CSS.
  *
- * @param brand - The brand colours; `null` for the theme's own.
+ * @param colour - The colour.
+ * @returns The colour, or `null`.
+ */
+function checked(colour: HexColour | null): HexColour | null {
+  return isHexColour(colour) ? colour : null;
+}
+
+/**
+ * Works out the palette for a set of brand colours. A dark accent counts
+ * only with an accent, and anything that isn't a colour in six hex digits
+ * counts as the theme's own.
+ *
+ * @param chosen - The brand colours; `null` for the theme's own.
  * @returns The palette in both modes, the overlay and the brand panel, and
  *   whether the accent had to move.
  */
-export function derivePalette(brand: BrandColours): BrandPalette {
+export function derivePalette(chosen: BrandColours): BrandPalette {
+  const accentChosen = checked(chosen.accent);
+  const brand: BrandColours = {
+    accent: accentChosen,
+    accentDark: accentChosen ? checked(chosen.accentDark) : null,
+    tint: checked(chosen.tint),
+  };
   const adjusted: Record<ThemeMode, boolean> = { light: false, dark: false };
   const modes = THEME_MODES.map((mode) => {
     let colours = THEME_PALETTE[mode];
@@ -330,6 +355,9 @@ export function derivePalette(brand: BrandColours): BrandPalette {
       const result = accentMode(colours, mode, accent);
       colours = result.colours;
       adjusted[mode] = result.adjusted;
+    } else if (brand.tint && !ACCENT_RULES.every((rule) => ruleHolds(rule, colours))) {
+      // The theme's own accent on tinted greys: moved like a chosen one, should a grey need it.
+      colours = accentMode(colours, mode, THEME_PALETTE[mode].primary).colours;
     }
     const { colour, alpha } = THEME_OVERLAY[mode];
     return {
