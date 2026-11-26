@@ -49,6 +49,7 @@
       "brand_logo_removed": "Removed the logo",
       "brand_icon_changed": "Changed the browser tab icon",
       "brand_icon_removed": "Removed the uploaded browser tab icon",
+      "brand_theme_changed": "Changed light and dark mode",
       "attachment_storage_changed": "Changed where attached files are kept",
       "attachment_storage_set_up": "Set up where attached files are kept",
       "smtp_settings_changed": "Changed the mail server",

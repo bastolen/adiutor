@@ -3,7 +3,13 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { isThemePreference, resolveTheme, THEME_STORAGE_KEY, themeScript } from './theme';
+import {
+  isThemePreference,
+  resolveTheme,
+  THEME_FORCED_ATTRIBUTE,
+  THEME_STORAGE_KEY,
+  themeScript,
+} from './theme';
 
 /**
  * Makes `window.matchMedia` report the given system setting.
@@ -49,6 +55,7 @@ describe('themeScript', () => {
   afterEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset.theme;
+    document.documentElement.removeAttribute(THEME_FORCED_ATTRIBUTE);
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -71,6 +78,18 @@ describe('themeScript', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'blue');
     runThemeScript();
     expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it('leaves a mode a staff Admin keeps every page in, and the stored choice, alone', () => {
+    mockSystemDark(false);
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.setAttribute(THEME_FORCED_ATTRIBUTE, '');
+
+    runThemeScript();
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
   });
 
   it('leaves the theme to CSS when storage is blocked', () => {

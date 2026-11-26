@@ -1,7 +1,8 @@
 /**
  * @file End-to-end tests for light and dark mode: the floating theme button
- * on the public pages, the theme row in the account menu, and the page
- * without JavaScript, which follows the system setting in CSS alone.
+ * on the public pages, the theme row in the account menu, the page without
+ * JavaScript, which follows the system setting in CSS alone, and every page
+ * kept in one mode by a staff Admin (decision 0053).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,6 +10,7 @@ import { join } from 'node:path';
 import { type Page } from '@playwright/test';
 
 import { THEME_STORAGE_KEY } from '../src/lib/theme';
+import { setForcedTheme } from './support/db';
 import { PLATFORM_ADMIN } from './support/fixtures';
 import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
@@ -128,6 +130,51 @@ test('a chosen theme wins over the system setting, which applies without one', a
       await expect(colorScheme === 'dark' ? onLight : onDark).toBeHidden();
     });
   });
+});
+
+test('a staff Admin keeps every page dark: no theme to choose, without JavaScript too, and a stored choice waits', async ({
+  page,
+  browser,
+}) => {
+  try {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/auth');
+    await page.evaluate((key) => localStorage.setItem(key, 'light'), THEME_STORAGE_KEY);
+    await setForcedTheme('dark');
+
+    await page.reload();
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect(html).toHaveAttribute('data-theme-forced', '');
+    await expect(page.getByRole('banner').locator('img[src*="logo-on-dark.svg"]')).toBeVisible();
+    // The corner button offers the language alone.
+    await page.getByRole('button', { name: /^Language: / }).click();
+    await expect(page.getByRole('group', { name: 'Theme' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    // Without JavaScript the page comes dark from the server.
+    const noScript = await browser.newPage({ javaScriptEnabled: false, colorScheme: 'light' });
+    try {
+      await noScript.goto('/auth');
+      await expect(noScript.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(
+        noScript.getByRole('banner').locator('img[src*="logo-on-dark.svg"]'),
+      ).toBeVisible();
+    } finally {
+      await noScript.close();
+    }
+
+    // Both modes back: the stored Light applies again.
+    await setForcedTheme();
+    await page.reload();
+    await expect(html).toHaveAttribute('data-theme', 'light');
+    await expect(html).not.toHaveAttribute('data-theme-forced');
+    await expect(
+      page.getByRole('button', { name: 'Theme and language: Light, English (US)' }),
+    ).toBeVisible();
+  } finally {
+    await setForcedTheme();
+  }
 });
 
 test('signed in, the theme is chosen in the account menu, sharing the choice with sign-in', async ({

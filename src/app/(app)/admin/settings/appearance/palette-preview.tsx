@@ -11,7 +11,7 @@ import { useId } from 'react';
 
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
-import { type BrandPalette, paletteVariables, THEME_MODES } from '@/lib/branding';
+import { type BrandPalette, paletteVariables, THEME_MODES, type ThemeMode } from '@/lib/branding';
 
 /**
  * Two small pages, one per mode, built from the real components with the
@@ -23,8 +23,15 @@ import { type BrandPalette, paletteVariables, THEME_MODES } from '@/lib/branding
  *
  * @param props - Preview props.
  * @param props.brand - The palette worked out from the colours as typed.
+ * @param props.modes - The modes to show: both, or the one every page is kept in (decision 0053).
  */
-export default function PalettePreview({ brand }: { brand: BrandPalette }) {
+export default function PalettePreview({
+  brand,
+  modes = THEME_MODES,
+}: {
+  brand: BrandPalette;
+  modes?: readonly ThemeMode[];
+}) {
   const t = useTranslations('admin.settings.appearance.colours.preview');
   const headingId = useId();
   return (
@@ -33,7 +40,7 @@ export default function PalettePreview({ brand }: { brand: BrandPalette }) {
         {t('title')}
       </h3>
       <div className="grid gap-4 md:grid-cols-2">
-        {THEME_MODES.map((mode) => (
+        {modes.map((mode) => (
           <figure key={mode} className="flex flex-col gap-2">
             <div
               inert
