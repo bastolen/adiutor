@@ -57,7 +57,7 @@ import {
 import mentionKey from './mention-key';
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
-import { staffWhoReadNotes, tellMentioned } from './updates';
+import { staffWhoReadNotes, tellMentioned } from './tell-people';
 
 /** Someone a stored text mentions, as its mention row names them. */
 export interface TextMention {

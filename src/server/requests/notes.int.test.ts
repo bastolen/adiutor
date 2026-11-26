@@ -20,7 +20,8 @@ import {
   staffActor,
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
-import { getRequest, THREAD_CHUNK } from './detail';
+import { getRequest } from './detail';
+import { THREAD_CHUNK } from './detail-thread';
 import { editReply } from './edits';
 import mentionKey from './mention-key';
 import { listMentionable } from './mentions';

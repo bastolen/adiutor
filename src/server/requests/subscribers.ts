@@ -2,7 +2,7 @@
  * @file Who is subscribed to a request: the people who follow it, next to
  * the staff members it's assigned to. Everyone on a request (assigned or
  * subscribed, rows of `request_participant`) is who the emails about it
- * reach (`updates.ts`).
+ * reach (`tell-people.ts`).
  *
  * - **Who can be subscribed:** an active account that can read the request:
  *   a staff member who reads requests, or someone at the request's company.
@@ -41,7 +41,7 @@ import { getRequestAccess, READING_STAFF_ROLES } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import mentionKey, { byNameThenKey } from './mention-key';
 import { subscribable, type Subscribable, SUBSCRIBED } from './participants';
-import { tellSubscribed } from './updates';
+import { tellSubscribed } from './tell-people';
 
 /** The most people one change subscribes or unsubscribes. */
 export const MAX_SUBSCRIBER_CHANGES = 50;

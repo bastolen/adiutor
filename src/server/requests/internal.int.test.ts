@@ -28,7 +28,9 @@ import { listRequests } from './list';
 import mentionKey from './mention-key';
 import { listMentionable } from './mentions';
 import raiseRequest from './raise';
+import { readRequestUpdate } from './read-request-update';
 import replyToRequest from './reply';
+import type { QueuedRequestNews } from './request-update';
 import { changeSubscribers, listSubscribable } from './subscribers';
 import {
   ctx,
@@ -38,7 +40,6 @@ import {
   storeSubscribers,
   storedRequest,
 } from './test-helpers';
-import { type QueuedRequestNews, readRequestUpdate } from './updates';
 
 /**
  * A text with a link to one of the staff's pages, which only the staff may read as a link.

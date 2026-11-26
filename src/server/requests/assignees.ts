@@ -26,8 +26,8 @@ import { signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { ASSIGNED } from './participants';
+import { tellAssigned } from './tell-people';
 import { tellWebhooks, tellWebhooksAbout } from './tell-webhooks';
-import { tellAssigned } from './updates';
 
 /**
  * The most people one change can add, and the most it can remove: more than

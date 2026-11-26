@@ -30,9 +30,9 @@ import { storeMentions } from './mentions';
 import { assertStillRaisableFor, personToRaiseFor, raisedForSchema } from './raise-for';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellMentioned, tellRaisedFor } from './tell-people';
 import { tellWebhooks } from './tell-webhooks';
 import { typeToGive } from './types';
-import { tellMentioned, tellRaisedFor } from './updates';
 
 /**
  * Takes the next request number: one more than the last (the

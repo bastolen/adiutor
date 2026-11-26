@@ -34,8 +34,8 @@ import {
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { type RequestNews, tellPeopleOnRequest } from './tell-people';
 import { tellWebhooks } from './tell-webhooks';
-import { type RequestNews, tellPeopleOnRequest } from './updates';
 
 /**
  * Approves or denies the solution a request waits on, for an Admin or a
