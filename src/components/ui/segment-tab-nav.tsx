@@ -20,6 +20,11 @@ interface SegmentTab {
   label: string;
   /** The route segment below the layout it opens, or `null` for the layout's own page. */
   segment: string | null;
+  /**
+   * Other route segments below the layout where this tab is the open
+   * section too, e.g. the pages of the items one of its cards lists.
+   */
+  alsoOn?: readonly string[];
 }
 
 /**
@@ -35,7 +40,8 @@ interface SegmentTabNavProps {
 /**
  * A row of section links with an underline under the open section's, marked
  * with `aria-current="page"` (and outlined in forced-colours mode, where every
- * link's line looks the same: `currentItem`). Each section is its own page, so these are
+ * link's line looks the same: `currentItem`), also on the other segments it
+ * names (`alsoOn`). Each section is its own page, so these are
  * links, not ARIA tabs. Render it from the layout of the sections, not from
  * their pages. Tabs that don't fit the width (long names on a phone, in some
  * languages) wrap onto another row, so every tab stays in sight and the page
@@ -47,7 +53,8 @@ export default function SegmentTabNav({ label, items }: SegmentTabNavProps) {
     <nav aria-label={label} className="-mb-px border-b border-border">
       <ul className="flex flex-wrap gap-1">
         {items.map((item) => {
-          const isCurrent = item.segment === current;
+          const isCurrent =
+            item.segment === current || (current !== null && !!item.alsoOn?.includes(current));
           return (
             <li key={item.href}>
               <Link

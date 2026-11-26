@@ -495,7 +495,8 @@ keyboard support.
   keeps focus and the header doesn't reload. The layouts of a company's pages and of Settings
   make every one of their tabs wide (`WidePage`, see "Layout"), so the header and tabs don't move
   when the tab changes. `SegmentTabNav` marks the current tab from the URL
-  (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
+  (`useSelectedLayoutSegment`), or from other segments a tab names (`alsoOn`, for pages of the
+  items a tab lists), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than
   widen the page.
 

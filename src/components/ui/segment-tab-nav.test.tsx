@@ -1,7 +1,7 @@
 /**
  * @file Tests for section tabs in a layout: the tab for the route segment
- * below the layout is the current one, and `null` stands for the layout's own
- * page.
+ * below the layout is the current one, `null` stands for the layout's own
+ * page, and a tab can stay current on other segments it names.
  */
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -44,6 +44,30 @@ describe('SegmentTabNav', () => {
 
     expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Members' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps a tab current on the other segments it names', () => {
+    useSelectedLayoutSegment.mockReturnValue('webhooks');
+    render(
+      <SegmentTabNav
+        label="Settings sections"
+        items={[
+          { href: '/admin/settings', label: 'General', segment: null },
+          {
+            href: '/admin/settings/connections',
+            label: 'Connections',
+            segment: 'connections',
+            alsoOn: ['webhooks'],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Connections' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
   });
 
   it('lets tabs that don’t fit wrap onto another row, rather than widen the page', () => {
