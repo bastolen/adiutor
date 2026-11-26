@@ -588,7 +588,8 @@
             "label": "Accentkleur",
             "description": "Knoppen, links en focusranden, ook in het donkere thema als dat geen eigen accentkleur heeft.",
             "pick": "Kies de accentkleur",
-            "descriptionDarkOnly": "De e-mails en het tabbladicoon, die licht blijven."
+            "descriptionDarkOnly": "De e-mails en het tabbladicoon, die licht blijven.",
+            "descriptionLightOnly": "Knoppen, links en focusranden."
           },
           "accentDark": {
             "label": "Accentkleur in het donkere thema",
@@ -598,7 +599,8 @@
           "tint": {
             "label": "Tint",
             "description": "De kleurtoon van elk grijs, ook van de achtergronden in het donkere thema; een grijze kleur geeft gewoon grijs.",
-            "pick": "Kies de tint"
+            "pick": "Kies de tint",
+            "descriptionLightOnly": "De kleurtoon van elk grijs; een grijze kleur geeft gewoon grijs."
           },
           "useAdiutor": "Kleuren van Adiutor gebruiken",
           "save": "Kleuren opslaan",

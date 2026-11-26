@@ -588,7 +588,8 @@
             "label": "Accent",
             "description": "Buttons, links and focus rings, in dark mode too unless it has an accent of its own.",
             "pick": "Pick the accent",
-            "descriptionDarkOnly": "The emails and the browser tab icon, which stay light."
+            "descriptionDarkOnly": "The emails and the browser tab icon, which stay light.",
+            "descriptionLightOnly": "Buttons, links and focus rings."
           },
           "accentDark": {
             "label": "Accent in dark mode",
@@ -598,7 +599,8 @@
           "tint": {
             "label": "Tint",
             "description": "The hue every grey takes, dark mode’s backgrounds too; a grey gives plain greys.",
-            "pick": "Pick the tint"
+            "pick": "Pick the tint",
+            "descriptionLightOnly": "The hue every grey takes; a grey gives plain greys."
           },
           "useAdiutor": "Use Adiutor’s colours",
           "save": "Save colours",

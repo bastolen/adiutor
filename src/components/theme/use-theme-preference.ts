@@ -5,7 +5,7 @@
  */
 'use client';
 
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 
 import {
   DARK_MEDIA_QUERY,
@@ -99,8 +99,9 @@ export default function useThemePreference() {
   const preference = useSyncExternalStore(subscribe, readPreference, getServerPreference);
   const forced = useForcedTheme();
 
-  useEffect(() => {
-    // Once both modes come back (the root layout no longer renders one), the stored choice applies.
+  useLayoutEffect(() => {
+    // Once both modes come back (the root layout no longer renders one), the stored choice applies,
+    // before the page paints, so the system's mode never shows in between.
     if (!forced) {
       applyPreference(readPreference());
     }

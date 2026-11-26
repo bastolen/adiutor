@@ -188,10 +188,33 @@ describe('ColoursForm', () => {
       ).not.toBeInTheDocument();
       expect(screen.getByTestId('preview-light')).toBeInTheDocument();
       expect(screen.queryByTestId('preview-dark')).not.toBeInTheDocument();
+      // The descriptions leave dark mode out.
+      expect(screen.getByText('Buttons, links and focus rings.')).toBeInTheDocument();
+      expect(
+        screen.getByText('The hue every grey takes; a grey gives plain greys.'),
+      ).toBeInTheDocument();
 
       await user.clear(field('Accent'));
       await user.type(field('Accent'), '#2e7d32');
       expect(await saveAndRead(user)).toEqual(['#2e7d32', '#ff80ab', ADIUTOR_COLOURS.tint]);
+    });
+
+    it('in light mode, leaves the dark accent alone when Adiutor’s colours are put back', async () => {
+      const user = userEvent.setup();
+      render(
+        <ColoursForm
+          saved={{ accent: '#c2185b', accentDark: '#ff80ab', tint: '#2e7d32' }}
+          forced="light"
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Use Adiutor’s colours' }));
+
+      expect(await saveAndRead(user)).toEqual([
+        ADIUTOR_COLOURS.accent,
+        '#ff80ab',
+        ADIUTOR_COLOURS.tint,
+      ]);
     });
 
     it('in dark mode, keeps both accents, says the accent is for emails and the icon, and previews dark only', () => {

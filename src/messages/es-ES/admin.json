@@ -588,7 +588,8 @@
             "label": "Color de acento",
             "description": "Botones, enlaces y contornos de foco, también en el tema oscuro si no tiene un color de acento propio.",
             "pick": "Elige el color de acento",
-            "descriptionDarkOnly": "Los correos y el icono de la pestaña, que siguen siendo claros."
+            "descriptionDarkOnly": "Los correos y el icono de la pestaña, que siguen siendo claros.",
+            "descriptionLightOnly": "Botones, enlaces y contornos de foco."
           },
           "accentDark": {
             "label": "Color de acento en el tema oscuro",
@@ -598,7 +599,8 @@
           "tint": {
             "label": "Tono",
             "description": "El matiz que toma cada gris, también los fondos del tema oscuro; un gris da grises neutros.",
-            "pick": "Elige el tono"
+            "pick": "Elige el tono",
+            "descriptionLightOnly": "El matiz que toma cada gris; un gris da grises neutros."
           },
           "useAdiutor": "Usar los colores de Adiutor",
           "save": "Guardar colores",

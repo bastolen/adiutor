@@ -79,8 +79,8 @@ function typedFrom(saved: BrandColours): TypedColours {
  *
  * While a staff Admin keeps every page in light mode (decision 0053), the
  * dark accent's field and preview aren't shown, but its value is still sent
- * as it is, so saving the colours never clears it for when both modes come
- * back. In dark mode only, both previews but the dark one go, and the
+ * as it is, and "Use Adiutor's colours" leaves it alone, so saving the
+ * colours never clears it for when both modes come back. In dark mode only, both previews but the dark one go, and the
  * accent's description says it's for the emails and the tab icon.
  *
  * @param props - Form props.
@@ -148,6 +148,14 @@ export default function ColoursForm({
     }));
   };
 
+  // What the accent colours, as far as the mode every page is kept in goes.
+  let accentDescription = t('accent.description');
+  if (forced === 'light') {
+    accentDescription = t('accent.descriptionLightOnly');
+  } else if (forced === 'dark') {
+    accentDescription = t('accent.descriptionDarkOnly');
+  }
+
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-6">
       <ChangesFieldset>
@@ -156,9 +164,7 @@ export default function ColoursForm({
           <ColourField
             label={t('accent.label')}
             pickLabel={t('accent.pick')}
-            description={
-              forced === 'dark' ? t('accent.descriptionDarkOnly') : t('accent.description')
-            }
+            description={accentDescription}
             name="accent"
             value={typed.accent}
             onChange={change('accent')}
@@ -187,7 +193,9 @@ export default function ColoursForm({
           <ColourField
             label={t('tint.label')}
             pickLabel={t('tint.pick')}
-            description={t('tint.description')}
+            description={
+              forced === 'light' ? t('tint.descriptionLightOnly') : t('tint.description')
+            }
             name="tint"
             value={typed.tint}
             onChange={change('tint')}
@@ -204,7 +212,18 @@ export default function ColoursForm({
             type="button"
             variant="secondary"
             disabled={changesOff}
-            onClick={() => setTyped(ADIUTOR_TYPED)}
+            onClick={() =>
+              // In light mode only, the dark accent can't be seen, so it isn't reset either.
+              setTyped((current) =>
+                forced === 'light'
+                  ? {
+                      ...ADIUTOR_TYPED,
+                      accentDark: current.accentDark,
+                      darkFollows: current.darkFollows,
+                    }
+                  : ADIUTOR_TYPED,
+              )
+            }
           >
             {t('useAdiutor')}
           </Button>
