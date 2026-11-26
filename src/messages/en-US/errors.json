@@ -151,6 +151,23 @@
       "someUnavailable": "One of the files is no longer available. Attach it again.",
       "tooManyAtOnce": "You’re uploading {maximum, number} files already. Wait for one to finish.",
       "notSetUp": "Attaching files isn’t set up yet. Ask a staff Admin to set up where files are kept."
+    },
+    "email": {
+      "serverFromEnvironment": "The server's environment chooses the mail server, so it can't be changed here.",
+      "confirmationRequired": "Confirm it’s you with your second step before changing the mail server.",
+      "passwordNeeded": "Give the password again: a saved one is only kept for the same server, port and username.",
+      "senderNeeded": "Give the sender's address.",
+      "problem": {
+        "tlsRequired": "Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted."
+      },
+      "check": {
+        "unreachable": "Adiutor couldn't reach the mail server. Check its name and port.",
+        "timedOut": "The mail server took too long to answer. Try again, or check its name and port.",
+        "tls": "Adiutor couldn't secure the connection. Check the security and the port.",
+        "loginRefused": "The mail server refused the username or the password. Check them.",
+        "addressRefused": "The mail server refused the sender's address or yours. Check that it may send from the sender's address.",
+        "refused": "The mail server refused the test email. Check its settings with your provider."
+      }
     }
   }
 }

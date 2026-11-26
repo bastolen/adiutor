@@ -47,6 +47,7 @@
       "brand_colours_changed": "Changed the brand colours",
       "attachment_storage_changed": "Changed where attached files are kept",
       "attachment_storage_set_up": "Set up where attached files are kept",
+      "smtp_settings_changed": "Changed the mail server",
       "request_type_added": "Added a request type",
       "request_type_changed": "Changed a request type",
       "request_type_archived": "Archived a request type",

@@ -151,6 +151,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
     attach files (only once there's a storage), and the largest file anyone may attach; each only
     shown when the server's environment chooses it (see
     [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
+  - **Email** (`/admin/settings/email`): the mail server emails go out through and their sender,
+    tried with a test email to the staff Admin before it's saved, with their second step from the
+    last 15 minutes; only shown when the server's environment names it (`SMTP_URL`, `EMAIL_FROM`;
+    see [Sending email](deploying.md#sending-email)). A change is in the audit log, and every
+    staff Admin is emailed about it.
   - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
     the staff's own systems and chat channels, each with whether it's on, its format, the host it
     sends to, its types and events, and adding one; each webhook's page has its controls and its

@@ -144,7 +144,7 @@ changes it). The application's files belong to root and only `.next`, where Next
 caches, is writable by that user (and `/data/attachments`, for a volume of attached files: see
 [Attachments](#attachments)), so a flaw that lets the server write files can't change the
 application's own code. The settings are the same as without Docker (see the checklist below,
-including `EMAIL_FROM`, and finish setup right after the first start: until then whoever opens
+including the mail server, and finish setup right after the first start: until then whoever opens
 `/setup` first becomes the staff Admin); when the
 database runs on the host, `DATABASE_URL` points at the host's address (such as
 `host.docker.internal` on Docker Desktop), not `localhost`.
@@ -225,18 +225,9 @@ What to set up on a server before sharing its address:
   (`getProviderMfaWarning`), and the Users list shows them as "Needs MFA".
 - **First run:** complete `/setup` (or run `pnpm setup:platform`) right after deploying. Until then
   the first visitor becomes the staff Admin (see [First run](companies-and-roles.md#first-run)).
-- **Email:** set `SMTP_URL` (without it, every email fails, and the server logs a warning when it
-  starts) and `EMAIL_FROM`, the sender, such as `Adiutor <no-reply@yourdomain>` on a domain you
-  control: left unset, it defaults to an address on `adiutor.dev`, which providers that check the
-  sender reject and which isn't yours. Use TLS, since the emails carry sign-in links:
-  `smtps://user:password@smtp.adiutor.dev:465` (TLS from the start), or
-  `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` (STARTTLS, required). A plain
-  `smtp://` URL only uses STARTTLS when the server offers it, so someone on the network could strip
-  it and read the links; with `NODE_ENV=production` the app refuses one, except to a mail server on
-  this computer. The app keeps up to 3 connections open and reuses them (nodemailer's pool), so a
-  bulk invitation doesn't connect and sign in once per email; settings in the URL win, e.g.
-  `?maxConnections=1` for a provider that allows one connection, or `?pool=false`. Never set
-  `EMAIL_OUTBOX_DIR`.
+- **Email:** right after setup, set up the mail server on the Email tab of Settings, or set
+  `SMTP_URL` and `EMAIL_FROM` (see [Sending email](#sending-email)). Without one, every email
+  fails, and the server logs a warning when it starts. Never set `EMAIL_OUTBOX_DIR`.
 - **No test data:** never run `pnpm db:seed` on a server. It deletes all data and adds a staff Admin
   whose password and authenticator secret are in the repository. It refuses to run when
   `BETTER_AUTH_URL` isn't on this computer (see [Test accounts](development.md#test-accounts)).
@@ -344,6 +335,42 @@ one does no harm. It exits with 1 when a job failed (after the others ran), so c
 monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
 run tries again. `pnpm jobs:list` shows every job with its last and next run, and
 `pnpm jobs:run <name>` runs one job now.
+
+## Sending email
+
+Adiutor sends sign-in links, password resets, invitations, security notices and the emails about
+requests through a mail server that a staff Admin sets up on the **Email** tab of Settings, unless
+the server's environment names one ([decision 0045](decisions/0045-mail-server-in-settings.md)).
+Without either, every email fails, and a production server logs a warning when it starts.
+
+- **In Settings,** a mail server is tried before it's saved: Adiutor sends a test email through it
+  to the staff Admin who saves it, and says what went wrong if that fails (couldn't connect, didn't
+  answer in time, couldn't secure the connection, refused the login, the address or the email),
+  never the server's own reply. Saving needs the staff Admin's second step from the last 15
+  minutes, is in the audit log, and tells every staff Admin by email, the one saving it too. Whoever controls the mail
+  server can read every sign-in link and code Adiutor sends, so that email goes out straight away
+  through the mail server that was in use before the change, which the new one can't hold back;
+  when there was none, or it fails, it goes through the new one. The password is encrypted with the
+  auth secret, like authenticator secrets, so [Rotating the auth secret](#rotating-the-auth-secret)
+  holds for it. It's never shown again, and it's kept only for the server it was saved for: another
+  host, port or username must be given it again.
+- **In the environment,** `SMTP_URL` wins over Settings, which then only shows the mail server,
+  without its password, and `EMAIL_FROM` wins for the sender. A mail server in Settings lets staff
+  Admins choose where every email goes, and make the server connect to any address it reaches, so
+  set `SMTP_URL` yourself if that's not what you want.
+- **The sender** is an address on a domain you control, such as `Adiutor <no-reply@yourdomain>`:
+  without one, it's an address on `adiutor.dev`, which providers that check the sender reject and
+  which isn't yours.
+- **Use TLS,** since the emails carry sign-in links: TLS from the start (usually port 465) or
+  STARTTLS that must succeed (usually 587), in Settings, or in the URL:
+  `smtps://user:password@smtp.adiutor.dev:465`, or
+  `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true`. Without either, nodemailer uses
+  STARTTLS only when the server offers it, so someone on the network could strip it and read the
+  links; with `NODE_ENV=production` the app refuses that, in Settings and in `SMTP_URL`, except for a
+  mail server on this computer.
+- **Connections:** the app keeps up to 3 connections open and reuses them (nodemailer's pool), so a
+  bulk invitation doesn't connect and sign in once per email; settings in `SMTP_URL` win, e.g.
+  `?maxConnections=1` for a provider that allows one connection, or `?pool=false`.
 
 ## Attachments
 
@@ -460,8 +487,8 @@ replaced too (`invalid input syntax for type uuid: "[redacted]"`: it quotes the 
 read), unless it's the constraint, table, column, schema or data type the error names. That covers
 Next's own logging of errors pages and server actions throw, Better Auth's logger and the app's own
 messages. Other text in the message of an error that isn't the database's stays, such as the
-address an SMTP server refused. In development without
-`SMTP_URL`, emails are printed in full so their links can be opened (never in production).
+address an SMTP server refused. In development without a mail server, emails are printed in full
+so their links can be opened (never in production).
 
 ## Looking up an error reference
 

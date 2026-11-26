@@ -501,6 +501,41 @@ export async function restoreAttachmentSettings(rows: AttachmentSettingRows): Pr
 }
 
 /**
+ * Reads the mail server saved on the Email tab of Settings (`email.smtp`),
+ * for a test that changes it to put back.
+ *
+ * @returns Its row, or `null` while none is saved.
+ */
+export async function smtpSettingRow(): Promise<{ key: string; value: unknown } | null> {
+  const [row] = await withTestDatabase((db) =>
+    db
+      .select({ key: schema.setting.key, value: schema.setting.value })
+      .from(schema.setting)
+      .where(eq(schema.setting.key, 'email.smtp')),
+  );
+  return row ?? null;
+}
+
+/**
+ * Puts the saved mail server back as {@link smtpSettingRow} read it: its row,
+ * or none.
+ *
+ * @param row - The row to put back, or `null` for none.
+ */
+export async function restoreSmtpSetting(
+  row: { key: string; value: unknown } | null,
+): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.setting).where(eq(schema.setting.key, 'email.smtp'));
+      if (row) {
+        await tx.insert(schema.setting).values(row);
+      }
+    });
+  });
+}
+
+/**
  * Brings back the dashboard's MFA recommendation for a user, as if they had
  * never dismissed it, so a test that dismisses it can run again.
  *

@@ -12,9 +12,10 @@ import SegmentTabNav from '@/components/ui/segment-tab-nav';
  * name shown to users, the languages and the time zone), Staff (the staff,
  * their invitations and invite links), Requests (request numbers and
  * types), Attachments (where attached files are kept, and the largest file),
- * Webhooks (where what happens to requests is sent) and Appearance (the
- * brand colours). Every tab is for staff Admins, who are the only ones to
- * see the settings, so none is left out. Its text comes from `admin.settings`.
+ * Email (the mail server emails go out through), Webhooks (where what
+ * happens to requests is sent) and Appearance (the brand colours). Every
+ * tab is for staff Admins, who are the only ones to see the settings, so
+ * none is left out. Its text comes from `admin.settings`.
  */
 export default function SettingsHeader() {
   const t = useTranslations('admin.settings');
@@ -31,6 +32,7 @@ export default function SettingsHeader() {
             label: t('tabs.attachments'),
             segment: 'attachments',
           },
+          { href: '/admin/settings/email', label: t('tabs.email'), segment: 'email' },
           { href: '/admin/settings/webhooks', label: t('tabs.webhooks'), segment: 'webhooks' },
           {
             href: '/admin/settings/appearance',

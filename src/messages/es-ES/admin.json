@@ -261,7 +261,8 @@
         "requests": "Solicitudes",
         "webhooks": "Webhooks",
         "appearance": "Apariencia",
-        "attachments": "Archivos adjuntos"
+        "attachments": "Archivos adjuntos",
+        "email": "Correo"
       },
       "general": {
         "name": {
@@ -638,6 +639,46 @@
           "hint": "Del 1 al {ceiling, number}.",
           "save": "Guardar tamaño",
           "saved": "Archivo más grande guardado."
+        }
+      },
+      "email": {
+        "title": "Correo",
+        "server": {
+          "title": "Servidor de correo",
+          "description": "Adiutor envía los enlaces de inicio de sesión, los restablecimientos de contraseña, las invitaciones, los avisos de seguridad y los correos sobre solicitudes a través de este servidor.",
+          "none": "Aún no hay ningún servidor de correo configurado.",
+          "noneWarning": "Aún no hay ningún servidor de correo configurado: hasta que lo haya, nadie recibe enlaces de inicio de sesión, enlaces para restablecer la contraseña ni invitaciones.",
+          "unreadable": "El entorno del servidor elige el servidor de correo, pero no se puede leer su dirección.",
+          "host": "Servidor",
+          "hostHint": "El nombre de host del servidor de correo, p. ej. smtp.tudominio.es.",
+          "security": "Seguridad",
+          "securities": {
+            "tls": "TLS",
+            "starttls": "STARTTLS",
+            "none": "Ninguna"
+          },
+          "securityHints": {
+            "tls": "Cifrado desde el principio, normalmente en el puerto 465.",
+            "starttls": "Cifrado una vez conectado, normalmente en el puerto 587.",
+            "none": "Sin cifrar. En producción, solo para un servidor de correo en este equipo."
+          },
+          "port": "Puerto",
+          "portHint": "Déjalo vacío para el puerto habitual: 465 con TLS, 587 con STARTTLS, 25 sin cifrar.",
+          "username": "Nombre de usuario",
+          "usernameHint": "Déjalo vacío para un servidor que acepta correo sin iniciar sesión.",
+          "password": "Contraseña",
+          "passwordSaved": "Hay una contraseña guardada. Deja esto vacío para conservarla mientras el servidor, el puerto y el nombre de usuario sigan siendo los mismos.",
+          "signsIn": "Inicia sesión como",
+          "signsInNone": "Sin iniciar sesión",
+          "sender": "Remitente",
+          "fromName": "Nombre del remitente",
+          "fromNameHint": "Se muestra junto a la dirección en las aplicaciones de correo, p. ej. Adiutor.",
+          "fromAddress": "Dirección del remitente",
+          "fromAddressHint": "Una dirección de un dominio que controlas, desde la que este servidor puede enviar.",
+          "whoIsTold": "Al guardar, te llega un correo de prueba a través de este servidor y después se avisa a todos los administradores del personal, también a ti.",
+          "save": "Probar y guardar",
+          "saved": "Servidor de correo guardado. Te ha llegado un correo de prueba a través de él.",
+          "confirmFirst": "Para cambiar el servidor de correo, primero confirma que eres tú."
         }
       }
     },

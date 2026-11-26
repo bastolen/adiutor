@@ -6,6 +6,7 @@ import type { JobBatch, QueuedJobRunner, RecurringJob } from './define';
 import addedToCompanyJob from './queued/added-to-company';
 import { requestUpdateRunner, requestUpdatesBatch } from './queued/request-updates';
 import securityNoticeJob from './queued/security-notice';
+import smtpChangedJob from './queued/smtp-changed';
 import staffAdminAddedJob from './queued/staff-admin-added';
 import webhookDeliveryJob from './queued/webhook-delivery';
 import webhookTurnedOffJob from './queued/webhook-turned-off';
@@ -41,6 +42,7 @@ export const QUEUED_JOBS: readonly QueuedJobRunner[] = [
   securityNoticeJob,
   addedToCompanyJob,
   staffAdminAddedJob,
+  smtpChangedJob,
   requestUpdateRunner,
   webhookDeliveryJob,
   webhookTurnedOffJob,

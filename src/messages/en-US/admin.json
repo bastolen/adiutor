@@ -261,7 +261,8 @@
         "requests": "Requests",
         "webhooks": "Webhooks",
         "appearance": "Appearance",
-        "attachments": "Attachments"
+        "attachments": "Attachments",
+        "email": "Email"
       },
       "general": {
         "name": {
@@ -638,6 +639,46 @@
           "hint": "From 1 to {ceiling, number}.",
           "save": "Save size",
           "saved": "Largest file saved."
+        }
+      },
+      "email": {
+        "title": "Email",
+        "server": {
+          "title": "Mail server",
+          "description": "Adiutor sends sign-in links, password resets, invitations, security notices and the emails about requests through this server.",
+          "none": "No mail server is set up yet.",
+          "noneWarning": "No mail server is set up yet: until one is, nobody gets sign-in links, password resets or invitations.",
+          "unreadable": "The server's environment chooses the mail server, but its address can't be read.",
+          "host": "Server",
+          "hostHint": "The mail server's host name, e.g. smtp.yourdomain.com.",
+          "security": "Security",
+          "securities": {
+            "tls": "TLS",
+            "starttls": "STARTTLS",
+            "none": "None"
+          },
+          "securityHints": {
+            "tls": "Encrypted from the start, usually on port 465.",
+            "starttls": "Encrypted once connected, usually on port 587.",
+            "none": "Not encrypted. In production, only for a mail server on this computer."
+          },
+          "port": "Port",
+          "portHint": "Leave it empty for the usual port: 465 with TLS, 587 with STARTTLS, 25 without.",
+          "username": "Username",
+          "usernameHint": "Leave it empty for a server that takes email without signing in.",
+          "password": "Password",
+          "passwordSaved": "A password is saved. Leave this empty to keep it while the server, port and username stay the same.",
+          "signsIn": "Signs in as",
+          "signsInNone": "Without signing in",
+          "sender": "Sender",
+          "fromName": "Sender name",
+          "fromNameHint": "Shown with the address in mail apps, e.g. Adiutor.",
+          "fromAddress": "Sender address",
+          "fromAddressHint": "An address on a domain you control, which this server may send from.",
+          "whoIsTold": "Saving sends a test email to you through this server, then tells every staff Admin, you included.",
+          "save": "Test and save",
+          "saved": "Mail server saved. A test email reached you through it.",
+          "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }
       }
     },

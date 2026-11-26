@@ -67,6 +67,10 @@ The folders of the repository and what belongs in each. Back to the [documentati
     kept under, the storage files go to now (`activeStorage`), and the Attachments tab of Settings
     (`settings.ts`, with the secrets encrypted by `secrets.ts`). Free of `server-only`, since the
     jobs' command imports it.
+  - `src/server/smtp/`: the Email tab of Settings (see [Sending email](deploying.md#sending-email)):
+    reading and saving the mail server (`settings.ts`, tried with a test email first) and telling
+    every staff Admin of a change (`notice.ts`). Sending itself is `src/lib/email.ts`, which
+    reads the saved mail server through `import()`, so `SMTP_URL` alone never loads the settings.
   - `src/server/webhooks/`: webhooks (see [Webhooks](webhooks.md)): managing them (`manage.ts`),
     the guard that keeps them out of Adiutor's own network (`address-guard.ts`), the JSON body and
     the chat message (`formats.ts`), their signature (`signing.ts`) and one attempt to send

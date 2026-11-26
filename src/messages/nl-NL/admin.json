@@ -261,7 +261,8 @@
         "requests": "Verzoeken",
         "webhooks": "Webhooks",
         "appearance": "Weergave",
-        "attachments": "Bijlagen"
+        "attachments": "Bijlagen",
+        "email": "E-mail"
       },
       "general": {
         "name": {
@@ -638,6 +639,46 @@
           "hint": "Van 1 tot {ceiling, number}.",
           "save": "Grootte opslaan",
           "saved": "Grootste bestand opgeslagen."
+        }
+      },
+      "email": {
+        "title": "E-mail",
+        "server": {
+          "title": "Mailserver",
+          "description": "Adiutor verstuurt inloglinks, wachtwoordherstel, uitnodigingen, beveiligingsmeldingen en de e-mails over verzoeken via deze server.",
+          "none": "Er is nog geen mailserver ingesteld.",
+          "noneWarning": "Er is nog geen mailserver ingesteld: tot er een is, krijgt niemand inloglinks, links om een wachtwoord te herstellen of uitnodigingen.",
+          "unreadable": "De omgeving van de server kiest de mailserver, maar het adres ervan is niet te lezen.",
+          "host": "Server",
+          "hostHint": "De hostnaam van de mailserver, bijv. smtp.jouwdomein.nl.",
+          "security": "Beveiliging",
+          "securities": {
+            "tls": "TLS",
+            "starttls": "STARTTLS",
+            "none": "Geen"
+          },
+          "securityHints": {
+            "tls": "Versleuteld vanaf het begin, meestal op poort 465.",
+            "starttls": "Versleuteld zodra de verbinding er is, meestal op poort 587.",
+            "none": "Niet versleuteld. In productie alleen voor een mailserver op deze computer."
+          },
+          "port": "Poort",
+          "portHint": "Laat dit leeg voor de gebruikelijke poort: 465 met TLS, 587 met STARTTLS, 25 zonder.",
+          "username": "Gebruikersnaam",
+          "usernameHint": "Laat dit leeg voor een server die e-mail aanneemt zonder in te loggen.",
+          "password": "Wachtwoord",
+          "passwordSaved": "Er is een wachtwoord opgeslagen. Laat dit leeg om het te houden zolang de server, de poort en de gebruikersnaam hetzelfde blijven.",
+          "signsIn": "Logt in als",
+          "signsInNone": "Zonder in te loggen",
+          "sender": "Afzender",
+          "fromName": "Naam van de afzender",
+          "fromNameHint": "Staat in mailapps bij het adres, bijv. Adiutor.",
+          "fromAddress": "Adres van de afzender",
+          "fromAddressHint": "Een adres op een domein dat van jou is, waarvandaan deze server mag versturen.",
+          "whoIsTold": "Bij het opslaan krijg je via deze server een test-e-mail, en daarna horen alle beheerders van de medewerkers het, jij ook.",
+          "save": "Testen en opslaan",
+          "saved": "Mailserver opgeslagen. Er kwam via deze server een test-e-mail bij je aan.",
+          "confirmFirst": "Om de mailserver te wijzigen, moet je eerst bevestigen dat jij het bent."
         }
       }
     },

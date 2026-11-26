@@ -454,6 +454,35 @@ A file attached to a request is uploaded on its own first, then sent with its te
   over a route's own. Thumbnails load from the same address: an image element shows an image
   whatever its `Content-Disposition` says, and `img-src 'self'` stays.
 
+## Where email goes
+
+A staff Admin sets the mail server on the Email tab of Settings, unless the server's environment
+names it (see [Sending email](deploying.md#sending-email) and
+[decision 0045](decisions/0045-mail-server-in-settings.md)). Whoever controls the mail server can
+read every sign-in link, password reset link and emailed code Adiutor sends, so:
+
+- **Changing it needs the staff Admin's second step from the last 15 minutes**, is in the audit log
+  (`smtp_settings_changed`, with the host and port, never the username or password), and is told
+  to every staff Admin by email, the one who made it too: their session may be the stolen one, and
+  an install with one staff Admin still hears of it. That email goes straight away through the
+  mail server in use before the change, as the save read and locked it, one staff Admin at a time
+  (`tellStaffAdminsOfMailServerChange` in `src/server/smtp/`), which the new one can't hold back;
+  only when there was none, or it fails within its time limit, is it queued (`smtp-changed`, for
+  that Admin and the ones after), and then it goes through the new one.
+- **The password is sealed** like the storage's secrets (`sealSecret`), never sent back to a
+  browser, and kept only for the server, port and username it was saved for (`secretToSave`), so a
+  staff Admin can't point a saved password at a host of their own.
+- **A mail server is tried before it's saved:** a test email goes through it to the staff Admin
+  saving it (`sendThrough`, with the send time limits). A failure is named by its kind only
+  (`smtpFailureOf`, through `checkBeforeSaving`): couldn't connect, timed out, couldn't secure the
+  connection, refused the login, an address or the email, never what the server replied. The tries
+  are limited per staff Admin (`smtpTestsPerUser`).
+- **In production a connection must be secured** (TLS, or STARTTLS that must succeed), except to a
+  mail server on this computer (`smtpProblems`), as `SMTP_URL` must.
+- **A staff Admin can make the server connect to any host it reaches**, as with a storage. An
+  operator who doesn't want that sets `SMTP_URL`, which the tab then only shows, without its
+  password.
+
 ## Where attached files are kept
 
 A staff Admin chooses the storage on the Attachments tab of Settings, unless the server's

@@ -151,6 +151,23 @@
       "someUnavailable": "Een van de bestanden is niet meer beschikbaar. Voeg het opnieuw toe.",
       "tooManyAtOnce": "Je uploadt al {maximum, number} bestanden. Wacht tot er een klaar is.",
       "notSetUp": "Bestanden toevoegen is nog niet ingesteld. Vraag een beheerder om in te stellen waar bestanden worden bewaard."
+    },
+    "email": {
+      "serverFromEnvironment": "De omgeving van de server kiest de mailserver, dus die kun je hier niet wijzigen.",
+      "confirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je de mailserver wijzigt.",
+      "passwordNeeded": "Geef het wachtwoord opnieuw: een opgeslagen wachtwoord geldt alleen voor dezelfde server, poort en gebruikersnaam.",
+      "senderNeeded": "Geef het adres van de afzender.",
+      "problem": {
+        "tlsRequired": "Gebruik TLS of STARTTLS: zonder gaan de e-mails, en de inloglinks erin, onversleuteld over het netwerk."
+      },
+      "check": {
+        "unreachable": "Adiutor kon de mailserver niet bereiken. Controleer de naam en de poort.",
+        "timedOut": "De mailserver deed er te lang over om te antwoorden. Probeer het opnieuw, of controleer de naam en de poort.",
+        "tls": "Adiutor kon de verbinding niet beveiligen. Controleer de beveiliging en de poort.",
+        "loginRefused": "De mailserver weigerde de gebruikersnaam of het wachtwoord. Controleer ze.",
+        "addressRefused": "De mailserver weigerde het adres van de afzender of dat van jou. Controleer of hij vanaf het adres van de afzender mag versturen.",
+        "refused": "De mailserver weigerde de test-e-mail. Controleer de instellingen bij je provider."
+      }
     }
   }
 }

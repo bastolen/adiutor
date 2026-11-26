@@ -111,6 +111,22 @@
       "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
       "button": "Instellingen voor medewerkers openen"
     },
+    "smtpChanged": {
+      "subject": "Adiutor verstuurt e-mail via een andere mailserver",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het altijd wanneer de mailserver wijzigt.",
+      "heading": "De mailserver is gewijzigd",
+      "changedBy": "{by} heeft de mailserver waarmee Adiutor e-mail verstuurt gewijzigd in {server}.",
+      "changed": "De mailserver waarmee Adiutor e-mail verstuurt is gewijzigd in {server}.",
+      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die Adiutor verstuurt. Herken je dit niet, controleer dan de instellingen voor e-mail en de auditlog.",
+      "button": "Instellingen voor e-mail openen"
+    },
+    "smtpTest": {
+      "subject": "Adiutor kan e-mail versturen via deze mailserver",
+      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad E-mail van de instellingen van Adiutor.",
+      "heading": "Deze mailserver werkt",
+      "body": "Adiutor stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
+      "button": "Instellingen voor e-mail openen"
+    },
     "jobFailing": {
       "subject": "Achtergrondtaak {job} blijft mislukken op Adiutor",
       "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",

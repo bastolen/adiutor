@@ -151,6 +151,23 @@
       "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo.",
       "tooManyAtOnce": "Ya estás subiendo {maximum, number} archivos. Espera a que termine uno.",
       "notSetUp": "Adjuntar archivos aún no está configurado. Pide a un administrador que configure dónde se guardan los archivos."
+    },
+    "email": {
+      "serverFromEnvironment": "El entorno del servidor elige el servidor de correo, así que no se puede cambiar aquí.",
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar el servidor de correo.",
+      "passwordNeeded": "Vuelve a escribir la contraseña: una guardada solo se conserva para el mismo servidor, puerto y nombre de usuario.",
+      "senderNeeded": "Indica la dirección del remitente.",
+      "problem": {
+        "tlsRequired": "Usa TLS o STARTTLS: sin ellos, los correos y los enlaces de inicio de sesión que contienen viajarían sin cifrar."
+      },
+      "check": {
+        "unreachable": "Adiutor no ha podido llegar al servidor de correo. Revisa su nombre y su puerto.",
+        "timedOut": "El servidor de correo ha tardado demasiado en responder. Vuelve a intentarlo o revisa su nombre y su puerto.",
+        "tls": "Adiutor no ha podido proteger la conexión. Revisa la seguridad y el puerto.",
+        "loginRefused": "El servidor de correo ha rechazado el nombre de usuario o la contraseña. Revísalos.",
+        "addressRefused": "El servidor de correo ha rechazado la dirección del remitente o la tuya. Comprueba que puede enviar desde la dirección del remitente.",
+        "refused": "El servidor de correo ha rechazado el correo de prueba. Revisa su configuración con tu proveedor."
+      }
     }
   }
 }
