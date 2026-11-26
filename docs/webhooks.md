@@ -88,6 +88,27 @@ log with why (by nobody: Adiutor did it), and emails every active staff Admin
 Admin turns it on again once its receiver works; it then starts with a clean slate, and what
 happened while it was off isn't sent.
 
+## Tests and sending again
+
+The staff who manage webhooks see a webhook's deliveries of the last 30 days, newest first: what
+each told of (its events and request), its status, its attempts, the receiver's last status or how
+the last attempt failed, and when the next one is due (`listDeliveries` in
+`src/server/webhooks/history.ts`), never what was sent or what the receiver answered.
+
+- **A test** (`sendTestEvent`) is sent while the Admin waits, at most 10 seconds, and the page says
+  how it went: `webhook.test` with the webhook's name, or a chat message saying it works. A
+  webhook that's off can be tested, to check it before turning it on. It's recorded among the
+  deliveries, and never counts towards turning the webhook off. It's sent from the request rather
+  than queued, an exception to [decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)
+  that [decision 0046](decisions/0046-webhooks.md) records: a queued test could wait minutes for a
+  tick.
+- **Send again** (`resendDelivery`) gives a delivery that's over (delivered, failed or cancelled)
+  one more attempt at the next tick, with the same `webhook-id`, whatever it had before; once its
+  own attempts ran out, no further ones follow by themselves. Only for a webhook that's on, and
+  never a test.
+- Both connect to an address, so they share a limit: 20 per staff Admin per hour
+  (`webhookSendsPerUser`).
+
 ## What's sent
 
 What a webhook is told is read when it's sent (`readWebhookNews` in
@@ -176,7 +197,8 @@ along:
 - **A recent second step:** adding, changing, renewing the secret and turning on need the Admin's
   second step from the last 15 minutes (`confirmation_required`). Turning off and removing don't:
   they send less.
-- **Rate-limited:** 30 changes per staff Admin per hour (`webhookChangesPerUser`).
+- **Rate-limited:** 30 changes per staff Admin per hour (`webhookChangesPerUser`), and 20 tests and
+  deliveries sent again (`webhookSendsPerUser`).
 - **In the audit log** (Companies and staff): `webhook_added`, `webhook_changed` (with what
   changed, and the host an address replaced), `webhook_secret_renewed`, `webhook_turned_off` (with
   why), `webhook_turned_on` and `webhook_removed`, each with the webhook's name and host, never its

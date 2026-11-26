@@ -30,7 +30,7 @@ detail, one topic each.
   the name checks, webhooks' addresses, the lock order of concurrent changes, security headers and
   the Content Security Policy.
 - [Webhooks](webhooks.md): who sets them up, what a webhook has, how news reaches it, retries and
-  turning off, what's sent (JSON and chat), why its changes are security changes, its address and
+  turning off, tests and sending again, what's sent (JSON and chat), why its changes are security changes, its address and
   secret, and verifying a delivery.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
 - [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,

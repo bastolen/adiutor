@@ -30,13 +30,13 @@ import {
 } from '@/lib/validation';
 import type { WebhookEvent, WebhookFormat, WebhookOffReason } from '@/lib/webhooks';
 
-import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
 import { notFoundError, parseId, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { openSecret, sealSecret } from '../sealed-secrets';
+import assertManagesWebhooks from './access';
 import { pointsInside, serverAddressRules } from './address-guard';
 import { newWebhookSecret } from './signing';
 
@@ -84,18 +84,6 @@ export interface WebhookInput {
   allTypes: boolean;
   /** The keys of the types it covers otherwise. */
   types: readonly string[];
-}
-
-/**
- * Checks that the actor may manage webhooks: the staff who manage request
- * types, not signed in as someone else.
- *
- * @param actor - The acting user.
- * @throws {ServiceError} `signed_in_as`, or `forbidden` without `staff:manage`.
- */
-function assertManagesWebhooks(actor: Actor): void {
-  assertNotSignedInAs(actor);
-  assertPermission(getGlobalPermissions(actor), 'staff:manage');
 }
 
 /**

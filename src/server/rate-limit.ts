@@ -102,6 +102,11 @@ export const RATE_LIMITS = {
    * up, and points request texts somewhere new.
    */
   webhookChangesPerUser: { limit: 30, windowSeconds: 60 * 60 },
+  /**
+   * Tests one staff Admin sends to webhooks, and deliveries they send again:
+   * each makes the server connect to an address.
+   */
+  webhookSendsPerUser: { limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

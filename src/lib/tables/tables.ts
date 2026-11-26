@@ -42,6 +42,9 @@ export type JobRunSort = 'time';
 /** How the failed queued jobs can be sorted: by when they were given up. */
 export type FailedJobSort = 'time';
 
+/** How a webhook's deliveries can be sorted: by when they were made. */
+export type WebhookDeliverySort = 'time';
+
 /** How a list of requests can be sorted by everyone who sees it. */
 export type RequestSort = 'activity' | 'raised';
 
@@ -147,6 +150,13 @@ export const AUDIT_LOG_TABLE: TableDefinition<AuditLogSort> = {
 
 /** The errors recorded in the last 7 days (`/admin/logs/errors`), newest first. */
 export const ERRORS_TABLE: TableDefinition<ErrorSort> = {
+  prefix: '',
+  defaultSort: 'time',
+  sorts: { time: dateSort('time') },
+};
+
+/** A webhook's deliveries of the last 30 days, on its page (`/admin/settings/webhooks/[webhookId]`), newest first. */
+export const WEBHOOK_DELIVERIES_TABLE: TableDefinition<WebhookDeliverySort> = {
   prefix: '',
   defaultSort: 'time',
   sorts: { time: dateSort('time') },

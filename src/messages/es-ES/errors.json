@@ -104,7 +104,9 @@
     },
     "webhooks": {
       "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar adónde envían los webhooks.",
-      "unreadable": "La dirección o el secreto de este webhook ya no se pueden leer. Escribe de nuevo su dirección y después renueva su secreto."
+      "unreadable": "La dirección o el secreto de este webhook ya no se pueden leer. Escribe de nuevo su dirección y después renueva su secreto.",
+      "off": "Activa primero el webhook: no se envía nada a un webhook desactivado.",
+      "stillSending": "Este envío aún se está enviando. Espera a que terminen sus intentos."
     }
   }
 }

@@ -8,8 +8,6 @@
  */
 import { z } from 'zod';
 
-import { WEBHOOK_MAX_ATTEMPTS } from '@/lib/webhooks';
-
 import { defineQueuedKind } from './define';
 
 /**
@@ -23,8 +21,13 @@ export const webhookDeliveryJob = defineQueuedKind({
   payload: z.object({
     /** The delivery. */
     deliveryId: z.uuid(),
-    /** Which attempt this is: the job of an attempt that's already recorded does nothing. */
-    attempt: z.int().min(2).max(WEBHOOK_MAX_ATTEMPTS),
+    /**
+     * Which attempt this is, counting every one the delivery had: the job of
+     * an attempt that's already recorded does nothing. Past the last
+     * (`WEBHOOK_MAX_ATTEMPTS`) when a staff Admin sends a delivery again,
+     * which is one more try.
+     */
+    attempt: z.int().min(1),
   }),
 });
 

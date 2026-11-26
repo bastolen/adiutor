@@ -69,6 +69,7 @@ code is the source if they ever differ.
 | Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
 | Changes to webhooks (`webhookChangesPerUser`)                   | 30    | 1 hour      | user                  |
+| Webhook tests and deliveries sent again (`webhookSendsPerUser`) | 20    | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
 | App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
 
