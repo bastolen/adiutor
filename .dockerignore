@@ -44,3 +44,6 @@ npm-debug.log*
 # Personal notes and local files
 .personal
 .local
+# Claude Security scan reports: the folder ignores itself for git only, and a scan's findings
+# must never reach an image
+**/CLAUDE-SECURITY-*
