@@ -14,6 +14,7 @@ import { jobFailingEmail } from '@/emails/job-failing';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import { sendFailureOf } from '@/lib/email';
 
+import { loadEmailBrand } from '../branding';
 import type { ServiceContext } from '../context';
 import recipientLocale from '../recipient-locale';
 
@@ -125,6 +126,7 @@ export async function alertStaffAdmins(
       .select({ id: user.id, email: user.email, locale: user.locale })
       .from(user)
       .where(and(eq(user.platformRole, PLATFORM_ADMIN_ROLE), isNull(user.deactivatedAt)));
+    const brand = await loadEmailBrand(ctx.db);
     const url = new URL('/admin/logs/errors', ctx.baseUrl);
     if (failing.reference) {
       url.searchParams.set('q', failing.reference);
@@ -135,6 +137,7 @@ export async function alertStaffAdmins(
           await ctx.sendEmail(
             await jobFailingEmail(admin.email, {
               appUrl: ctx.baseUrl,
+              brand,
               locale: await recipientLocale(ctx, admin.locale),
               job: failing.job,
               failure: failing.failure,

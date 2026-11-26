@@ -566,6 +566,28 @@ test.describe('signed in', () => {
     await expect(save).toBeEnabled();
   });
 
+  test('a colour field’s swatch and text are reached in turn, the swatch with a visible ring', async ({
+    page,
+  }) => {
+    // Only browsed with Tab: nothing is saved.
+    await page.goto('/admin/settings/appearance');
+    const text = page.getByRole('textbox', { name: 'Accent', exact: true });
+    const swatch = page.getByLabel('Pick the accent', { exact: true });
+    // The swatch is an invisible colour input; the square after it shows its focus ring.
+    const square = swatch.locator('xpath=following-sibling::span');
+    await text.click();
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(swatch).toBeFocused();
+    await expect(square).toHaveCSS('outline-style', 'solid');
+
+    await page.keyboard.press('Tab');
+    await expect(text).toBeFocused();
+    await expect(square).toHaveCSS('outline-style', 'none');
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Pick the accent for dark mode', { exact: true })).toBeFocused();
+  });
+
   test('toasts are reached with F8 and dismissed with the keyboard', async ({ page }) => {
     await page.goto(`/companies/${COMPANY_SLUG}/members`);
     await page.getByRole('button', { name: 'Create invite link' }).click();

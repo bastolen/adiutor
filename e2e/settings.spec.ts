@@ -6,9 +6,14 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { type Page } from '@playwright/test';
+
+import { derivePalette, type HexColour, THEME_PALETTE } from '../src/lib/branding';
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
+import expectAccessible from './support/axe';
 import {
   backdateMfaConfirmation,
+  setBrandColours,
   setDefaultLocale,
   setDefaultTimeZone,
   setRequestPrefix,
@@ -73,6 +78,114 @@ test('an Admin changes the name shown to users', async ({ page }) => {
     await expect(page.getByRole('main').getByText('Name saved.')).toHaveCount(0);
   } finally {
     await setStaffName(STAFF_NAME);
+  }
+});
+
+/**
+ * Reads the colour a token resolves to on the page in one mode, as the
+ * browser computes it.
+ *
+ * @param page - The page.
+ * @param token - The custom property, without `--`, e.g. `primary`.
+ * @param scheme - The colour scheme to read it in.
+ * @returns E.g. `rgb(194, 24, 91)`.
+ */
+async function shownColour(page: Page, token: string, scheme: 'light' | 'dark'): Promise<string> {
+  return page.evaluate(
+    ({ name, colourScheme }) => {
+      const probe = document.createElement('span');
+      probe.style.colorScheme = colourScheme;
+      probe.style.color = `var(--${name})`;
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    },
+    { name: token, colourScheme: scheme },
+  );
+}
+
+/**
+ * Writes a hex colour the way the browser computes colours.
+ *
+ * @param hex - The colour, as `#rrggbb`.
+ * @returns E.g. `rgb(194, 24, 91)`.
+ */
+function rgbOf(hex: HexColour): string {
+  const [r, g, b] = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+  return `rgb(${String(r)}, ${String(g)}, ${String(b)})`;
+}
+
+test('an Admin chooses the brand colours, which every page shows', async ({ page, browser }) => {
+  const chosen = { accent: '#c2185b', accentDark: null, tint: '#2e7d32' } as const;
+  const palette = derivePalette(chosen);
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/appearance');
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+    const accent = page.getByRole('textbox', { name: 'Accent', exact: true });
+    const accentDark = page.getByRole('textbox', { name: 'Accent in dark mode', exact: true });
+    await expect(accent).toHaveValue('');
+    expect(await shownColour(page, 'primary', 'light')).toBe(rgbOf(THEME_PALETTE.light.primary));
+
+    // A dark accent needs an accent; refused, what was typed stays.
+    await accentDark.fill('#ff80ab');
+    await page.getByRole('button', { name: 'Save colours' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      'Choose an accent before an accent for dark mode.',
+    );
+    await expect(accentDark).toHaveValue('#ff80ab');
+
+    await accentDark.fill('');
+    await accent.fill('C2185B');
+    await page.getByRole('textbox', { name: 'Tint', exact: true }).fill(chosen.tint);
+    await page.getByRole('button', { name: 'Save colours' }).click();
+    await expect(toasts(page)).toContainText('Colours saved.');
+    await expect(accent).toHaveValue(chosen.accent);
+
+    // This page shows them at once, in both modes, and so does every other page.
+    await expect
+      .poll(() => shownColour(page, 'primary', 'light'))
+      .toBe(rgbOf(palette.palette.light.primary));
+    expect(await shownColour(page, 'primary', 'dark')).toBe(rgbOf(palette.palette.dark.primary));
+    expect(await shownColour(page, 'surface', 'dark')).toBe(rgbOf(palette.palette.dark.surface));
+    await expectAccessible(page);
+    await page.goto('/dashboard');
+    expect(await shownColour(page, 'background', 'light')).toBe(
+      rgbOf(palette.palette.light.background),
+    );
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expectAccessible(page);
+
+    // Signed out too, the brand panel included.
+    const signedOut = await browser.newPage();
+    try {
+      await signedOut.goto('/auth');
+      expect(await shownColour(signedOut, 'primary', 'light')).toBe(
+        rgbOf(palette.palette.light.primary),
+      );
+      expect(await shownColour(signedOut, 'brand-panel', 'light')).toBe(
+        rgbOf(palette.panel.background),
+      );
+    } finally {
+      await signedOut.close();
+    }
+
+    // Back to Adiutor's own: the page has no colours of its own any more.
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/admin/settings/appearance');
+    await page.getByRole('button', { name: 'Use Adiutor’s colours' }).click();
+    await expect(accent).toHaveValue('');
+    await page.getByRole('button', { name: 'Save colours' }).click();
+    await expect(toasts(page)).toContainText('Colours saved.');
+    await expect
+      .poll(() => shownColour(page, 'primary', 'light'))
+      .toBe(rgbOf(THEME_PALETTE.light.primary));
+    await expect(page.locator('head style', { hasText: ':root:root' })).toHaveCount(0);
+  } finally {
+    await setBrandColours();
   }
 });
 

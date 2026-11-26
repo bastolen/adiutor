@@ -5,6 +5,7 @@
 import EmailCode from '@/components/email/email-code';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
@@ -29,7 +30,9 @@ export default function TwoFactorCodeEmail({
   code,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: TwoFactorCodeEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.twoFactorCode');
   return (
     <EmailLayout
@@ -37,12 +40,13 @@ export default function TwoFactorCodeEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('intro')}</EmailParagraph>
-      <EmailCode code={code} />
-      <EmailNote>{t('note', { minutes: EMAIL_CODE_MINUTES })}</EmailNote>
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('intro')}</EmailParagraph>
+      <EmailCode colours={colours} code={code} />
+      <EmailNote colours={colours}>{t('note', { minutes: EMAIL_CODE_MINUTES })}</EmailNote>
     </EmailLayout>
   );
 }

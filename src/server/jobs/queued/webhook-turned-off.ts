@@ -12,6 +12,7 @@ import { user, webhook } from '@/db/schema';
 import { webhookTurnedOffEmail } from '@/emails/webhook-turned-off';
 import { getGlobalPermissions } from '@/lib/authz/permissions';
 
+import { loadEmailBrand } from '../../branding';
 import { webhookTurnedOffJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { handleQueuedJob } from '../define';
@@ -54,6 +55,7 @@ export default handleQueuedJob(
     await ctx.sendEmail(
       await webhookTurnedOffEmail(recipient.email, {
         appUrl: ctx.baseUrl,
+        brand: await loadEmailBrand(ctx.db),
         locale: await recipientLocale(ctx, recipient.locale),
         name: found.name,
         reason,

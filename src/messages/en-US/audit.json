@@ -44,6 +44,7 @@
       "company_deactivated": "Deactivated a company",
       "company_reactivated": "Reactivated a company",
       "staff_renamed": "Changed the name shown to users",
+      "brand_colours_changed": "Changed the brand colours",
       "request_type_added": "Added a request type",
       "request_type_changed": "Changed a request type",
       "request_type_archived": "Archived a request type",

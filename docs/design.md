@@ -18,7 +18,8 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
+  values), `ColourField` (a colour in hex, with a swatch that opens the browser's colour picker),
+  `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
   view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
@@ -317,7 +318,15 @@ keyboard support.
 
   Layers that float above the page use `raised`, a step lighter than `surface` in dark mode so they
   stand apart (white in light mode), and fills inside them `raised-muted`, not `muted`, which would
-  vanish on them. `src/styles/theme.test.ts` checks their contrast in both modes.
+  vanish on them.
+
+  The rules every palette keeps are data, `PALETTE_RULES` in `src/lib/branding/rules.ts`: text
+  4.5:1 on every surface and on the buttons it's written on, input borders and focus rings 3:1,
+  highlighted code 4.5:1 on `background`, and in dark mode raised layers lighter than the surfaces
+  under them. Code reads the theme's colours from a copy, `THEME_PALETTE`
+  (`src/lib/branding/theme-colours.ts`); `src/styles/theme.test.ts` checks that the copy has the
+  same tokens and values as `theme.css`, and that the theme keeps every rule in both modes. A new
+  colour token goes in both, and a rule for it in `PALETTE_RULES` when it stands on another.
 
   Never make text lighter with opacity (`text-foreground/60`): contrast can't be guaranteed that
   way. Brand orange is too light for small text on white, so errors use the darker `danger`.
@@ -325,9 +334,8 @@ keyboard support.
   Highlighted code has its own tokens (`code-comment`, `code-keyword`, `code-string`,
   `code-number`, `code-title`, `code-type`, `code-attribute`), which `src/styles/code.css` gives
   to the classes highlight.js puts on the parts of a block of code. Code stands on `background`,
-  in a block and in a sentence; each token is 6:1 or more on it in both modes, and
-  `src/styles/theme.test.ts` checks that. A new kind of token gets its colour there, never a
-  fixed one in a component.
+  in a block and in a sentence; each token is 6:1 or more on it in both modes, and the rules check
+  4.5:1. A new kind of token gets its colour there, never a fixed one in a component.
 
 - **Font:** Inter for text and JetBrains Mono for codes, URL names and references, which Adiutor
   ships (`src/lib/fonts.ts`, served from its own domain), so text looks and measures the same on
@@ -638,7 +646,9 @@ has a palette icon, apart from the options.
   (`@custom-variant dark` in `src/styles/theme.css`), so a dark page gets the logo with light text
   there too.
 - **Colours:** each semantic colour is defined once in `src/styles/theme.css` as
-  `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast.
+  `light-dark(<light>, <dark>)`, so both values sit side by side when you check contrast. Brand
+  colours a staff Admin chose replace some of them with pairs of their own (see
+  [Brand colours](#brand-colours)), so the mode still decides.
 - **Styling:** use the semantic colours (see [Design and accessibility](#colours-and-font))
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
   switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
@@ -664,7 +674,60 @@ the `.ico` again from the SVG.
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
 `brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
 text sizes with line height = font size + 8px, short entrance animations, and the semantic colours
-described under [Design and accessibility](#colours-and-font). Use the brand colours for
-brand moments only; UI uses the semantic colours.
+described under [Design and accessibility](#colours-and-font). Components never use the brand
+colours directly, since a staff Admin's brand colours replace them: UI uses the semantic colours,
+and the signed-out pages' brand panel its own tokens (`brand-panel`, `brand-panel-glow` and
+`brand-panel-glow-deep`, the same in both modes).
+
+### Brand colours
+
+Adiutor can run in the colours of whoever operates it ([decision
+0049](decisions/0049-brand-colours-from-an-accent-and-a-tint.md)). A staff Admin chooses up to three
+colours, kept as the `brand.accent`, `brand.accent_dark` and `brand.tint` settings; `null` is the
+theme's own. The palette every page shows is worked out from them by `derivePalette`
+(`src/lib/branding/palette.ts`), in OKLCH (`colour-space.ts`), where the same lightness looks
+equally light in every hue:
+
+- **Tint:** every grey (`background`, `surface`, `muted`, `raised`, `raised-muted`, `border`,
+  `border-strong`, `foreground`, `muted-foreground`, `code-comment`, the dark text on light buttons,
+  the overlay and the brand panel) keeps the theme's lightness and chroma and takes the tint's hue.
+  The tint's own chroma sets how much colour the greys take, up to as much as the theme's navy has
+  (a grey tint gives plain greys), and never more than 60% of what a grey's lightness and hue allow,
+  so a warm tint gives warm greys rather than a deep brown.
+- **Accent:** `primary`, `primary-hover`, `primary-foreground`, `highlight`, `ring` and the brand
+  panel's glows. The accent keeps its hue and its share of the chroma its lightness allows (a
+  vivid colour stays vivid); its lightness moves a step at a time, darker in light mode and lighter
+  in dark mode, until links, focus rings and the text on buttons keep the rules. The text on it is
+  white or the darkest grey, whichever reads better, and hover is a step darker (light mode) or
+  lighter (dark mode). Without a dark accent, dark mode starts from the accent. `adjusted` says
+  when a mode's accent had to move. With a tint alone, the theme's own accent is moved the same way,
+  should a tinted grey ever need it. Anything that isn't six hex digits counts as the theme's own.
+- **Kept:** `danger`, `success`, `warning` and their fills, and the code colours other than comments.
+
+A grey that would still break a rule is nudged in lightness, away from what it stands on, until it
+keeps it. The tests (`src/lib/branding/palette.test.ts`) work out palettes for tints and accents of
+every hue, greys, black, white and yellow, and check that each keeps every rule in `PALETTE_RULES`,
+and that the theme's own ink as a tint gives the theme's greys back.
+
+Staff Admins choose them on the **Appearance** tab of Settings (`/admin/settings/appearance`,
+`setBrandColours` in `src/server/branding/`, recorded in the audit log as `brand_colours_changed`):
+three `ColourField`s (`src/components/ui/colour-field.tsx`: a text field for the hex digits, with a
+swatch before it that is the browser's own colour picker, an invisible `<input type="color">` over
+a square of the colour, which shows the focus ring), each empty for the theme's own, and a preview
+of the palette in light and dark mode that follows what's typed (`palette-preview.tsx`: real
+components with the palette's colours set on them as custom properties, `inert`). Under each mode it
+says when the accent had to move, and to which colour. "Use Adiutor's colours" empties the fields,
+which Save then saves like any other change. A dark accent needs an accent, and a colour that isn't
+six hex digits is refused with a message that names its field. It isn't part of setup: setup is one
+narrow form, with no room for a preview.
+
+The root layout reads the settings once per request (`pageBrandCss` in
+`src/server/branding/page-colours.ts`, the theme's colours when the database can't be read) and adds
+`paletteCss`'s rule in a `<style>` in `<head>`: `:root:root { … }` with only the tokens that differ
+from the theme, as `light-dark()` pairs, which outranks `theme.css` wherever the two end up. It
+holds only hex colours that `paletteCss` wrote and checked, so nothing chosen can close the rule.
+With nothing chosen there's no `<style>` at all. `global-error.tsx`, which replaces the whole
+document and can't reach the database, keeps the theme's colours, and so do the logo and the
+favicon.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license) and the list of files in [NOTICE](../NOTICE).

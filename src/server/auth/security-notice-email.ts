@@ -13,6 +13,7 @@ import { describeIpAddress } from '@/lib/request/ip-address';
 import { describeUserAgent } from '@/lib/request/user-agent';
 import type { SecurityNoticeKind } from '@/lib/security-notice-kinds';
 
+import { loadEmailBrand } from '../branding';
 import type { ServiceContext } from '../context';
 import recipientLocale from '../recipient-locale';
 import recipientTimeZone from '../recipient-time-zone';
@@ -70,6 +71,7 @@ export default async function buildSecurityNotice(
   ]);
   return securityNoticeEmail(email, {
     appUrl: ctx.baseUrl,
+    brand: await loadEmailBrand(ctx.db),
     locale: language,
     kind,
     when,

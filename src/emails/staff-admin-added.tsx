@@ -5,6 +5,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -48,7 +49,9 @@ export default function StaffAdminAddedEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: StaffAdminAddedEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.staffAdminAdded');
   // Their address once, also when it's all there is to name them by.
   const who =
@@ -69,12 +72,15 @@ export default function StaffAdminAddedEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading', { name: newAdminName })}</EmailHeading>
-      <EmailParagraph>{what}</EmailParagraph>
-      <EmailParagraph>{t('advice')}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
+      <EmailHeading colours={colours}>{t('heading', { name: newAdminName })}</EmailHeading>
+      <EmailParagraph colours={colours}>{what}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('advice')}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
     </EmailLayout>
   );
 }

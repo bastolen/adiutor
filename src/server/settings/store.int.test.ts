@@ -90,6 +90,29 @@ describe('writeSettings', () => {
     expect(await db.$count(setting)).toBe(2);
   });
 
+  it('removes the row of a setting written as null, which then reads as its fallback', async () => {
+    await saveSettings(db, { 'brand.accent': '#c2185b', 'brand.tint': '#2e7d32' });
+
+    const before = await db.transaction((tx) =>
+      writeSettings(tx, { 'brand.accent': null, 'brand.accent_dark': null }),
+    );
+    expect(before).toEqual({ 'brand.accent': '#c2185b', 'brand.accent_dark': null });
+    expect(await storedRow('brand.accent')).toBeUndefined();
+    expect(await readSettings(db, ['brand.accent', 'brand.tint'])).toEqual({
+      'brand.accent': null,
+      'brand.tint': '#2e7d32',
+    });
+  });
+
+  it('runs the checks on a setting written as null as on its fallback', async () => {
+    await saveSettings(db, { 'brand.accent': '#c2185b', 'brand.accent_dark': '#ff80ab' });
+
+    await expect(saveSettings(db, { 'brand.accent': null })).rejects.toThrow(
+      'a dark accent needs an accent',
+    );
+    expect(await storedRow('brand.accent')).toBeDefined();
+  });
+
   it('notes when a setting was last written', async () => {
     await saveSettings(db, { 'requests.prefix': 'AT' });
     await db.update(setting).set({ updatedAt: new Date('2026-01-01T00:00:00Z') });

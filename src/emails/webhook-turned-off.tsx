@@ -7,6 +7,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 import { WEBHOOK_FAILING_DAYS } from '@/lib/webhooks';
@@ -41,22 +42,29 @@ export default function WebhookTurnedOffEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: WebhookTurnedOffEmailProps) {
   const t = translator(locale, 'emails.webhookTurnedOff');
+  const colours = emailColours(brand);
   return (
     <EmailLayout
       preview={t('subject', { name })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading', { name })}</EmailHeading>
-      <EmailParagraph>{t('why', { reason, days: WEBHOOK_FAILING_DAYS })}</EmailParagraph>
-      <EmailParagraph>
+      <EmailHeading colours={colours}>{t('heading', { name })}</EmailHeading>
+      <EmailParagraph colours={colours}>
+        {t('why', { reason, days: WEBHOOK_FAILING_DAYS })}
+      </EmailParagraph>
+      <EmailParagraph colours={colours}>
         {reason === 'unreadable' ? t('adviceUnreadable') : t('advice')}
       </EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
     </EmailLayout>
   );
 }

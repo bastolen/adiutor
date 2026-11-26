@@ -15,6 +15,7 @@ import { Client } from 'pg';
 import * as schema from '../../src/db/schema';
 import type { AuditAction } from '../../src/lib/audit-actions';
 import type { CompanyRole } from '../../src/lib/authz/roles';
+import type { HexColour } from '../../src/lib/branding';
 import { firstRow } from '../../src/lib/defined';
 import { type Locale, LOCALES } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
@@ -590,6 +591,33 @@ export async function allowStaffSignInOf(email: string): Promise<void> {
 export async function setStaffName(name: string): Promise<void> {
   await withTestDatabase(async (db) => {
     await db.transaction((tx) => writeSettings(tx, { 'staff.name': name }));
+  });
+}
+
+/**
+ * Sets the brand colours directly, e.g. to put Adiutor's own back after a
+ * test chose some in Settings.
+ *
+ * @param colours - Each colour as `#rrggbb`; left out (or `null`) for the theme's own.
+ * @param colours.accent - The accent.
+ * @param colours.accentDark - The accent in dark mode.
+ * @param colours.tint - The tint.
+ */
+export async function setBrandColours(
+  colours: {
+    accent?: HexColour | null;
+    accentDark?: HexColour | null;
+    tint?: HexColour | null;
+  } = {},
+): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction((tx) =>
+      writeSettings(tx, {
+        'brand.accent': colours.accent ?? null,
+        'brand.accent_dark': colours.accentDark ?? null,
+        'brand.tint': colours.tint ?? null,
+      }),
+    );
   });
 }
 

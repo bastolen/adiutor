@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_EMAIL_COLOURS, emailColoursOf } from '@/components/email/theme';
+import { derivePalette } from '@/lib/branding';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
 import { LOCALES, type Locale } from '@/lib/i18n/locales';
@@ -14,6 +16,7 @@ import { accountCreatedEmail } from './account-created';
 import { addedToCompanyEmail } from './added-to-company';
 import { alreadyInvitedEmail } from './already-invited';
 import { alreadyMemberEmail } from './already-member';
+import type { EmailBrand } from './base-props';
 import { invitationEmail } from './invitation';
 import { invitationReminderEmail } from './invitation-reminder';
 import { inviteLinkConfirmationEmail } from './invite-link-confirmation';
@@ -1408,5 +1411,81 @@ describe('request emails: links to the staff’s pages', () => {
     expect(email.text.split(userPage)).toHaveLength(2);
     expect(email.text.match(/Ask Sam Support\./g)).toHaveLength(2);
     expectBasics(email, url);
+  });
+});
+
+describe('brand colours', () => {
+  /** A brand whose colours differ from the theme's in every colour that matters. */
+  const brand: EmailBrand = {
+    colours: emailColoursOf(
+      derivePalette({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' }),
+    ),
+  };
+
+  it('draws the page, the button and the links in the brand’s colours', async () => {
+    const url = `${appUrl}/api/auth/request-link/sign-in?token=adiutor-tests-token`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      brand,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: { text: 'See https://adiutor.test/manual.', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(brand.colours.primary).not.toBe(DEFAULT_EMAIL_COLOURS.primary);
+    expect(email.html).toContain(`background-color:${brand.colours.background}`);
+    expect(email.html).toContain(`background-color:${brand.colours.primary}`);
+    expect(email.html).toContain(
+      `color:${brand.colours.primary};text-decoration-line:none;font-weight:600`,
+    );
+    expect(email.html).toContain(`color:${brand.colours.primary};text-decoration:underline`);
+    expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.primary);
+    expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.background);
+  });
+
+  it('draws the code box and the role summary in the brand’s colours', async () => {
+    const [code, invitation] = await Promise.all([
+      twoFactorCodeEmail('jane@adiutor.test', { ...english, brand, code: '482915' }),
+      invitationEmail('jane@adiutor.test', {
+        ...english,
+        brand,
+        inviterName: 'Sam Doe',
+        companyName: 'Adiutor Tests',
+        role: 'client',
+        url: `${appUrl}/invite/abc`,
+        validDays: 7,
+      }),
+    ]);
+
+    for (const email of [code, invitation]) {
+      expect(email.html).toContain(`border:1px solid ${brand.colours.border}`);
+      expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.border);
+    }
+  });
+
+  it('keeps the theme’s colours without a brand', async () => {
+    const email = await magicLinkEmail('jane@adiutor.test', {
+      ...english,
+      url: `${appUrl}/auth/email-link?token=abc`,
+    });
+    const withDefaults = await magicLinkEmail('jane@adiutor.test', {
+      ...english,
+      brand: { colours: DEFAULT_EMAIL_COLOURS },
+      url: `${appUrl}/auth/email-link?token=abc`,
+    });
+
+    expect(email.html).toContain('background-color:#0e5655');
+    expect(email.html).toContain('background-color:#f7f7f9');
+    expect(withDefaults.html).toBe(email.html);
   });
 });

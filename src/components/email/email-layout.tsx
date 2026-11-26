@@ -3,25 +3,28 @@
  * recipient's language.
  */
 import type { ReactNode } from 'react';
-import { Body, Container, Head, Html, Img, Link, Preview, Section, Text } from 'react-email';
+import { Body, Container, Head, Html, Img, Preview, Section, Text } from 'react-email';
 
+import type { EmailBrand } from '@/emails/base-props';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 
-import { colors, fontFamily, small } from './theme';
+import { EmailLink } from './email-text';
+import { type EmailColours, emailColours, fontFamily, small } from './theme';
 
 /**
  * The footer's link to the app, for the `<link>` tag of
  * `emails.layout.sentBy` ("Sent by <link>Adiutor</link>").
  *
  * @param href - The app's URL.
+ * @param colours - The email's colours.
  */
-function appLinkTag(href: string) {
+function appLinkTag(href: string, colours: EmailColours) {
   return function linkTag(chunks: ReactNode) {
     return (
-      <Link href={href} style={{ color: colors.muted, textDecoration: 'underline' }}>
+      <EmailLink href={href} tone="muted" underline colours={colours}>
         {chunks}
-      </Link>
+      </EmailLink>
     );
   };
 }
@@ -40,6 +43,8 @@ interface EmailLayoutProps {
   reason: ReactNode;
   /** Logo image URL. Defaults to `{appUrl}/brand/logo.png`; the template preview overrides it. */
   logoSrc?: string;
+  /** The brand colours to draw the email with; the theme's own without. */
+  brand?: EmailBrand;
   /** The email's content. */
   children: ReactNode;
 }
@@ -59,8 +64,10 @@ export default function EmailLayout({
   locale,
   reason,
   logoSrc = undefined,
+  brand = undefined,
   children,
 }: EmailLayoutProps) {
+  const colors = emailColours(brand);
   const t = translator(locale, 'emails.layout');
   return (
     <Html lang={locale} dir="ltr">
@@ -93,8 +100,10 @@ export default function EmailLayout({
             {children}
           </Section>
           <Section style={{ padding: '24px 8px 0' }}>
-            <Text style={{ ...small, marginBottom: '8px' }}>{reason}</Text>
-            <Text style={small}>{t.rich('sentBy', { link: appLinkTag(appUrl) })}</Text>
+            <Text style={{ ...small(colors), marginBottom: '8px' }}>{reason}</Text>
+            <Text style={small(colors)}>
+              {t.rich('sentBy', { link: appLinkTag(appUrl, colors) })}
+            </Text>
           </Section>
         </Container>
       </Body>

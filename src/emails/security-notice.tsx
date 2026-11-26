@@ -9,6 +9,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import { IMPERSONATION_MINUTES } from '@/lib/authz/impersonation';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
@@ -137,7 +138,9 @@ export default function SecurityNoticeEmail({
   staffName = undefined,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: SecurityNoticeEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.securityNotice');
   const values = noticeValues(locale, { provider, role, company, staffMember, staffName });
   // Nothing to review in the account of someone who can't sign in (or whose account is gone).
@@ -156,11 +159,12 @@ export default function SecurityNoticeEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', { kind })}
     >
-      <EmailHeading>{t(`${kind}.heading`, values)}</EmailHeading>
-      <EmailParagraph>{t(`${kind}.body`, values)}</EmailParagraph>
-      <EmailNote>
+      <EmailHeading colours={colours}>{t(`${kind}.heading`, values)}</EmailHeading>
+      <EmailParagraph colours={colours}>{t(`${kind}.body`, values)}</EmailParagraph>
+      <EmailNote colours={colours}>
         {t('when', { when: formatDateTime(when, locale, timeZone, { zoneName: true }) })}
         {from && (
           <>
@@ -170,11 +174,11 @@ export default function SecurityNoticeEmail({
         )}
       </EmailNote>
       {!withoutAccount && (
-        <EmailButton href={`${appUrl}/account/security${sectionOf(kind)}`}>
+        <EmailButton colours={colours} href={`${appUrl}/account/security${sectionOf(kind)}`}>
           {t('button')}
         </EmailButton>
       )}
-      <EmailParagraph>{t('ifNotYou', { kind })}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('ifNotYou', { kind })}</EmailParagraph>
     </EmailLayout>
   );
 }

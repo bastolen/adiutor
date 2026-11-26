@@ -10,6 +10,7 @@ import type { DatabaseTransaction } from '@/db';
 import { invitation, inviteLink, membership, user } from '@/db/schema';
 import { alreadyInvitedEmail } from '@/emails/already-invited';
 import { alreadyMemberEmail } from '@/emails/already-member';
+import type { EmailBrand } from '@/emails/base-props';
 import { invitationEmail } from '@/emails/invitation';
 import { inviteLinkConfirmationEmail } from '@/emails/invite-link-confirmation';
 import { type Role } from '@/lib/authz/roles';
@@ -48,10 +49,10 @@ export interface CreatedInvitation<Status extends LinkClaimStatus = InviteStatus
    */
   invitationId: string | null;
   /**
-   * Renders the email to send. Call it once the transaction has committed,
-   * next to sending it, so no locks are held while it renders.
+   * Renders the email to send, in the brand's colours (`loadEmailBrand`). Call it once the
+   * transaction has committed, next to sending it, so no locks are held while it renders.
    */
-  renderEmail: () => Promise<Email>;
+  renderEmail: (brand: EmailBrand) => Promise<Email>;
 }
 
 /** The invitation {@link createInvitationRecord} creates, whoever it's from. */
@@ -210,11 +211,13 @@ export async function createInvitationRecord(
         /**
          * Renders the "already a member" email, once the transaction has committed.
          *
+         * @param brand - The brand colours to draw the email with.
          * @returns The email.
          */
-        renderEmail: () =>
+        renderEmail: (brand) =>
           alreadyMemberEmail(email, {
             appUrl: baseUrl,
+            brand,
             locale: inviteeLocale,
             companyName: target.name,
             url: `${baseUrl}${joinedPath(target.companyId)}`,
@@ -251,10 +254,11 @@ export async function createInvitationRecord(
          * Renders the "already invited" email, once the transaction has committed, in the
          * language of whoever claimed the link.
          *
+         * @param brand - The brand colours to draw the email with.
          * @returns The email.
          */
-        renderEmail: () =>
-          alreadyInvitedEmail(email, { appUrl: baseUrl, locale, companyName: target.name }),
+        renderEmail: (brand) =>
+          alreadyInvitedEmail(email, { appUrl: baseUrl, brand, locale, companyName: target.name }),
       };
     }
   }
@@ -301,10 +305,11 @@ export async function createInvitationRecord(
     invitationId: created.id,
     // A link's confirmation is in the language of whoever claimed it (they just did).
     renderEmail: input.fromLink
-      ? () => inviteLinkConfirmationEmail(email, { ...details, locale })
-      : () =>
+      ? (brand) => inviteLinkConfirmationEmail(email, { ...details, brand, locale })
+      : (brand) =>
           invitationEmail(email, {
             ...details,
+            brand,
             locale: inviteeLocale,
             inviterName: input.inviterName,
           }),

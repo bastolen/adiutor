@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import { Button, Section } from 'react-email';
 
-import { colors } from './theme';
+import type { EmailColours } from './theme';
 
 /**
  * Props for {@link EmailButton}.
@@ -17,6 +17,8 @@ interface EmailButtonProps {
   children: ReactNode;
   /** `primary` (the default) for the main action; `secondary` for a second choice beside it. */
   variant?: 'primary' | 'secondary';
+  /** The email's colours (`emailColours(props.brand)`). */
+  colours: EmailColours;
 }
 
 /**
@@ -24,7 +26,12 @@ interface EmailButtonProps {
  * with brand-teal text and border. React Email's `Button` adds the
  * workarounds that keep its padding in Outlook.
  */
-export default function EmailButton({ href, children, variant = 'primary' }: EmailButtonProps) {
+export default function EmailButton({
+  href,
+  children,
+  variant = 'primary',
+  colours: colors,
+}: EmailButtonProps) {
   const primary = variant === 'primary';
   return (
     <Section style={{ margin: '8px 0 24px' }}>

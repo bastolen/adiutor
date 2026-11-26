@@ -36,7 +36,7 @@ detail, one topic each.
 - [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,
   the commands and adding a job.
 - [Design, accessibility and dark mode](design.md): the component library, tables, colours,
-  keyboard support, dark mode and the brand assets.
+  keyboard support, dark mode, the brand assets and the brand colours a staff Admin chooses.
 - [Languages](i18n.md): English (US), Dutch and Spanish, how the language is chosen, the
   translation catalogues, writing messages, time zones, formatting, the checks and adding a language.
 

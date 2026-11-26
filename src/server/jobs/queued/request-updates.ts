@@ -21,6 +21,7 @@ import { answerLinkPath, entryIdOf } from '@/lib/requests';
 import { requestLinkPath } from '@/lib/sign-in/request-link';
 
 import { createRequestLink } from '../../auth/request-links';
+import { loadEmailBrand } from '../../branding';
 import { isWebhookNews, REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { createAnswerLink, readRequestUpdate } from '../../requests';
@@ -85,6 +86,7 @@ export const requestUpdatesBatch = defineJobBatch({
     await ctx.sendEmail(
       await requestUpdateEmail(update.recipient.email, {
         appUrl: ctx.baseUrl,
+        brand: await loadEmailBrand(ctx.db),
         locale: await recipientLocale(ctx, update.recipient.locale),
         reference: update.request.reference,
         title: update.request.title,

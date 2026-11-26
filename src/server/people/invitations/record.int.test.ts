@@ -9,6 +9,7 @@ import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import { atTheSameMoment, staffActor, tokenFrom } from '../../../../tests/integration/helpers';
+import { loadEmailBrand } from '../../branding';
 import { getInvitationPreview } from './accept';
 import { revokeInvitation } from './manage';
 import { createSentInvitation } from './record';
@@ -42,7 +43,7 @@ describe.each([
       () => inviteByEmail(ctx, inviter, { companyId, email, role }),
     );
     // The first request renders and sends its email once its transaction has committed.
-    const firstEmail = await first.renderEmail();
+    const firstEmail = await first.renderEmail(await loadEmailBrand(db));
     await ctx.sendEmail(firstEmail);
 
     // Both succeed and both emails go out, but only the second request's link works.

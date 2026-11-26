@@ -105,6 +105,11 @@
  * Mode-aware colours: `light-dark(light, dark)` picks the value for the
  * page's colour scheme. Dark mode is based on the brand's dark navy.
  *
+ * Code reads these from a copy, `THEME_PALETTE` in `src/lib/branding`
+ * (`theme.test.ts` keeps the two the same), to check palettes against the
+ * theme's rules and to work out the palette for the brand colours a staff
+ * Admin chose, which the root layout sets over these (decision 0049).
+ *
  * `src/lib/theme.ts` sets `data-theme="light"` or `data-theme="dark"` on
  * `<html>` before the page paints, which fixes the scheme. Without
  * JavaScript, the scheme follows the system setting.
@@ -182,6 +187,16 @@
   --code-type: light-dark(#0e5655, #5fe0cf);
   --code-attribute: light-dark(#b42a00, #ff9473);
 
+  /**
+   * The decorative brand panel of the signed-out pages (`brand-panel.tsx`),
+   * the same in both modes: dark ink, with a bright and a deep glow in the
+   * accent colours. Brand colours a staff Admin chose replace them, like the
+   * tokens above (decision 0049).
+   */
+  --brand-panel: var(--color-ink);
+  --brand-panel-glow: var(--color-brand-green);
+  --brand-panel-glow-deep: var(--color-brand-teal);
+
   color-scheme: light dark;
 }
 
@@ -223,6 +238,9 @@
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-brand-panel: var(--brand-panel);
+  --color-brand-panel-glow: var(--brand-panel-glow);
+  --color-brand-panel-glow-deep: var(--brand-panel-glow-deep);
 }
 
 /**

@@ -115,6 +115,13 @@
     "webhookTypes": {
       "empty": "Kies minstens één verzoektype, of allemaal.",
       "unknown": "Kies uit de verzoektypen in de lijst."
+    },
+    "brandColour": {
+      "invalid": "Vul een kleur in als zes hexadecimale tekens, bijvoorbeeld #0e5655.",
+      "accent": "Vul de accentkleur in als zes hexadecimale tekens, bijvoorbeeld #0e5655.",
+      "accentDark": "Vul de accentkleur voor het donkere thema in als zes hexadecimale tekens, bijvoorbeeld #25dc89.",
+      "tint": "Vul de tint in als zes hexadecimale tekens, bijvoorbeeld #0e0e2d.",
+      "darkNeedsAccent": "Kies eerst een accentkleur, dan pas een accentkleur voor het donkere thema."
     }
   }
 }

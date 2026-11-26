@@ -6,6 +6,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -31,7 +32,9 @@ export default function AlreadyInvitedEmail({
   companyName,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: AlreadyInvitedEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.alreadyInvited');
   const values = { company: companyName };
   return (
@@ -40,12 +43,15 @@ export default function AlreadyInvitedEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <EmailParagraph>{t('expired')}</EmailParagraph>
-      <EmailButton href={`${appUrl}/auth`}>{t('button')}</EmailButton>
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('expired')}</EmailParagraph>
+      <EmailButton colours={colours} href={`${appUrl}/auth`}>
+        {t('button')}
+      </EmailButton>
     </EmailLayout>
   );
 }

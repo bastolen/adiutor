@@ -5,6 +5,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
+import { emailColours } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
@@ -38,7 +39,9 @@ export default function AddedToCompanyEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: AddedToCompanyEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.addedToCompany');
   const values = {
     adder: adderName,
@@ -51,12 +54,15 @@ export default function AddedToCompanyEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading', values)}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <RoleSummary role={role} locale={locale} />
-      <EmailButton href={url}>{t('button', values)}</EmailButton>
+      <EmailHeading colours={colours}>{t('heading', values)}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <RoleSummary colours={colours} role={role} locale={locale} />
+      <EmailButton colours={colours} href={url}>
+        {t('button', values)}
+      </EmailButton>
     </EmailLayout>
   );
 }

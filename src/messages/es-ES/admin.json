@@ -259,7 +259,8 @@
         "general": "General",
         "staff": "Personal",
         "requests": "Solicitudes",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "appearance": "Apariencia"
       },
       "general": {
         "name": {
@@ -515,6 +516,46 @@
           "answered": "Respondió {status, number}."
         },
         "removedToast": "Webhook eliminado."
+      },
+      "appearance": {
+        "title": "Apariencia",
+        "colours": {
+          "title": "Colores de marca",
+          "description": "Los colores de cada página y correo, para usuarios y personal. El texto siempre se puede leer: un color demasiado claro u oscuro para ello se ajusta, y la vista previa muestra el que se usará.",
+          "accent": {
+            "label": "Color de acento",
+            "description": "Botones, enlaces y contornos de foco. Déjalo vacío para el verde azulado y el verde de Adiutor.",
+            "pick": "Elige el color de acento"
+          },
+          "accentDark": {
+            "label": "Color de acento en el tema oscuro",
+            "description": "Solo si el tema oscuro debe tener otro color de acento. Déjalo vacío para calcularlo a partir del color de acento.",
+            "pick": "Elige el color de acento del tema oscuro"
+          },
+          "tint": {
+            "label": "Tono",
+            "description": "El matiz que toma cada gris, también los fondos del tema oscuro; un gris da grises neutros. Déjalo vacío para el azul marino de Adiutor.",
+            "pick": "Elige el tono"
+          },
+          "useAdiutor": "Usar los colores de Adiutor",
+          "save": "Guardar colores",
+          "saved": "Colores guardados.",
+          "preview": {
+            "title": "Vista previa",
+            "light": "Tema claro",
+            "dark": "Tema oscuro",
+            "heading": "Solicitud de ejemplo",
+            "text": "Texto secundario, como una fecha o una descripción.",
+            "link": "Un enlace",
+            "button": "Acción principal",
+            "badge": "Etiqueta",
+            "field": "Un campo con foco",
+            "adjusted": {
+              "light": "Oscurecido para que el texto sobre él se pueda leer: {colour}.",
+              "dark": "Aclarado para que se pueda leer en el tema oscuro: {colour}."
+            }
+          }
+        }
       }
     },
     "companies": {

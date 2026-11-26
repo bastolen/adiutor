@@ -15,6 +15,7 @@ import {
   assertNotSignedInAs,
 } from '../../access';
 import type { Actor } from '../../actor';
+import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
 import { concurrentChangeError, isDeadlock, ServiceError } from '../../errors';
 import assertLanguageOffered from '../../offered-language';
@@ -69,7 +70,7 @@ export async function inviteByEmail(
     });
   });
   // Rendered only now, once the transaction has committed and released its locks.
-  await ctx.sendEmail(await created.renderEmail());
+  await ctx.sendEmail(await created.renderEmail(await loadEmailBrand(ctx.db)));
   return { status: visibleStatus(actor, created.status) };
 }
 

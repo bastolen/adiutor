@@ -115,6 +115,13 @@
     "webhookTypes": {
       "empty": "Elige al menos un tipo de solicitud, o todos.",
       "unknown": "Elige entre los tipos de solicitud de la lista."
+    },
+    "brandColour": {
+      "invalid": "Escribe un color con seis dígitos hexadecimales, por ejemplo #0e5655.",
+      "accent": "Escribe el color de acento con seis dígitos hexadecimales, por ejemplo #0e5655.",
+      "accentDark": "Escribe el color de acento del tema oscuro con seis dígitos hexadecimales, por ejemplo #25dc89.",
+      "tint": "Escribe el tono con seis dígitos hexadecimales, por ejemplo #0e0e2d.",
+      "darkNeedsAccent": "Elige primero un color de acento y después uno para el tema oscuro."
     }
   }
 }
