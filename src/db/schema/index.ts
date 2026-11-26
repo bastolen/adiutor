@@ -2,6 +2,7 @@
  * @file All database tables, for Drizzle and its migrations.
  */
 export * from './auth';
+export * from './branding';
 export * from './companies';
 export * from './jobs';
 export * from './requests';

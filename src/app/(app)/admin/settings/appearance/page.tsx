@@ -1,8 +1,8 @@
 /**
  * @file The Appearance tab of Settings, served at `/admin/settings/appearance`:
- * the brand colours every page and email shows (decision 0049). Platform
- * Admins only (`staff:manage`). The heading and tabs come from the Settings
- * layout.
+ * the logo and the browser tab icon (decision 0052) and the brand colours
+ * (decision 0049) every page and email shows. Platform Admins only
+ * (`staff:manage`). The heading and tabs come from the Settings layout.
  */
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
@@ -12,10 +12,12 @@ import { PageSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { requireGlobalPermission } from '@/server/authz';
-import { getBrandColours } from '@/server/branding';
+import { getBrandColours, getBrandImageSettings } from '@/server/branding';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 
 import ColoursForm from './colours-form';
+import IconForm from './icon-form';
+import LogoForm from './logo-form';
 
 /**
  * Page metadata: "Appearance · Settings · Adiutor" for those who may see the
@@ -28,17 +30,29 @@ export const generateMetadata = globalPermissionMetadata(
 );
 
 /**
- * Loads and shows the brand colours. Its text comes from
- * `admin.settings.appearance`, which `ColoursForm` also gets through
- * `ClientMessages`.
+ * Loads and shows the logo, the browser tab icon and the brand colours, each
+ * in its card. Its text comes from `admin.settings.appearance`, which the
+ * forms also get through `ClientMessages`, with `errors.branding` for the
+ * files the browser refuses.
  */
 async function AppearanceSettings() {
-  const t = await getTranslations('admin.settings.appearance.colours');
+  const t = await getTranslations('admin.settings.appearance');
   const actor = await requireGlobalPermission('staff:manage');
-  const colours = await getBrandColours(appContext, actor);
+  const [colours, images] = await Promise.all([
+    getBrandColours(appContext, actor),
+    getBrandImageSettings(appContext, actor),
+  ]);
   return (
-    <ClientMessages namespaces={['admin.settings.appearance']}>
-      <Card id="colours" title={t('title')} description={t('description')}>
+    <ClientMessages namespaces={['admin.settings.appearance', 'errors.branding']}>
+      <Card id="logo" title={t('logo.title')} description={t('logo.description')}>
+        <LogoForm logo={images.logo} colours={colours} />
+      </Card>
+
+      <Card id="icon" title={t('icon.title')} description={t('icon.description')}>
+        <IconForm icon={images.icon} ownIcon={images.ownIcon} />
+      </Card>
+
+      <Card id="colours" title={t('colours.title')} description={t('colours.description')}>
         <ColoursForm saved={colours} />
       </Card>
     </ClientMessages>

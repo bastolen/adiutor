@@ -72,6 +72,27 @@ export const WEBHOOK_NAME_MAX_LENGTH = 80;
 export const WEBHOOK_URL_MAX_LENGTH = 2048;
 
 /**
+ * The largest logo or browser tab icon a staff Admin may upload, in MB
+ * (`setBrandImage`, and the Appearance tab's file fields).
+ */
+export const BRAND_IMAGE_MAX_MB = 1;
+
+/**
+ * The widest and highest a logo or browser tab icon may be, in pixels, read
+ * from the image's header before anything decodes it (`imageFacts`).
+ */
+export const BRAND_IMAGE_MAX_SIDE = 4096;
+
+/** The lowest a logo may be, in pixels: it shows up to 32 pixels high, on screens of every density. */
+export const BRAND_LOGO_MIN_HEIGHT = 32;
+
+/** The narrowest and lowest an own browser tab icon may be, in pixels. */
+export const BRAND_ICON_MIN_SIDE = 32;
+
+/** The images a logo or browser tab icon may be, for the file fields' `accept`. */
+export const BRAND_IMAGE_ACCEPT = 'image/png,image/jpeg,.png,.jpg,.jpeg';
+
+/**
  * A name's Latin letters and digits, for a key or a slug made from it:
  * without accents (`NFKD`), in lower case, with one separator for every
  * other run of characters and none at either end. A script without a Latin

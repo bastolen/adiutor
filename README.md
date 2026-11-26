@@ -83,10 +83,10 @@ solution the company approves. Your staff see every company's requests; each com
   [Background jobs](docs/jobs.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA in both modes, with full
   keyboard support. See [Design, accessibility and dark mode](docs/design.md).
-- **Your brand.** Staff Admins choose an accent and a tint, and every page and email shows them in
-  light and dark mode, adjusted where needed so text stays readable. Every text names the staff
-  instead of Adiutor, with a small "Powered by Adiutor". See
-  [Brand colours](docs/design.md#brand-colours).
+- **Your brand.** Staff Admins upload a logo and choose an accent and a tint, and every page and
+  email shows them in light and dark mode, adjusted where needed so text stays readable; the
+  browser tab icon is made from the logo. Every text names the staff instead of Adiutor, with a
+  small "Powered by Adiutor". See [Brand](docs/design.md#brand).
 - **Languages and time zones.** Staff Admins choose the languages Adiutor offers and its default;
   everyone can pick their own, and emails reach them in it. Times show in each person's own zone.
   See [Languages](docs/i18n.md).

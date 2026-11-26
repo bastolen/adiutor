@@ -521,6 +521,47 @@
       },
       "appearance": {
         "title": "Appearance",
+        "chooseFirst": "Choose an image first.",
+        "choose": "Choose image",
+        "noneChosen": "No image chosen",
+        "logo": {
+          "title": "Logo",
+          "description": "Every page and email shows it instead of Adiutor’s, in light and dark mode alike. A logo with a transparent background suits both modes.",
+          "field": "Logo image",
+          "fieldDescription": "A PNG or JPEG of at most {maximum, number} MB, at least {minimum, number} pixels high and at most {widest, number} times as wide as it’s high.",
+          "preview": "Preview",
+          "light": "Light mode",
+          "dark": "Dark mode",
+          "adiutors": "Adiutor’s logo shows until one is uploaded.",
+          "chosen": "The chosen image, not uploaded yet.",
+          "upload": "Upload logo",
+          "saved": "Logo uploaded.",
+          "remove": "Remove logo",
+          "removeTitle": "Remove the logo?",
+          "removeDescription": "Every page and email shows Adiutor’s logo again, and the browser tab icon made from it goes too, unless an own icon was uploaded.",
+          "removed": "Logo removed."
+        },
+        "icon": {
+          "title": "Browser tab icon",
+          "description": "The small picture in a browser tab and on a phone’s home screen. It’s made from the logo, so there’s nothing more to do: upload an own icon only to replace it.",
+          "source": {
+            "icon": "The uploaded icon.",
+            "logo": "Made from the logo, which is about square.",
+            "initials": "The initials of {staff} on the accent colour, as the logo is wide.",
+            "adiutor": "Adiutor’s icon, until a logo or an icon is uploaded."
+          },
+          "tab": "In a browser tab",
+          "touch": "On a phone’s home screen",
+          "chosen": "The chosen icon, not uploaded yet.",
+          "field": "Own icon",
+          "fieldDescription": "A PNG or JPEG of at most {maximum, number} MB, about square and at least {minimum, number} pixels wide and high.",
+          "upload": "Upload icon",
+          "saved": "Icon uploaded.",
+          "remove": "Remove uploaded icon",
+          "removeTitle": "Remove the uploaded icon?",
+          "removeDescription": "The browser tab shows the icon made from the logo again, or Adiutor’s without a logo.",
+          "removed": "Uploaded icon removed."
+        },
         "colours": {
           "title": "Brand colours",
           "description": "The colours every page and email shows, to users and staff alike. Text always stays readable: a colour too light or too dark for that is adjusted, and the preview shows what will be used.",

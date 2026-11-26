@@ -521,6 +521,47 @@
       },
       "appearance": {
         "title": "Weergave",
+        "chooseFirst": "Kies eerst een afbeelding.",
+        "choose": "Afbeelding kiezen",
+        "noneChosen": "Geen afbeelding gekozen",
+        "logo": {
+          "title": "Logo",
+          "description": "Elke pagina en e-mail toont het in plaats van dat van Adiutor, in de lichte en de donkere modus. Een logo met een transparante achtergrond past bij beide modi.",
+          "field": "Logo-afbeelding",
+          "fieldDescription": "Een PNG of JPEG van hooguit {maximum, number} MB, minstens {minimum, number} pixels hoog en hooguit {widest, number} keer zo breed als hoog.",
+          "preview": "Voorbeeld",
+          "light": "Lichte modus",
+          "dark": "Donkere modus",
+          "adiutors": "Het logo van Adiutor staat er tot er een is geüpload.",
+          "chosen": "De gekozen afbeelding, nog niet geüpload.",
+          "upload": "Logo uploaden",
+          "saved": "Logo geüpload.",
+          "remove": "Logo verwijderen",
+          "removeTitle": "Het logo verwijderen?",
+          "removeDescription": "Elke pagina en e-mail toont weer het logo van Adiutor, en het tabbladicoon dat ervan is gemaakt verdwijnt ook, tenzij er een eigen icoon is geüpload.",
+          "removed": "Logo verwijderd."
+        },
+        "icon": {
+          "title": "Tabbladicoon",
+          "description": "Het kleine plaatje in een browsertabblad en op het beginscherm van een telefoon. Het wordt van het logo gemaakt, dus je hoeft niets meer te doen: upload alleen een eigen icoon om het te vervangen.",
+          "source": {
+            "icon": "Het geüploade icoon.",
+            "logo": "Gemaakt van het logo, dat ongeveer vierkant is.",
+            "initials": "De initialen van {staff} op de accentkleur, omdat het logo breed is.",
+            "adiutor": "Het icoon van Adiutor, tot er een logo of een icoon is geüpload."
+          },
+          "tab": "In een browsertabblad",
+          "touch": "Op het beginscherm van een telefoon",
+          "chosen": "Het gekozen icoon, nog niet geüpload.",
+          "field": "Eigen icoon",
+          "fieldDescription": "Een PNG of JPEG van hooguit {maximum, number} MB, ongeveer vierkant en minstens {minimum, number} pixels breed en hoog.",
+          "upload": "Icoon uploaden",
+          "saved": "Icoon geüpload.",
+          "remove": "Geüpload icoon verwijderen",
+          "removeTitle": "Het geüploade icoon verwijderen?",
+          "removeDescription": "Het tabblad toont weer het icoon dat van het logo is gemaakt, of dat van Adiutor zonder logo.",
+          "removed": "Geüpload icoon verwijderd."
+        },
         "colours": {
           "title": "Huisstijlkleuren",
           "description": "De kleuren van elke pagina en e-mail, voor gebruikers en medewerkers. Tekst blijft altijd leesbaar: een kleur die daarvoor te licht of te donker is, wordt aangepast, en het voorbeeld laat zien wat er gebruikt wordt.",

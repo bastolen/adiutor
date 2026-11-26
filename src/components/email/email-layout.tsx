@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { Body, Container, Head, Html, Img, Preview, Section, Text } from 'react-email';
 
 import type { EmailBrand } from '@/emails/base-props';
-import { poweredByShown } from '@/lib/branding';
+import { type BrandLogo, fitInto, poweredByShown } from '@/lib/branding';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 
@@ -30,6 +30,26 @@ function appLinkTag(href: string, colours: EmailColours) {
   };
 }
 
+/** Adiutor's logo in an email: a PNG twice the size it's shown at, for sharp screens. */
+const ADIUTOR_LOGO: BrandLogo = { src: '/brand/logo.png', width: 140, height: 32 };
+
+/** The room the logo takes at the top of an email: 32 pixels high, at most 200 wide. */
+const LOGO_BOX = { width: 200, height: 32 };
+
+/**
+ * The logo an email shows and the size it's shown at: the uploaded one
+ * fitted to the room at the top, keeping its shape, or Adiutor's.
+ *
+ * @param brand - The email's brand.
+ * @returns The logo's path on the app and its size.
+ */
+export function emailLogo(brand: EmailBrand | undefined): BrandLogo {
+  if (!brand?.logo) {
+    return ADIUTOR_LOGO;
+  }
+  return { src: brand.logo.src, ...fitInto(brand.logo, LOGO_BOX, { grow: true }) };
+}
+
 /**
  * Props for {@link EmailLayout}.
  */
@@ -42,7 +62,10 @@ interface EmailLayoutProps {
   locale: Locale;
   /** Why the recipient gets this email, shown in the footer. */
   reason: ReactNode;
-  /** Logo image URL. Defaults to `{appUrl}/brand/logo.png`; the template preview overrides it. */
+  /**
+   * Logo image URL. Defaults to the brand's uploaded logo or Adiutor's
+   * (`emailLogo`), on the app's URL; the template preview overrides it.
+   */
   logoSrc?: string;
   /**
    * The brand to draw the email with: its colours, and the staff's name in
@@ -60,9 +83,10 @@ interface EmailLayoutProps {
  * have a name of their own, a last line says "Powered by Adiutor"
  * (`poweredByShown`), without a link; it's in the plain text too.
  *
- * The logo is linked, not attached. Clients that block remote images show
- * its alt text, the staff's name, instead, styled as the wordmark, and the
- * fixed size keeps the layout in place.
+ * The logo is linked, not attached: the one a staff Admin uploaded (a PNG
+ * Adiutor drew, at its versioned address) or Adiutor's. Clients that block
+ * remote images show its alt text, the staff's name, instead, styled as the
+ * wordmark, and its given size keeps the layout in place.
  */
 export default function EmailLayout({
   preview,
@@ -75,6 +99,7 @@ export default function EmailLayout({
 }: EmailLayoutProps) {
   const colors = emailColours(brand);
   const staff = emailName(brand);
+  const logo = emailLogo(brand);
   const t = translator(locale, 'emails.layout');
   return (
     <Html lang={locale} dir="ltr">
@@ -84,9 +109,9 @@ export default function EmailLayout({
         <Container style={{ maxWidth: '560px', margin: '0 auto', padding: '40px 16px' }}>
           <Section style={{ padding: '0 8px 24px' }}>
             <Img
-              src={logoSrc ?? `${appUrl}/brand/logo.png`}
-              width="140"
-              height="32"
+              src={logoSrc ?? `${appUrl}${logo.src}`}
+              width={String(logo.width)}
+              height={String(logo.height)}
               alt={t('logoAlt', { staff })}
               style={{
                 color: colors.primary,

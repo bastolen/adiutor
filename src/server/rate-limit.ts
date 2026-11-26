@@ -122,6 +122,12 @@ export const RATE_LIMITS = {
    * connects to a server they choose and sends a test email to them.
    */
   smtpTestsPerUser: { limit: 20, windowSeconds: 60 * 60 },
+  /**
+   * Logos and browser tab icons one staff Admin uploads on the Appearance tab
+   * of Settings: each is drawn again on the server, which takes a moment of
+   * its time.
+   */
+  brandImagesPerUser: { limit: 30, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

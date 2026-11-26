@@ -62,6 +62,7 @@ describe('database rules', () => {
   const VALUE_CHECKS = [
     'app_error_route_type_valid',
     'app_error_source_valid',
+    'brand_image_kind_valid',
     'invitation_locale_valid',
     'job_run_status_valid',
     'job_run_trigger_valid',

@@ -6,13 +6,7 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
-/**
- * The Content Security Policy for the static files the proxy skips (logos and
- * icons, see the matcher in `src/proxy.ts`): no scripts at all, even in an
- * SVG opened directly.
- */
-const STATIC_FILE_POLICY =
-  "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+import { IMAGE_FILE_POLICY } from './src/lib/request/csp';
 
 /**
  * Security headers sent with every response. The Content Security Policy for
@@ -60,12 +54,25 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // The static files the proxy doesn't handle: nothing in them may run.
-      ...['/brand/:path*', '/icon.svg', '/favicon.ico'].map((source) => ({
+      // The logos and icons the proxy doesn't handle: nothing in them may run, even in an SVG
+      // opened directly.
+      ...['/brand/:path*', '/favicon.ico'].map((source) => ({
         source,
-        headers: [{ key: 'Content-Security-Policy', value: STATIC_FILE_POLICY }],
+        headers: [{ key: 'Content-Security-Policy', value: IMAGE_FILE_POLICY }],
       })),
     ];
+  },
+
+  /**
+   * Sends `/favicon.ico` to the brand's icon (`src/app/branding/favicon/`),
+   * which is Adiutor's own until a staff Admin uploads a logo or an icon
+   * (decision 0052). The proxy skips the path, so tools that ask for it
+   * without reading the page get the icon, signed in or not.
+   *
+   * @returns The rewrite rules.
+   */
+  async rewrites() {
+    return [{ source: '/favicon.ico', destination: '/branding/favicon' }];
   },
 
   /** Enables Cache Components (part of the create-next-app defaults). */
@@ -75,6 +82,14 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
 
   experimental: {
+    /**
+     * A server action's request may be up to 2 MB, past Next's 1 MB: room for
+     * a logo or icon of up to 1 MB (`BRAND_IMAGE_MAX_MB`) with its form's
+     * overhead. The proxy already reads bodies of up to 10 MB, so this opens
+     * nothing new; each action checks its own input.
+     */
+    serverActions: { bodySizeLimit: '2mb' },
+
     /**
      * In development, Next.js checks every navigation for instant loading in
      * the background, rendering each page again in a worker. That makes a

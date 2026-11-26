@@ -1,9 +1,10 @@
 /**
- * @file End-to-end tests for Settings: the staff's name, the request number
- * prefix, request types, where attached files are kept (and the storage
- * chosen kept through confirming it's you), inviting staff, staff roles and
- * the last-Admin guard, and confirming it's you before giving a staff role
- * or a company's Admin role. A test that changes a setting puts it back.
+ * @file End-to-end tests for Settings: the staff's name, the brand colours,
+ * the logo and the icon made from it, the request number prefix, request
+ * types, where attached files are kept (and the storage chosen kept through
+ * confirming it's you), inviting staff, staff roles and the last-Admin
+ * guard, and confirming it's you before giving a staff role or a company's
+ * Admin role. A test that changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -18,6 +19,7 @@ import expectAccessible from './support/axe';
 import {
   attachmentSettingRows,
   backdateMfaConfirmation,
+  removeBrandImages,
   restoreAttachmentSettings,
   restoreSmtpSetting,
   setBrandColours,
@@ -215,6 +217,109 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
     await expect(page.locator('head style', { hasText: ':root:root' })).toHaveCount(0);
   } finally {
     await setBrandColours();
+  }
+});
+
+test('an Admin uploads a logo, which every page and email shows, with an icon made from it', async ({
+  page,
+  browser,
+  request,
+}) => {
+  const visitor = await browser.newPage();
+  try {
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/appearance');
+    // The file input itself: the "Choose image" button opens it.
+    const logoField = page.getByLabel('Logo image', { exact: true }).and(page.locator('input'));
+    const upload = page.getByRole('button', { name: 'Upload logo' });
+    await expect(page.getByTestId('logo-light').locator('img')).toHaveAttribute(
+      'src',
+      '/brand/logo.svg',
+    );
+
+    // An SVG never reaches the server.
+    await logoField.setInputFiles({
+      name: 'logo.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+    });
+    await upload.click();
+    await expect(page.locator('#logo').getByRole('alert')).toContainText(
+      'Choose a PNG or JPEG image.',
+    );
+
+    // A wordmark: the logo every page shows, and the staff's initials as the tab's icon.
+    await logoField.setInputFiles('public/brand/logo.png');
+    await upload.click();
+    await expect(toasts(page)).toContainText('Logo uploaded.');
+    const shown = page.getByTestId('logo-light').locator('img');
+    await expect(shown).toHaveAttribute('src', /^\/branding\/logo\?v=/);
+    const logoSrc = (await shown.getAttribute('src')) ?? '';
+    await expect(
+      page.getByRole('link', { name: 'Go to the dashboard' }).first().locator('img'),
+    ).toHaveAttribute('src', logoSrc);
+    await expect(
+      page.getByText(`The initials of ${STAFF_NAME} on the accent colour, as the logo is wide.`),
+    ).toBeVisible();
+    await expectAccessible(page);
+
+    // Served to anyone as a PNG that runs nothing, kept for a year at its version.
+    const logo = await request.get(logoSrc);
+    expect(logo.status()).toBe(200);
+    expect(logo.headers()).toMatchObject({
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=31536000, immutable',
+      'x-content-type-options': 'nosniff',
+      'content-security-policy':
+        "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+    });
+    const iconHref = await page.locator('link[rel="icon"]').getAttribute('href');
+    expect(iconHref).toMatch(/^\/branding\/icon\?v=/);
+    const icon = await request.get(iconHref ?? '');
+    expect(icon.headers()['content-type']).toBe('image/png');
+    const touchHref = await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
+    const touchIcon = await (await request.get(touchHref ?? '')).body();
+    // `/favicon.ico` follows: one 32-pixel picture now.
+    const favicon = await request.get('/favicon.ico', { maxRedirects: 0 });
+    expect(favicon.status()).toBe(200);
+    expect(favicon.headers()['content-type']).toBe('image/x-icon');
+    expect([...(await favicon.body()).subarray(0, 8)]).toEqual([0, 0, 1, 0, 1, 0, 32, 32]);
+
+    // Signed out, and in the emails sent from there.
+    await visitor.goto('/auth');
+    await expect(visitor.getByRole('banner').locator('img')).toHaveAttribute('src', logoSrc);
+    await visitor.getByRole('button', { name: 'Sign in with an email link instead' }).click();
+    await visitor.getByLabel('Email').fill(REQUESTS_CLIENT.email);
+    const before = await countEmails(REQUESTS_CLIENT.email);
+    await visitor.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    const email = await waitForNewEmail(REQUESTS_CLIENT.email, before);
+    expect(email.html).toContain(`src="${E2E_BASE_URL}${logoSrc}"`);
+
+    // An own icon replaces the one made from the logo, and goes again.
+    await page.getByLabel('Own icon', { exact: true }).and(page.locator('input')).setInputFiles({
+      name: 'icon.png',
+      mimeType: 'image/png',
+      buffer: touchIcon,
+    });
+    await page.getByRole('button', { name: 'Upload icon' }).click();
+    await expect(toasts(page)).toContainText('Icon uploaded.');
+    await expect(page.getByText('The uploaded icon.')).toBeVisible();
+    await page.getByRole('button', { name: 'Remove uploaded icon' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove uploaded icon' }).click();
+    await expect(toasts(page)).toContainText('Uploaded icon removed.');
+    await expect(page.getByText(`The initials of ${STAFF_NAME}`, { exact: false })).toBeVisible();
+
+    // Removing the logo brings Adiutor's logo and icon back.
+    await page.getByRole('button', { name: 'Remove logo' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove logo' }).click();
+    await expect(toasts(page)).toContainText('Logo removed.');
+    await expect(shown).toHaveAttribute('src', '/brand/logo.svg');
+    await expect(page.getByRole('button', { name: 'Remove logo' })).toHaveCount(0);
+    expect((await request.get(logoSrc)).status()).toBe(404);
+    expect((await request.get('/favicon.ico', { maxRedirects: 0 })).status()).toBe(307);
+  } finally {
+    await visitor.close();
+    await removeBrandImages();
   }
 });
 

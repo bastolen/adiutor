@@ -19,8 +19,37 @@
  */
 export const FILE_POLICY = "default-src 'none'; sandbox";
 
-/** Where attached files are served from: the paths that get {@link FILE_POLICY}. */
+/**
+ * The policy of an image a browser may show on its own, opened in a tab:
+ * Adiutor's own logos and icons (`next.config.ts`) and the brand's images
+ * from `/branding/` (decision 0052). Nothing in it may run (an SVG's
+ * scripts included) or load from elsewhere; only the image itself and the
+ * styles of the browser's own image viewer.
+ */
+export const IMAGE_FILE_POLICY =
+  "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+
+/** Where attached files are served from. */
 export const ATTACHMENTS_PATH = '/attachments/';
+
+/** Where the brand's images are served from (the uploaded logo and the icon made from the brand). */
+export const BRANDING_FILES_PATH = '/branding/';
+
+/**
+ * The fixed policy of a path that serves a file rather than a page:
+ * {@link FILE_POLICY} for attached files, {@link IMAGE_FILE_POLICY} for the
+ * brand's images. The proxy sets it, as Next.js puts the proxy's headers
+ * over a route's own.
+ *
+ * @param pathname - The request's path.
+ * @returns The policy, or `null` for a page, which gets one with a nonce.
+ */
+export function filePolicyFor(pathname: string): string | null {
+  if (pathname.startsWith(ATTACHMENTS_PATH)) {
+    return FILE_POLICY;
+  }
+  return pathname.startsWith(BRANDING_FILES_PATH) ? IMAGE_FILE_POLICY : null;
+}
 
 /** Request header the proxy passes the nonce in, for the root layout. */
 export const NONCE_HEADER = 'x-nonce';

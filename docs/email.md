@@ -92,10 +92,11 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   them in `src/emails` and `src/components/email`
 
 Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`: the
-colours, and `name`, the staff's name, which the email's text shows instead of "Adiutor", decision
-0050): `loadEmailBrand(db)` in `src/server/branding/email-brand.ts` reads the saved colours and the
-staff's name when the email is built and falls back to Adiutor's own when they can't be read, so a
-mail still goes out. A job that sends several emails
+colours, `name`, the staff's name, which the email's text shows instead of "Adiutor", decision
+0050, and `logo`, the logo a staff Admin uploaded, decision 0052): `loadEmailBrand(db)` in
+`src/server/branding/email-brand.ts` reads the saved colours, the staff's name and the logo when
+the email is built and falls back to Adiutor's own when they can't be read, so a mail still goes
+out. A job that sends several emails
 in a run loads it once. The Better Auth callbacks in `src/lib/auth.ts` import it next to their
 template, inside the callback. An invitation's `renderEmail(brand)` takes it, so it's rendered after
 the transaction commits. The template preview has no `brand`, so it shows the defaults.
@@ -214,9 +215,13 @@ invitation nobody sent (setup, the seeds) has no zone of its own.
 
 ## Logo
 
-Emails link to `{app URL}/brand/logo.png` instead of attaching it. Clients that block
-remote images show the alt text, the staff's name (`emails.layout.logoAlt`), instead. `src/emails/static/logo.png` is a copy for the
-template preview, and a test keeps the two identical.
+Emails link the logo instead of attaching it (`emailLogo` in `EmailLayout`): the one a staff
+Admin uploaded at `{app URL}/branding/logo?v=<id>`, a PNG Adiutor drew, shown 32 pixels high and
+at most 200 wide ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)),
+or Adiutor's `{app URL}/brand/logo.png` in its 140×32 box. The address is public, as mail clients
+fetch it without a session, and changes with every upload. Clients that block remote images show
+the alt text, the staff's name (`emails.layout.logoAlt`), instead. `src/emails/static/logo.png` is
+a copy of Adiutor's for the template preview.
 
 ## Previewing and seeing sent emails
 

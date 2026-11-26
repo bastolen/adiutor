@@ -1,19 +1,22 @@
 /**
  * @file Integration tests for the brand emails are sent in, against the test
  * database: the theme's own colours before any are chosen, the chosen
- * accent's light palette after, and the theme's own when the colours can't
- * be read.
+ * accent's light palette after, the uploaded logo, and the theme's own when
+ * the brand can't be read.
  */
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_EMAIL_COLOURS, emailColoursOf } from '@/components/email/theme';
 import type { Database } from '@/db';
 import { derivePalette, NO_BRAND_COLOURS } from '@/lib/branding';
 
-import { saveSettings, setupTestContext } from '../../../tests/integration/helpers';
+import { saveSettings, setupTestContext, staffActor } from '../../../tests/integration/helpers';
+import { setBrandImage } from './brand-images';
 import loadEmailBrand from './email-brand';
 
-const { db } = setupTestContext();
+const { ctx, db } = setupTestContext();
 
 describe('loadEmailBrand', () => {
   it('gives the theme’s own colours, and Adiutor’s name, before any are chosen', async () => {
@@ -41,7 +44,20 @@ describe('loadEmailBrand', () => {
     expect(brand.colours.primary).not.toBe(DEFAULT_EMAIL_COLOURS.primary);
   });
 
-  it('gives Adiutor’s colours and name when the brand can’t be read, so the email still goes out', async () => {
+  it('gives no logo, Adiutor’s, until one is uploaded, and the uploaded one’s address and size after', async () => {
+    expect((await loadEmailBrand(db)).logo).toBeUndefined();
+
+    const admin = await staffActor(db, 'platform_admin', 'admin@adiutor.test');
+    const logo = await setBrandImage(ctx, admin, 'logo', readFileSync('public/brand/logo.png'));
+
+    expect((await loadEmailBrand(db)).logo).toEqual({
+      src: `/branding/logo?v=${logo.id}`,
+      width: 280,
+      height: 64,
+    });
+  });
+
+  it('gives Adiutor’s colours, name and logo when the brand can’t be read, so the email still goes out', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const failing = {
       /**
@@ -59,7 +75,7 @@ describe('loadEmailBrand', () => {
       name: 'Adiutor',
     });
     expect(warn).toHaveBeenCalledWith(
-      'The brand could not be read; an email uses Adiutor’s colours and name.',
+      'The brand could not be read; an email uses Adiutor’s colours, name and logo.',
     );
     warn.mockRestore();
   });

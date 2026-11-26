@@ -35,7 +35,7 @@
  * removing, reactivating, accepting) gets a target of its own in
  * `createWorld`.
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -85,7 +85,13 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
-import { getBrandColours, setBrandColours } from './branding';
+import {
+  getBrandColours,
+  getBrandImageSettings,
+  removeBrandImage,
+  setBrandColours,
+  setBrandImage,
+} from './branding';
 import { notFoundError, ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
@@ -569,6 +575,7 @@ function listOperations(): Operation[] {
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['view brand colours', (w) => getBrandColours(ctx, w.actor)],
+    ['view the logo and icon settings', (w) => getBrandImageSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
@@ -596,6 +603,11 @@ function listOperations(): Operation[] {
       'set brand colours',
       (w) => setBrandColours(ctx, w.actor, { accent: '#c2185b', accentDark: '', tint: '' }),
     ],
+    [
+      'upload the logo',
+      (w) => setBrandImage(ctx, w.actor, 'logo', readFileSync('public/brand/logo.png')),
+    ],
+    ['remove the logo', (w) => removeBrandImage(ctx, w.actor, 'logo')],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     // Settings decide, whatever the checkout's environment says (`{}`); a new folder for each try.
     ['view attachment settings', (w) => getAttachmentSettings(ctx, w.actor, {})],
@@ -1107,6 +1119,7 @@ const READS: ReadonlySet<string> = new Set([
   "download a description's file (other)",
   "download an internal note's file (own)",
   'view brand colours',
+  'view the logo and icon settings',
   'view email settings',
   'list request types',
   'list users',
@@ -1303,6 +1316,7 @@ const EXPECTED: Record<string, string> = {
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
   'view brand colours': 'FFFFFFA',
+  'view the logo and icon settings': 'FFFFFFA',
   // Everyone chooses their own language, time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
   'save own first time zone': 'AAAAAAA',
@@ -1323,6 +1337,8 @@ const EXPECTED: Record<string, string> = {
   'set languages': 'FFFFFFA',
   'set default time zone': 'FFFFFFA',
   'set brand colours': 'FFFFFFA',
+  'upload the logo': 'FFFFFFA',
+  'remove the logo': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
   // Where files are kept, and how large they may be: staff Admins only, like the other settings.
   'view attachment settings': 'FFFFFFA',

@@ -168,6 +168,17 @@
         "addressRefused": "De mailserver weigerde het adres van de afzender of dat van jou. Controleer of hij vanaf het adres van de afzender mag versturen.",
         "refused": "De mailserver weigerde de test-e-mail. Controleer de instellingen bij je provider."
       }
+    },
+    "branding": {
+      "typeNotAllowed": "Kies een PNG- of JPEG-afbeelding.",
+      "empty": "Dat bestand is leeg.",
+      "tooLarge": "Die afbeelding is te groot: kies er een van hooguit {maximum, number} MB.",
+      "tooManyPixels": "Die afbeelding is te groot: kies er een van hooguit {maximum, number} pixels breed en hoog.",
+      "logoTooSmall": "Dat logo is te klein: kies er een van minstens {minimum, number} pixels hoog.",
+      "logoShape": "De vorm van dat logo past niet: kies er een die hooguit {widest, number} keer zo breed als hoog is, en hooguit {tallest, number} keer zo hoog als breed.",
+      "iconTooSmall": "Dat icoon is te klein: kies er een van minstens {minimum, number} pixels breed en hoog.",
+      "iconShape": "Kies een icoon dat ongeveer vierkant is.",
+      "unreadable": "Die afbeelding kon niet worden gelezen. Sla hem opnieuw op als PNG en probeer het nog eens."
     }
   }
 }

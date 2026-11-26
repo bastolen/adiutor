@@ -1,8 +1,8 @@
 /**
  * @file Proxy (formerly middleware): every page requires a signed-in user,
  * except the public ones in `PUBLIC_PATHS` (sign-in, invitations, invite links,
- * first-run setup, the links in emails that answer a solution, the health
- * check and the jobs' tick).
+ * first-run setup, the links in emails that answer a solution, the brand's
+ * images, the health check and the jobs' tick).
  *
  * Signed-out visitors are sent to the sign-in page (API routes get a 401).
  * This only checks that a session cookie exists, which is fast but not secure
@@ -19,13 +19,7 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import {
-  ATTACHMENTS_PATH,
-  contentSecurityPolicy,
-  createNonce,
-  FILE_POLICY,
-  NONCE_HEADER,
-} from '@/lib/request/csp';
+import { contentSecurityPolicy, createNonce, filePolicyFor, NONCE_HEADER } from '@/lib/request/csp';
 import PATHNAME_HEADER from '@/lib/request/pathname-header';
 
 /**
@@ -35,10 +29,13 @@ import PATHNAME_HEADER from '@/lib/request/pathname-header';
  * (`answerTickRequest`), since the proxy is never the security check.
  * `/answer` holds the links in an email that answer a proposed solution
  * (decision 0033): each works only with its secret token, for its person.
+ * `/branding` serves the logo and the icon made from the brand (decision
+ * 0052), which the sign-in pages show and mail clients fetch.
  */
 const PUBLIC_PATHS = [
   '/answer',
   '/auth',
+  '/branding',
   '/invite',
   '/join',
   '/setup',
@@ -68,9 +65,9 @@ export function isPublicPath(pathname: string): boolean {
 export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const nonce = createNonce();
-  // An attached file gets a fixed policy: Next.js puts the proxy's headers over a route's own,
-  // so the route can't set it itself.
-  const policy = pathname.startsWith(ATTACHMENTS_PATH) ? FILE_POLICY : contentSecurityPolicy(nonce);
+  // A file (an attachment, a brand image) gets a fixed policy: Next.js puts the proxy's headers
+  // over a route's own, so the route can't set it itself.
+  const policy = filePolicyFor(pathname) ?? contentSecurityPolicy(nonce);
   /**
    * Adds the policy to a response.
    *
@@ -105,11 +102,11 @@ export default function proxy(request: NextRequest) {
 
 /**
  * Runs on every request except Next.js's own files, the static files in
- * `public/brand/` and the app icons, `/icon.svg` and `/favicon.ico` (those
- * get a fixed policy from `next.config.ts`), and the attachments' upload,
- * `/api/attachments` exactly. The icons must answer a signed-out visitor,
- * and a tool that asks for `/favicon.ico` without reading the page, with the
- * icon and not with the way to sign in. The upload is left alone because the
+ * `public/brand/` and `/favicon.ico` (those get a fixed policy from
+ * `next.config.ts`; `/favicon.ico` is rewritten to the brand's icon), and
+ * the attachments' upload, `/api/attachments` exactly. The icon must answer
+ * a signed-out visitor, and a tool that asks for `/favicon.ico` without
+ * reading the page, with the icon and not with the way to sign in. The upload is left alone because the
  * proxy holds every request's body in memory (up to 10 MB, cutting a longer
  * one short without a word), whoever sends it; its route checks the session
  * and where the request came from itself, and reads its body up to the
@@ -118,5 +115,5 @@ export default function proxy(request: NextRequest) {
  * policy.
  */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|icon\\.svg|favicon\\.ico|brand/|api/attachments$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|brand/|api/attachments$).*)'],
 };

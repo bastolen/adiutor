@@ -138,13 +138,30 @@ test('page addresses ending like a file still get the policy, and static files a
   const logo = await request.get('/brand/logo.svg');
   expect(logo.headers()['content-security-policy']).toBe(strict);
   // The icon a browser or a tool asks for without reading the page: an icon also for someone
-  // who isn't signed in, never the way to the sign-in page.
-  const favicon = await request.get('/favicon.ico', { maxRedirects: 0 });
+  // who isn't signed in, never the way to the sign-in page. Until a staff Admin uploads a logo
+  // or an icon, that's Adiutor's own .ico.
+  const toFavicon = await request.get('/favicon.ico', { maxRedirects: 0 });
+  expect(toFavicon.status()).toBe(307);
+  expect(toFavicon.headers().location).toBe('/brand/favicon.ico');
+  const favicon = await request.get('/favicon.ico');
   expect(favicon.status()).toBe(200);
   expect(favicon.headers()['content-type']).toBe('image/x-icon');
   expect(favicon.headers()['content-security-policy']).toBe(strict);
   // An .ico file starts with these four bytes, and says how many pictures it holds: three sizes.
   expect([...(await favicon.body()).subarray(0, 6)]).toEqual([0, 0, 1, 0, 3, 0]);
+});
+
+test('the brand’s images answer anyone with a file that runs nothing, or "not found"', async ({
+  request,
+}) => {
+  // Nothing is uploaded in the shared database; the logo spec uploads and removes its own.
+  const strict = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+  for (const path of ['/branding/logo', '/branding/icon']) {
+    // eslint-disable-next-line no-await-in-loop -- Two addresses, one after the other.
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(404);
+    expect(response.headers()['content-security-policy'], path).toBe(strict);
+  }
 });
 
 test("only scripts with the request's nonce run", async ({ request, page, cspViolations }) => {

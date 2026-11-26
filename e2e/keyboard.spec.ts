@@ -589,6 +589,22 @@ test.describe('signed in', () => {
     await expect(page.getByLabel('Pick the accent for dark mode', { exact: true })).toBeFocused();
   });
 
+  test('the logo’s Choose image button is reached with Tab, with a visible ring', async ({
+    page,
+  }) => {
+    // Only browsed with Tab: nothing is chosen or uploaded.
+    await page.goto('/admin/settings/appearance');
+    const choose = page.getByRole('button', { name: 'Choose image Logo image' });
+    // Clicking the help text under the field starts the keyboard from there.
+    await page.getByText(/^A PNG or JPEG of at most 1 MB, at least 32 pixels high/).click();
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(choose).toBeFocused();
+    await expect(choose).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Upload logo' })).toBeFocused();
+  });
+
   test('toasts are reached with F8 and dismissed with the keyboard', async ({ page }) => {
     await page.goto(`/companies/${COMPANY_SLUG}/members`);
     await page.getByRole('button', { name: 'Create invite link' }).click();

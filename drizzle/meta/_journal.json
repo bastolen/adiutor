@@ -225,6 +225,13 @@
       "when": 1795707970827,
       "tag": "0031_request_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795720650509,
+      "tag": "0032_brand_images",
+      "breakpoints": true
     }
   ]
 }
