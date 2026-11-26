@@ -71,6 +71,13 @@ stays as it is. It's safe to run again: files already there are left alone, and 
 the storage are stored again, as long as the storage is still set up (a deleted folder needs setting
 up again in Settings, or a new seed). It refuses the same databases as the seed (below).
 
+`pnpm db:seed` attaches them too. It empties the database, settings included, so it chooses
+`.local/attachments` in the main checkout as the storage (made and marked as Adiutor's for you, also
+when you seed from a git worktree, which shares the main checkout's database), unless
+`ATTACHMENTS_STORAGE` in `.env` chooses one, turns attachments `off` or names too little. People can
+attach files stays off, as on a new install. Files from earlier seeds stay in the storage, since
+their rows are gone; to clear the seed's folder, delete it and seed again.
+
 ## Starting over
 
 The database files live in `docker/database/` (git-ignored). To start over with an empty database
@@ -91,7 +98,8 @@ invitations and invite links in every state (one due for its expiry reminder), v
 times, some audit log entries, sample errors from the last few days to look up under Logs →
 Errors (`scripts/sample-errors.ts`; the `retention` job removes them once they're 7 days old) and
 sample requests in every status, with replies and changes from both sides, and two internal
-requests, the staff's own (`scripts/sample-requests.ts`).
+requests, the staff's own (`scripts/sample-requests.ts`), some with files attached (see
+[Attachments](#attachments)).
 `scripts/seed-dev.ts` lists the accounts and their password. The open invitations are emailed to
 Mailpit, and the script prints the authenticator setup key, backup codes and the links that still
 work. It reads the same validated `.env` as the app (so `BETTER_AUTH_URL` must be set), and refuses
