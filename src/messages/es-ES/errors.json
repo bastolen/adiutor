@@ -168,6 +168,17 @@
         "addressRefused": "El servidor de correo ha rechazado la dirección del remitente o la tuya. Comprueba que puede enviar desde la dirección del remitente.",
         "refused": "El servidor de correo ha rechazado el correo de prueba. Revisa su configuración con tu proveedor."
       }
+    },
+    "branding": {
+      "typeNotAllowed": "Elige una imagen PNG o JPEG.",
+      "empty": "Ese archivo está vacío.",
+      "tooLarge": "Esa imagen es demasiado grande: elige una de {maximum, number} MB como máximo.",
+      "tooManyPixels": "Esa imagen es demasiado grande: elige una de {maximum, number} píxeles de ancho y de alto como máximo.",
+      "logoTooSmall": "Ese logotipo es demasiado pequeño: elige uno de al menos {minimum, number} píxeles de alto.",
+      "logoShape": "La forma de ese logotipo no encaja: elige uno que sea como mucho {widest, number} veces más ancho que alto, y como mucho {tallest, number} veces más alto que ancho.",
+      "iconTooSmall": "Ese icono es demasiado pequeño: elige uno de al menos {minimum, number} píxeles de ancho y de alto.",
+      "iconShape": "Elige un icono más o menos cuadrado.",
+      "unreadable": "No se ha podido leer esa imagen. Guárdala de nuevo como PNG y vuelve a intentarlo."
     }
   }
 }

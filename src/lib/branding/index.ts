@@ -2,7 +2,8 @@
  * @file Branding: the theme's colours as data, the rules every palette keeps
  * (readable text, visible borders and focus rings, elevation in dark mode),
  * the palette worked out from the brand colours a staff Admin chose, with
- * its CSS, and the name people see Adiutor by. This is the module's public
+ * its CSS, the name people see Adiutor by, and the rules for the logo and
+ * browser tab icon a staff Admin uploads. This is the module's public
  * API; the code lives in the files next to it, and nothing outside this
  * folder imports them directly.
  *
@@ -21,6 +22,22 @@ export {
 } from './colour-space';
 export { contrast, type HexColour, luminance } from './contrast';
 export { paletteCss, paletteVariables } from './css';
+export {
+  ABOUT_SQUARE_RATIO,
+  BRAND_IMAGE_KINDS,
+  type BrandImageKind,
+  type BrandImageProblem,
+  brandImageProblem,
+  fitInto,
+  IMAGE_CONTENT_TYPES,
+  type ImageFacts,
+  imageFacts,
+  type ImageSize,
+  type ImageType,
+  isAboutSquare,
+  LOGO_RATIO,
+  STORED_BOX,
+} from './images';
 export { ADIUTOR_NAME, forTitleTemplate, isOwnName, poweredByShown, signInAppName } from './name';
 export {
   ACCENT_TOKENS,

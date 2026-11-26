@@ -168,6 +168,17 @@
         "addressRefused": "The mail server refused the sender's address or yours. Check that it may send from the sender's address.",
         "refused": "The mail server refused the test email. Check its settings with your provider."
       }
+    },
+    "branding": {
+      "typeNotAllowed": "Choose a PNG or JPEG image.",
+      "empty": "That file is empty.",
+      "tooLarge": "That image is too large: choose one of at most {maximum, number} MB.",
+      "tooManyPixels": "That image is too large: choose one of at most {maximum, number} pixels wide and high.",
+      "logoTooSmall": "That logo is too small: choose one at least {minimum, number} pixels high.",
+      "logoShape": "That logo’s shape doesn’t fit: choose one at most {widest, number} times as wide as it’s high, and at most {tallest, number} times as high as it’s wide.",
+      "iconTooSmall": "That icon is too small: choose one at least {minimum, number} pixels wide and high.",
+      "iconShape": "Choose an icon that’s about square.",
+      "unreadable": "That image couldn’t be read. Save it again as a PNG and try once more."
     }
   }
 }
