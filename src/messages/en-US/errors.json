@@ -108,7 +108,7 @@
       "confirmationRequired": "Confirm it’s you with your second step before choosing where files are kept.",
       "secretNeeded": {
         "s3": "Give the secret key again: a saved one is only kept for the same service and access key.",
-        "sftp": "Give the password or the private key again: a saved one is only kept for the same server and user."
+        "sftp": "Give the password or the private key again: a saved one is only kept for the same server, user and host key."
       },
       "storageProblem": {
         "local_on_vercel": "Vercel's disk doesn't keep files. Choose an S3-compatible bucket or an SFTP server.",

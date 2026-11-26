@@ -96,6 +96,7 @@
       "endpoint": "Indica la dirección del servicio, empezando por https://.",
       "region": "Revisa la región.",
       "bucket": "Indica el nombre del bucket.",
+      "bucketName": "Usa de 3 a 63 letras minúsculas, cifras, puntos y guiones, empezando y terminando por una letra o cifra.",
       "accessKeyId": "Indica el ID de la clave de acceso.",
       "secret": "Ese secreto es demasiado largo.",
       "host": "Indica el nombre de host o la dirección del servidor.",

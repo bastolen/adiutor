@@ -456,8 +456,9 @@ environment does (see [Attachments](deploying.md#attachments) and
   Auth's `symmetricEncrypt` and the versioned auth secrets (`sealSecret` in
   `src/server/sealed-secrets.ts`, which any setting with a secret uses), never sent back to a
   browser, and kept only for the place they were saved for (`secretToSave`): another S3 service or
-  access key, or another SFTP server, port or user, must be given them again, so a staff Admin
-  can't point a saved password at a host of their own.
+  access key, or another SFTP server, port, user or host key, must be given them again, so a staff Admin
+  can't point a saved password at a host of their own. A bucket's name must follow S3's own rules
+  (`S3_BUCKET_PATTERN`), since it becomes part of the host name a bucket is reached at.
 - **A storage is tried before it's saved** (`checkStorage`, through `checkBeforeSaving` in
   `src/server/check-before-save.ts`), with the staff Admin's second step from the last 15 minutes
   (`needsRecentConfirmation`), at most 20 times an hour, and in the audit log

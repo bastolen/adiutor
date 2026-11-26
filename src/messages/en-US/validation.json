@@ -96,6 +96,7 @@
       "endpoint": "Give the service's address, starting with https://.",
       "region": "Check the region.",
       "bucket": "Give the bucket's name.",
+      "bucketName": "Use 3 to 63 lowercase letters, digits, dots and dashes, starting and ending with a letter or digit.",
       "accessKeyId": "Give the access key's ID.",
       "secret": "That secret is too long.",
       "host": "Give the server's host name or address.",

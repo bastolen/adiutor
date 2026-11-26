@@ -43,6 +43,7 @@ import {
   DEFAULT_S3_REGION,
   DEFAULT_SFTP_PORT,
   HOST_KEY_PATTERN,
+  S3_BUCKET_PATTERN,
   PRIVATE_KEY_MAX_LENGTH,
   STORAGE_FIELD_MAX_LENGTH,
 } from './storage';
@@ -581,6 +582,11 @@ function storageText(message: ValidationMessageKey) {
     .max(STORAGE_FIELD_MAX_LENGTH, { error: message });
 }
 
+/** An S3 bucket's name, by S3's own rules (`S3_BUCKET_PATTERN`). */
+const storageBucketSchema = storageText('validation.storage.bucket').regex(S3_BUCKET_PATTERN, {
+  error: 'validation.storage.bucketName' satisfies ValidationMessageKey,
+});
+
 /** A storage's folder, on the server or over SFTP: an absolute path (`storageProblems` checks it). */
 const storageFolderSchema = storageText('validation.storage.folder');
 
@@ -620,7 +626,7 @@ export const storedStorageSchema = z.discriminatedUnion('driver', [
     driver: z.literal('s3'),
     endpoint: storageEndpointSchema,
     region: storageText('validation.storage.region'),
-    bucket: storageText('validation.storage.bucket'),
+    bucket: storageBucketSchema,
     accessKeyId: storageText('validation.storage.accessKeyId'),
     secretAccessKey: z
       .string()
@@ -681,7 +687,7 @@ export const storageFormSchema = z.discriminatedUnion(
           error: 'validation.storage.region' satisfies ValidationMessageKey,
         })
         .transform((value) => value || DEFAULT_S3_REGION),
-      bucket: storageText('validation.storage.bucket'),
+      bucket: storageBucketSchema,
       accessKeyId: storageText('validation.storage.accessKeyId'),
       secretAccessKey: storageSecret(STORAGE_FIELD_MAX_LENGTH),
       forcePathStyle: z.boolean(),

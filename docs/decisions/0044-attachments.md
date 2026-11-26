@@ -50,7 +50,7 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
   where every company's files go, and holds credentials.
 - **Its secrets are encrypted** with Better Auth's `symmetricEncrypt` and the versioned auth
   secrets, as authenticator secrets are, never shown again, and kept only for the place they were
-  saved for: another S3 service or key, or another SFTP server, port or user, must be given them
+  saved for: another S3 service or key, or another SFTP server, port, user or host key, must be given them
   again, so a changed host can't receive a saved password.
 - **One S3 driver for every S3-compatible service,** with a configurable endpoint, signed with
   `aws4fetch` (AWS Signature V4 on `fetch`) rather than the AWS SDK: the driver needs four requests,

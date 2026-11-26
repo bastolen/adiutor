@@ -173,7 +173,8 @@ function withSavedSecrets(input: StorageFormInput, saved: StorageConfig | null):
       !typedAny &&
       savedServer?.host === place.host &&
       savedServer.port === place.port &&
-      savedServer.username === place.username;
+      savedServer.username === place.username &&
+      savedServer.hostKey === place.hostKey;
     const password = secretToSave({
       typed: typedPassword,
       saved: savedServer?.password,

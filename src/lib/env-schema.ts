@@ -15,6 +15,7 @@ import isLocalHostname from './local-host';
 import { parseAuthSecrets } from './sign-in/auth-secrets';
 import {
   HOST_KEY_PATTERN,
+  S3_BUCKET_PATTERN,
   MAX_FILE_MB,
   maxFileMbCeiling,
   STORAGE_DRIVERS,
@@ -241,8 +242,14 @@ const envSchema = z
     ATTACHMENTS_S3_ENDPOINT: z.preprocess(emptyToUndefined, z.url().optional()),
     /** The region requests are signed for (`auto` on R2); `us-east-1` when unset. */
     ATTACHMENTS_S3_REGION: optionalString,
-    /** The bucket for `s3`. */
-    ATTACHMENTS_S3_BUCKET: optionalString,
+    /** The bucket for `s3`, named by S3's own rules (`S3_BUCKET_PATTERN`). */
+    ATTACHMENTS_S3_BUCKET: z.preprocess(
+      emptyToUndefined,
+      z
+        .string()
+        .regex(S3_BUCKET_PATTERN, 'Use 3 to 63 lowercase letters, digits, dots and dashes.')
+        .optional(),
+    ),
     /** The access key's ID for `s3`. */
     ATTACHMENTS_S3_ACCESS_KEY_ID: optionalString,
     /** The access key's secret for `s3`. */

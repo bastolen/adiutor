@@ -730,6 +730,36 @@ describe('storageFormSchema', () => {
   });
 });
 
+describe('storageFormSchema: bucket names', () => {
+  /**
+   * The issue a bucket's name gets, if any.
+   *
+   * @param bucket - The name.
+   * @returns The first issue's message, or `undefined` for a name that holds.
+   */
+  const issueOf = (bucket: string) =>
+    storageFormSchema.safeParse({
+      driver: 's3',
+      endpoint: 'https://files.adiutor.dev',
+      region: '',
+      bucket,
+      accessKeyId: 'key-id',
+      secretAccessKey: '',
+      forcePathStyle: false,
+    }).error?.issues[0]?.message;
+
+  it('takes a name by S3’s own rules', () => {
+    expect(issueOf('adiutor-files.2026')).toBeUndefined();
+  });
+
+  it.each(['evil.adiutor.test/x', 'Adiutor', 'ab', 'a..b', '192.168.0.1', '-adiutor'])(
+    'refuses %s, which isn’t one',
+    (bucket) => {
+      expect(issueOf(bucket)).toBe('validation.storage.bucketName');
+    },
+  );
+});
+
 describe('maxFileMbSchema', () => {
   it('takes a whole number of megabytes from 1 to the ceiling', () => {
     expect(maxFileMbSchema(50).parse('25')).toBe(25);

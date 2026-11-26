@@ -361,7 +361,7 @@ files, and the files already attached can still be downloaded.
   password or private key) are encrypted with the auth secret, like authenticator secrets, so
   [Rotating the auth secret](#rotating-the-auth-secret) holds for them: keep the old version until
   the storage has been saved again. A saved secret is never shown again, and is kept only for the
-  place it was saved for: another S3 service or key, or another SFTP server, port or user, must be
+  place it was saved for: another S3 service or key, or another SFTP server, port, user or host key, must be
   given it again.
 - **In the environment,** `ATTACHMENTS_STORAGE` and the variables below win over Settings, which
   then only shows the storage, without its secrets. `ATTACHMENTS_STORAGE=off` turns attachments

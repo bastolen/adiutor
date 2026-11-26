@@ -4,6 +4,7 @@
  * place, refused while the environment chooses, with a confirmation, a limit
  * and an audit event), the largest file, and the storage files go to.
  */
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,6 +25,7 @@ import {
   setupTestContext,
   staffActor,
   TEST_BUCKET,
+  testSftpFolder,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { ServiceError } from '../errors';
@@ -137,6 +139,30 @@ describe('saveAttachmentStorage', () => {
       saveAttachmentStorage(ctx, admin, { ...kept, accessKeyId: 'someone-else' }, SETTINGS_DECIDE),
     );
     expect(otherKey.key).toBe('errors.attachments.secretNeeded.s3');
+  });
+
+  it('keeps a saved SFTP password for the same server, user and host key only', async () => {
+    const server = await testSftpFolder(`/config/attachments-${randomUUID()}`);
+    await saveAttachmentStorage(
+      ctx,
+      admin,
+      { ...server, port: String(server.port), privateKey: '' },
+      SETTINGS_DECIDE,
+    );
+    const kept = { ...server, port: String(server.port), password: '', privateKey: '' };
+
+    // The same place keeps it.
+    await saveAttachmentStorage(ctx, admin, kept, SETTINGS_DECIDE);
+    // Another host key could be another server answering: the password must be given again.
+    const otherKey = await refusal(() =>
+      saveAttachmentStorage(
+        ctx,
+        admin,
+        { ...kept, hostKey: `SHA256:${'A'.repeat(43)}` },
+        SETTINGS_DECIDE,
+      ),
+    );
+    expect(otherKey.key).toBe('errors.attachments.secretNeeded.sftp');
   });
 
   it('refuses a storage that fails its test, naming only the kind of failure', async () => {

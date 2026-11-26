@@ -74,6 +74,16 @@ export const DEFAULT_SFTP_PORT = 22;
 /** A host key's fingerprint as OpenSSH prints it: SHA-256, in base64 without padding. */
 export const HOST_KEY_PATTERN = /^SHA256:[A-Za-z0-9+/]{43}$/;
 
+/**
+ * An S3 bucket's name, by S3's own rules: 3 to 63 lowercase letters, digits,
+ * dots and dashes, starting and ending with a letter or digit, without two
+ * dots in a row or the shape of an IP address. Checked because the name
+ * becomes part of the host name a bucket is reached at (`bucket.endpoint`),
+ * where anything else could point a saved secret's requests at another host.
+ */
+export const S3_BUCKET_PATTERN =
+  /^(?!\d{1,3}(?:\.\d{1,3}){3}$)(?!.*\.\.)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
+
 /** The region requests are signed for when none is given: what most services without regions accept. */
 export const DEFAULT_S3_REGION = 'us-east-1';
 

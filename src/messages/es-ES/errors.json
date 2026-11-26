@@ -108,7 +108,7 @@
       "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de elegir dónde se guardan los archivos.",
       "secretNeeded": {
         "s3": "Vuelve a indicar la clave secreta: una guardada solo se conserva para el mismo servicio y la misma clave de acceso.",
-        "sftp": "Vuelve a indicar la contraseña o la clave privada: una guardada solo se conserva para el mismo servidor y usuario."
+        "sftp": "Vuelve a indicar la contraseña o la clave privada: una guardada solo se conserva para el mismo servidor, usuario y clave de host."
       },
       "storageProblem": {
         "local_on_vercel": "El disco de Vercel no conserva archivos. Elige un bucket compatible con S3 o un servidor SFTP.",

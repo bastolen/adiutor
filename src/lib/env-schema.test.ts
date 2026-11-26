@@ -105,6 +105,10 @@ describe('parseEnv', () => {
           .ATTACHMENTS_DIR,
       ).toBe('/data/files');
       expect(parseEnv({ ...validEnv, ...bucket }).ATTACHMENTS_S3_BUCKET).toBe('adiutor');
+      // A name that isn't a bucket's would become part of another host name.
+      expect(() =>
+        parseEnv({ ...validEnv, ...bucket, ATTACHMENTS_S3_BUCKET: 'evil.adiutor.test/x' }),
+      ).toThrow(/ATTACHMENTS_S3_BUCKET/);
       expect(parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'off' }).ATTACHMENTS_STORAGE).toBe('off');
     });
 
