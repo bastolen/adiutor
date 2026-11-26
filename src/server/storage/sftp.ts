@@ -43,7 +43,7 @@ const PERMISSION_DENIED = 3;
 
 /** What the marker file says, for someone who finds it. */
 const MARKER_TEXT =
-  'This folder holds the files attached in Adiutor. Keep this file with them: without it, Adiutor refuses to read or delete files here.\n';
+  'This folder holds the files attached in Adiutor. Keep this file with them: without it, Adiutor refuses to keep, read or delete files here.\n';
 
 /**
  * A host key's fingerprint as OpenSSH prints it (`ssh-keygen -lf`): SHA-256,
@@ -151,7 +151,18 @@ function connect(config: SftpStorageConfig, timeouts: SftpTimeouts): Promise<Con
       }
     });
     client.once('ready', () => {
+      // Opening the SFTP channel has a time limit of its own: a server can stall after the handshake.
+      let late = false;
+      const timer = setTimeout(() => {
+        late = true;
+        client.end();
+        reject(new StorageError('timed_out'));
+      }, timeouts.call);
       client.sftp((error, sftp) => {
+        clearTimeout(timer);
+        if (late) {
+          return;
+        }
         if (error) {
           client.end();
           reject(new StorageError('failed', { cause: error }));
@@ -326,16 +337,24 @@ function callsOn(
       await assertMarked();
       await makeFolders(path);
       const temporary = `${path}.${randomUUID()}.tmp`;
-      await call(connection, timeouts.put, (done) =>
-        connection.sftp.writeFile(
-          temporary,
-          Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
-          done,
-        ),
-      );
-      await call(connection, timeouts.call, (done) =>
-        connection.sftp.rename(temporary, path, done),
-      );
+      try {
+        await call(connection, timeouts.put, (done) =>
+          connection.sftp.writeFile(
+            temporary,
+            Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+            done,
+          ),
+        );
+        await call(connection, timeouts.call, (done) =>
+          connection.sftp.rename(temporary, path, done),
+        );
+      } catch (error) {
+        // Nothing finds a temporary file later: it goes now, if the connection still can.
+        await call(connection, timeouts.call, (done) =>
+          connection.sftp.unlink(temporary, done),
+        ).catch(() => {});
+        throw error;
+      }
     },
 
     /**

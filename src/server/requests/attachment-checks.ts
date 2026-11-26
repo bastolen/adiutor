@@ -2,9 +2,10 @@
  * @file Whether a file's bytes are what its extension says (decision 0044):
  * the signature each kind of file starts with, and for text, valid UTF-8 or
  * UTF-16 throughout without NUL characters. A file that fails is refused, so
- * an HTML page named `.png` or a program named `.txt` is never stored.
- * Every file is still served as a download that runs nothing; this keeps
- * what's stored to what it claims to be.
+ * an HTML page named `.png`, or a compiled program named `.txt`, is never
+ * stored. Text is text whatever it says: a script or a page named `.txt`
+ * is kept as plain text, and every file is served as a download that runs
+ * nothing; this keeps what's stored to what it claims to be.
  */
 import type { AttachmentCheck } from '@/lib/requests';
 

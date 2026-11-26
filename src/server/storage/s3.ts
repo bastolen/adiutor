@@ -41,20 +41,44 @@ const TIMEOUTS: BucketTimeouts = {
 /** How much of an error reply is read for its code. */
 const ERROR_READ_BYTES = 2048;
 
+/** How long an error reply's first bytes may take, in milliseconds. */
+const ERROR_READ_MS = 5_000;
+
 /**
  * Reads an S3 error reply's code (`NoSuchKey`, `NoSuchBucket`, ...), from
- * its first bytes only.
+ * its first bytes only, and for a few seconds at most: the rest of the reply
+ * is never read, however large or slow it is.
  *
  * @param response - The reply.
  * @returns The code, or `null` without one.
  */
 async function errorCode(response: Response): Promise<string | null> {
-  try {
-    const text = (await response.text()).slice(0, ERROR_READ_BYTES);
-    return /<Code>([A-Za-z]+)<\/Code>/.exec(text)?.[1] ?? null;
-  } catch {
+  const reader = response.body?.getReader();
+  if (!reader) {
     return null;
   }
+  const decoder = new TextDecoder();
+  let text = '';
+  const timer = setTimeout(() => {
+    reader.cancel().catch(() => {});
+  }, ERROR_READ_MS);
+  try {
+    while (text.length < ERROR_READ_BYTES) {
+      // One piece after another, until there's enough or the reply ends (or is cancelled).
+      // eslint-disable-next-line no-await-in-loop -- a stream is read a piece at a time
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } catch {
+    // A reply that broke off: what arrived is all there is.
+  } finally {
+    clearTimeout(timer);
+    reader.cancel().catch(() => {});
+  }
+  return /<Code>([A-Za-z]+)<\/Code>/.exec(text.slice(0, ERROR_READ_BYTES))?.[1] ?? null;
 }
 
 /**

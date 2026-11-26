@@ -40,6 +40,7 @@ describe('GET /attachments/[id]', () => {
       name: 'Café menu.pdf',
       contentType: 'application/pdf',
       body: new Response('%PDF-1.7').body ?? new ReadableStream(),
+      size: 8,
     });
 
     const response = await download();
@@ -54,6 +55,8 @@ describe('GET /attachments/[id]', () => {
     expect(await response.text()).toBe('%PDF-1.7');
     expect(Object.fromEntries(response.headers)).toMatchObject({
       'content-type': 'application/pdf',
+      // So the browser shows how far a large download is.
+      'content-length': '8',
       'content-disposition':
         'attachment; filename="Cafe menu.pdf"; filename*=UTF-8\'\'Caf%C3%A9%20menu.pdf',
       'x-content-type-options': 'nosniff',

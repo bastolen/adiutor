@@ -131,6 +131,37 @@ describe('bucketStorage', () => {
     }
   });
 
+  it('reads only the start of an error reply, however much follows', async () => {
+    // A code at the start, then far more than is ever read, sent as it's asked for.
+    let piecesSent = 0;
+    stubFetch(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            /**
+             * Sends the next piece: the code first, then filler that never ends.
+             *
+             * @param controller - The stream's controller.
+             */
+            pull(controller) {
+              piecesSent += 1;
+              controller.enqueue(
+                new TextEncoder().encode(
+                  piecesSent === 1 ? '<Error><Code>NoSuchBucket</Code>' : 'x'.repeat(1024),
+                ),
+              );
+            },
+          }),
+          { status: 404 },
+        ),
+    );
+
+    await expect(
+      bucketStorage(config, quick).put(attachmentKey(ID), new Uint8Array([1]), 'image/png'),
+    ).rejects.toMatchObject({ failure: 'not_found' });
+    expect(piecesSent).toBeLessThan(10);
+  });
+
   it('says a storage is unreachable when there is no connection', async () => {
     stubFetch(() => {
       throw new TypeError('fetch failed');

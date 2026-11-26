@@ -275,6 +275,8 @@ export interface AttachmentToServe {
   contentType: string;
   /** Its bytes, as they arrive from the storage. */
   body: ReadableStream<Uint8Array>;
+  /** Its size in bytes, when the storage says. */
+  size: number | null;
 }
 
 /**
@@ -339,7 +341,7 @@ export async function loadAttachment(
     console.warn('An attachment has no file in the storage:', parsed.data);
     return null;
   }
-  return { name: row.name, contentType: row.contentType, body: file.body };
+  return { name: row.name, contentType: row.contentType, body: file.body, size: file.size };
 }
 
 /**

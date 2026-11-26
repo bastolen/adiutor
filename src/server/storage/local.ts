@@ -21,7 +21,7 @@ export const MARKER_FILE = '.adiutor-attachments';
 
 /** What the marker file says, for someone who finds it. */
 const MARKER_TEXT =
-  'This folder holds the files attached in Adiutor. Keep this file with them: without it, Adiutor refuses to read or delete files here.\n';
+  'This folder holds the files attached in Adiutor. Keep this file with them: without it, Adiutor refuses to keep, read or delete files here.\n';
 
 /**
  * Whether an error is Node's for a missing file.

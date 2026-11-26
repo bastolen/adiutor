@@ -243,6 +243,19 @@ describe('AttachmentPicker', () => {
     );
   });
 
+  it('gives focus to the Attach button when a failed upload’s tile had it', async () => {
+    const { chooser } = renderPicker();
+    choose(chooser, [textFile('printer.log')]);
+    const waiting = await screen.findByRole('list', { name: '1 file to send' });
+    within(waiting).getByRole('button', { name: 'Remove printer.log' }).focus();
+
+    act(() =>
+      defined(uploads[0], 'the upload').finish({ ok: false, reason: null, stopped: false }),
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Attach files' })).toHaveFocus());
+  });
+
   it('stops a removed file’s upload and gives focus to the Attach button', async () => {
     const user = userEvent.setup();
     const { chooser } = renderPicker();

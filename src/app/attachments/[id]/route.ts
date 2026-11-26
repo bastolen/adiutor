@@ -49,6 +49,8 @@ export async function GET(
   return new Response(file.body, {
     headers: {
       'Content-Type': file.contentType,
+      // So the browser shows how far a large download is.
+      ...(file.size !== null && { 'Content-Length': String(file.size) }),
       'Content-Disposition': attachmentDisposition(file.name),
       'X-Content-Type-Options': 'nosniff',
       'Cross-Origin-Resource-Policy': 'same-origin',

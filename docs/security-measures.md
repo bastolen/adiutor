@@ -402,7 +402,9 @@ A file attached to a request is uploaded on its own first, then sent with its te
   SVG, scripts or programs. **A file's bytes must be what its extension says**
   (`matchesAttachmentKind` in `src/server/requests/attachment-checks.ts`): each kind's signature,
   and for text, valid UTF-8 or UTF-16 throughout without a NUL character, so an HTML page named
-  `.png` or a program named `.txt` is refused.
+  `.png`, or a compiled program named `.txt`, is refused. Text is text whatever it says: a script
+  or a page named `.txt` is kept, as `text/plain`, and like every file is only ever served as a
+  download under a policy that runs nothing.
 - **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
   extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its

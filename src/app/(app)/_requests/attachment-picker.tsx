@@ -142,6 +142,17 @@ export default function AttachmentPicker({
     setFiles((waiting) => waiting.filter((candidate) => candidate.key !== key));
   };
 
+  // Set when a failed upload's tile goes: if it had focus, focus goes to the Attach button.
+  const refocus = useRef(false);
+  useLayoutEffect(() => {
+    if (refocus.current) {
+      refocus.current = false;
+      if (!document.activeElement || document.activeElement === document.body) {
+        attachButton.current?.focus();
+      }
+    }
+  }, [files]);
+
   // The files waiting for their upload to start, oldest first, and how many uploads run now.
   const queue = useRef<{ key: string; name: string; file: File; stop: AbortController }[]>([]);
   const running = useRef(0);
@@ -177,6 +188,7 @@ export default function AttachmentPicker({
               if (outcome.stopped) {
                 return;
               }
+              refocus.current = true;
               drop(key);
               setRefusal(outcome.reason ?? t('failed', { name }));
             },
