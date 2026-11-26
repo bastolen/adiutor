@@ -51,9 +51,11 @@ The folders of the repository and what belongs in each. Back to the [documentati
   - `src/server/requests/`: listing, showing as a board, reading, raising and changing requests
     (see [Requests](requests.md)), with the checks every change shares in `change.ts`, reading one
     request in `detail.ts` (its texts in `detail-texts.ts`, its conversation in `detail-thread.ts`
-    and who reads it in `detail-reader.ts`), and their attachments: uploading, downloading and
-    removing (`attachments.ts`), the check of a file's bytes against its type
-    (`attachment-checks.ts`) and sending uploads with a text (`attachment-claims.ts`).
+    and who reads it in `detail-reader.ts`), who is told what happens to one (`tell-people.ts`)
+    and what one person's email about it shows (`read-request-update.ts`, made of the shapes in
+    `request-update.ts` and read from `request-update-context.ts`), and their attachments:
+    uploading, downloading and removing (`attachments.ts`), the check of a file's bytes against
+    its type (`attachment-checks.ts`) and sending uploads with a text (`attachment-claims.ts`).
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),

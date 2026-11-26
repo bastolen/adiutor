@@ -33,8 +33,8 @@ import {
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellPeopleOnRequest } from './tell-people';
 import { tellWebhooks } from './tell-webhooks';
-import { tellPeopleOnRequest } from './updates';
 
 /**
  * Replies to a request, and may set its status with the reply: the staff

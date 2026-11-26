@@ -2,9 +2,10 @@
  * @file Reading who is on a request: the staff members it's assigned to and
  * its subscribers (`request_participant`), as far as they can still read it.
  * Shared by what changes subscriptions (`subscribers.ts`), what shows a
- * request (`detail.ts`) and what tells the people on it something
- * (`updates.ts`). An internal request has no company (decision 0048), so
- * only the staff who read requests count for one.
+ * request (`detail.ts`), what tells the people on it something
+ * (`tell-people.ts`) and what reads their emails (`request-update-context.ts`).
+ * An internal request has no company (decision 0048), so only the staff who
+ * read requests count for one.
  */
 import { and, eq, inArray, isNotNull, isNull, or, type SQL, sql } from 'drizzle-orm';
 

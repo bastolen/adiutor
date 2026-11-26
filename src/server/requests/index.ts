@@ -66,8 +66,8 @@ export {
   type WebhookNewsEvent,
   type WebhookPerson,
 } from './read-webhook-news';
-export { readRequestUpdate } from './updates';
-export type { QueuedRequestNews, RequestUpdate, RequestUpdateItem } from './updates';
+export { readRequestUpdate } from './read-request-update';
+export type { QueuedRequestNews, RequestUpdate, RequestUpdateItem } from './request-update';
 export type { MentionablePerson } from './mentions';
 export {
   addRequestType,

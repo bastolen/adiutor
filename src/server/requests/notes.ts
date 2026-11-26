@@ -16,8 +16,8 @@ import claimAttachments from './attachment-claims';
 import { assertReplyLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
+import { tellStaffOnRequest } from './tell-people';
 import { tellWebhooks } from './tell-webhooks';
-import { tellStaffOnRequest } from './updates';
 
 /**
  * Adds an internal note to a request's conversation, written by a staff

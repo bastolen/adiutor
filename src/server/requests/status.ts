@@ -21,8 +21,8 @@ import {
   requestToChange,
   workingPermission,
 } from './change';
+import { tellPeopleOnRequest } from './tell-people';
 import { tellWebhooks } from './tell-webhooks';
-import { tellPeopleOnRequest } from './updates';
 
 /**
  * Changes a request's status. The staff who work on requests set any

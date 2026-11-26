@@ -304,7 +304,7 @@ written and sent is in [Email](email.md), and the jobs that send them in
   request emails nobody but whoever it was raised for and the people its description mentions: it
   shows in the list and on the dashboard. A changed title, type or priority, an
   edited text (unless the edit adds a mention) and being taken off a request email nobody.
-- **Who is told** (`src/server/requests/updates.ts`, the one place that decides it): a reply and
+- **Who is told** (`src/server/requests/tell-people.ts`, the one place that decides it): a reply and
   a status change go to everyone on the request, its assignees and its subscribers
   (`tellPeopleOnRequest`, from `loadPeopleOn`), except whoever did it. Being put on a request goes
   to the one it's about, unless they did it themselves: a staff member a colleague assigned
@@ -321,7 +321,8 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **One email per person and request per tick:** the jobs of one person about one request share a
   batch key, so a reply and the status change that came with it, a note beside them, or three
   replies in five minutes, are one email, in the order they happened.
-- **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
+- **What the email shows** is read when it's sent (`readRequestUpdate` in
+  `src/server/requests/read-request-update.ts`): the request's title, its
   number as a link, its company (or "Internal", `whereInternal`), who did what, and each reply (and a text that mentions the
   reader) in full, formatted as on the page
   (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)), with the
