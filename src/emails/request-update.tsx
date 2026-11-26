@@ -2,17 +2,19 @@
  * @file Email telling someone on a request what happened to it: who replied,
  * with the reply, who changed its status, and what put them on it (assigned
  * to them, a text that mentions them, someone who subscribed them). Several
- * pieces of news about one request are one email.
+ * pieces of news about one request are one email. A text's files are named
+ * under it, never attached or linked: the request's page downloads them.
  */
 import type { ReactNode } from 'react';
-import { Link, Section } from 'react-email';
+import { Link, Section, Text } from 'react-email';
 
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import EmailMarkdown, { type EmailText } from '@/components/email/email-markdown';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { colors } from '@/components/email/theme';
+import { colors, small } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
+import { formatFileSize } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
@@ -27,6 +29,12 @@ import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
+/** A text the email shows, with the people it mentions by name and the files attached to it. */
+export interface RequestUpdateEmailText extends EmailText {
+  /** The files attached to it, oldest first: named, never attached or linked. */
+  attachments?: readonly { name: string; size: number }[];
+}
+
 /** One thing the email tells its reader. Each names who did it, as the request's page names them. */
 export type RequestUpdateEmailItem =
   | {
@@ -34,16 +42,16 @@ export type RequestUpdateEmailItem =
       event: 'reply';
       /** Who. */
       by: string;
-      /** The reply, with the people it mentions by name. */
-      text: EmailText;
+      /** The reply, with the people it mentions by name and its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone wrote an internal note: only ever in an email to the staff. */
       event: 'note';
       /** Who. */
       by: string;
-      /** The note, with the people it mentions by name. */
-      text: EmailText;
+      /** The note, with the people it mentions by name and its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone changed the status. */
@@ -70,8 +78,8 @@ export type RequestUpdateEmailItem =
       by: string;
       /** Where: in the request's description, a reply, or an internal note (for the staff). */
       where: 'description' | 'reply' | 'note';
-      /** The text that mentions them. */
-      text: EmailText;
+      /** The text that mentions them, with its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone subscribed the reader to the request. */
@@ -156,7 +164,8 @@ function accountLinkTag(href: string) {
 
 /**
  * A text someone wrote, set apart from the email's own words by a line on
- * its left, formatted as on the request's page (`EmailMarkdown`).
+ * its left, formatted as on the request's page (`EmailMarkdown`), with the
+ * names and sizes of its files below it.
  *
  * @param props - Component props.
  * @param props.text - The text.
@@ -171,11 +180,13 @@ function WrittenText({
   locale,
   appUrl,
 }: {
-  text: EmailText;
+  text: RequestUpdateEmailText;
   id: string;
   locale: Locale;
   appUrl: string | null;
 }) {
+  const t = translator(locale, 'emails.requestUpdate');
+  const files = text.attachments ?? [];
   return (
     <Section
       style={{
@@ -185,6 +196,17 @@ function WrittenText({
       }}
     >
       <EmailMarkdown value={text} id={id} locale={locale} appUrl={appUrl} />
+      {files.length > 0 && (
+        <>
+          <Text style={{ ...small, margin: '4px 0' }}>{t('files', { count: files.length })}</Text>
+          {files.map((file, index) => (
+            // eslint-disable-next-line react/no-array-index-key -- a fixed list, rendered once; names can repeat
+            <Text key={index} style={{ ...small, margin: '0', overflowWrap: 'anywhere' }}>
+              {t('file', { name: file.name, size: formatFileSize(file.size, locale) })}
+            </Text>
+          ))}
+        </>
+      )}
     </Section>
   );
 }
@@ -362,6 +384,10 @@ RequestUpdateEmail.PreviewProps = {
         ].join('\n'),
         format: 'markdown',
         mentions: {},
+        attachments: [
+          { name: 'test-page.pdf', size: 184_000 },
+          { name: 'printer.log', size: 3_200 },
+        ],
       },
     },
     { event: 'status', by: 'Sam Doe', bySide: 'staff', from: 'in_progress', to: 'waiting' },

@@ -257,6 +257,8 @@
       "reply": "<strong>{name}</strong> replied:",
       "note": "<strong>{name}</strong> wrote an internal note:",
       "noteOnlyStaff": "Internal note: only the staff see this.",
+      "files": "{count, plural, one {# file attached, to download from the request:} other {# files attached, to download from the request:}}",
+      "file": "{name} ({size})",
       "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} proposed {<strong>{name}</strong> proposed a solution.} approved {<strong>{name}</strong> approved the solution.} denied {<strong>{name}</strong> didn’t approve the solution.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",
       "assigned": "<strong>{name}</strong> assigned this request to you.",
       "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} note {<strong>{name}</strong> mentioned you in an internal note:} other {<strong>{name}</strong> mentioned you in a reply:}}",

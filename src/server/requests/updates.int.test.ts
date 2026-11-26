@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   membership,
   queuedJob,
+  requestAttachment,
   requestEntry,
   requestMention,
   requestParticipant,
@@ -22,6 +23,7 @@ import {
   createStaffSettings,
   memberActor,
   staffActor,
+  storeAttachment,
 } from '../../../tests/integration/helpers';
 import { changeAssignees } from './assignees';
 import { editReply, editRequestDescription } from './edits';
@@ -34,6 +36,7 @@ import { changeSubscribers, subscribe, unsubscribe } from './subscribers';
 import {
   ctx,
   db,
+  storage,
   storeEntry,
   storeRequest,
   storeSubscribers,
@@ -360,6 +363,42 @@ describe('what one person’s email may show', () => {
     expect(shown).not.toContain('@adiutor.test');
     expect(shown).not.toContain(support.id);
     expect(shown).not.toContain(colleague.id);
+  });
+
+  it('names a reply’s files as they are when the email is sent, and nothing more of them', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    const watcher = await memberActor(db, company.id, 'watcher');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    await storeSubscribers(raised.id, [watcher.id, support.id]);
+    const files = [
+      await storeAttachment(db, storage, { uploadedBy: support.id, name: 'test-page.pdf' }),
+      await storeAttachment(db, storage, { uploadedBy: support.id, name: 'password.png' }),
+    ];
+    await replyToRequest(ctx, support, {
+      request: raised.id,
+      body: 'The test page is attached.',
+      attachments: files,
+    });
+    // Removed before the email went: it isn't named.
+    await db
+      .update(requestAttachment)
+      .set({ removedAt: new Date(), removedBy: support.id })
+      .where(eq(requestAttachment.id, files[1] ?? ''));
+
+    const update = await readRequestUpdate(
+      ctx,
+      { requestId: raised.id, userId: watcher.id },
+      await newsFor(watcher.id),
+    );
+
+    const [reply] = update?.items ?? [];
+    expect(reply?.event === 'reply' ? reply.text.attachments : undefined).toEqual([
+      { name: 'test-page.pdf', size: 15 },
+    ]);
+    // Its name and size only: no ID to download it by, and nothing of who uploaded it.
+    expect(JSON.stringify(update?.items)).not.toContain(files[0] ?? '');
   });
 
   it('says why they get it and words it for them: an assignee on the staff', async () => {

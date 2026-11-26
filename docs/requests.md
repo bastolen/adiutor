@@ -309,7 +309,9 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
   number as a link, its company, who did what, and each reply (and a text that mentions the
   reader) in full, formatted as on the page
-  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)). People are
+  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)), with the
+  names and sizes of its files under it (as they are by then: a removed one is left out), never
+  the files themselves or a link to one: the request's page downloads them. People are
   named as the request's page names them, their own name or their side's, never by an address or
   an ID, and the people a reply mentions by name. The statuses are worded for the reader
   ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
@@ -747,6 +749,9 @@ in [Attachments](deploying.md#attachments).
 - **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
   kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
   Someone signed out is sent to sign in and back; a file they may not read is "not found".
+- **In emails** about a request, a reply, a note or a text that mentions the reader names its
+  files and their sizes under it, as they are when the email is sent; nothing is attached or
+  linked (see [Emails](#emails)). Adding files in an edit, and removing one, emails nobody.
 - **Removing** (`removeAttachment`, `mayRemoveAttachment` in `rules.ts`): only the staff who work
   on requests, on any of a request's texts, whatever its status, and whether attaching is on or
   not; a Remove button on each file's tile asks first (`RowAction`), and focus then goes to the
