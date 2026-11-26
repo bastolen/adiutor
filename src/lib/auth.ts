@@ -553,7 +553,7 @@ export const auth = betterAuth({
        * Which picture the user shows: their initials, or the picture of
        * their account with a provider (`AVATAR_SOURCES`). Empty until they
        * choose, which shows the picture of the account they connected first
-       * (`pictureAccount`); set by
+       * that has one (`pictureAccount`); set by
        * `setOwnPicture`.
        */
       avatarSource: { type: [...AVATAR_SOURCES], required: false, input: false },

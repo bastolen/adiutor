@@ -536,9 +536,11 @@ those emails' footers link to; `setOwnRequestEmails` in `src/server/people/reque
 - **Pictures:** the same noting keeps the address of the account's picture at the provider
   (`account.accountImage`: GitHub's `avatar_url`, Google's `picture`, `PROVIDER_IMAGE_CLAIMS`),
   but only an `https` address on the provider's own picture hosts (`isProviderImageUrl`). Someone
-  shows the picture of the confirmed account they connected first, or the one they choose on the
-  account page, or their initials (`pictureAccount` in `src/lib/sign-in/pictures.ts`,
-  `user.avatarSource`). The picture is served from Adiutor's own address, never the provider's,
+  shows the picture of the confirmed account they connected first that has one, or the provider's
+  they choose on the account page, or their initials (`pictureAccount` in
+  `src/lib/sign-in/pictures.ts`, `user.avatarSource`). The page offers each provider once, by its
+  first confirmed account with a picture, else its first (`choiceAccounts`), so the option names
+  and previews the account whose picture shows. The picture is served from Adiutor's own address, never the provider's,
   and the account page previews each picture they can choose, which only they get (see
   [decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)). Accounts
   connected before pictures were kept get one at their next sign-in.

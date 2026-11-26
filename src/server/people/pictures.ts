@@ -11,8 +11,9 @@
  * there (`src/app/avatars/[account]/route.ts`) fetches the image from the
  * provider each time a browser asks for it (`loadPicture`), within limits,
  * and stores nothing. It serves the picture someone shows to everyone signed
- * in, and the other pictures they can choose (`choiceAccounts`) to them
- * alone, for the account page. See decision 0051.
+ * in, and the other pictures they can choose (`choiceAccounts`, one account
+ * per provider by the same rule) to them alone, for the account page. See
+ * decision 0051.
  */
 import { createHmac } from 'node:crypto';
 
@@ -28,10 +29,10 @@ import {
 } from '@/lib/sign-in/oauth-providers';
 import {
   type AvatarSource,
+  choiceAccounts,
   isAvatarSource,
   type PictureAccount,
   pictureAccount,
-  pictureProviders,
 } from '@/lib/sign-in/pictures';
 import { idSchema } from '@/lib/validation';
 
@@ -143,23 +144,6 @@ async function accountsOf(
 }
 
 /**
- * The accounts whose pictures someone can choose on the account page: each
- * provider's first connected confirmed account, in the order they connected
- * them, with a picture or without one yet.
- *
- * @param rows - Their connected accounts, the first connected first.
- * @returns One account per provider.
- */
-function choiceAccounts<T extends PictureAccount>(
-  rows: readonly T[],
-): { providerId: OAuthProvider; row: T }[] {
-  return pictureProviders(rows).flatMap((providerId) => {
-    const row = rows.find((found) => found.providerId === providerId && found.confirmed);
-    return row ? [{ providerId, row }] : [];
-  });
-}
-
-/**
  * Whether a viewer gets the pictures someone can choose but doesn't show,
  * for the account page: only that person themselves. A staff member signed
  * in as them gets what the user's page shows the staff, the picture in use.
@@ -226,8 +210,8 @@ export interface PictureChoice {
 
 /**
  * The pictures someone can choose from, for the account page's Picture
- * card: each provider's first connected confirmed account, with its picture
- * (or none yet), what they chose, and what they show by that. A staff member
+ * card: one account per provider (`choiceAccounts`), with its picture (or
+ * none yet), what they chose, and what they show by that. A staff member
  * signed in as them gets the address of the picture in use only, as the
  * route serves them (`loadPicture`), and the accounts' names only when the
  * user's page shows them the names (`personalDataShown`: staff Admins).
@@ -249,7 +233,7 @@ export async function ownPictureChoices(
   const shownAccount = pictureAccount(source, rows);
   const getsOthers = getsOtherChoices(actor, actor.id);
   const { accountNames } = personalDataShown(actor);
-  const choices = choiceAccounts(rows).map(({ providerId, row }) => ({
+  const choices = choiceAccounts(rows).map(({ providerId, account: row }) => ({
     providerId,
     accountName: accountNames ? row.accountName : null,
     hasPicture: row.image !== null,
@@ -416,7 +400,7 @@ export async function loadPicture(
   const { rows, sources } = await accountsOf(ctx.db, [owner.userId]);
   const shown = pictureAccount(sources.get(owner.userId) ?? null, rows);
   const otherChoice = getsOtherChoices(viewer, owner.userId)
-    ? choiceAccounts(rows).find(({ row }) => row.id === id.data)?.row
+    ? choiceAccounts(rows).find(({ account: row }) => row.id === id.data)?.account
     : undefined;
   const served = shown?.id === id.data ? shown : otherChoice;
   if (!served?.image || !isOAuthProvider(served.providerId)) {

@@ -84,6 +84,26 @@ async function personWithTwoPictures() {
 }
 
 /**
+ * A user with two GitHub accounts: the older connected before pictures were
+ * kept, so without one yet, and a newer one with a picture.
+ *
+ * @returns The user and their accounts' IDs.
+ */
+async function personWithAnOldGithubAccount() {
+  const userId = await createUser(db, `old-${randomUUID().slice(0, 8)}@adiutor.test`);
+  const olderGithub = await connectProvider(db, userId, {
+    accountName: 'adiutor-tests-old',
+    createdAt: minutesAgo(10),
+  });
+  const newerGithub = await connectProvider(db, userId, {
+    accountName: 'adiutor-tests',
+    accountImage: GITHUB_PICTURE,
+    createdAt: minutesAgo(5),
+  });
+  return { userId, olderGithub, newerGithub };
+}
+
+/**
  * A user as the actor while a staff member with these global permissions is
  * signed in as them.
  *
@@ -290,6 +310,29 @@ describe('choosing a picture', () => {
     });
   });
 
+  it('offers the account whose picture shows when a provider’s older account has none yet', async () => {
+    const { userId, newerGithub } = await personWithAnOldGithubAccount();
+    const actor = await actorFor(db, userId);
+    const shownPicture = (await loadPictures(db, [userId])).get(userId);
+    expect(shownPicture).toMatch(servedFrom(newerGithub));
+
+    const { choices, source, shown } = await ownPictureChoices(ctx, actor);
+
+    expect(source).toBeNull();
+    expect(shown).toBe('github');
+    // GitHub's option names, previews and saves the account whose picture shows.
+    expect(choices).toEqual([
+      {
+        providerId: 'github',
+        accountName: 'adiutor-tests',
+        hasPicture: true,
+        picture: shownPicture,
+      },
+    ]);
+    expect(await setOwnPicture(ctx, actor, 'github')).toBe('github');
+    expect((await loadPictures(db, [userId])).get(userId)).toBe(shownPicture);
+  });
+
   it('saves a provider or initials, and refuses anything else', async () => {
     const { userId } = await personWithTwoPictures();
     const actor = await actorFor(db, userId);
@@ -390,6 +433,21 @@ describe('loadPicture', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenNthCalledWith(1, GITHUB_PICTURE, expect.anything());
     expect(fetchMock).toHaveBeenNthCalledWith(2, GOOGLE_PICTURE, expect.anything());
+  });
+
+  it('serves its owner the picture of the account their provider’s option offers, after choosing initials', async () => {
+    const { userId, olderGithub, newerGithub } = await personWithAnOldGithubAccount();
+    await db.update(user).set({ avatarSource: 'initials' }).where(eq(user.id, userId));
+    const fetchMock = providerServesPictures();
+    const owner = await actorFor(db, userId);
+
+    expect(await loadPicture(ctx, owner, newerGithub)).toEqual(SERVED);
+    expect(await loadPicture(ctx, owner, olderGithub)).toBeNull();
+    const viewer = await someoneElse();
+    expect(await loadPicture(ctx, viewer, newerGithub)).toBeNull();
+    expect(await loadPicture(ctx, viewer, olderGithub)).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(GITHUB_PICTURE, expect.anything());
   });
 
   it('serves a staff member signed in as the owner only the picture they show', async () => {

@@ -390,9 +390,10 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   only PNG, JPEG, GIF and WebP up to 1 MB (never SVG). It stores nothing, and a failure is logged
   without the address.
 - **Who gets it:** someone signed in, and only while that account is its owner's current picture.
-  The owner alone also gets the other pictures they can choose (each provider's first confirmed
-  account, `choiceAccounts`), so the account page previews each choice, but a staff member signed
-  in as them doesn't: the page gives them initials there (`ownPictureChoices`)
+  The owner alone also gets the other pictures they can choose (one account per provider: its
+  first confirmed account with a picture, else its first, `choiceAccounts` in
+  `src/lib/sign-in/pictures.ts`), so the account page previews each choice, but a staff member
+  signed in as them doesn't: the page gives them initials there (`ownPictureChoices`)
   ([decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)).
   Anything else gets "not found". The account ID in the address isn't the user's ID, so it tells a
   company user nothing about who someone is beyond the picture they show next to their name.
