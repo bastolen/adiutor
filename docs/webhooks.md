@@ -68,6 +68,10 @@ A webhook is a recipient of the news about requests, like a person on a request
   the attempt before it, and records only if that still holds, so the safety net does nothing once
   the first attempt recorded, and an attempt run twice never records twice. Deliveries are kept
   for 30 days (the `retention` job, see [Background jobs](jobs.md#the-jobs)).
+- **A failing receiver doesn't hold up the emails:** the batch that makes the first attempt also
+  sends the emails about requests, so while a webhook is failing (`failing_since` is set) the job
+  only stores its delivery and leaves the first attempt to the queued one. An attempt gives up
+  after 3 seconds when the connection doesn't open, and after 10 in all.
 - **At least once:** an attempt that sent but couldn't record is sent again with the same
   `webhook-id`, and a `request-update` job that couldn't be noted as done before its delivery was
   stored is run again, as an email can arrive twice. A receiver drops what it already has by

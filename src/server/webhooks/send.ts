@@ -5,8 +5,9 @@
  * Adiutor's own network (`address-guard.ts`, checked on this very
  * connection), follows no redirect, gives up after 10 seconds in all (the
  * look-up, the connection, the encryption and the answer's headers: a job's
- * piece of work must end well within the tick, `REQUEST_RUN_SECONDS`), reads
- * at most 4 KB of the answer and drops it, and goes through no proxy. It
+ * piece of work must end well within the tick, `REQUEST_RUN_SECONDS`) and
+ * after 3 when the connection doesn't open, reads at most 4 KB of the answer
+ * and drops it, and goes through no proxy. It
  * logs nothing: the caller logs the delivery's ID and the kind of failure,
  * never the address, which can hold a token.
  */
@@ -29,6 +30,12 @@ import { signedHeaders } from './signing';
 
 /** How long one attempt may take in all, in milliseconds. */
 export const WEBHOOK_TIMEOUT_MS = 10_000;
+
+/**
+ * How long the connection may take to open, in milliseconds: a host that
+ * drops packets gives up here rather than using the whole attempt.
+ */
+const CONNECT_TIMEOUT_MS = 3000;
 
 /** The most of a receiver's answer that's read before the connection is closed. */
 const MAX_ANSWER_BYTES = 4096;
@@ -74,6 +81,8 @@ export interface SendOptions {
   resolve?: ResolveAll;
   /** How long it may take, in milliseconds; {@link WEBHOOK_TIMEOUT_MS} otherwise. */
   timeoutMs?: number;
+  /** How long the connection may take to open, in milliseconds; 3 seconds otherwise. */
+  connectTimeoutMs?: number;
   /** Whether Adiutor runs in production, for the address's rules; from `NODE_ENV` otherwise. */
   production?: boolean;
   /** The moment it's sent, for `webhook-timestamp`; now otherwise. */
@@ -105,12 +114,17 @@ const DNS_ERROR_CODES: ReadonlySet<string> = new Set([
  * @param error - The request's error.
  * @returns The kind.
  */
-function errorKind(error: unknown): WebhookErrorKind {
+export function errorKind(error: unknown): WebhookErrorKind {
   if (error instanceof RefusedAddressError) {
     return 'refused_address';
   }
   const { code = '', name } = error as NodeJS.ErrnoException;
-  if (name === 'AbortError' || name === 'TimeoutError' || code === 'ABORT_ERR') {
+  if (
+    name === 'AbortError' ||
+    name === 'TimeoutError' ||
+    code === 'ABORT_ERR' ||
+    code === 'ETIMEDOUT'
+  ) {
     return 'timeout';
   }
   if (DNS_ERROR_CODES.has(code)) {
@@ -237,6 +251,18 @@ export function sendWebhook(
     );
     request.on('error', (error) => {
       settle({ delivered: false, status: null, error: errorKind(error), durationMs: elapsed() });
+    });
+    request.on('socket', (socket) => {
+      if (!socket.connecting) {
+        return;
+      }
+      const giveUp = setTimeout(() => {
+        request.destroy(
+          Object.assign(new Error('The connection didn’t open in time.'), { code: 'ETIMEDOUT' }),
+        );
+      }, options.connectTimeoutMs ?? CONNECT_TIMEOUT_MS);
+      socket.once('connect', () => clearTimeout(giveUp));
+      socket.once('close', () => clearTimeout(giveUp));
     });
     request.end(body);
   });

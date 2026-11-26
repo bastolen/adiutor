@@ -277,7 +277,9 @@ describe('delivering news to a webhook', () => {
       .returning({ id: webhookDelivery.id });
     await replyThatMovesTheStatus();
 
+    // A failing webhook's first attempt is the queued one.
     await runNews();
+    await runDueAttempts();
 
     expect(await readWebhook(db, webhookId)).toMatchObject({
       turnedOffReason: 'failing',
@@ -411,6 +413,24 @@ describe('delivering news to a webhook', () => {
     expect(receiver.received).toHaveLength(1);
     expect(await deliveries()).toEqual([
       expect.objectContaining({ status: 'cancelled', attempts: 1 }),
+    ]);
+  });
+
+  it('leaves the first attempt to the queued one while the webhook is failing', async () => {
+    await storeWebhook(db, { url: receiver.url, failingSince: new Date(Date.now() - 60 * 60_000) });
+    await replyThatMovesTheStatus();
+
+    expect(await runNews()).toEqual(['succeeded']);
+
+    // Nothing waited on the receiver in the batch that sends the emails about requests.
+    expect(receiver.received).toHaveLength(0);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'pending', attempts: 0 }),
+    ]);
+    await runDueAttempts();
+    expect(receiver.received).toHaveLength(1);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'delivered', attempts: 1 }),
     ]);
   });
 

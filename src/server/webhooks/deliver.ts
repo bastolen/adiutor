@@ -347,7 +347,10 @@ export async function attemptDelivery(
  * there are skipped. Once the delivery is stored, nothing here throws: a
  * first attempt that fails on Adiutor's side is made again by the queued
  * one, under the same `webhook-id`, rather than by running the batch again,
- * which would make a second delivery of the same news.
+ * which would make a second delivery of the same news. While the webhook is
+ * failing (`failing_since`), the first attempt is left to the queued one, so
+ * a receiver that's down never holds up the emails about requests, which run
+ * in the same batches.
  *
  * @param ctx - Service context.
  * @param jobs - The webhook's jobs about one request, in the order they were queued.
@@ -370,6 +373,7 @@ export async function deliverWebhookNews(
       events: webhook.events,
       allTypes: webhook.allTypes,
       turnedOffAt: webhook.turnedOffAt,
+      failingSince: webhook.failingSince,
     })
     .from(webhook)
     .where(eq(webhook.id, first.webhookId));
@@ -407,7 +411,10 @@ export async function deliverWebhookNews(
     }
     return stored?.id;
   });
-  if (deliveryId) {
+  // While the webhook is failing, its first attempt is left to the queued one: a receiver that's
+  // down would otherwise hold up the emails about requests, which share this batch, by an attempt's
+  // seconds for every piece of news.
+  if (deliveryId && found.failingSince === null) {
     try {
       await attemptDelivery(ctx, deliveryId, 1, read);
     } catch {

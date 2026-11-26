@@ -408,8 +408,8 @@ network, or the cloud's metadata service and the credentials it hands out. So
   inside IPv6 (`::ffff:…`, NAT64's `64:ff9b::…`) is judged as the IPv4 it holds. A name with any
   internal address is refused as a whole.
 - **What's sent and read:** a signed `POST` that follows no redirect, goes through no proxy, gives up
-  after 10 seconds in all (look-up, connection, encryption and the answer's headers), and reads at
-  most 4 KB of the answer, which it drops. Only the status, the time it took and a kind of failure
+  after 3 seconds when the connection doesn't open and after 10 in all (look-up, connection,
+  encryption and the answer's headers), and reads at most 4 KB of the answer, which it drops. Only the status, the time it took and a kind of failure
   are kept, never what the receiver answered, so a webhook can't be used to read a page.
 - **Logs** name a delivery and its kind of failure, never the address, which can hold a token.
 

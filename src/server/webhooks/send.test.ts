@@ -8,8 +8,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { startWebhookReceiver, type WebhookReceiver } from '../../../tests/http/webhook-receiver';
-import { addressRules, type ResolveAll } from './address-guard';
-import { sendWebhook } from './send';
+import { addressRules, RefusedAddressError, type ResolveAll } from './address-guard';
+import { errorKind, sendWebhook } from './send';
 import { newWebhookSecret, signWebhook } from './signing';
 
 // The server's own allowed networks aren't used here: every send is given its rules.
@@ -170,5 +170,24 @@ describe('sendWebhook', () => {
         production: true,
       }),
     ).toMatchObject({ delivered: false, error: 'refused_address' });
+  });
+});
+
+describe('errorKind', () => {
+  it('names each kind of failure, a connection that didn’t open in time as a timeout', () => {
+    /**
+     * An error with a code, as Node.js gives its network errors.
+     *
+     * @param code - The code.
+     * @returns The error.
+     */
+    const coded = (code: string) => Object.assign(new Error(code), { code });
+    expect(errorKind(coded('ETIMEDOUT'))).toBe('timeout');
+    expect(errorKind(Object.assign(new Error('aborted'), { name: 'AbortError' }))).toBe('timeout');
+    expect(errorKind(coded('ENOTFOUND'))).toBe('dns');
+    expect(errorKind(new RefusedAddressError())).toBe('refused_address');
+    expect(errorKind(coded('CERT_HAS_EXPIRED'))).toBe('tls');
+    expect(errorKind(coded('ERR_TLS_CERT_ALTNAME_INVALID'))).toBe('tls');
+    expect(errorKind(coded('ECONNRESET'))).toBe('connection');
   });
 });

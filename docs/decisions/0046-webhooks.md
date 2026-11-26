@@ -18,9 +18,10 @@ How it works is in [Webhooks](../webhooks.md). The choices behind it:
   covers every request type or chosen ones, and picks its events: raised, replies, status changes,
   assignees, details, internal notes.
 - **A webhook is a recipient of the news job** (`request-update`): one tick's news about a request
-  is one delivery with its events in order, read when it's sent. The job makes the first attempt;
-  later ones are the delivery's own (5 minutes to 24 hours), since the queue retries only by
-  throwing. Three days of failures, or `410 Gone`, turn it off and email the staff Admins.
+  is one delivery with its events in order, read when it's sent. The job makes the first attempt
+  (a queued one makes it while the webhook is failing, so a dead receiver never holds up the
+  emails); later ones are the delivery's own (5 minutes to 24 hours), since the queue retries only
+  by throwing. Three days of failures, or `410 Gone`, turn it off and email the staff Admins.
 - **Signed JSON by the Standard Webhooks specification, or a chat message** in Adiutor's default
   language, in which no one's text can ping a channel.
 - **People by name and side only:** never an address, a user ID or who was signed in as whom.
