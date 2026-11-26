@@ -17,7 +17,6 @@
     "accountMenu": "Menú de la cuenta:",
     "accountSettings": "Ajustes de la cuenta",
     "signOut": "Cerrar sesión",
-    "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo.",
     "signedInAs": {
       "label": "Sesión iniciada como otra persona",
       "text": "Has iniciado sesión como {name} ({email}). Puedes trabajar en sus solicitudes; todo lo demás es de solo lectura. Termina a las {time}.",

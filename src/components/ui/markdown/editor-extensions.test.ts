@@ -492,6 +492,72 @@ describe('pasting with formatting', () => {
     );
   });
 
+  /** A block of code as a browser copies it from where a text is read: caption, button, code. */
+  const COPIED_CODE = [
+    '<figure data-code-figure="" style="margin: 0px">',
+    '<figcaption style="font-weight: 600">Bash</figcaption>',
+    '<div><button type="button">Copy code</button></div>',
+    '<pre dir="ltr" role="group" aria-label="Bash code" tabindex="0">',
+    '<code class="hljs language-bash"><span class="hljs-built_in">npm</span> test</code>',
+    '</pre></figure>',
+  ].join('');
+
+  it('takes the weight off headings and header cells, and leaves their other styles', () => {
+    const cleaned = withoutOwnLooks(
+      '<h3 style="font-weight: 600; color: red">Steps</h3><table><tr><th style="font-weight: 700; text-align: left">Name</th></tr></table>',
+    );
+
+    expect(cleaned).not.toContain('font-weight');
+    expect(cleaned).toContain('color: red');
+    expect(cleaned).toContain('text-align: left');
+  });
+
+  it('takes a block of code copied from a text as its code alone, and leaves other figures', () => {
+    const cleaned = withoutOwnLooks(COPIED_CODE);
+    expect(cleaned).toMatch(/^<pre[^>]*><code class="hljs language-bash">/);
+    expect(cleaned).not.toMatch(/figure|figcaption|Bash<|Copy code/);
+
+    // Another site's caption is part of what it says.
+    const listing = '<figure><figcaption>Listing 1</figcaption><pre><code>ls</code></pre></figure>';
+    expect(withoutOwnLooks(listing)).toBe(listing);
+  });
+
+  it('pastes a heading and a table’s header row copied from a text without bold', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'Steps\n\nName Role\nSam Support',
+      'text/html': [
+        '<h3 style="font-weight: 600">Steps</h3>',
+        '<table><thead><tr><th style="font-weight: 600">Name</th><th style="font-weight: 600">Role</th></tr></thead>',
+        '<tbody><tr><td>Sam</td><td>Support</td></tr></tbody></table>',
+      ].join(''),
+    });
+
+    expect(writeMarkdown(editor)).toMatch(/^### Steps\n/);
+    expect(writeMarkdown(editor)).not.toContain('**');
+    expect(editor.view.dom.querySelector('strong')).toBeNull();
+  });
+
+  it('pastes a block of code copied from a text as that block, without its caption', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, { 'text/plain': 'Bash\nnpm test', 'text/html': COPIED_CODE });
+
+    expect(writeMarkdown(editor)).toBe('```bash\nnpm test\n```');
+  });
+
+  it('keeps the bold someone gave the text, also as a weight', () => {
+    const editor = editorWith('');
+
+    pasteIn(editor, {
+      'text/plain': 'An urgent fix',
+      'text/html': '<p>An <span style="font-weight: 700">urgent</span> fix</p>',
+    });
+
+    expect(writeMarkdown(editor)).toBe('An **urgent** fix');
+  });
+
   it('pastes a mention without a key as its text, never as a link to the person’s page', () => {
     const editor = editorWith('');
 

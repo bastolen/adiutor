@@ -1,5 +1,6 @@
 /**
- * @file Account setups and sign-in changes shared by the MFA rule tests.
+ * @file Account setups, sign-in changes and step-up methods shared by the MFA
+ * rule tests.
  */
 import type { MfaRole } from './requirement';
 import {
@@ -8,6 +9,15 @@ import {
   wouldRemoveRequiredMfa,
 } from './sign-in-changes';
 import type { MfaState, ProviderAvailability } from './state';
+import type { StepUpMethods } from './step-up';
+
+/** No way to confirm a session at all, to build step-up methods from. */
+export const NO_STEP_UP_METHODS: StepUpMethods = {
+  authenticator: false,
+  email: false,
+  passkey: false,
+  providers: [],
+};
 
 /** An account with nothing set up. */
 export const bare: MfaState = {

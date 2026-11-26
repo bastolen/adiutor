@@ -81,6 +81,8 @@ describe('MarkdownText: formatting', () => {
     // The caption is what people see; the block's name is what a screen reader says on reaching it.
     const figure = screen.getByRole('figure');
     expect(within(figure).getByText('TypeScript').tagName).toBe('FIGCAPTION');
+    // Marked, so a copy pasted in the editor is the code alone (`withoutOwnLooks`).
+    expect(figure).toHaveAttribute('data-code-figure');
     const block = within(figure).getByRole('group', { name: 'TypeScript code' });
     expect(block.tagName).toBe('PRE');
     expect(block).toHaveAttribute('dir', 'ltr');

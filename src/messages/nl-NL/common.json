@@ -200,6 +200,7 @@
         "staffPage": "Het bedrijf leest deze tekst, dus die kan niet naar een pagina voor medewerkers linken."
       }
     },
-    "setByEnvironment": "Gekozen in de omgeving van de server ({variable}), dus je kunt het hier niet wijzigen."
+    "setByEnvironment": "Gekozen in de omgeving van de server ({variable}), dus je kunt het hier niet wijzigen.",
+    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw."
   }
 }
