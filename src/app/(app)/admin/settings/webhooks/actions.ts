@@ -1,9 +1,9 @@
 /**
- * @file Server actions for the Webhooks tab of Settings and a webhook's page:
- * adding, changing, renewing the secret, turning off and on and removing a
- * webhook, sending it a test and sending a delivery again. A change that
- * needs the staff Admin's recent second step sends them to confirm it first,
- * and back to the card (`confirmFirstIfNeeded`).
+ * @file Server actions for the webhooks card of Settings' Connections tab
+ * and a webhook's page: adding, changing, renewing the secret, turning off
+ * and on and removing a webhook, sending it a test and sending a delivery
+ * again. A change that needs the staff Admin's recent second step sends them
+ * to confirm it first, and back to the card (`confirmFirstIfNeeded`).
  */
 'use server';
 
@@ -29,8 +29,8 @@ import {
 
 import confirmFirstIfNeeded from '../../../_people/confirm-grant';
 
-/** The tab's address, where the step-up page comes back to without a `returnTo`. */
-const WEBHOOKS_PAGE = '/admin/settings/webhooks';
+/** The list's card, where the step-up page comes back to without a `returnTo`. */
+const WEBHOOKS_CARD = '/admin/settings/connections#webhooks';
 
 /**
  * The fields of a webhook's form.
@@ -62,7 +62,7 @@ export async function addWebhookAction(
 ): Promise<ActionResult<{ secret: string }>> {
   return runAction(async () => {
     const actor = await getActor();
-    const { secret } = await confirmFirstIfNeeded(formData, WEBHOOKS_PAGE, () =>
+    const { secret } = await confirmFirstIfNeeded(formData, WEBHOOKS_CARD, () =>
       addWebhook(appContext, actor, webhookInput(formData)),
     );
     refresh();
@@ -78,7 +78,7 @@ export async function addWebhookAction(
  * @returns The page's path.
  */
 function webhookPage(formData: FormData): string {
-  return `${WEBHOOKS_PAGE}/${encodeURIComponent(field(formData, 'webhook'))}`;
+  return `/admin/settings/webhooks/${encodeURIComponent(field(formData, 'webhook'))}`;
 }
 
 /**
@@ -169,7 +169,7 @@ export async function removeWebhookAction(
   });
   if (result.ok) {
     refresh();
-    redirect(`${WEBHOOKS_PAGE}?removed=1`);
+    redirect('/admin/settings/connections?removed=1#webhooks');
   }
   return result;
 }

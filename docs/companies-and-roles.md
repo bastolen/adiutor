@@ -131,9 +131,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
 ## Staff screens
 
 - **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with four tabs, each a page
-  of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages.
-  Every tab is for staff Admins, so none is left out. The address before it had tabs,
-  `/admin/staff`, is gone (no redirect).
+  of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages,
+  grouped by what they're for ([decision 0055](decisions/0055-four-settings-tabs.md)). Every tab
+  is for staff Admins, so none is left out. The address before it had tabs, `/admin/staff`, is
+  gone (no redirect); the addresses of the tabs merged into General and Connections lead to the
+  card that took their place.
   - **General** (`/admin/settings`): change the name shown to users (in invitations and wherever
     users see who's helping them), the languages Adiutor offers and its default language (for
     everyone who hasn't chosen one; see [Offered languages](i18n.md#offered-languages)), and its
@@ -148,20 +150,21 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
-  - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
-    it's saved and with the staff Admin's second step from the last 15 minutes, whether people can
-    attach files (only once there's a storage), and the largest file anyone may attach; each only
-    shown when the server's environment chooses it (see
-    [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
-  - **Email** (`/admin/settings/email`): the mail server emails go out through and their sender,
-    tried with a test email to the staff Admin before it's saved, with their second step from the
-    last 15 minutes; only shown when the server's environment names it (`SMTP_URL`, `EMAIL_FROM`;
-    see [Sending email](deploying.md#sending-email)). A change is in the audit log, and every
-    staff Admin is emailed about it.
-  - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
-    the staff's own systems and chat channels, each with whether it's on, its format, the host it
-    sends to, its types and events, and adding one; each webhook's page has its controls and its
-    deliveries (see [Webhooks](webhooks.md)).
+  - **Connections** (`/admin/settings/connections`): what Adiutor connects to outside itself.
+    First the mail server emails go out through and their sender (`#mail-server`), tried with a
+    test email to the staff Admin before it's saved; only shown when the server's environment
+    names it (`SMTP_URL`, `EMAIL_FROM`; see [Sending email](deploying.md#sending-email)). A change
+    is in the audit log, and every staff Admin is emailed about it. Then where attached files are
+    kept (`#storage`), tried before it's saved, whether people can attach files (only once
+    there's a storage), and the largest file anyone may attach; each only shown when the server's
+    environment chooses it (see [Attachments](deploying.md#attachments)). Changing the storage is
+    in the audit log. Saving the mail server or the storage needs the staff Admin's second step
+    from the last 15 minutes. Last, the webhooks that send what happens to requests to the
+    staff's own systems and chat channels (`#webhooks`), each with whether it's on, its format,
+    the host it sends to, its types and events, and adding one; each webhook's page
+    (`/admin/settings/webhooks/[webhookId]`, with Connections current) has its controls and its
+    deliveries (see [Webhooks](webhooks.md)). The old Email, Attachments and Webhooks tabs'
+    addresses lead to these three cards.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It

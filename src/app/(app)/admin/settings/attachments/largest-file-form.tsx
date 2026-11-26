@@ -1,5 +1,5 @@
 /**
- * @file The Largest file form on the Attachments tab of Settings: the most
+ * @file The Largest file form on Settings' Connections tab: the most
  * megabytes a file anyone attaches may have. Its text comes from
  * `admin.settings.attachments.largestFile` (through `ClientMessages`).
  */

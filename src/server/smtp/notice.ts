@@ -82,7 +82,7 @@ export async function smtpChangedEmailFor(
     locale: await recipientLocale(ctx, recipient.locale),
     server,
     byName: by ? displayName(by) : null,
-    url: `${ctx.baseUrl}/admin/settings/email`,
+    url: `${ctx.baseUrl}/admin/settings/connections#mail-server`,
     brand: await loadEmailBrand(ctx.db),
   });
 }

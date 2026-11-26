@@ -56,7 +56,7 @@ tick themselves: see [Background jobs](deploying.md#background-jobs) in the depl
 
 Attaching files is off until there's a storage and **People can attach files** is on (see
 [Attachments](requests.md#attachments)). To try it locally, make a folder (`mkdir -p
-.local/attachments`, which git ignores) and choose it on the Attachments tab of Settings as a
+.local/attachments`, which git ignores) and choose it on the Connections tab of Settings as a
 staff Admin, by its absolute path (`pwd` prints the start of it); saving asks for your second step
 when your account has one. Then turn on People can attach files on the same tab. Setting
 `ATTACHMENTS_STORAGE=local` and `ATTACHMENTS_DIR` in `.env` instead chooses the folder for the

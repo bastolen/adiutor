@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Largest file form on the Attachments tab of Settings:
+ * @file Tests for the Largest file form on Settings' Connections tab:
  * the limit and its ceiling, saving it, and the locked field while the
  * server's environment chooses it.
  */

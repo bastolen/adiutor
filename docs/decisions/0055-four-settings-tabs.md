@@ -1,0 +1,53 @@
+# 0055. Four Settings tabs, grouped by what they're for
+
+- **Status:** Accepted
+- **Date:** 2026-11-27
+
+## Context
+
+Settings grew a tab per feature: General, Staff, Requests, Attachments, Email, Webhooks and
+Appearance. Two of the seven held a single card, the name and the logo that replace Adiutor's sat
+on different tabs, and finding the mail server meant knowing it had a tab of its own. Every tab is
+for staff Admins, so the tabs can only be grouped by what a setting is for. Staff and Requests are
+used week to week; the mail server, the storage and the brand are mostly set once.
+
+## Decision
+
+How the tabs look is in [Companies, users and roles](../companies-and-roles.md#staff-screens).
+
+- **General** (`/admin/settings`): how users see the staff and what they read in. The name, the
+  languages and the default time zone, then the logo, the browser tab icon and the brand colours:
+  the short forms first, the tall cards with previews after.
+- **Staff** and **Requests** stay as they were.
+- **Connections** (`/admin/settings/connections`): what Adiutor connects to. The mail server first,
+  since nobody gets a sign-in link or an invitation without it; then where attached files are kept,
+  with whether people can attach them and the largest file (both need a storage first, so they stay
+  with it); then the webhooks.
+- **In that order:** the tabs used week to week first, the services set once last.
+- **A new setting is a card on the tab of what it's for.** A new tab only for a group that fits
+  none of these.
+- **Old addresses still land:** `redirects` in `next.config.ts` send the four old tabs to the card
+  that took their first place (`#logo`, `#mail-server`, `#storage`, `#webhooks`). A webhook's page
+  keeps `/admin/settings/webhooks/[webhookId]`, with Connections current there (`SegmentTabNav`'s
+  `alsoOn`), so emailed links don't change.
+
+## Consequences
+
+- Longer pages: links and return addresses point at a card's anchor, never only at a tab.
+- An anchor on an old address gives way to the first card's: `/admin/settings/appearance#colours`
+  lands on the logo, two cards above.
+- The redirects are temporary (307), so browsers don't keep them and a later tab may take one of
+  these addresses.
+- `appearance/`, `attachments/` and `email/` hold cards and actions, not routes: each old page
+  became the cards component its tab renders (`appearance-cards.tsx` and so on).
+
+## Alternatives considered
+
+- **A sidebar of sections instead of tabs:** a second kind of section navigation for one page, and
+  with four tabs nothing left to tidy.
+- **Attaching files and the largest file on Requests:** they wait for a storage, which would then
+  be on another tab.
+- **"Integrations" or "Server" as the name:** the first reads as webhooks only, the second as the
+  operator's machine.
+- **Webhook pages under `/admin/settings/connections/webhooks/`:** tidier addresses, but more
+  files would move and emailed links would go through a redirect, for nothing users see.

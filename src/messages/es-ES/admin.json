@@ -253,15 +253,13 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, dónde se guardan los archivos adjuntos y adónde envían los webhooks.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, y adónde van los correos, los archivos adjuntos y los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
         "staff": "Personal",
         "requests": "Solicitudes",
-        "webhooks": "Webhooks",
-        "attachments": "Archivos adjuntos",
-        "email": "Correo"
+        "connections": "Conexiones"
       },
       "general": {
         "name": {
@@ -374,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Envía lo que pasa con las solicitudes a tus propios sistemas como JSON firmado, o a un canal de chat como mensaje. Cada webhook elige los tipos de solicitud y los eventos que recibe.",
@@ -599,7 +596,6 @@
         }
       },
       "attachments": {
-        "title": "Archivos adjuntos",
         "storage": {
           "title": "Dónde se guardan los archivos",
           "description": "Los archivos que se adjuntan a las solicitudes se guardan aquí. Cada uno se sirve desde este servidor, a quien pueda leerlo.",
@@ -681,7 +677,6 @@
         }
       },
       "email": {
-        "title": "Correo",
         "server": {
           "title": "Servidor de correo",
           "description": "Los enlaces de inicio de sesión, los restablecimientos de contraseña, las invitaciones, los avisos de seguridad y los correos sobre solicitudes se envían a través de este servidor.",
@@ -719,6 +714,9 @@
           "saved": "Servidor de correo guardado. Te ha llegado un correo de prueba a través de él.",
           "confirmFirst": "Para cambiar el servidor de correo, primero confirma que eres tú."
         }
+      },
+      "connections": {
+        "title": "Conexiones · Ajustes"
       }
     },
     "companies": {

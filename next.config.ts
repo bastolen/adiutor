@@ -86,9 +86,13 @@ const nextConfig: NextConfig = {
    * @returns The redirect rules.
    */
   async redirects() {
-    return [{ source: '/admin/settings/appearance', destination: '/admin/settings#logo' }].map(
-      (rule) => ({ ...rule, permanent: false }),
-    );
+    return [
+      { source: '/admin/settings/appearance', destination: '/admin/settings#logo' },
+      { source: '/admin/settings/email', destination: '/admin/settings/connections#mail-server' },
+      { source: '/admin/settings/attachments', destination: '/admin/settings/connections#storage' },
+      // Only the list: a webhook's page keeps its address.
+      { source: '/admin/settings/webhooks', destination: '/admin/settings/connections#webhooks' },
+    ].map((rule) => ({ ...rule, permanent: false }));
   },
 
   /** Enables Cache Components (part of the create-next-app defaults). */

@@ -239,9 +239,10 @@ In `src/lib/email.ts`, in order:
 
 - `EMAIL_OUTBOX_DIR` set: written there as JSON (the end-to-end tests read them)
 - `SMTP_URL` set: sent through the mail server the server's environment names (Mailpit in
-  development, your provider in production), which the Email tab of Settings then only shows
-- otherwise the mail server saved on the Email tab of Settings (`email.smtp`, its password
-  encrypted with the auth secret and decrypted here; see
+  development, your provider in production), which the Mail server card of Settings then only
+  shows
+- otherwise the mail server saved on the Mail server card of Settings › Connections
+  (`email.smtp`, its password encrypted with the auth secret and decrypted here; see
   [Sending email](deploying.md#sending-email)). It's read on each send, and its transport is kept
   while the setting stays the same, so a save takes effect at once, also in the background jobs.
   Only this case loads the settings (through `import()`), so `SMTP_URL` alone works as before
@@ -267,7 +268,7 @@ nodemailer's minutes), which closes the connection of a send that was given up; 
 - `EMAIL_OUTBOX_DIR` is refused in production unless `E2E_TESTS=1` (the end-to-end tests)
 
 `sendThrough` sends one email through a given mail server rather than the one in use, on a
-connection of its own that it closes afterwards, with the same time limits: the Email tab tries a
+connection of its own that it closes afterwards, with the same time limits: the Mail server card tries a
 mail server with it before saving, and tells every staff Admin of a change through the server
 it replaced (see [Sending email](deploying.md#sending-email)). With an outbox, it writes there too.
 

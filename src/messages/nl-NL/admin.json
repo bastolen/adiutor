@@ -253,15 +253,13 @@
     },
     "settings": {
       "title": "Instellingen",
-      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, waar bijlagen worden bewaard, en waar webhooks naartoe sturen.",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, en waar e-mails, bijlagen en webhooks naartoe gaan.",
       "sections": "Onderdelen van de instellingen",
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
         "requests": "Verzoeken",
-        "webhooks": "Webhooks",
-        "attachments": "Bijlagen",
-        "email": "E-mail"
+        "connections": "Koppelingen"
       },
       "general": {
         "name": {
@@ -374,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Stuur wat er met verzoeken gebeurt naar je eigen systemen als ondertekende JSON, of naar een chatkanaal als bericht. Elke webhook kiest welke verzoektypen en gebeurtenissen hij krijgt.",
@@ -599,7 +596,6 @@
         }
       },
       "attachments": {
-        "title": "Bijlagen",
         "storage": {
           "title": "Waar bestanden worden bewaard",
           "description": "Bestanden die mensen aan verzoeken toevoegen, worden hier bewaard. Elk bestand wordt via deze server geleverd, aan wie het mag lezen.",
@@ -681,7 +677,6 @@
         }
       },
       "email": {
-        "title": "E-mail",
         "server": {
           "title": "Mailserver",
           "description": "Inloglinks, wachtwoordherstel, uitnodigingen, beveiligingsmeldingen en de e-mails over verzoeken worden via deze server verstuurd.",
@@ -719,6 +714,9 @@
           "saved": "Mailserver opgeslagen. Er kwam via deze server een test-e-mail bij je aan.",
           "confirmFirst": "Om de mailserver te wijzigen, moet je eerst bevestigen dat jij het bent."
         }
+      },
+      "connections": {
+        "title": "Koppelingen · Instellingen"
       }
     },
     "companies": {

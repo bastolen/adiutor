@@ -825,7 +825,7 @@ test.describe('signed in', () => {
   }) => {
     // Opening it needs a recent second step.
     await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
-    await page.goto('/admin/settings/webhooks');
+    await page.goto('/admin/settings/connections');
     const add = page.getByRole('button', { name: 'Add webhook' });
 
     await add.focus();
@@ -919,6 +919,9 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Settings sections', 'Requests', 'Settings');
     await expect(page).toHaveURL('/admin/settings/requests');
     await expect(page).toHaveTitle(`Requests · Settings · ${STAFF_NAME}`);
+    await chooseTab(page, 'Settings sections', 'Connections', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/connections');
+    await expect(page).toHaveTitle(`Connections · Settings · ${STAFF_NAME}`);
     await chooseTab(page, 'Settings sections', 'General', 'Settings');
     await expect(page).toHaveURL('/admin/settings');
     await expect(page).toHaveTitle(`Settings · ${STAFF_NAME}`);

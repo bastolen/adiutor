@@ -1,8 +1,8 @@
 /**
- * @file Tests for the Attaching files form on the Attachments tab of
- * Settings: turning "People can attach files" on and off, and the box that
- * can't be changed without a storage or while the server's environment
- * turned attachments off.
+ * @file Tests for the Attaching files form on Settings' Connections tab:
+ * turning "People can attach files" on and off, and the box that can't be
+ * changed without a storage or while the server's environment turned
+ * attachments off.
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

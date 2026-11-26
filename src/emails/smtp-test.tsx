@@ -60,7 +60,7 @@ export default function SmtpTestEmail({
 SmtpTestEmail.PreviewProps = {
   ...PREVIEW_BASE,
   server: 'smtp.adiutor.dev:587',
-  url: 'https://adiutor.dev/admin/settings/email',
+  url: 'https://adiutor.dev/admin/settings/connections#mail-server',
 } satisfies SmtpTestEmailProps;
 
 /**

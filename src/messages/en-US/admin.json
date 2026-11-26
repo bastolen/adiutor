@@ -253,15 +253,13 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, how requests are numbered and typed, where attached files are kept, and where webhooks send.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where emails, attached files and webhooks go.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",
         "staff": "Staff",
         "requests": "Requests",
-        "webhooks": "Webhooks",
-        "attachments": "Attachments",
-        "email": "Email"
+        "connections": "Connections"
       },
       "general": {
         "name": {
@@ -374,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Send what happens to requests to your own systems as signed JSON, or to a chat channel as a message. Each webhook picks the request types and events it gets.",
@@ -599,7 +596,6 @@
         }
       },
       "attachments": {
-        "title": "Attachments",
         "storage": {
           "title": "Where files are kept",
           "description": "Files people attach to requests are kept here. Each one is served from this server, to whoever may read it.",
@@ -681,7 +677,6 @@
         }
       },
       "email": {
-        "title": "Email",
         "server": {
           "title": "Mail server",
           "description": "Sign-in links, password resets, invitations, security notices and the emails about requests are sent through this server.",
@@ -719,6 +714,9 @@
           "saved": "Mail server saved. A test email reached you through it.",
           "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }
+      },
+      "connections": {
+        "title": "Connections · Settings"
       }
     },
     "companies": {

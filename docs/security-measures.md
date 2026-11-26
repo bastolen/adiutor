@@ -502,7 +502,7 @@ or not, so only what Adiutor made itself is ever served:
 
 ## Where email goes
 
-A staff Admin sets the mail server on the Email tab of Settings, unless the server's environment
+A staff Admin sets the mail server on the Connections tab of Settings, unless the server's environment
 names it (see [Sending email](deploying.md#sending-email) and
 [decision 0045](decisions/0045-mail-server-in-settings.md)). Whoever controls the mail server can
 read every sign-in link, password reset link and emailed code Adiutor sends, so:
@@ -531,7 +531,7 @@ read every sign-in link, password reset link and emailed code Adiutor sends, so:
 
 ## Where attached files are kept
 
-A staff Admin chooses the storage on the Attachments tab of Settings, unless the server's
+A staff Admin chooses the storage on the Connections tab of Settings, unless the server's
 environment does (see [Attachments](deploying.md#attachments) and
 [decision 0044](decisions/0044-attachments.md)):
 

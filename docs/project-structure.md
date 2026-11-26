@@ -70,10 +70,10 @@ The folders of the repository and what belongs in each. Back to the [documentati
     Better Auth's configuration reads that.
   - `src/server/storage/`: where attached files are kept (see [Attachments](deploying.md#attachments)):
     a driver per storage (`local.ts`, `s3.ts`, `sftp.ts`) behind `FileStorage`, the keys files are
-    kept under, the storage files go to now (`activeStorage`), and the Attachments tab of Settings
+    kept under, the storage files go to now (`activeStorage`), and the attachment cards of Settings
     (`settings.ts`, with the secrets encrypted by `secrets.ts`). Free of `server-only`, since the
     jobs' command imports it.
-  - `src/server/smtp/`: the Email tab of Settings (see [Sending email](deploying.md#sending-email)):
+  - `src/server/smtp/`: the Mail server card of Settings (see [Sending email](deploying.md#sending-email)):
     reading and saving the mail server (`settings.ts`, tried with a test email first) and telling
     every staff Admin of a change (`notice.ts`). Sending itself is `src/lib/email.ts`, which
     reads the saved mail server through `import()`, so `SMTP_URL` alone never loads the settings.

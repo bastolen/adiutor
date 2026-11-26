@@ -3,8 +3,9 @@
  * the logo and the icon made from it, the request number prefix, request
  * types, where attached files are kept (and the storage chosen kept through
  * confirming it's you), inviting staff, staff roles and the last-Admin
- * guard, and confirming it's you before giving a staff role or a company's
- * Admin role. A test that changes a setting puts it back.
+ * guard, confirming it's you before giving a staff role or a company's
+ * Admin role, and the addresses of the tabs merged into others. A test that
+ * changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -57,6 +58,7 @@ import {
   waitForEmailAbout,
   waitForNewEmail,
 } from './support/outbox';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
@@ -323,7 +325,7 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
   }
 });
 
-test('the address of a tab merged into another leads to its first card', async ({ page }) => {
+test('the addresses of tabs merged into others lead to their first cards', async ({ page }) => {
   await signIn(page, PLATFORM_ADMIN);
   const tabs = page.getByRole('navigation', { name: 'Settings sections' });
 
@@ -332,6 +334,22 @@ test('the address of a tab merged into another leads to its first card', async (
   await expect(page).toHaveURL('/admin/settings#logo');
   await expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('region', { name: 'Logo' })).toBeInViewport();
+
+  // Email, Attachments and Webhooks are on the Connections tab, which a webhook's page keeps.
+  const connections = tabs.getByRole('link', { name: 'Connections' });
+  await inOrder(
+    [
+      ['email', 'mail-server', 'Mail server'],
+      ['attachments', 'storage', 'Where files are kept'],
+      ['webhooks', 'webhooks', 'Webhooks'],
+    ] as const,
+    async ([old, card, region]) => {
+      await page.goto(`/admin/settings/${old}`);
+      await expect(page).toHaveURL(`/admin/settings/connections#${card}`);
+      await expect(connections).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('region', { name: region })).toBeInViewport();
+    },
+  );
 });
 
 test('the staff’s name shows instead of Adiutor everywhere, with Powered by Adiutor', async ({
@@ -414,7 +432,7 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
   try {
     await restoreAttachmentSettings([]);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/attachments');
+    await page.goto('/admin/settings/connections');
     await expect(
       page.getByText('No storage is chosen yet, so nobody can attach files.'),
     ).toBeVisible();
@@ -473,7 +491,7 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await signIn(page, PLATFORM_ADMIN);
     // Signed in 20 minutes ago, as far as the confirmation window goes.
     await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
-    await page.goto('/admin/settings/attachments');
+    await page.goto('/admin/settings/connections');
 
     const storage = page.getByRole('combobox', { name: 'Storage' });
     await storage.click();
@@ -499,7 +517,7 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
     // Back with the bucket chosen and everything typed, ready to save.
-    await expect(page).toHaveURL('/admin/settings/attachments#storage', { timeout: 15_000 });
+    await expect(page).toHaveURL('/admin/settings/connections#storage', { timeout: 15_000 });
     await expect(save).toBeEnabled();
     await expect(storage).toHaveText(/An S3-compatible bucket/);
     await expect(endpoint).toHaveValue('https://files.adiutor.test');
@@ -517,7 +535,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
   try {
     await restoreSmtpSetting(null);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/email');
+    await page.goto('/admin/settings/connections');
     // The tests' server runs in production, where a missing mail server means no sign-in links.
     await expect(
       page.getByText(
