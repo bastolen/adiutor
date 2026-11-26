@@ -19,9 +19,10 @@ Everything in 0022 holds except who gets which picture:
 
 - **The picture someone shows** is served to everyone signed in, as before: readers get it
   wherever they get the name.
-- **The other pictures they can choose** (each provider's first confirmed account,
-  `choiceAccounts` in `src/server/people/pictures.ts`) are served to their owner alone, whichever
-  picture they show, so the account page previews each choice (`loadPicture` takes the viewer).
+- **The other pictures they can choose** (one account per provider, the one whose picture
+  choosing it shows: `choiceAccounts` in `src/lib/sign-in/pictures.ts`) are served to their owner
+  alone, whichever picture they show, so the account page previews each choice (`loadPicture`
+  takes the viewer).
 - **A staff member signed in as them** gets only the picture in use, as the user's page shows the
   staff. The account page gives them no address for the others (`ownPictureChoices`), and shows
   initials in those previews.
