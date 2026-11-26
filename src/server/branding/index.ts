@@ -8,4 +8,5 @@
  */
 export { type BrandColoursInput, getBrandColours, setBrandColours } from './colour-settings';
 export { default as loadBrandColours } from './colours';
+export { default as loadEmailBrand } from './email-brand';
 export { default as pageBrandCss } from './page-colours';

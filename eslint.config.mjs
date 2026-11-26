@@ -437,6 +437,44 @@ const restrictedImportsConfig = [
     },
   },
   {
+    name: 'adiutor/restricted-imports/emails',
+    files: ['src/emails/**/*.{ts,tsx}', 'src/components/email/**/*.{ts,tsx}'],
+    rules: {
+      /**
+       * Emails are bundled into server code (the jobs route, the
+       * instrumentation), where React's server build has no hooks or context:
+       * values reach the blocks as props (decision 0047).
+       */
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: folderModulePatterns,
+          paths: [
+            useActionStatePath,
+            nextAfterPath,
+            {
+              name: 'react',
+              importNames: [
+                'createContext',
+                'useContext',
+                'useState',
+                'useEffect',
+                'useLayoutEffect',
+                'useReducer',
+                'useRef',
+                'useMemo',
+                'useCallback',
+                'use',
+              ],
+              message:
+                'Emails render in server code, where React has no hooks or context: pass values as props (decision 0047).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     name: 'adiutor/restricted-imports/transient-state',
     files: ['src/components/ui/use-transient-state.ts'],
     rules: {

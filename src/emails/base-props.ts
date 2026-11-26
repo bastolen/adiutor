@@ -2,7 +2,17 @@
  * @file The props and example data every email template shares, so each
  * template only declares what is its own.
  */
+import type { EmailColours } from '@/components/email/theme';
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
+
+/**
+ * How the operator's brand shows in an email (decision 0047). An object, so
+ * what more of the brand an email shows has a place to go.
+ */
+export interface EmailBrand {
+  /** The colours the email is drawn with (`emailColoursOf`). */
+  colours: EmailColours;
+}
 
 /**
  * Props every email template takes. Templates extend it with their own
@@ -18,6 +28,11 @@ export interface EmailBaseProps {
   locale: Locale;
   /** Logo URL override, for the template preview. */
   logoSrc?: string;
+  /**
+   * The brand colours to draw the email with (`loadEmailBrand`, which every
+   * send passes); without it, the theme's own.
+   */
+  brand?: EmailBrand;
 }
 
 /**

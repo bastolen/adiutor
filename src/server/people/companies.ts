@@ -24,6 +24,7 @@ import {
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
 import { withMfaPromotion } from '../auth/mfa-promotion';
+import { loadEmailBrand } from '../branding';
 import type { ServiceContext } from '../context';
 import { isUniqueViolation, notFoundError, ServiceError } from '../errors';
 import assertLanguageOffered from '../offered-language';
@@ -147,7 +148,7 @@ export async function registerCompany(
       return { created: inserted, invitation: invited };
     });
     // Rendered only now, once the transaction has committed and released its locks.
-    await ctx.sendEmail(await invitation.renderEmail());
+    await ctx.sendEmail(await invitation.renderEmail(await loadEmailBrand(ctx.db)));
     return {
       companyId: created.id,
       slug: created.slug,

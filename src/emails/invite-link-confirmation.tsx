@@ -10,6 +10,7 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
+import { emailColours } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
@@ -43,7 +44,9 @@ export default function InviteLinkConfirmationEmail({
   validDays,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: InviteLinkConfirmationEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.inviteLinkConfirmation');
   const values = { company: companyName, role: translator(locale, 'roles')(`${role}.label`) };
   return (
@@ -52,14 +55,17 @@ export default function InviteLinkConfirmationEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <RoleSummary role={role} locale={locale} />
-      <EmailButton href={url}>{t('button', values)}</EmailButton>
-      <EmailNote>{t('note', { days: validDays })}</EmailNote>
-      <LinkFallback url={url} locale={locale} />
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <RoleSummary colours={colours} role={role} locale={locale} />
+      <EmailButton colours={colours} href={url}>
+        {t('button', values)}
+      </EmailButton>
+      <EmailNote colours={colours}>{t('note', { days: validDays })}</EmailNote>
+      <LinkFallback colours={colours} url={url} locale={locale} />
     </EmailLayout>
   );
 }

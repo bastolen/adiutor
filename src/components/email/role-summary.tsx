@@ -7,7 +7,7 @@ import type { Role } from '@/lib/authz/roles';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 
-import { colors } from './theme';
+import type { EmailColours } from './theme';
 
 /**
  * The role's name and what it can do, in a soft panel, in the recipient's
@@ -16,8 +16,17 @@ import { colors } from './theme';
  * @param props - Component props.
  * @param props.role - The role.
  * @param props.locale - The recipient's language.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
-export default function RoleSummary({ role, locale }: { role: Role; locale: Locale }) {
+export default function RoleSummary({
+  role,
+  locale,
+  colours: colors,
+}: {
+  role: Role;
+  locale: Locale;
+  colours: EmailColours;
+}) {
   const t = translator(locale, 'roles');
   return (
     <Section

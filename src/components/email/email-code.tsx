@@ -4,7 +4,7 @@
  */
 import { Section, Text } from 'react-email';
 
-import { colors, monoFontFamily } from './theme';
+import { type EmailColours, monoFontFamily } from './theme';
 
 /**
  * Props for {@link EmailCode}.
@@ -12,13 +12,15 @@ import { colors, monoFontFamily } from './theme';
 interface EmailCodeProps {
   /** The code, e.g. "482915". */
   code: string;
+  /** The email's colours (`emailColours(props.brand)`). */
+  colours: EmailColours;
 }
 
 /**
  * The code centred in a bordered box on the email's background colour, in
  * large, widely spaced monospace digits.
  */
-export default function EmailCode({ code }: EmailCodeProps) {
+export default function EmailCode({ code, colours: colors }: EmailCodeProps) {
   return (
     <Section
       style={{

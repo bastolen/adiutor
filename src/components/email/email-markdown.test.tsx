@@ -11,6 +11,7 @@ import { storedMentionMarker } from '@/lib/requests';
 
 import UNLINKED_CASES from '../../../tests/ui/unlinked-markdown';
 import EmailMarkdown from './email-markdown';
+import { DEFAULT_EMAIL_COLOURS } from './theme';
 
 /** The ID of a mention's row, as a stored text's marker names it. */
 const SAM = '019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b';
@@ -41,6 +42,7 @@ function show(
       id="text"
       locale={options.locale ?? 'en-US'}
       appUrl={options.appUrl === undefined ? 'https://adiutor.dev' : options.appUrl}
+      colours={DEFAULT_EMAIL_COLOURS}
     />,
   ).container;
 }
@@ -141,6 +143,7 @@ describe('EmailMarkdown: formatting', () => {
         id="text"
         locale="en-US"
         appUrl="https://adiutor.dev"
+        colours={DEFAULT_EMAIL_COLOURS}
       />,
     );
 
@@ -385,6 +388,7 @@ describe('EmailMarkdown: links to the staff’s pages', () => {
         id="text"
         locale="en-US"
         appUrl="https://adiutor.dev"
+        colours={DEFAULT_EMAIL_COLOURS}
       />,
     );
 

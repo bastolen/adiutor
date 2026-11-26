@@ -10,6 +10,7 @@ import { company, membership, user } from '@/db/schema';
 import { addedToCompanyEmail } from '@/emails/added-to-company';
 import displayName from '@/lib/display-name';
 
+import { loadEmailBrand } from '../../branding';
 import getStaffName from '../../people/staff-name';
 import { addedToCompanyJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
@@ -41,6 +42,7 @@ export default handleQueuedJob(
     await ctx.sendEmail(
       await addedToCompanyEmail(member.email, {
         appUrl: ctx.baseUrl,
+        brand: await loadEmailBrand(ctx.db),
         locale: await recipientLocale(ctx, member.locale),
         // The staff member's account may be gone since; the staff's name stands in then.
         adderName: adder ? displayName(adder) : await getStaffName(ctx.db),

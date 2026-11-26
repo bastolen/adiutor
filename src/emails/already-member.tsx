@@ -5,6 +5,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -30,7 +31,9 @@ export default function AlreadyMemberEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: AlreadyMemberEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.alreadyMember');
   const values = { company: companyName };
   return (
@@ -39,11 +42,14 @@ export default function AlreadyMemberEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <EmailButton href={url}>{t('button', values)}</EmailButton>
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button', values)}
+      </EmailButton>
     </EmailLayout>
   );
 }

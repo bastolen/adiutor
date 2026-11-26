@@ -12,6 +12,7 @@ import { staffAdminAddedEmail } from '@/emails/staff-admin-added';
 import { PLATFORM_ADMIN_ROLE } from '@/lib/authz/roles';
 import displayName from '@/lib/display-name';
 
+import { loadEmailBrand } from '../../branding';
 import { staffAdminAddedJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { handleQueuedJob } from '../define';
@@ -52,6 +53,7 @@ export default handleQueuedJob(
     await ctx.sendEmail(
       await staffAdminAddedEmail(recipient.email, {
         appUrl: ctx.baseUrl,
+        brand: await loadEmailBrand(ctx.db),
         locale: await recipientLocale(ctx, recipient.locale),
         newAdminName: displayName(newAdmin),
         newAdminEmail: newAdmin.email,

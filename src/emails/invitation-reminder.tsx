@@ -9,6 +9,7 @@ import {
   EmailParagraph,
   LinkFallback,
 } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
@@ -53,7 +54,9 @@ export default function InvitationReminderEmail({
   timeZone,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: InvitationReminderEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.invitationReminder');
   const values = {
     inviter: inviterName,
@@ -67,13 +70,16 @@ export default function InvitationReminderEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
-      <EmailNote>{t('note')}</EmailNote>
-      <LinkFallback url={url} locale={locale} />
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
+      <EmailNote colours={colours}>{t('note')}</EmailNote>
+      <LinkFallback colours={colours} url={url} locale={locale} />
     </EmailLayout>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from '../../access';
 import type { Actor } from '../../actor';
 import { recordEvent } from '../../audit';
+import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
 import { forbiddenError, notFoundError, parseId } from '../../errors';
 import { orderTerms, paginate } from '../../pagination';
@@ -220,7 +221,7 @@ export async function resendInvitation(
     return resent;
   });
   // Rendered only now, once the transaction has committed and released its locks.
-  await ctx.sendEmail(await created.renderEmail());
+  await ctx.sendEmail(await created.renderEmail(await loadEmailBrand(ctx.db)));
 }
 
 /**
