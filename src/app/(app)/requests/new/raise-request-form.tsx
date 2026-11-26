@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
@@ -21,10 +21,13 @@ import { REQUEST_PRIORITIES } from '@/lib/requests';
 
 import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
-import raiseRequestAction from './actions';
+import raiseRequestAction, { raiseForChoicesAction } from './actions';
 
 /** The priority select's first choice: leave the priority to the request's type. */
 const FROM_TYPE = 'from-type';
+
+/** The first choice of who it's raised for: the staff member raises it themself. */
+const FOR_SELF = 'self';
 
 /** A company a request can be raised in. */
 interface RaisableCompany {
@@ -44,6 +47,14 @@ interface RaisableType {
   description: string;
 }
 
+/** Someone at the company the staff can raise a request for. */
+interface RaiseForChoice {
+  /** Their key in the company, which the form sends. */
+  key: string;
+  /** Their name. */
+  name: string;
+}
+
 /**
  * Props for {@link RaiseRequestForm}.
  */
@@ -58,17 +69,24 @@ interface RaiseRequestFormProps {
   choosesPriority: boolean;
   /** What attaching needs, while people can attach files to the description. */
   attaching?: Attaching | null;
+  /** Whether the viewer can raise it for someone at the company: the staff who work on requests. */
+  raisesFor?: boolean;
+  /** Who it can be raised for in the company chosen already, if one is; by name. */
+  raiseForChoices?: readonly RaiseForChoice[];
 }
 
 /**
  * A form with the request's company (a select only when there's more than
  * one to choose from, naming a company by its URL name too when another has
  * the same name: `companyChoiceLabels`), title, type and description. Each type says what it's
- * for. The staff also get a priority, which the type sets unless they choose
- * one; nobody else sees a priority. While people can attach files, files go
- * with the description (`AttachmentPicker`), and the request waits for them
- * to upload. A refused request keeps what was typed and attached; a raised
- * one opens its page.
+ * for. The staff also choose who it's for, themselves or an Admin or Client
+ * of the company who asked them (the people come with the company chosen
+ * already, and are asked for when another is chosen, which puts the choice
+ * back to themselves), and get a priority, which the type sets unless they
+ * choose one; nobody else sees either. While people can attach files, files
+ * go with the description (`AttachmentPicker`), and the request waits for
+ * them to upload. A refused request keeps what was typed and attached; a
+ * raised one opens its page.
  */
 export default function RaiseRequestForm({
   types,
@@ -76,6 +94,8 @@ export default function RaiseRequestForm({
   company = undefined,
   choosesPriority,
   attaching = null,
+  raisesFor = false,
+  raiseForChoices = [],
 }: RaiseRequestFormProps) {
   const t = useTranslations('requests');
   const tCommon = useTranslations('common');
@@ -93,6 +113,40 @@ export default function RaiseRequestForm({
     () => (chosen ? mentionChoicesAction({ company: chosen }) : Promise.resolve([])),
     [chosen],
   );
+  // Who it's raised for, among the people of the chosen company: asked for when it changes.
+  const [forChoices, setForChoices] = useState(raiseForChoices);
+  const [raisedFor, setRaisedFor] = useState(FOR_SELF);
+  const [loadingFor, setLoadingFor] = useState(false);
+  // Only the answer for the company chosen last counts.
+  const latestCompany = useRef('');
+  /**
+   * Chooses the company and, for the staff, asks for its people, putting
+   * who it's raised for back to themselves meanwhile.
+   *
+   * @param slug - The company's URL name.
+   */
+  const chooseCompany = (slug: string) => {
+    setChosen(slug);
+    if (!raisesFor) {
+      return;
+    }
+    latestCompany.current = slug;
+    setRaisedFor(FOR_SELF);
+    setForChoices([]);
+    setLoadingFor(true);
+    /**
+     * Shows the people of the company, unless another was chosen meanwhile.
+     *
+     * @param people - Who it can be raised for there.
+     */
+    const show = (people: readonly RaiseForChoice[]) => {
+      if (latestCompany.current === slug) {
+        setForChoices(people);
+        setLoadingFor(false);
+      }
+    };
+    raiseForChoicesAction(slug).then(show, () => show([]));
+  };
 
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -107,9 +161,26 @@ export default function RaiseRequestForm({
             tCommon('companyWithUrlName', { name, urlName: slug }),
           ).map(({ slug, label }) => ({ value: slug, label }))}
           defaultValue={company ?? ''}
-          onValueChange={setChosen}
+          onValueChange={chooseCompany}
           placeholder={t('new.companyPlaceholder')}
         />
+      )}
+      {raisesFor && (
+        <>
+          {/* The select can't hold an empty value, so the staff member themself is sent as none. */}
+          <input type="hidden" name="raised_for" value={raisedFor === FOR_SELF ? '' : raisedFor} />
+          <SelectField
+            label={t('new.raiseForLabel')}
+            options={[
+              { value: FOR_SELF, label: t('new.raiseForSelf') },
+              ...forChoices.map(({ key, name }) => ({ value: key, label: name })),
+            ]}
+            value={raisedFor}
+            onValueChange={setRaisedFor}
+            busy={loadingFor}
+            description={t('new.raiseForHint')}
+          />
+        </>
       )}
       <TextField
         label={t('new.titleLabel')}

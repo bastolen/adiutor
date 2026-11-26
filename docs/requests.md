@@ -8,9 +8,10 @@ requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
-the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), and for the
-board in [decision 0037](decisions/0037-a-board-of-requests.md), and for its attachments in
-[decision 0044](decisions/0044-attachments.md).
+the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), for the
+board in [decision 0037](decisions/0037-a-board-of-requests.md), for raising one for someone
+in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md), and for its attachments
+in [decision 0044](decisions/0044-attachments.md).
 
 ## Words
 
@@ -53,6 +54,9 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
   access, so its requests are "not found" to them (see
   [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
   page and under All, and leave the Active and Waiting lists that cover several companies.
+- The staff who work on requests (`requests:manage`) can **raise a request for someone** at the
+  company, an Admin or a Client, who is then who raised it (see
+  [Raising a request for someone](#raising-a-request-for-someone)).
 - While a staff member is **signed in as a user**, they can do that user's request work, which
   records them (see [Signed in as a user](#signed-in-as-a-user)); managing request types stays
   off.
@@ -253,7 +257,8 @@ Someone subscribed to a request follows it: a request's assignees and subscriber
   for the staff, the staff in another. Like the assignees' dialog it saves only what its editor
   changed. A deactivated company's request has neither button.
 - **Automatically** (`subscribeAutomatically`, in the transaction of the change): whoever raises a
-  request, replies to it or is mentioned in it is subscribed. Someone who unsubscribes stays
+  request (and, for a request raised for someone, both that person and the staff member), replies
+  to it or is mentioned in it is subscribed. Someone who unsubscribes stays
   unsubscribed until they reply or are mentioned again. Editing a text subscribes the people it
   mentions newly, not the ones it mentioned already.
 - **Who sees the subscribers** (`getRequest`): the staff see everyone, each on their side. Someone
@@ -285,9 +290,11 @@ written and sent is in [Email](email.md), and the jobs that send them in
 [Background jobs](jobs.md#queued-jobs).
 
 - **What is told:** a reply, an internal note (to the staff only), a change of status (also the
-  one a reply brings, and done, cancelled and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
-  subscribed by someone else. A new request emails nobody but the people its description
-  mentions: it shows in the list and on the dashboard. A changed title, type or priority, an
+  one a reply brings, and done, cancelled and reopened), and being put on the request: assigned to it, mentioned in one of its texts,
+  subscribed by someone else, or having it raised for them by a staff member (`raised`, with its
+  description; see [Raising a request for someone](#raising-a-request-for-someone)). A new
+  request emails nobody but whoever it was raised for and the people its description mentions: it
+  shows in the list and on the dashboard. A changed title, type or priority, an
   edited text (unless the edit adds a mention) and being taken off a request email nobody.
 - **Who is told** (`src/server/requests/updates.ts`, the one place that decides it): a reply and
   a status change go to everyone on the request, its assignees and its subscribers
@@ -349,6 +356,15 @@ written and sent is in [Email](email.md), and the jobs that send them in
   or a mention in one, is queued for the staff only, and `readRequestUpdate` checks again: it
   builds a note item only for a reader with `requests:view-internal`, so a note queued for anyone
   else by mistake is left out, and an email with nothing left isn't sent.
+
+## Webhooks
+
+The staff's own systems and chat channels can hear of a request too, through webhooks that staff
+Admins set up (see [Webhooks](webhooks.md)). Which webhooks hear of what is decided in one place,
+`tellWebhooks` (`src/server/requests/tell-webhooks.ts`), queued in the change's transaction like
+the emails: a request raised, a reply, an internal note, a status change, an assignment or removal,
+and a change of title, type or priority, for the webhooks that chose it and cover the request's
+type, whoever made the change.
 
 ## Numbers
 
@@ -638,8 +654,8 @@ A description, a reply or a note can mention people. Why it's built this way is 
 - **Who may be mentioned** (`listMentionable`, for whoever may write there:
   `requests:contribute`): the staff can mention everyone at the request's company and every staff
   member who reads requests; someone at the company can mention their colleagues, and the staff
-  members whose names the request already shows them (who raised it, replied, changed it, is or
-  was assigned; not who only changed the priority or wrote an internal note, which they don't
+  members whose names the request already shows them (who raised it or raised it for someone,
+  replied, changed it, is or was assigned; not who only changed the priority or wrote an internal note, which they don't
   see). For a request that isn't
   raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
   deactivated account, or someone without a name to show; someone on the staff who is also in the
@@ -760,6 +776,45 @@ in [Attachments](deploying.md#attachments).
   the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
   told, the request's last activity doesn't move, and a removed file is "not found" from then on.
 
+## Raising a request for someone
+
+Someone at a company who asks by phone or by email can have a staff member raise the request for
+them ([decision 0047](decisions/0047-staff-raise-a-request-for-someone.md)).
+
+- **Who:** the staff who work on requests (`requests:manage`) raise it for an active Admin or
+  Client of the company with a name to show: someone who could raise it themselves, on the
+  company's side. Not a Watcher, who can't raise a request, and not someone whose own request
+  would be the staff's (a staff member who works on requests and is also a member). Anyone else
+  who names someone is refused (`forbidden`).
+- **Named by their key:** `listRaisableFor` lists the people by name with their key in the company
+  (`mentionKey`), and `raiseRequest` takes that key (`raisedFor`), never a user ID. A key that
+  stands for nobody it can be raised for is refused (`errors.requests.notRaisableFor`). The
+  raising transaction locks the person's account row with the actor's (`assertStillMayChange`'s
+  `alsoLock`, which also checks again that the actor still works on requests) and then their
+  membership, and checks them again (`assertStillRaisableFor`; see
+  [Lock order](security-measures.md#lock-order)), so someone who became a Watcher, left the
+  company or was deactivated meanwhile has nothing raised for them.
+- **The record:** the person is who raised it (`created_by`), on the company's side
+  (`created_by_side`), so it counts as the company's request. A flag and the staff member
+  (`created_on_behalf`, `created_on_behalf_by`) say who raised it for them; the flag outlives the
+  staff member's account. A staff member signed in as another staff member who raises it for
+  someone is recorded as usual (`signedInAsWork`), for the staff member they're signed in as.
+- **On the page** (`getRequest`'s `raisedOnBehalf`, `RaisedForNote`): every reader of the request
+  reads who raised it for the person, after the time in the description's header and under "Raised
+  by" in the Details: "Ann raised this for Pat", "Ann raised this for you" for Pat, "You raised
+  this for Pat" for Ann, and the staff's name once Ann's account is gone. As the company's request
+  it has a first response. Code copied from the description names the staff member as who wrote
+  it, and the company can mention them, as the request shows their name.
+- **Signed in as someone:** a mark on raising (see [Signed in as a user](#signed-in-as-a-user))
+  is about the staff member who raised it for the person, the one who did the work: they and the
+  staff who see the audit log read it, not the person it was raised for.
+- **Following it:** both the person and the staff member are subscribed.
+- **Told by email** (`tellRaisedFor`): the person gets an email that the staff member raised the
+  request for them, with its description as it is when the email is sent, opening the request at
+  its description. A mention of them in the description isn't told again; the staff member, who
+  raised it, isn't told.
+- **Rate limits** count against the staff member (`actingUserId`), who is acting.
+
 ## Signed in as a user
 
 A staff member signed in as a user
@@ -859,14 +914,19 @@ says so with a "Show everything" button.
   them (its people and the staff), under the company's header with its Requests tab still current
   (see [The board](#the-board)).
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
-  type with what each is for, and a description. The staff also choose a priority, or leave it to
-  the type. It opens the new request. A company that wasn't chosen is asked for like any other
+  type with what each is for, and a description. The staff also choose who it's for, themselves
+  ("Yourself") or someone at the company (see
+  [Raising a request for someone](#raising-a-request-for-someone)), and a priority, or leave it to
+  the type. The people come with a company that's chosen already; choosing another asks for its
+  people (`raiseForChoicesAction`, busy meanwhile) and puts the choice back to "Yourself". It opens
+  the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
   change (and, for the staff, every internal note), oldest first unless the reader chose otherwise
   (see [Reading the activity](#reading-the-activity)), and a Details bar: status, who
   it's assigned to, who is subscribed, type, priority (staff),
-  company, who raised it and when, the staff's first response and the last activity, with the
+  company, who raised it (and who raised it for them) and when, the staff's first response and the
+  last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1200px of
@@ -1018,8 +1078,10 @@ no Move menu.
   `findRequestNumber`, `getRequest`, `setActivityView` (how the reader reads the activity),
   `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
-  `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`,
-  `readRequestUpdate` (what one person's email about a request may show), and
+  `listRaisableFor` (who a request can be raised for), `listMentionable`, `subscribe`,
+  `unsubscribe`, `changeSubscribers`, `listSubscribable`,
+  `readRequestUpdate` (what one person's email about a request may show), `readWebhookNews` (what
+  a webhook is told, see [Webhooks](webhooks.md#whats-sent)), and
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
   Every change checks the permission and that the company is active, validates, takes a rate

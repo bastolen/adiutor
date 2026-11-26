@@ -29,6 +29,8 @@ export const QUEUED_JOB_NAMES = [
   'added-to-company',
   'staff-admin-added',
   'request-update',
+  'webhook-delivery',
+  'webhook-turned-off',
 ] as const;
 
 /** A recurring job or a kind of queued job. */
@@ -86,6 +88,8 @@ const JOB_SUMMARY_KEYS = [
   'unsentFiles',
   /** Removed attachments whose files were deleted, because that failed when they were removed. */
   'removedFiles',
+  /** Deliveries to webhooks deleted after 30 days. */
+  'webhookDeliveries',
 ] as const;
 
 /** One count a run can report. */

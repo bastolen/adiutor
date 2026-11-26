@@ -251,7 +251,7 @@
     },
     "requestUpdate": {
       "subject": "{reference}: {title}",
-      "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} other {{name} subscribed you to this request.}}",
+      "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} raised {{name} raised this request for you.} other {{name} subscribed you to this request.}}",
       "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
       "reply": "<strong>{name}</strong> replied:",
@@ -263,6 +263,7 @@
       "assigned": "<strong>{name}</strong> assigned this request to you.",
       "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} note {<strong>{name}</strong> mentioned you in an internal note:} other {<strong>{name}</strong> mentioned you in a reply:}}",
       "subscribed": "<strong>{name}</strong> subscribed you to this request.",
+      "raised": "<strong>{name}</strong> raised this request for you:",
       "button": "Open request",
       "answerQuestion": "Does this solve your request?",
       "approve": "Approve",
@@ -270,6 +271,15 @@
       "answerNote": "Approving closes the request. Denying sends it back to the staff, and you can then tell them what’s still wrong. These buttons work only for you, and only once.",
       "noReply": "Replies to this email aren’t read. To answer, open the request.",
       "signInNote": "{days, plural, one {The links in this email sign you in to Adiutor for # day, so don’t forward it.} other {The links in this email sign you in to Adiutor for # days, so don’t forward it.}}"
+    },
+    "webhookTurnedOff": {
+      "subject": "Adiutor turned off the webhook “{name}”",
+      "reason": "You’re receiving this because you’re a staff Admin on Adiutor, who set up webhooks.",
+      "heading": "The webhook “{name}” is off",
+      "why": "{reason, select, gone {Its receiver answered that it’s gone for good (410 Gone), so Adiutor turned it off.} unreadable {Its address or signing secret can’t be read with Adiutor’s current auth secrets any more, so Adiutor turned it off.} other {Every delivery to it has failed for {days, plural, one {# day} other {# days}}, so Adiutor turned it off.}}",
+      "advice": "Nothing is sent to it while it’s off, and what happens meanwhile isn’t sent later. Once its receiver works again, turn it on in Settings, where its last deliveries show what went wrong.",
+      "adviceUnreadable": "Nothing is sent to it while it’s off. Enter its address again and renew its secret in Settings, then turn it on.",
+      "button": "Open the webhook"
     }
   }
 }

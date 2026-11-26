@@ -6,6 +6,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -44,7 +45,9 @@ export default function JobFailingEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: JobFailingEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.jobFailing');
   return (
     <EmailLayout
@@ -52,15 +55,20 @@ export default function JobFailingEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading', { job })}</EmailHeading>
-      <EmailParagraph>
+      <EmailHeading colours={colours}>{t('heading', { job })}</EmailHeading>
+      <EmailParagraph colours={colours}>
         {failure === 'recurring' ? t('recurring', { job, count }) : t('queued', { job, count })}
       </EmailParagraph>
-      {reference && <EmailParagraph>{t('reference', { reference })}</EmailParagraph>}
-      <EmailParagraph>{t('advice')}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
+      {reference && (
+        <EmailParagraph colours={colours}>{t('reference', { reference })}</EmailParagraph>
+      )}
+      <EmailParagraph colours={colours}>{t('advice')}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
     </EmailLayout>
   );
 }

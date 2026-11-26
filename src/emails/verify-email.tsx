@@ -4,6 +4,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -27,7 +28,9 @@ export default function VerifyEmailEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: VerifyEmailEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.verifyEmail');
   return (
     <EmailLayout
@@ -35,12 +38,15 @@ export default function VerifyEmailEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body')}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
-      <LinkFallback url={url} locale={locale} />
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body')}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
+      <LinkFallback colours={colours} url={url} locale={locale} />
     </EmailLayout>
   );
 }

@@ -26,6 +26,7 @@ import { signedInAsWork } from '../signed-in-as';
 import { requestScope, visibleRequests } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { ASSIGNED } from './participants';
+import { tellWebhooks, tellWebhooksAbout } from './tell-webhooks';
 import { tellAssigned } from './updates';
 
 /**
@@ -200,6 +201,12 @@ export async function changeAssignees(
             : [],
         ),
       );
+      // Webhooks hear of every assignment and removal, whoever made it.
+      await tellWebhooks(
+        tx,
+        { requestId: locked.id, typeKey: locked.type },
+        entries.map(({ id }) => ({ event: 'assignee' as const, entryId: id })),
+      );
       await tx
         .update(request)
         .set({ lastActivityAt: CHANGE_MOMENT })
@@ -231,7 +238,7 @@ export async function changeAssignees(
  */
 export async function unassignFrom(tx: DatabaseTransaction, userId: string): Promise<number> {
   const assigned = await tx
-    .select({ id: request.id })
+    .select({ id: request.id, type: request.type })
     .from(request)
     .where(
       exists(
@@ -269,9 +276,19 @@ export async function unassignFrom(tx: DatabaseTransaction, userId: string): Pro
     return 0;
   }
   const requestIds = removed.map(({ requestId }) => requestId);
-  await tx
+  const entries = await tx
     .insert(requestEntry)
-    .values(requestIds.map((requestId) => assignmentEntry(requestId, userId, 'unassigned', null)));
+    .values(requestIds.map((requestId) => assignmentEntry(requestId, userId, 'unassigned', null)))
+    .returning({ id: requestEntry.id, requestId: requestEntry.requestId });
+  // The webhooks of each request's type hear of it, in one statement for them all.
+  await tellWebhooksAbout(
+    tx,
+    entries.map(({ id, requestId }) => ({
+      requestId,
+      typeKey: assigned.find((found) => found.id === requestId)?.type ?? '',
+      news: [{ event: 'assignee' as const, entryId: id }],
+    })),
+  );
   await tx
     .update(request)
     .set({ lastActivityAt: CHANGE_MOMENT })

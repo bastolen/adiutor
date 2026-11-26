@@ -352,9 +352,11 @@ const bracesConfig = [{ name: 'adiutor/braces', rules: { curly: ['error', 'all']
  */
 const FOLDER_MODULES = [
   'lib/authz/mfa',
+  'lib/branding',
   'lib/requests',
   'server/auth/auth-events',
   'server/auth/auth-guards',
+  'server/branding',
   'server/jobs',
   'server/people/invitations',
   'server/people/invite-links',
@@ -363,6 +365,7 @@ const FOLDER_MODULES = [
   'server/requests',
   'server/settings',
   'server/storage',
+  'server/webhooks',
 ];
 
 /**
@@ -432,6 +435,44 @@ const restrictedImportsConfig = [
       'no-restricted-imports': [
         'error',
         { patterns: folderModulePatterns, paths: [useActionStatePath, nextAfterPath] },
+      ],
+    },
+  },
+  {
+    name: 'adiutor/restricted-imports/emails',
+    files: ['src/emails/**/*.{ts,tsx}', 'src/components/email/**/*.{ts,tsx}'],
+    rules: {
+      /**
+       * Emails are bundled into server code (the jobs route, the
+       * instrumentation), where React's server build has no hooks or context:
+       * values reach the blocks as props (decision 0049).
+       */
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: folderModulePatterns,
+          paths: [
+            useActionStatePath,
+            nextAfterPath,
+            {
+              name: 'react',
+              importNames: [
+                'createContext',
+                'useContext',
+                'useState',
+                'useEffect',
+                'useLayoutEffect',
+                'useReducer',
+                'useRef',
+                'useMemo',
+                'useCallback',
+                'use',
+              ],
+              message:
+                'Emails render in server code, where React has no hooks or context: pass values as props (decision 0049).',
+            },
+          ],
+        },
       ],
     },
   },

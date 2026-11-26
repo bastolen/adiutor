@@ -62,6 +62,17 @@ describe('parseEnv', () => {
     );
   });
 
+  it('reads the networks webhooks may reach as a list, empty when unset', () => {
+    expect(parseEnv(validEnv).WEBHOOK_ALLOWED_NETWORKS).toEqual([]);
+    expect(
+      parseEnv({ ...validEnv, WEBHOOK_ALLOWED_NETWORKS: '10.20.0.0/16, 127.0.0.1,fd00::/8' })
+        .WEBHOOK_ALLOWED_NETWORKS,
+    ).toEqual(['10.20.0.0/16', '127.0.0.1', 'fd00::/8']);
+    expect(() =>
+      parseEnv({ ...validEnv, WEBHOOK_ALLOWED_NETWORKS: 'intranet.adiutor.dev' }),
+    ).toThrow(/WEBHOOK_ALLOWED_NETWORKS/);
+  });
+
   it('reads the end-to-end tests’ port as a number, when a checkout sets one', () => {
     expect(parseEnv({ ...validEnv, E2E_PORT: '3105' }).E2E_PORT).toBe(3105);
     expect(parseEnv({ ...validEnv, E2E_PORT: '' }).E2E_PORT).toBeUndefined();

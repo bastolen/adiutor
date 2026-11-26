@@ -14,6 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
+import { isHexColour, tidyHexColour } from './branding';
 import { hasControlCharacter, hasHiddenCharacter, hasVisibleCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
@@ -29,6 +30,8 @@ import {
   REQUEST_TYPE_DESCRIPTION_MAX_LENGTH,
   REQUEST_TYPE_NAME_MAX_LENGTH,
   SLUG_MAX_LENGTH,
+  WEBHOOK_NAME_MAX_LENGTH,
+  WEBHOOK_URL_MAX_LENGTH,
 } from './input-rules';
 import {
   ACTIVITY_GROUPS,
@@ -47,6 +50,12 @@ import {
   PRIVATE_KEY_MAX_LENGTH,
   STORAGE_FIELD_MAX_LENGTH,
 } from './storage';
+import {
+  WEBHOOK_EVENTS,
+  WEBHOOK_FORMATS,
+  type WebhookUrlProblem,
+  webhookUrlProblem,
+} from './webhooks';
 
 /**
  * A message of the `validation` catalogue, by its full key (e.g.
@@ -152,6 +161,51 @@ export const timeZoneSchema = z
   .string()
   .refine(isTimeZone, { error: 'validation.timeZone' satisfies ValidationMessageKey });
 
+/**
+ * A colour in six hex digits, with or without `#`, in any case. It's kept as
+ * `#` and six lower-case digits, the only colour format branding writes into
+ * CSS.
+ *
+ * @param error - The message when it isn't one.
+ * @returns The schema.
+ */
+function hexColourSchema(error: ValidationMessageKey) {
+  return z.string().transform(tidyHexColour).refine(isHexColour, { error });
+}
+
+/** A brand colour as the `brand.*` settings keep it (decision 0049). */
+export const brandColourSchema = hexColourSchema('validation.brandColour.invalid');
+
+/**
+ * A brand colour from the Appearance tab of Settings: empty for the theme's
+ * own (`null`).
+ *
+ * @param error - The message when it isn't a colour, naming the field.
+ * @returns The schema.
+ */
+function chosenBrandColourSchema(error: ValidationMessageKey) {
+  return z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    hexColourSchema(error).nullable(),
+  );
+}
+
+/**
+ * The brand colours from the Appearance tab of Settings: the accent, the
+ * accent for dark mode (only with an accent) and the tint, each empty for
+ * the theme's own.
+ */
+export const brandColoursSchema = z
+  .object({
+    accent: chosenBrandColourSchema('validation.brandColour.accent'),
+    accentDark: chosenBrandColourSchema('validation.brandColour.accentDark'),
+    tint: chosenBrandColourSchema('validation.brandColour.tint'),
+  })
+  .refine((colours) => colours.accentDark === null || colours.accent !== null, {
+    error: 'validation.brandColour.darkNeedsAccent' satisfies ValidationMessageKey,
+    path: ['accentDark'],
+  });
+
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });
 
@@ -242,7 +296,8 @@ type NameField =
   | 'impersonationReason'
   | 'requestTitle'
   | 'requestTypeName'
-  | 'requestTypeDescription';
+  | 'requestTypeDescription'
+  | 'webhookName';
 
 /**
  * Adds the shared character rules to a string schema: no control characters
@@ -724,3 +779,86 @@ export function maxFileMbSchema(ceiling: number) {
     .min(1, { error })
     .max(ceiling, { error: 'validation.storage.maxFileMb.tooBig' satisfies ValidationMessageKey });
 }
+
+/** A webhook's name, as the staff call it: a name, since the email that it was turned off quotes it. */
+export const webhookNameSchema = withNameSafety(
+  lengthLimited({
+    min: 1,
+    max: WEBHOOK_NAME_MAX_LENGTH,
+    tooShort: 'validation.webhookName.empty',
+    tooLong: 'validation.webhookName.tooLong',
+  }),
+  'webhookName',
+);
+
+/** The message for each thing that can be wrong with a webhook's address (`webhookUrlProblem`). */
+const WEBHOOK_URL_MESSAGES: Record<WebhookUrlProblem, ValidationMessageKey> = {
+  too_long: 'validation.webhookUrl.tooLong',
+  invalid: 'validation.webhookUrl.invalid',
+  scheme: 'validation.webhookUrl.scheme',
+  credentials: 'validation.webhookUrl.credentials',
+  insecure: 'validation.webhookUrl.insecure',
+};
+
+/**
+ * A webhook's address, by the rules the browser shares
+ * (`webhookUrlProblem`): its length is checked first, so the other rules
+ * never parse a megabyte. Whether it points inside Adiutor's network is the
+ * server's own check (`pointsInside`).
+ *
+ * @param production - Whether Adiutor runs in production, where only `https://` (or this computer) will do.
+ * @returns The schema.
+ */
+export function webhookUrlSchema(production: boolean) {
+  return z
+    .string()
+    .trim()
+    .min(1, { error: 'validation.webhookUrl.empty' satisfies ValidationMessageKey, abort: true })
+    .max(WEBHOOK_URL_MAX_LENGTH, {
+      error: 'validation.webhookUrl.tooLong' satisfies ValidationMessageKey,
+      abort: true,
+    })
+    .superRefine((value, ctx) => {
+      const problem = webhookUrlProblem(value, { production });
+      if (problem !== null) {
+        ctx.addIssue({ code: 'custom', message: WEBHOOK_URL_MESSAGES[problem] });
+      }
+    });
+}
+
+/** How a webhook is sent (`WEBHOOK_FORMATS`). */
+export const webhookFormatSchema = z.enum(WEBHOOK_FORMATS, {
+  error: 'validation.webhookFormat' satisfies ValidationMessageKey,
+});
+
+/** What a webhook is told about: at least one of `WEBHOOK_EVENTS`, each once. */
+export const webhookEventsSchema = z
+  .array(
+    z.enum(WEBHOOK_EVENTS, {
+      error: 'validation.webhookEvents.unknown' satisfies ValidationMessageKey,
+    }),
+  )
+  .max(WEBHOOK_EVENTS.length * 2, {
+    error: 'validation.webhookEvents.unknown' satisfies ValidationMessageKey,
+  })
+  .transform((events) => WEBHOOK_EVENTS.filter((event) => events.includes(event)))
+  .refine((events) => events.length > 0, {
+    error: 'validation.webhookEvents.empty' satisfies ValidationMessageKey,
+  });
+
+/**
+ * The request types a webhook covers when it doesn't cover them all: keys in
+ * form, each once (whether they exist is the service's check). A handful at
+ * most in practice; the bound keeps a forged form small.
+ */
+export const webhookTypesSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .regex(REQUEST_TYPE_KEY_PATTERN, {
+        error: 'validation.webhookTypes.unknown' satisfies ValidationMessageKey,
+      }),
+  )
+  .max(200, { error: 'validation.webhookTypes.unknown' satisfies ValidationMessageKey })
+  .transform((keys) => [...new Set(keys)]);

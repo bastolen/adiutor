@@ -249,9 +249,17 @@ export interface RequestDetail {
   reopenedAt: Date | null;
   /** Its priority, or `null` for readers who don't see priorities. */
   priority: RequestPriority | null;
-  /** Who raised it. */
+  /** Who raised it: for a request raised for someone, that person. */
   raisedBy: RequestPerson;
-  /** That it was raised while signed in as `raisedBy`, for the readers who may know. */
+  /**
+   * The staff member who raised it for `raisedBy` (decision 0047), for every
+   * reader; left out when `raisedBy` raised it themself.
+   */
+  raisedOnBehalf?: RequestPerson;
+  /**
+   * That it was raised while signed in as whoever raised it (`raisedOnBehalf`
+   * when it's set, `raisedBy` otherwise), for the readers who may know.
+   */
   raisedSignedInAs?: SignedInAsMark;
   /** The staff members it's assigned to, by name; empty while nobody is. */
   assignees: RequestPerson[];
@@ -515,7 +523,8 @@ async function loadThread(
 
 /**
  * Loads the people a request's page names besides its history: who raised
- * it, the staff member signed in as them when it was raised (if one was),
+ * it, the staff member who raised it for them (if one did), the staff
+ * member signed in as whoever raised it when it was raised (if one was),
  * the staff members it's assigned to and its subscribers who can read it by
  * now (`loadSubscribers`), both by name.
  *
@@ -524,12 +533,18 @@ async function loadThread(
  * @returns Their rows; `null` for an account that's gone, or a staff member there wasn't.
  */
 async function loadPeople(ctx: ServiceContext, found: RequestRow) {
-  const [raisedBy, raisedByStaff, assignees, following] = await Promise.all([
+  const [raisedBy, raisedOnBehalfBy, raisedByStaff, assignees, following] = await Promise.all([
     found.createdBy
       ? ctx.db
           .select({ id: user.id, name: user.name })
           .from(user)
           .where(eq(user.id, found.createdBy))
+      : [],
+    found.createdOnBehalfBy
+      ? ctx.db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, found.createdOnBehalfBy))
       : [],
     found.createdSignedInAsStaffId
       ? ctx.db
@@ -547,6 +562,7 @@ async function loadPeople(ctx: ServiceContext, found: RequestRow) {
   ]);
   return {
     raisedBy: raisedBy[0] ?? null,
+    raisedOnBehalfBy: raisedOnBehalfBy[0] ?? null,
     raisedByStaff: raisedByStaff[0] ?? null,
     assignees,
     following,
@@ -964,6 +980,7 @@ export async function getRequest(
   // Everyone the page names, with their pictures, in one go.
   const pictures = await loadPictures(ctx.db, [
     found.createdBy,
+    found.createdOnBehalfBy,
     ...people.assignees.map(({ id }) => id),
     ...subscribers.map(({ id }) => id),
     ...thread.latest.flatMap(({ author, subject }) => [author?.id ?? null, subject?.id ?? null]),
@@ -981,10 +998,12 @@ export async function getRequest(
   const entries = (
     thread.activity.order === 'oldest' ? thread.latest.reverse() : thread.latest
   ).map((row) => entryView(page, row));
+  // A staff member signed in as someone did the work of whoever raised it: for a request raised
+  // for someone, the staff member who raised it for them.
   const raisedSignedInAs = signedInAsMark(
     reader,
     { signedInAs: found.createdSignedInAs, staff: people.raisedByStaff },
-    found.createdBy,
+    found.createdOnBehalf ? found.createdOnBehalfBy : found.createdBy,
   );
   return {
     id: found.id,
@@ -1010,6 +1029,14 @@ export async function getRequest(
       actor,
       pictures,
     ),
+    ...(found.createdOnBehalf && {
+      raisedOnBehalf: requestPerson(
+        people.raisedOnBehalfBy ?? { id: null, name: null },
+        'staff',
+        actor,
+        pictures,
+      ),
+    }),
     ...(raisedSignedInAs && { raisedSignedInAs }),
     assignees: people.assignees.map((person) => requestPerson(person, 'staff', actor, pictures)),
     // Someone on the staff who is also in the company is a colleague to the company's readers.

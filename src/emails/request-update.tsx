@@ -6,13 +6,13 @@
  * under it, never attached or linked: the request's page downloads them.
  */
 import type { ReactNode } from 'react';
-import { Link, Section, Text } from 'react-email';
+import { Section, Text } from 'react-email';
 
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import EmailMarkdown, { type EmailText } from '@/components/email/email-markdown';
-import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { colors, small } from '@/components/email/theme';
+import { EmailHeading, EmailLink, EmailNote, EmailParagraph } from '@/components/email/email-text';
+import { type EmailColours, emailColours, small } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import { formatFileSize } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
@@ -86,6 +86,14 @@ export type RequestUpdateEmailItem =
       event: 'subscribed';
       /** Who. */
       by: string;
+    }
+  | {
+      /** A staff member raised the request for the reader. */
+      event: 'raised';
+      /** Who. */
+      by: string;
+      /** Its description, with the people it mentions by name. */
+      text: EmailText;
     };
 
 /**
@@ -130,13 +138,14 @@ function strongTag(chunks: ReactNode) {
  * The link to the request, for the `<link>` tag of a message.
  *
  * @param href - The request's address.
+ * @param colours - The email's colours.
  */
-function requestLinkTag(href: string) {
+function requestLinkTag(href: string, colours: EmailColours) {
   return function linkTag(chunks: ReactNode) {
     return (
-      <Link href={href} style={{ color: colors.primary, fontWeight: 600 }}>
+      <EmailLink href={href} tone="primary" bold colours={colours}>
         {chunks}
-      </Link>
+      </EmailLink>
     );
   };
 }
@@ -151,13 +160,14 @@ export const REQUEST_EMAILS_PATH = '/account/preferences#request-emails';
  * The link to the account's setting, for the `<account>` tag of the footer.
  *
  * @param href - The setting's address.
+ * @param colours - The email's colours.
  */
-function accountLinkTag(href: string) {
+function accountLinkTag(href: string, colours: EmailColours) {
   return function accountTag(chunks: ReactNode) {
     return (
-      <Link href={href} style={{ color: colors.muted, textDecoration: 'underline' }}>
+      <EmailLink href={href} tone="muted" underline colours={colours}>
         {chunks}
-      </Link>
+      </EmailLink>
     );
   };
 }
@@ -173,17 +183,20 @@ function accountLinkTag(href: string) {
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address, for a text the company reads (its links to the
  *   staff's pages show as text); `null` for an internal note.
+ * @param props.colours - The email's colours.
  */
 function WrittenText({
   text,
   id,
   locale,
   appUrl,
+  colours: colors,
 }: {
   text: RequestUpdateEmailText;
   id: string;
   locale: Locale;
   appUrl: string | null;
+  colours: EmailColours;
 }) {
   const t = translator(locale, 'emails.requestUpdate');
   const files = text.attachments ?? [];
@@ -195,13 +208,15 @@ function WrittenText({
         padding: '0 0 0 16px',
       }}
     >
-      <EmailMarkdown value={text} id={id} locale={locale} appUrl={appUrl} />
+      <EmailMarkdown value={text} id={id} locale={locale} appUrl={appUrl} colours={colors} />
       {files.length > 0 && (
         <>
-          <Text style={{ ...small, margin: '4px 0' }}>{t('files', { count: files.length })}</Text>
+          <Text style={{ ...small(colors), margin: '4px 0' }}>
+            {t('files', { count: files.length })}
+          </Text>
           {files.map((file, index) => (
             // eslint-disable-next-line react/no-array-index-key -- a fixed list, rendered once; names can repeat
-            <Text key={index} style={{ ...small, margin: '0', overflowWrap: 'anywhere' }}>
+            <Text key={index} style={{ ...small(colors), margin: '0', overflowWrap: 'anywhere' }}>
               {t('file', { name: file.name, size: formatFileSize(file.size, locale) })}
             </Text>
           ))}
@@ -221,6 +236,7 @@ function WrittenText({
  * @param props.audience - How to word the request's statuses for the reader.
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address.
+ * @param props.colours - The email's colours.
  */
 function UpdateItem({
   item,
@@ -228,12 +244,14 @@ function UpdateItem({
   audience,
   locale,
   appUrl,
+  colours,
 }: {
   item: RequestUpdateEmailItem;
   id: string;
   audience: RequestAudience;
   locale: Locale;
   appUrl: string;
+  colours: EmailColours;
 }) {
   const t = translator(locale, 'emails.requestUpdate');
   const tRequests = translator(locale, 'requests');
@@ -241,8 +259,8 @@ function UpdateItem({
   if (item.event === 'reply') {
     return (
       <Section>
-        <EmailParagraph>{t.rich('reply', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} />
+        <EmailParagraph colours={colours}>{t.rich('reply', who)}</EmailParagraph>
+        <WrittenText colours={colours} text={item.text} id={id} locale={locale} appUrl={appUrl} />
       </Section>
     );
   }
@@ -250,29 +268,40 @@ function UpdateItem({
     // Only the staff read a note: its links to their pages stay links.
     return (
       <Section>
-        <EmailParagraph>{t.rich('note', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} appUrl={null} />
-        <EmailNote>{t('noteOnlyStaff')}</EmailNote>
+        <EmailParagraph colours={colours}>{t.rich('note', who)}</EmailParagraph>
+        <WrittenText colours={colours} text={item.text} id={id} locale={locale} appUrl={null} />
+        <EmailNote colours={colours}>{t('noteOnlyStaff')}</EmailNote>
       </Section>
     );
   }
   if (item.event === 'mentioned') {
     return (
       <Section>
-        <EmailParagraph>{t.rich('mentioned', { ...who, where: item.where })}</EmailParagraph>
+        <EmailParagraph colours={colours}>
+          {t.rich('mentioned', { ...who, where: item.where })}
+        </EmailParagraph>
         <WrittenText
+          colours={colours}
           text={item.text}
           id={id}
           locale={locale}
           appUrl={item.where === 'note' ? null : appUrl}
         />
-        {item.where === 'note' && <EmailNote>{t('noteOnlyStaff')}</EmailNote>}
+        {item.where === 'note' && <EmailNote colours={colours}>{t('noteOnlyStaff')}</EmailNote>}
+      </Section>
+    );
+  }
+  if (item.event === 'raised') {
+    return (
+      <Section>
+        <EmailParagraph colours={colours}>{t.rich('raised', who)}</EmailParagraph>
+        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} colours={colours} />
       </Section>
     );
   }
   if (item.event === 'status') {
     return (
-      <EmailParagraph>
+      <EmailParagraph colours={colours}>
         {t.rich('status', {
           ...who,
           change: statusChangeKind(item.from, item.to, item.bySide),
@@ -283,14 +312,15 @@ function UpdateItem({
       </EmailParagraph>
     );
   }
-  return <EmailParagraph>{t.rich(item.event, who)}</EmailParagraph>;
+  return <EmailParagraph colours={colours}>{t.rich(item.event, who)}</EmailParagraph>;
 }
 
 /**
  * Tells the reader what happened to a request they're on: its title and
  * number (a link to it), then each piece of news in the order it happened.
  * A reply, an internal note (only ever in an email to the staff, marked as
- * one) and a text that mentions the reader are shown in full, formatted as
+ * one), a text that mentions the reader and the description of a request
+ * raised for them are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
  * A button opens the request; for someone at the company who may answer a
@@ -311,7 +341,9 @@ export default function RequestUpdateEmail({
   answerLinks = undefined,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: RequestUpdateEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.requestUpdate');
   const [first] = items;
   return (
@@ -320,14 +352,15 @@ export default function RequestUpdateEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t.rich('reason', {
         role,
-        account: accountLinkTag(`${appUrl}${REQUEST_EMAILS_PATH}`),
+        account: accountLinkTag(`${appUrl}${REQUEST_EMAILS_PATH}`, colours),
       })}
     >
-      <EmailHeading>{title}</EmailHeading>
-      <EmailNote>
-        {t.rich('where', { reference, company: companyName, link: requestLinkTag(url) })}
+      <EmailHeading colours={colours}>{title}</EmailHeading>
+      <EmailNote colours={colours}>
+        {t.rich('where', { reference, company: companyName, link: requestLinkTag(url, colours) })}
       </EmailNote>
       {items.map((item, index) => (
         <UpdateItem
@@ -338,22 +371,27 @@ export default function RequestUpdateEmail({
           audience={audience}
           locale={locale}
           appUrl={appUrl}
+          colours={colours}
         />
       ))}
       {answerLinks ? (
         <Section>
-          <EmailParagraph>{t('answerQuestion')}</EmailParagraph>
-          <EmailButton href={answerLinks.approve}>{t('approve')}</EmailButton>
-          <EmailButton href={answerLinks.deny} variant="secondary">
+          <EmailParagraph colours={colours}>{t('answerQuestion')}</EmailParagraph>
+          <EmailButton colours={colours} href={answerLinks.approve}>
+            {t('approve')}
+          </EmailButton>
+          <EmailButton colours={colours} href={answerLinks.deny} variant="secondary">
             {t('deny')}
           </EmailButton>
-          <EmailNote>{t('answerNote')}</EmailNote>
+          <EmailNote colours={colours}>{t('answerNote')}</EmailNote>
         </Section>
       ) : (
-        <EmailButton href={url}>{t('button')}</EmailButton>
+        <EmailButton colours={colours} href={url}>
+          {t('button')}
+        </EmailButton>
       )}
-      <EmailNote>{t('noReply')}</EmailNote>
-      <EmailNote>{t('signInNote', { days: REQUEST_LINK_DAYS })}</EmailNote>
+      <EmailNote colours={colours}>{t('noReply')}</EmailNote>
+      <EmailNote colours={colours}>{t('signInNote', { days: REQUEST_LINK_DAYS })}</EmailNote>
     </EmailLayout>
   );
 }

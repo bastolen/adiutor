@@ -21,6 +21,7 @@ import {
   requestToChange,
   workingPermission,
 } from './change';
+import { tellWebhooks } from './tell-webhooks';
 import { tellPeopleOnRequest } from './updates';
 
 /**
@@ -84,6 +85,9 @@ export default async function changeRequestStatus(
     }
     const changed = await recordStatusChange(tx, locked, status, actor, requestSide(permissions));
     await tellPeopleOnRequest(tx, { request: locked, actorId: actor.id }, [
+      { event: 'status', entryId: changed },
+    ]);
+    await tellWebhooks(tx, { requestId: locked.id, typeKey: locked.type }, [
       { event: 'status', entryId: changed },
     ]);
     return { changed: true, reopened: isReopening(locked.status, status), status };

@@ -41,9 +41,10 @@ solution the company approves. Your staff see every company's requests; each com
   <img src="docs/images/readme-board-light.png" width="880" alt="The requests board in Adiutor, across companies: search, filters and sort above lanes for Open, To do, In progress and Waiting, each card showing a request's number, type, title, company, priority, who it's assigned to and a Move button." />
 </picture>
 
-- **Requests.** Companies raise requests, and both sides work each one through in one
-  conversation, with replies written in Markdown, mentions, and internal notes and priorities only
-  the staff see. See [Requests](docs/requests.md).
+- **Requests.** Companies raise requests, or the staff raise one for someone who asked by phone,
+  and both sides work each one through in one conversation, with replies written in Markdown,
+  mentions, and internal notes and priorities only the staff see. See
+  [Requests](docs/requests.md).
 - **Attachments.** Screenshots, logs, PDFs, Office files and screen recordings go with a request,
   a reply or a note: by a button, dropped on the form or pasted. Images show as thumbnails, and
   files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
@@ -56,6 +57,9 @@ solution the company approves. Your staff see every company's requests; each com
   its status, with links that open it in one click. The staff can send a reply as the solution,
   which the company approves or denies. See [Emails](docs/requests.md#emails) and
   [Solutions](docs/requests.md#solutions).
+- **Webhooks.** Send what happens to requests to your own systems as signed JSON, or to a chat
+  channel as a message, per request type and event, retried when a receiver is down. See
+  [Webhooks](docs/webhooks.md).
 - **Companies, users and roles.** Staff add companies and invite each company's first Admin, who
   invites the rest. Users can belong to several companies, with a role in each (Admin, Client or
   Watcher), and the staff have roles of their own. There's no public sign-up. See
@@ -76,6 +80,9 @@ solution the company approves. Your staff see every company's requests; each com
   [Background jobs](docs/jobs.md).
 - **Accessible, in light and dark mode.** Built to meet WCAG 2.2 AA in both modes, with full
   keyboard support. See [Design, accessibility and dark mode](docs/design.md).
+- **Your brand colours.** Staff Admins choose an accent and a tint, and every page and email shows
+  them in light and dark mode, adjusted where needed so text stays readable. See
+  [Brand colours](docs/design.md#brand-colours).
 - **Languages and time zones.** Staff Admins choose the languages Adiutor offers and its default;
   everyone can pick their own, and emails reach them in it. Times show in each person's own zone.
   See [Languages](docs/i18n.md).
@@ -144,24 +151,25 @@ The integration and end-to-end tests need `pnpm services:up` running. See [Testi
 
 The [docs](docs/README.md) go into detail, one topic each:
 
-| Page                                                      | What it covers                                                                  |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| [Local development](docs/development.md)                  | First run, test accounts, starting over, every script                           |
-| [Where the code lives](docs/project-structure.md)         | The folders of the repository                                                   |
-| [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                          |
-| [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                             |
-| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates        |
-| [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                               |
-| [Requests](docs/requests.md)                              | Statuses, types and priorities, numbers, text, who may do what, the pages       |
-| [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                       |
-| [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                               |
-| [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP                 |
-| [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                               |
-| [Background jobs](docs/jobs.md)                           | The tick, recurring and queued jobs, the Jobs page, commands, adding a job      |
-| [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand                 |
-| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, time zones, formatting, checks     |
-| [Deploying and running](docs/deploying.md)                | Install and upgrade, Vercel, Docker, server setup, client IP, jobs, logs, leaks |
-| [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                        |
+| Page                                                      | What it covers                                                                            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Local development](docs/development.md)                  | First run, test accounts, starting over, every script                                     |
+| [Where the code lives](docs/project-structure.md)         | The folders of the repository                                                             |
+| [Testing](docs/testing.md)                                | Unit, integration and end-to-end tests                                                    |
+| [Code style and tooling](docs/code-style.md)              | Linters, formatting, JSDoc, editor setup, Git hooks                                       |
+| [CI, releases and dependencies](docs/ci-and-releases.md)  | CI, protecting `main`, security advisories, releases, dependency updates                  |
+| [Companies, users and roles](docs/companies-and-roles.md) | Roles and permissions, staff screens, invitations                                         |
+| [Requests](docs/requests.md)                              | Statuses, types and priorities, numbers, text, who may do what, the pages                 |
+| [Sign-in and accounts](docs/authentication.md)            | Sign-in methods, sessions, account pages, security emails                                 |
+| [Multi-factor authentication](docs/mfa.md)                | Second steps, who needs them, confirming sessions                                         |
+| [Security measures](docs/security-measures.md)            | Audit log, rate limits, tokens, names, lock order, headers, CSP                           |
+| [Webhooks](docs/webhooks.md)                              | Who sets them up, addresses, secrets, verifying a delivery                                |
+| [Email](docs/email.md)                                    | Templates, previews, Mailpit, how emails are sent                                         |
+| [Background jobs](docs/jobs.md)                           | The tick, recurring and queued jobs, the Jobs page, commands, adding a job                |
+| [Design, accessibility and dark mode](docs/design.md)     | Components, tables, colours, keyboard support, dark mode, brand                           |
+| [Languages](docs/i18n.md)                                 | Choosing a language, translation catalogues, time zones, formatting, checks               |
+| [Deploying and running](docs/deploying.md)                | Install and upgrade, Vercel, Docker, server setup, client IP, jobs, webhooks, logs, leaks |
+| [Decision records](docs/decisions/README.md)              | Why Adiutor works the way it does, one decision per page                                  |
 
 ## Contributing
 

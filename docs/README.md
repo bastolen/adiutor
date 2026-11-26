@@ -27,13 +27,16 @@ detail, one topic each.
 - [Multi-factor authentication](mfa.md): second steps, who must have them, and when a session
   counts as confirmed.
 - [Security measures](security-measures.md): the audit log, rate limits, the client IP, tokens,
-  the name checks, the lock order of concurrent changes, security headers and the Content Security
-  Policy.
+  the name checks, webhooks' addresses, the lock order of concurrent changes, security headers and
+  the Content Security Policy.
+- [Webhooks](webhooks.md): who sets them up, what a webhook has, how news reaches it, retries and
+  turning off, tests and sending again, what's sent (JSON and chat), why its changes are security changes, its address and
+  secret, and verifying a delivery.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
 - [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,
   the commands and adding a job.
 - [Design, accessibility and dark mode](design.md): the component library, tables, colours,
-  keyboard support, dark mode and the brand assets.
+  keyboard support, dark mode, the brand assets and the brand colours a staff Admin chooses.
 - [Languages](i18n.md): English (US), Dutch and Spanish, how the language is chosen, the
   translation catalogues, writing messages, time zones, formatting, the checks and adding a language.
 
@@ -41,8 +44,8 @@ detail, one topic each.
 
 - [Deploying and running Adiutor](deploying.md): installing and upgrading, deploying on Vercel, the
   Docker image and health check, what to set up on a server, the client IP address, background jobs,
-  where attached files are kept, logs, rotating the auth secret, and what to do after a suspected
-  leak.
+  where attached files are kept, webhooks, logs, rotating the auth secret, and what to do after a
+  suspected leak.
 
 ## The project
 

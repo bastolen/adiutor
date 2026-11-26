@@ -90,6 +90,39 @@
     "requestPrefix": "Usa de una a cinco letras o cifras para el prefijo, empezando por una letra, por ejemplo AD.",
     "locale": "Elige uno de los idiomas.",
     "timeZone": "Elige una de las zonas horarias.",
+    "webhookName": {
+      "empty": "Escribe un nombre para el webhook.",
+      "tooLong": "Usa como máximo {maximum, number} caracteres para el nombre del webhook.",
+      "controlCharacters": "Quita los saltos de línea y los caracteres de control del nombre del webhook.",
+      "hiddenCharacters": "Quita los caracteres invisibles y las marcas de dirección del texto del nombre del webhook.",
+      "noVisibleCharacter": "Usa al menos una letra, un número o un símbolo en el nombre del webhook.",
+      "webAddress": "Quita las direcciones web del nombre del webhook."
+    },
+    "webhookUrl": {
+      "empty": "Escribe la dirección a la que enviar.",
+      "tooLong": "Usa una dirección de como máximo {maximum, number} caracteres.",
+      "invalid": "Escribe una dirección web, como https://hooks.adiutor.dev/in.",
+      "scheme": "Usa una dirección que empiece por https://.",
+      "credentials": "Quita el nombre de usuario y la contraseña de la dirección: la firma le dice al receptor que es Adiutor.",
+      "insecure": "Usa una dirección https://: http:// sin cifrar solo funciona para este ordenador.",
+      "internal": "Esta dirección está dentro de la propia red de Adiutor, a la que los webhooks nunca llegan."
+    },
+    "webhookFormat": "Elige cómo se envía el webhook.",
+    "webhookEvents": {
+      "empty": "Elige al menos una cosa que enviar.",
+      "unknown": "Elige entre los eventos de la lista."
+    },
+    "webhookTypes": {
+      "empty": "Elige al menos un tipo de solicitud, o todos.",
+      "unknown": "Elige entre los tipos de solicitud de la lista."
+    },
+    "brandColour": {
+      "invalid": "Escribe un color con seis dígitos hexadecimales, por ejemplo #0e5655.",
+      "accent": "Escribe el color de acento con seis dígitos hexadecimales, por ejemplo #0e5655.",
+      "accentDark": "Escribe el color de acento del tema oscuro con seis dígitos hexadecimales, por ejemplo #25dc89.",
+      "tint": "Escribe el tono con seis dígitos hexadecimales, por ejemplo #0e0e2d.",
+      "darkNeedsAccent": "Elige primero un color de acento y después uno para el tema oscuro."
+    },
     "storage": {
       "driver": "Elige dónde se guardan los archivos.",
       "folder": "Indica la ruta absoluta de la carpeta, por ejemplo /data/attachments.",

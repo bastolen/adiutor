@@ -79,7 +79,7 @@
     },
     "new": {
       "title": "Nueva solicitud",
-      "description": "{audience, select, staff {Crea una solicitud para una empresa, por ejemplo tras una llamada.} other {Cuéntale a {staff} lo que necesitas. Te responderán en la página de la solicitud.}}",
+      "description": "{audience, select, staff {Crea una solicitud para una empresa, o para alguien de ella que te lo pidió, por ejemplo por teléfono.} other {Cuéntale a {staff} lo que necesitas. Te responderán en la página de la solicitud.}}",
       "back": "Solicitudes",
       "company": "Empresa",
       "companyPlaceholder": "Elige una empresa",
@@ -92,6 +92,9 @@
       "priorityLabel": "Prioridad",
       "priorityFromType": "Según el tipo",
       "priorityHint": "Solo el personal ve la prioridad.",
+      "raiseForLabel": "Solicitante",
+      "raiseForSelf": "Tú",
+      "raiseForHint": "Alguien de la empresa que te lo pidió, por ejemplo por teléfono. Aparece como quien la creó, la sigue y recibe un correo.",
       "submit": "Crear solicitud"
     },
     "detail": {
@@ -256,6 +259,11 @@
       "versionLine": "{name} lo cambió el {time}.",
       "editNote": "Editar nota",
       "noteLabel": "Nota"
+    },
+    "raisedFor": {
+      "forName": "La creó {staff} para {name}",
+      "forYou": "La creó {staff} para ti",
+      "byYou": "La creaste tú para {name}"
     },
     "signedInAs": {
       "workForYou": "Lo hizo {staff} con la sesión iniciada como tú",

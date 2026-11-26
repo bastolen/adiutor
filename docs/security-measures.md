@@ -18,8 +18,10 @@ password and provider changes, wrong current passwords typed in a signed-in sess
 account, turning two-step verification on or off, or new backup codes), revoked sessions,
 account creation (by an Admin, by accepting an invitation, or at setup), deactivation, reactivation
 and deletion,
-MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
-signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
+MFA resets, role changes, removed members, invitations and invite links, company changes, changes
+to webhooks (added, changed, a secret renewed, turned off or on, removed; with the webhook's name
+and host, never its address or secret, see [Webhooks](webhooks.md#changes-are-security-changes)),
+and staff signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
 the staff member's session ending; and users turning sign-ins by staff off or on,
 `staff_sign_in_turned_off` and `staff_sign_in_turned_on`; see `src/server/auth/impersonation.ts` and
@@ -68,6 +70,8 @@ code is the source if they ever differ.
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
 | Storages tried in Settings (`storageChecksPerUser`)             | 20    | 1 hour      | user                  |
 | Files uploaded to attach (`attachmentUploadsPerUser`)           | 100   | 1 hour      | user                  |
+| Changes to webhooks (`webhookChangesPerUser`)                   | 30    | 1 hour      | user                  |
+| Webhook tests and deliveries sent again (`webhookSendsPerUser`) | 20    | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
 | App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
 
@@ -479,6 +483,33 @@ environment does (see [Attachments](deploying.md#attachments) and
   on the local network needs this. An operator who doesn't want staff Admins to choose sets the
   storage in the environment, or `ATTACHMENTS_STORAGE=off`.
 
+## Webhooks' addresses
+
+A webhook's address is typed by a staff Admin and the server connects to it, so without a check it
+could reach what only the server reaches: a database's admin page, another service on the local
+network, or the cloud's metadata service and the credentials it hands out. So
+(`src/server/webhooks/address-guard.ts` and `send.ts`):
+
+- **The address:** `https://`, or in production `http://` only on this computer (as for the app's
+  own address, `isSecureOrLocalUrl`); no user name or password; at most 2,048 characters
+  (`webhookUrlProblem` in `src/lib/webhooks.ts`).
+- **Never inside Adiutor's network:** every address a host name resolves to is checked in the
+  request's own lookup (`guardedLookup`), so the address that's checked is the one connected to: a
+  name that resolves to a public address for one look-up and an internal one for the next can't slip
+  through. An IP address in the URL, which is never looked up, is checked before connecting, as the
+  URL parser writes it (so `http://2130706433/` is `127.0.0.1`). Refused, unless the operator
+  allowed the network (`WEBHOOK_ALLOWED_NETWORKS`, see [Webhooks](deploying.md#webhooks)): private,
+  loopback, link-local, shared (CGNAT), multicast, reserved, documentation and benchmarking ranges,
+  in IPv4 and IPv6 (unique local and link-local addresses included), and an IPv4 address written
+  inside IPv6 (`::ffff:…`, NAT64's `64:ff9b::…`) is judged as the IPv4 it holds, never by an
+  allowed IPv6 range (each allowed range holds its own family only). A name with any internal
+  address is refused as a whole.
+- **What's sent and read:** a signed `POST` that follows no redirect, goes through no proxy, gives up
+  after 3 seconds when the connection doesn't open and after 10 in all (look-up, connection,
+  encryption and the answer's headers), and reads at most 4 KB of the answer, which it drops. Only the status, the time it took and a kind of failure
+  are kept, never what the receiver answered, so a webhook can't be used to read a page.
+- **Logs** name a delivery and its kind of failure, never the address, which can hold a token.
+
 ## Provider tokens aren't kept
 
 Refresh and ID tokens are never stored, nor the access tokens of
@@ -521,8 +552,10 @@ deadlocking:
    member and the user `FOR SHARE` (`startImpersonation` in `src/server/auth/impersonation.ts`, so
    a role change or deactivation of either takes turns with signing in as the user, which then
    decides again with the locked rows).
-3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), the
-   company's `FOR UPDATE` (`changeMembership`).
+3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), then
+   the membership of the person a request is raised for `FOR SHARE` (`assertStillRaisableFor`, so
+   a change of their role or their removal takes turns with raising it), the company's
+   `FOR UPDATE` (`changeMembership`).
 4. `invite_link` rows: the link a claim uses (or frees again when its email couldn't be sent, before
    it revokes the claim's invitation under the per-address lock), the links whose creator loses
    their rights (`revokeInvitesWithoutManager`), and the link a resend re-points to the new
@@ -555,7 +588,12 @@ deadlocking:
    is read there, never locked (it would come first, step 1): a change refuses when that read
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.
-8. Sessions and audit events, last.
+8. A `webhook` row, `FOR NO KEY UPDATE`, then its `webhook_delivery` rows: a change to the webhook
+   (`src/server/webhooks/manage.ts`; turning it off cancels its pending deliveries) and recording a
+   delivery's attempt (`src/server/webhooks/deliver.ts`, after the send). Nothing above
+   locks a webhook: a request change only reads which webhooks hear of it, and a new delivery's
+   foreign key takes `FOR KEY SHARE`, which doesn't wait for `FOR NO KEY UPDATE`.
+9. Sessions and audit events, last.
 
 The other rows of `setting` (the staff's settings and setup's) are locked by settings changes
 (`writeSettings`, `FOR UPDATE` in key order, with the rows a check compares them with) and by setup,
@@ -593,8 +631,19 @@ check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). 
 the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
 (`next.config.ts`); the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
-HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script, and e2e tests fail
-on CSP violations that pages report (`e2e/support/test.ts`, console errors and uncaught `EvalError`s).
+HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and the brand colours'
+`<style>`, and e2e tests fail on CSP violations that pages report (`e2e/support/test.ts`, console
+errors and uncaught `EvalError`s).
+
+The brand colours a staff Admin chose reach every page as CSS ([decision
+0049](decisions/0049-brand-colours-from-an-accent-and-a-tint.md)), so nothing typed into them may
+reach it: a colour is six hex digits when it's saved (`brandColourSchema`) and when it's read back
+(the registry gives the fallback for anything else, `loadBrandColours` checks again), the CSS holds
+only colours `derivePalette` worked out and wrote in hex, and `paletteCss` checks every value once
+more before it writes a declaration (emails' colours too, in `emailColoursOf`). `derivePalette`
+takes anything that isn't six hex digits as the theme's own and caps its search for the accent's
+lightness, so no stored value can hang a page or an email, and a page whose palette can't be worked
+out keeps the theme's colours (`pageBrandCss`, logged without any value).
 
 Permission checks (the authorization matrix, and pages protected by default) are described under
 [Roles and permissions](companies-and-roles.md#roles-and-permissions).

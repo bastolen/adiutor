@@ -17,6 +17,7 @@ import { emailSchema } from '@/lib/validation';
 import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../access';
 import type { Actor } from '../actor';
 import { recordEvent } from '../audit';
+import { loadEmailBrand } from '../branding';
 import type { ServiceContext } from '../context';
 import { isUniqueViolation } from '../errors';
 import assertLanguageOffered from '../offered-language';
@@ -122,6 +123,7 @@ export async function registerUser(
   await ctx.sendEmail(
     await accountCreatedEmail(email, {
       appUrl: ctx.baseUrl,
+      brand: await loadEmailBrand(ctx.db),
       locale: await recipientLocale(ctx, options.locale),
       creatorName: displayName(actor),
       staffName: await getStaffName(ctx.db),

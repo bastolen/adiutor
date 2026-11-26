@@ -16,6 +16,10 @@ One file per email in `src/emails/`:
   the new Admin and who made it happen, without a device
   or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts` queues one
   `staff-admin-added` job per Admin; see [Background jobs](jobs.md#queued-jobs))
+- `webhook-turned-off.tsx` for the staff Admins when Adiutor turned a webhook off (its deliveries
+  failed for days, its receiver is gone, or its address or secret can't be read), naming the
+  webhook and why, never its address, with a link to it (one `webhook-turned-off` job per Admin;
+  see [Retries and turning off](webhooks.md#retries-and-turning-off))
 - `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's
   reference and a link to it under Logs → Errors, at most once a day per job (`alertStaffAdmins` in
   `src/server/jobs/alerts.ts`, see [Background jobs](jobs.md#failures))
@@ -26,9 +30,11 @@ One file per email in `src/emails/`:
   sign-in page)
 - `request-update.tsx` for the people on a request when someone replies to it or changes its
   status, for the staff on it when someone writes an internal note (marked as one, and never for
-  anyone at the company), and for someone who is put on one (assigned, mentioned, or subscribed
-  by someone else): one email per person and request with everything that happened, each reply in full
-  (`EmailMarkdown`) with the names and sizes of its files (never attached or linked), the statuses in the reader's words, the request's number as its first link
+  anyone at the company), and for someone who is put on one (assigned, mentioned, subscribed
+  by someone else, or having it raised for them by a staff member, with its description): one
+  email per person and request with everything that happened, each reply in full
+  (`EmailMarkdown`) with the names and sizes of its files (never attached or linked), the statuses
+  in the reader's words, the request's number as its first link
   (opening the request at the first news the email tells of, with its `#entry-<ID>` anchor)
   and a subject without words of its own, the request's number and title, and a footer that links
   to the account's setting that turns them off (the `request-update` jobs, batched; see
@@ -69,9 +75,26 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   too costly to format. Given the email's `appUrl`, it shows a link to one of the staff's pages as
   its text, as the page does, also in such a plain text (`staffLinksAsLabels`); an internal note,
   for the staff only, gets none and keeps them
-- the colours and fonts in `theme.ts` (`fontFamily`, `monoFontFamily`), which match the app's
-  light theme as inline styles; the fonts are the device's own, not the Inter and JetBrains Mono the
-  app ships, because many email clients block or strip web fonts
+- the fonts in `theme.ts` (`fontFamily`, `monoFontFamily`): the device's own, not the Inter and
+  JetBrains Mono the app ships, because many email clients block or strip web fonts
+- the colours, which are the brand colours a staff Admin chose (decision 0049). `theme.ts` has
+  `EmailColours`, `DEFAULT_EMAIL_COLOURS` (the app's light theme, which is what an email has when
+  nothing was chosen) and `emailColoursOf` (the light palette of `derivePalette`; emails have no
+  dark mode). A template works its colours out once, `const colours = emailColours(brand)`
+  (`theme.ts`), and passes them to every block as the required `colours` prop (`EmailButton`,
+  `EmailCode`, `EmailHeading`, `EmailMarkdown`, ...); `EmailLayout` takes `brand` itself. Nothing in
+  an email is a fixed colour, and the styles that use colours are functions of them
+  (`paragraph(colours)`, `small(colours)`). There is no React context or hook: emails are bundled
+  into server code (the jobs and the instrumentation), where React has none, and ESLint refuses
+  them in `src/emails` and `src/components/email`
+
+Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`, which
+later holds more of the brand than colours): `loadEmailBrand(db)` in
+`src/server/branding/email-brand.ts` reads the saved colours when the email is built and falls back
+to the defaults when they can't be read, so a mail still goes out. A job that sends several emails
+in a run loads it once. The Better Auth callbacks in `src/lib/auth.ts` import it next to their
+template, inside the callback. An invitation's `renderEmail(brand)` takes it, so it's rendered after
+the transaction commits. The template preview has no `brand`, so it shows the defaults.
 
 `security-notice.tsx` is one template with a wording per kind (`SECURITY_NOTICE_KINDS`): a changed or
 added password, two-step verification, backup codes, passkeys and connected GitHub or Google accounts,

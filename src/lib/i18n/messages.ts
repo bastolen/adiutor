@@ -31,6 +31,7 @@ import enUsRequests from '@/messages/en-US/requests.json';
 import enUsRoles from '@/messages/en-US/roles.json';
 import enUsTables from '@/messages/en-US/tables.json';
 import enUsValidation from '@/messages/en-US/validation.json';
+import enUsWebhooks from '@/messages/en-US/webhooks.json';
 import esEsAccount from '@/messages/es-ES/account.json';
 import esEsAdmin from '@/messages/es-ES/admin.json';
 import esEsAudit from '@/messages/es-ES/audit.json';
@@ -47,6 +48,7 @@ import esEsRequests from '@/messages/es-ES/requests.json';
 import esEsRoles from '@/messages/es-ES/roles.json';
 import esEsTables from '@/messages/es-ES/tables.json';
 import esEsValidation from '@/messages/es-ES/validation.json';
+import esEsWebhooks from '@/messages/es-ES/webhooks.json';
 import nlNlAccount from '@/messages/nl-NL/account.json';
 import nlNlAdmin from '@/messages/nl-NL/admin.json';
 import nlNlAudit from '@/messages/nl-NL/audit.json';
@@ -63,6 +65,7 @@ import nlNlRequests from '@/messages/nl-NL/requests.json';
 import nlNlRoles from '@/messages/nl-NL/roles.json';
 import nlNlTables from '@/messages/nl-NL/tables.json';
 import nlNlValidation from '@/messages/nl-NL/validation.json';
+import nlNlWebhooks from '@/messages/nl-NL/webhooks.json';
 
 import type { Locale } from './locales';
 
@@ -84,6 +87,7 @@ const EN_US = {
   ...enUsRoles,
   ...enUsTables,
   ...enUsValidation,
+  ...enUsWebhooks,
 };
 
 /** Every message, in English (US): the shape all languages share. */
@@ -114,6 +118,7 @@ const TRANSLATIONS: Record<Locale, MessageTree> = {
     ...nlNlRoles,
     ...nlNlTables,
     ...nlNlValidation,
+    ...nlNlWebhooks,
   },
   'es-ES': {
     ...esEsAccount,
@@ -132,6 +137,7 @@ const TRANSLATIONS: Record<Locale, MessageTree> = {
     ...esEsRoles,
     ...esEsTables,
     ...esEsValidation,
+    ...esEsWebhooks,
   },
 };
 

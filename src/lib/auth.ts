@@ -203,9 +203,11 @@ const emailLinkSignIn = magicLink({
       const saved = (found.user as { locale?: unknown }).locale;
       const { offered } = await loadLanguageSettings(db);
       const { magicLinkEmail } = await import('../emails/magic-link');
+      const { loadEmailBrand } = await import('../server/branding');
       await sendEmail(
         await magicLinkEmail(found.user.email, {
           appUrl,
+          brand: await loadEmailBrand(db),
           url: emailLinkUrl(url, appUrl),
           locale: offeredLocale(saved, offered) ?? requestLocale,
         }),
@@ -644,9 +646,11 @@ export const auth = betterAuth({
       }
       // Loaded here, not at the top: loading this config (e.g. for `pnpm auth:schema`) shouldn't load React templates.
       const { resetPasswordEmail } = await import('../emails/reset-password');
+      const { loadEmailBrand } = await import('../server/branding');
       await sendEmail(
         await resetPasswordEmail(user.email, {
           appUrl,
+          brand: await loadEmailBrand(db),
           url,
           locale: await emailLocale(user, await callbackHeaders(request)),
         }),
@@ -743,9 +747,11 @@ export const auth = betterAuth({
      */
     sendVerificationEmail: async ({ user, url }, request) => {
       const { verifyEmailEmail } = await import('../emails/verify-email');
+      const { loadEmailBrand } = await import('../server/branding');
       await sendEmail(
         await verifyEmailEmail(user.email, {
           appUrl,
+          brand: await loadEmailBrand(db),
           url,
           locale: await emailLocale(user, await callbackHeaders(request)),
         }),
@@ -831,9 +837,11 @@ export const auth = betterAuth({
          */
         sendOTP: async ({ user, otp }, context) => {
           const { twoFactorCodeEmail } = await import('../emails/two-factor-code');
+          const { loadEmailBrand } = await import('../server/branding');
           await sendEmail(
             await twoFactorCodeEmail(user.email, {
               appUrl,
+              brand: await loadEmailBrand(db),
               code: otp,
               locale: await emailLocale(user, context?.headers),
             }),

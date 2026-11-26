@@ -1,5 +1,5 @@
 {
-  "id": "643c7d6e-068e-40e4-822f-395c94c90cb5",
+  "id": "8c7ac261-c8f2-4ab0-98b7-1d42fcea8858",
   "prevId": "915eff3f-5123-4a1b-b699-1ea8658a0bcf",
   "version": "7",
   "dialect": "postgresql",
@@ -1912,6 +1912,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "created_on_behalf": {
+          "name": "created_on_behalf",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_on_behalf_by": {
+          "name": "created_on_behalf_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2021,6 +2034,21 @@
           "method": "btree",
           "with": {}
         },
+        "request_created_on_behalf_by_idx": {
+          "name": "request_created_on_behalf_by_idx",
+          "columns": [
+            {
+              "expression": "created_on_behalf_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "request_type_idx": {
           "name": "request_type_idx",
           "columns": [
@@ -2089,6 +2117,19 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "request_created_on_behalf_by_user_id_fk": {
+          "name": "request_created_on_behalf_by_user_id_fk",
+          "tableFrom": "request",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_on_behalf_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2114,6 +2155,10 @@
         "request_created_signed_in_as_fits": {
           "name": "request_created_signed_in_as_fits",
           "value": "\"request\".\"created_signed_in_as_staff_id\" is null or \"request\".\"created_signed_in_as\""
+        },
+        "request_created_on_behalf_fits": {
+          "name": "request_created_on_behalf_fits",
+          "value": "(\"request\".\"created_on_behalf_by\" is null or \"request\".\"created_on_behalf\") and (not \"request\".\"created_on_behalf\" or \"request\".\"created_by_side\" = 'company')"
         }
       },
       "isRLSEnabled": false
@@ -2293,346 +2338,6 @@
         "request_answer_link_used_fits": {
           "name": "request_answer_link_used_fits",
           "value": "(\"request_answer_link\".\"used_at\" is null) = (\"request_answer_link\".\"answer\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.request_attachment": {
-      "name": "request_attachment",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "entry_id": {
-          "name": "entry_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "uploaded_by": {
-          "name": "uploaded_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signed_in_as": {
-          "name": "signed_in_as",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "signed_in_as_staff_id": {
-          "name": "signed_in_as_staff_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content_type": {
-          "name": "content_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "size": {
-          "name": "size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "uploaded_at": {
-          "name": "uploaded_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_by": {
-          "name": "removed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_signed_in_as": {
-          "name": "removed_signed_in_as",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "removed_signed_in_as_staff_id": {
-          "name": "removed_signed_in_as_staff_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "file_deleted_at": {
-          "name": "file_deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "request_attachment_request_idx": {
-          "name": "request_attachment_request_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entry_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_entry_idx": {
-          "name": "request_attachment_entry_idx",
-          "columns": [
-            {
-              "expression": "entry_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_uploaded_by_idx": {
-          "name": "request_attachment_uploaded_by_idx",
-          "columns": [
-            {
-              "expression": "uploaded_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_signed_in_as_staff_idx": {
-          "name": "request_attachment_signed_in_as_staff_idx",
-          "columns": [
-            {
-              "expression": "signed_in_as_staff_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_removed_by_idx": {
-          "name": "request_attachment_removed_by_idx",
-          "columns": [
-            {
-              "expression": "removed_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_removed_signed_in_as_staff_idx": {
-          "name": "request_attachment_removed_signed_in_as_staff_idx",
-          "columns": [
-            {
-              "expression": "removed_signed_in_as_staff_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "request_attachment_unsent_idx": {
-          "name": "request_attachment_unsent_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"request_attachment\".\"request_id\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "request_attachment_request_id_request_id_fk": {
-          "name": "request_attachment_request_id_request_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_attachment_entry_id_request_entry_id_fk": {
-          "name": "request_attachment_entry_id_request_entry_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "request_entry",
-          "columnsFrom": [
-            "entry_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "request_attachment_uploaded_by_user_id_fk": {
-          "name": "request_attachment_uploaded_by_user_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "user",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "request_attachment_signed_in_as_staff_id_user_id_fk": {
-          "name": "request_attachment_signed_in_as_staff_id_user_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "user",
-          "columnsFrom": [
-            "signed_in_as_staff_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "request_attachment_removed_by_user_id_fk": {
-          "name": "request_attachment_removed_by_user_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "user",
-          "columnsFrom": [
-            "removed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "request_attachment_removed_signed_in_as_staff_id_user_id_fk": {
-          "name": "request_attachment_removed_signed_in_as_staff_id_user_id_fk",
-          "tableFrom": "request_attachment",
-          "tableTo": "user",
-          "columnsFrom": [
-            "removed_signed_in_as_staff_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "request_attachment_content_type_valid": {
-          "name": "request_attachment_content_type_valid",
-          "value": "\"request_attachment\".\"content_type\" in ('image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/heic', 'application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet', 'application/vnd.oasis.opendocument.presentation', 'application/zip', 'application/x-7z-compressed', 'application/gzip', 'video/mp4', 'video/quicktime', 'video/webm')"
-        },
-        "request_attachment_size_fits": {
-          "name": "request_attachment_size_fits",
-          "value": "\"request_attachment\".\"size\" > 0"
-        },
-        "request_attachment_entry_fits": {
-          "name": "request_attachment_entry_fits",
-          "value": "\"request_attachment\".\"entry_id\" is null or \"request_attachment\".\"request_id\" is not null"
-        },
-        "request_attachment_sent_fits": {
-          "name": "request_attachment_sent_fits",
-          "value": "(\"request_attachment\".\"request_id\" is null or \"request_attachment\".\"uploaded_at\" is not null) and (\"request_attachment\".\"removed_at\" is null or \"request_attachment\".\"request_id\" is not null)"
-        },
-        "request_attachment_signed_in_as_fits": {
-          "name": "request_attachment_signed_in_as_fits",
-          "value": "\"request_attachment\".\"signed_in_as_staff_id\" is null or \"request_attachment\".\"signed_in_as\""
-        },
-        "request_attachment_removed_fits": {
-          "name": "request_attachment_removed_fits",
-          "value": "\"request_attachment\".\"removed_at\" is not null or (\"request_attachment\".\"removed_by\" is null and not \"request_attachment\".\"removed_signed_in_as\" and \"request_attachment\".\"file_deleted_at\" is null)"
-        },
-        "request_attachment_removed_signed_in_as_fits": {
-          "name": "request_attachment_removed_signed_in_as_fits",
-          "value": "\"request_attachment\".\"removed_signed_in_as_staff_id\" is null or \"request_attachment\".\"removed_signed_in_as\""
         }
       },
       "isRLSEnabled": false

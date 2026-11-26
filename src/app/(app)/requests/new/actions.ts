@@ -1,5 +1,6 @@
 /**
- * @file Server action for raising a request.
+ * @file Server actions for raising a request, and for the people the staff
+ * can raise it for.
  */
 'use server';
 
@@ -12,7 +13,8 @@ import { requestPath } from '@/lib/requests';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { raiseRequest } from '@/server/requests';
+import { ServiceError } from '@/server/errors';
+import { listRaisableFor, type RaisableForPerson, raiseRequest } from '@/server/requests';
 
 /**
  * Raises a request and goes to its page, which confirms it. A priority only
@@ -25,7 +27,8 @@ import { raiseRequest } from '@/server/requests';
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `company` (its URL name), `title`, `type`, `description` and,
- *   from the staff, `priority`, and an `attachment` for each file sent with it.
+ *   from the staff, `priority` and `raised_for` (the key of the person it's raised for; empty
+ *   when the staff member raises it), and an `attachment` for each file sent with it.
  * @returns Why it failed; on success the browser is sent to the new request.
  */
 export default async function raiseRequestAction(
@@ -41,8 +44,35 @@ export default async function raiseRequestAction(
       description: field(formData, 'description'),
       priority: field(formData, 'priority'),
       attachments: fieldValues(formData, 'attachment'),
+      raisedFor: field(formData, 'raised_for'),
     });
     refresh();
     redirect(`${requestPath(number)}?raised=1`);
   });
+}
+
+/**
+ * Lists who the viewer can raise a request in a company for
+ * (`listRaisableFor`), for the form's select when another company is
+ * chosen: a key and a name each, never an ID or an address. A read: it
+ * changes nothing.
+ *
+ * @param company - The company's URL name, as the browser sent it.
+ * @returns The people; nobody for a company the viewer may not raise a request for others in,
+ *   like for one that doesn't exist.
+ */
+export async function raiseForChoicesAction(company: unknown): Promise<RaisableForPerson[]> {
+  if (typeof company !== 'string' || company === '') {
+    return [];
+  }
+  const actor = await getActor();
+  try {
+    return await listRaisableFor(appContext, actor, company);
+  } catch (error) {
+    // Whatever the viewer may not see or raise for others in has nobody to choose.
+    if (error instanceof ServiceError) {
+      return [];
+    }
+    throw error;
+  }
 }

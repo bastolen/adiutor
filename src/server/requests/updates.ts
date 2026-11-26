@@ -307,6 +307,32 @@ export async function tellSubscribed(
   );
 }
 
+/**
+ * Queues, for someone at the company a staff member raised a request for
+ * (decision 0047), that it was raised for them. Their email shows the
+ * description, so the mentions in it aren't told to them again.
+ *
+ * @param tx - The raising transaction.
+ * @param about - The request, who raised it and who for.
+ * @param about.requestId - The request.
+ * @param about.actorId - The staff member who raised it.
+ * @param about.raisedFor - Who they raised it for.
+ */
+export async function tellRaisedFor(
+  tx: DatabaseTransaction,
+  about: { requestId: string; actorId: string; raisedFor: string },
+): Promise<void> {
+  await queueNews(tx, [
+    {
+      requestId: about.requestId,
+      userId: about.raisedFor,
+      event: 'raised',
+      entryId: null,
+      byUserId: about.actorId,
+    },
+  ]);
+}
+
 /** A queued piece of news for one person, as the batch that sends it hands it over. */
 export interface QueuedRequestNews {
   /** The queued job's ID. Job IDs are in the order the news was queued. */
@@ -386,6 +412,14 @@ export type RequestUpdateItem =
       event: 'subscribed';
       /** Who. */
       by: string;
+    }
+  | {
+      /** A staff member raised the request for the reader (decision 0047). */
+      event: 'raised';
+      /** Who. */
+      by: string;
+      /** Its description, as it is by now. */
+      text: RequestUpdateText;
     };
 
 /** What one person's email about a request may show. */
@@ -417,7 +451,8 @@ export interface RequestUpdate {
   /**
    * Where on the request's page the email's link opens: the anchor of the
    * first news it tells of that has a place there (an entry of the activity,
-   * `#entry-<ID>`, or the description for a mention in it), or `null` when
+   * `#entry-<ID>`, or the description for a mention in it or a request
+   * raised for the reader), or `null` when
    * none has one (being subscribed leaves no entry).
    */
   anchor: string | null;
@@ -446,6 +481,8 @@ async function loadNewsRequest(db: Database, requestId: string) {
       title: request.title,
       description: request.description,
       descriptionFormat: request.descriptionFormat,
+      createdBy: request.createdBy,
+      createdOnBehalf: request.createdOnBehalf,
       companyId: request.companyId,
       status: request.status,
       companyName: company.name,
@@ -826,6 +863,15 @@ function itemOf(
   if (event === 'subscribed' && told.subscribed) {
     return { event, by };
   }
+  if (event === 'raised' && found.createdOnBehalf && found.createdBy === told.reader.id) {
+    // The request says a staff member raised it, also once their account is gone.
+    const raisedBy = told.people.find(({ id }) => id === byUserId);
+    return {
+      event,
+      by: pageName(context, raisedBy?.name ?? null, 'staff'),
+      text: updateText(context, found.description, found.descriptionFormat, null),
+    };
+  }
   return null;
 }
 
@@ -837,7 +883,7 @@ function itemOf(
  * @returns Its anchor, or `null` when it has none.
  */
 function anchorOf(piece: QueuedRequestNews, item: RequestUpdateItem): string | null {
-  if (item.event === 'mentioned' && item.where === 'description') {
+  if ((item.event === 'mentioned' && item.where === 'description') || item.event === 'raised') {
     return DESCRIPTION_ANCHOR;
   }
   return item.event === 'subscribed' || piece.entryId === null ? null : entryAnchor(piece.entryId);

@@ -10,6 +10,7 @@ import {
   EmailParagraph,
   LinkFallback,
 } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -42,7 +43,9 @@ export default function AccountCreatedEmail({
   validDays,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: AccountCreatedEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.accountCreated');
   const values = { creator: creatorName, staff: staffName };
   return (
@@ -51,13 +54,18 @@ export default function AccountCreatedEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', values)}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
-      <EmailNote>{t('note', { days: validDays, signInUrl: `${appUrl}/auth` })}</EmailNote>
-      <LinkFallback url={url} locale={locale} />
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
+      <EmailNote colours={colours}>
+        {t('note', { days: validDays, signInUrl: `${appUrl}/auth` })}
+      </EmailNote>
+      <LinkFallback colours={colours} url={url} locale={locale} />
     </EmailLayout>
   );
 }

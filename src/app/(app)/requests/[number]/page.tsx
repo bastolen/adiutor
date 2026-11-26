@@ -76,6 +76,7 @@ import {
 } from '@/server/requests';
 
 import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
+import RaisedForNote from '../../_requests/raised-for-note';
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
@@ -278,7 +279,8 @@ async function RequestContent({
 
   const descriptionSource = {
     url: address,
-    writer: personName(detail.raisedBy, names),
+    // Who wrote it: for a request raised for someone, the staff member who raised it for them.
+    writer: personName(detail.raisedOnBehalf ?? detail.raisedBy, names),
     at: detail.createdAt,
   };
   const descriptionText = (
@@ -329,9 +331,16 @@ async function RequestContent({
                 <PersonLine person={detail.raisedBy} names={names}>
                   <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
                     <RelativeTime date={detail.createdAt} />
+                    {detail.raisedOnBehalf && (
+                      <RaisedForNote
+                        staff={detail.raisedOnBehalf}
+                        person={detail.raisedBy}
+                        names={names}
+                      />
+                    )}
                     <SignedInAsMark
                       mark={detail.raisedSignedInAs}
-                      author={detail.raisedBy}
+                      author={detail.raisedOnBehalf ?? detail.raisedBy}
                       names={names}
                     />
                     <EditedNote

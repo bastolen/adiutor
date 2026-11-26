@@ -65,6 +65,12 @@ export const ERROR_MESSAGE_MAX_LENGTH = 500;
 /** The longest page path that is reported or stored (`reportErrorAction` and `recordAppError`). */
 export const ERROR_PATH_MAX_LENGTH = 300;
 
+/** The longest name of a webhook (`webhookNameSchema`, and the name field's `maxLength`). */
+export const WEBHOOK_NAME_MAX_LENGTH = 80;
+
+/** The longest address of a webhook (`webhookUrlProblem`, and the URL field's `maxLength`). */
+export const WEBHOOK_URL_MAX_LENGTH = 2048;
+
 /**
  * A name's Latin letters and digits, for a key or a slug made from it:
  * without accents (`NFKD`), in lower case, with one separator for every

@@ -4,6 +4,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
+import { emailColours } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
@@ -28,7 +29,9 @@ export default function MagicLinkEmail({
   url,
   locale,
   logoSrc = undefined,
+  brand = undefined,
 }: MagicLinkEmailProps) {
+  const colours = emailColours(brand);
   const t = translator(locale, 'emails.magicLink');
   return (
     <EmailLayout
@@ -36,12 +39,17 @@ export default function MagicLinkEmail({
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
+      brand={brand}
       reason={t('reason')}
     >
-      <EmailHeading>{t('heading')}</EmailHeading>
-      <EmailParagraph>{t('body', { minutes: EMAIL_LINK_MINUTES })}</EmailParagraph>
-      <EmailButton href={url}>{t('button')}</EmailButton>
-      <LinkFallback url={url} locale={locale} />
+      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailParagraph colours={colours}>
+        {t('body', { minutes: EMAIL_LINK_MINUTES })}
+      </EmailParagraph>
+      <EmailButton colours={colours} href={url}>
+        {t('button')}
+      </EmailButton>
+      <LinkFallback colours={colours} url={url} locale={locale} />
     </EmailLayout>
   );
 }

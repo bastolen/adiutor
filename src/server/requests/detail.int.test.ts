@@ -28,6 +28,8 @@ import {
   MAX_EARLIER_CHUNKS,
   THREAD_CHUNK,
 } from './detail';
+import mentionKey from './mention-key';
+import raiseRequest from './raise';
 import {
   ctx,
   db,
@@ -78,6 +80,47 @@ describe('getRequest', () => {
       earlierChunks: 0,
     });
     expect(detail.createdAt).toEqual(stored.createdAt);
+  });
+
+  it('says who raised a request for someone to every reader, and nothing for one raised by its author', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const colleague = await memberActor(db, company.id, 'client', 'colin@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await raiseRequest(ctx, support, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'They called about it.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+    const own = await storeRequest(company.id, { createdBy: client.id });
+
+    const forClient = await getRequest(ctx, client, raised.id);
+    expect(forClient).toMatchObject({
+      raisedBy: { userId: null, name: 'casey', side: 'company', isViewer: true },
+      raisedOnBehalf: { userId: null, name: 'sam', side: 'staff', isViewer: false },
+    });
+    expect((await getRequest(ctx, colleague, raised.id)).raisedOnBehalf).toMatchObject({
+      name: 'sam',
+      isViewer: false,
+    });
+    // The staff have a page for every user, which the names link to.
+    expect(await getRequest(ctx, support, raised.id)).toMatchObject({
+      raisedBy: { userId: client.id, name: 'casey', side: 'company', isViewer: false },
+      raisedOnBehalf: { userId: support.id, name: 'sam', side: 'staff', isViewer: true },
+    });
+    expect(await getRequest(ctx, client, own.id)).not.toHaveProperty('raisedOnBehalf');
+
+    // Once the staff member's account is gone, the request still says the staff raised it.
+    await db.delete(user).where(eq(user.id, support.id));
+    expect((await getRequest(ctx, client, raised.id)).raisedOnBehalf).toEqual({
+      userId: null,
+      name: null,
+      side: 'staff',
+      isViewer: false,
+      picture: null,
+    });
   });
 
   it('finds a request by its number or its ID', async () => {

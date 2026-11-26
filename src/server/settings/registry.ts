@@ -11,6 +11,7 @@ import { DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 import { DEFAULT_REQUEST_PREFIX } from '@/lib/requests';
 import { DEFAULT_MAX_FILE_MB, MAX_FILE_MB, type StorageConfig } from '@/lib/storage';
 import {
+  brandColourSchema,
   localeSchema,
   maxFileMbSchema,
   requestPrefixSchema,
@@ -72,6 +73,19 @@ export const SETTINGS = {
    * with it.
    */
   'requests.prefix': defineSetting(requestPrefixSchema, DEFAULT_REQUEST_PREFIX as string),
+  /**
+   * The brand colours (decision 0049), set on the Appearance tab of Settings
+   * and worked out into the palette every page and email uses
+   * (`src/lib/branding`). `null` is the theme's own: the accent is the main
+   * actions, links and focus rings (teal and green), the dark accent the
+   * accent in dark mode only (only with an accent, {@link SETTING_CHECKS}),
+   * and the tint the colour whose hue the greys take (navy).
+   */
+  'brand.accent': defineSetting(brandColourSchema.nullable(), null),
+  /** The accent in dark mode; `null` works it out from `brand.accent`. */
+  'brand.accent_dark': defineSetting(brandColourSchema.nullable(), null),
+  /** The colour whose hue the greys take; `null` keeps the theme's navy. */
+  'brand.tint': defineSetting(brandColourSchema.nullable(), null),
   /**
    * The highest number a request has: raising a request adds one to it in its
    * transaction (`incrementSetting`), so two requests never share a number and
@@ -212,5 +226,17 @@ export const SETTING_CHECKS: readonly SettingCheck[] = [
       return defaultLocale === null || values['staff.offered_locales'].includes(defaultLocale);
     },
     problem: 'the default language must be one of the languages offered',
+  },
+  {
+    keys: ['brand.accent', 'brand.accent_dark'],
+    /**
+     * Whether a dark accent comes with an accent: it's a different accent for
+     * dark mode, so without an accent there's nothing for it to differ from.
+     *
+     * @param values - The settings as they'd be after the change.
+     * @returns Whether it holds.
+     */
+    holds: (values) => values['brand.accent_dark'] === null || values['brand.accent'] !== null,
+    problem: 'a dark accent needs an accent',
   },
 ];

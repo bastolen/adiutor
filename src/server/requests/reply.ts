@@ -33,6 +33,7 @@ import {
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellWebhooks } from './tell-webhooks';
 import { tellPeopleOnRequest } from './updates';
 
 /**
@@ -124,6 +125,9 @@ export default async function replyToRequest(
         .set({ lastActivityAt: CHANGE_MOMENT })
         .where(eq(request.id, locked.id));
       await tellPeopleOnRequest(tx, told, [{ event: 'reply', entryId: reply.id }], mentioned);
+      await tellWebhooks(tx, { requestId: locked.id, typeKey: locked.type }, [
+        { event: 'reply', entryId: reply.id },
+      ]);
       return { status };
     }
     // After the reply, so the history reads: the reply, then what it did to the status.
@@ -138,6 +142,10 @@ export default async function replyToRequest(
       ],
       mentioned,
     );
+    await tellWebhooks(tx, { requestId: locked.id, typeKey: locked.type }, [
+      { event: 'reply', entryId: reply.id },
+      { event: 'status', entryId: changed },
+    ]);
     return { status };
   });
 }

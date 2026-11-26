@@ -29,6 +29,7 @@ import {
   auditEvents,
 } from '../../../../tests/integration/helpers';
 import type { Actor } from '../../actor';
+import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
 import { RATE_LIMITS } from '../../rate-limit';
 import {
@@ -149,7 +150,7 @@ describe('invite links', () => {
       () => claimInviteLink(ctx, token, email),
     );
     // The invitation is rendered and emailed once its transaction has committed.
-    const firstEmail = await first.renderEmail();
+    const firstEmail = await first.renderEmail(await loadEmailBrand(db));
     await ctx.sendEmail(firstEmail);
 
     // The claim waited for the Admin's invitation, then kept it: the address is told to use it.

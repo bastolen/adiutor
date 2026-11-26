@@ -92,6 +92,7 @@
       "detailsChanged": "Los datos de esta solicitud han cambiado entretanto. Compruébalos y vuelve a intentarlo.",
       "notAssignable": "Solo se puede asignar a personal activo que trabaje en solicitudes. Comprueba a quién has elegido y vuelve a intentarlo.",
       "notSubscribable": "Solo se puede suscribir a personas activas que puedan leer esta solicitud. Comprueba a quién has elegido y vuelve a intentarlo.",
+      "notRaisableFor": "Solo puedes elegir a administradores y clientes activos de esta empresa. Comprueba a quién has elegido y vuelve a intentarlo.",
       "closedNoEdit": "Esta solicitud está cerrada, así que sus textos ya no se pueden editar.",
       "textChanged": "Alguien ha editado este texto entretanto. Compruébalo y vuelve a intentarlo."
     },
@@ -101,6 +102,12 @@
     "requestTypes": {
       "unavailable": "Este tipo ya no se puede elegir. Elige otro.",
       "lastActive": "Deja al menos un tipo sin archivar, o no se podrá abrir ninguna solicitud."
+    },
+    "webhooks": {
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar adónde envían los webhooks.",
+      "unreadable": "La dirección o el secreto de este webhook ya no se pueden leer. Escribe de nuevo su dirección y después renueva su secreto.",
+      "off": "Activa primero el webhook: no se envía nada a un webhook desactivado.",
+      "stillSending": "Este envío aún se está enviando. Espera a que terminen sus intentos."
     },
     "attachments": {
       "storageFromEnvironment": "El entorno del servidor elige dónde se guardan los archivos, así que no puedes cambiarlo aquí.",

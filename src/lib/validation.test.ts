@@ -13,6 +13,8 @@ import {
   REQUEST_TYPE_NAME_MAX_LENGTH,
   REQUEST_TITLE_MAX_LENGTH,
   SLUG_MAX_LENGTH,
+  WEBHOOK_NAME_MAX_LENGTH,
+  WEBHOOK_URL_MAX_LENGTH,
 } from './input-rules';
 import {
   CHOOSE_COMPANY_ROLE_MESSAGE,
@@ -44,6 +46,11 @@ import {
   staffRoleSchema,
   maxFileMbSchema,
   storageFormSchema,
+  webhookEventsSchema,
+  webhookFormatSchema,
+  webhookNameSchema,
+  webhookTypesSchema,
+  webhookUrlSchema,
 } from './validation';
 
 describe('emailSchema', () => {
@@ -323,6 +330,8 @@ describe('a name far too long', () => {
     ['companyNameSchema', companyNameSchema, 'validation.companyName.tooLong'],
     ['staffNameSchema', staffNameSchema, 'validation.staffName.tooLong'],
     ['requestTypeNameSchema', requestTypeNameSchema, 'validation.requestTypeName.tooLong'],
+    ['webhookNameSchema', webhookNameSchema, 'validation.webhookName.tooLong'],
+    ['webhookUrlSchema', webhookUrlSchema(true), 'validation.webhookUrl.tooLong'],
     ['passkeyNameSchema', passkeyNameSchema, 'validation.passkeyName.tooLong'],
     ['requestTitleSchema', requestTitleSchema, 'validation.requestTitle.tooLong'],
     [
@@ -769,5 +778,68 @@ describe('maxFileMbSchema', () => {
     expect(maxFileMbSchema(50).safeParse('2.5').error?.issues[0]?.message).toBe(
       'validation.storage.maxFileMb.whole',
     );
+  });
+});
+
+describe('the webhook schemas', () => {
+  /**
+   * The messages a value gets.
+   *
+   * @param schema - The schema.
+   * @param value - The value.
+   * @returns The messages, or none when it passed.
+   */
+  const messagesFor = (schema: z.ZodType, value: unknown) =>
+    schema.safeParse(value).error?.issues.map(({ message }) => message) ?? [];
+
+  it('take a name by the rules for names, as the email that turns a webhook off quotes it', () => {
+    expect(webhookNameSchema.parse('  Procurement ')).toBe('Procurement');
+    expect(messagesFor(webhookNameSchema, ' ')).toEqual(['validation.webhookName.empty']);
+    expect(messagesFor(webhookNameSchema, 'a'.repeat(WEBHOOK_NAME_MAX_LENGTH + 1))).toEqual([
+      'validation.webhookName.tooLong',
+    ]);
+    expect(messagesFor(webhookNameSchema, 'See hooks.adiutor.dev')).toEqual([
+      'validation.webhookName.webAddress',
+    ]);
+  });
+
+  it('take an address by the shared rules, worded for each problem', () => {
+    expect(webhookUrlSchema(true).parse(' https://hooks.adiutor.dev/in ')).toBe(
+      'https://hooks.adiutor.dev/in',
+    );
+    expect(messagesFor(webhookUrlSchema(true), '')).toEqual(['validation.webhookUrl.empty']);
+    expect(messagesFor(webhookUrlSchema(true), 'hooks.adiutor.dev')).toEqual([
+      'validation.webhookUrl.invalid',
+    ]);
+    expect(messagesFor(webhookUrlSchema(true), 'ftp://hooks.adiutor.dev')).toEqual([
+      'validation.webhookUrl.scheme',
+    ]);
+    expect(messagesFor(webhookUrlSchema(true), 'https://a:b@hooks.adiutor.dev')).toEqual([
+      'validation.webhookUrl.credentials',
+    ]);
+    expect(messagesFor(webhookUrlSchema(true), 'http://hooks.adiutor.dev')).toEqual([
+      'validation.webhookUrl.insecure',
+    ]);
+    expect(messagesFor(webhookUrlSchema(false), 'http://hooks.adiutor.dev')).toEqual([]);
+    expect(
+      messagesFor(
+        webhookUrlSchema(true),
+        `https://hooks.adiutor.dev/${'a'.repeat(WEBHOOK_URL_MAX_LENGTH)}`,
+      ),
+    ).toEqual(['validation.webhookUrl.tooLong']);
+  });
+
+  it('take a format, at least one event each once, and type keys each once', () => {
+    expect(webhookFormatSchema.parse('chat')).toBe('chat');
+    expect(messagesFor(webhookFormatSchema, 'xml')).toEqual(['validation.webhookFormat']);
+    expect(webhookEventsSchema.parse(['reply', 'raised', 'reply'])).toEqual(['raised', 'reply']);
+    expect(messagesFor(webhookEventsSchema, [])).toEqual(['validation.webhookEvents.empty']);
+    expect(messagesFor(webhookEventsSchema, ['everything'])).toEqual([
+      'validation.webhookEvents.unknown',
+    ]);
+    expect(webhookTypesSchema.parse(['bug', 'hotfix', 'bug'])).toEqual(['bug', 'hotfix']);
+    expect(messagesFor(webhookTypesSchema, ['Not a key'])).toEqual([
+      'validation.webhookTypes.unknown',
+    ]);
   });
 });

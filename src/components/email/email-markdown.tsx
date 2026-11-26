@@ -40,7 +40,7 @@ import {
   textLinkTarget,
 } from '@/lib/requests';
 
-import { colors, monoFontFamily } from './theme';
+import { type EmailColours, monoFontFamily } from './theme';
 
 /** A text to show in an email. */
 export interface EmailText {
@@ -68,53 +68,8 @@ const TASK_OPEN_MARK = '☐';
 /** The space below a block of text. */
 const BLOCK_GAP = '12px';
 
-/** The text around every block. */
-const root: CSSProperties = {
-  color: colors.foreground,
-  fontSize: '15px',
-  lineHeight: '24px',
-  overflowWrap: 'anywhere',
-};
-
 /** A paragraph. */
 const paragraph: CSSProperties = { margin: `0 0 ${BLOCK_GAP}` };
-
-/** A link someone wrote. */
-const link: CSSProperties = { color: colors.primary, textDecoration: 'underline' };
-
-/** A mention of a person. */
-const mention: CSSProperties = { color: colors.primary, fontWeight: 600 };
-
-/** Code in a sentence. */
-const inlineCode: CSSProperties = {
-  backgroundColor: colors.background,
-  border: `1px solid ${colors.border}`,
-  borderRadius: '4px',
-  fontFamily: monoFontFamily,
-  fontSize: '13px',
-  padding: '1px 4px',
-};
-
-/** A block of code: every line break kept, long lines wrapped. */
-const codeBlock: CSSProperties = {
-  backgroundColor: colors.background,
-  border: `1px solid ${colors.border}`,
-  borderRadius: '8px',
-  fontFamily: monoFontFamily,
-  fontSize: '13px',
-  lineHeight: '20px',
-  margin: `0 0 ${BLOCK_GAP}`,
-  padding: '12px',
-  whiteSpace: 'pre-wrap',
-};
-
-/** A quotation. */
-const quote: CSSProperties = {
-  borderLeft: `3px solid ${colors.border}`,
-  color: colors.muted,
-  margin: `0 0 ${BLOCK_GAP}`,
-  padding: '0 0 0 12px',
-};
 
 /** A list. */
 const list: CSSProperties = { margin: `0 0 ${BLOCK_GAP}`, padding: '0 0 0 24px' };
@@ -130,35 +85,91 @@ const table: CSSProperties = {
   margin: `0 0 ${BLOCK_GAP}`,
 };
 
-/** A table's cell. */
-const cell: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  padding: '6px 10px',
-  verticalAlign: 'top',
-};
-
-/** The notes at the end of a text. */
-const footnotes: CSSProperties = {
-  borderTop: `1px solid ${colors.border}`,
-  color: colors.muted,
-  fontSize: '13px',
-  lineHeight: '20px',
-  margin: `0 0 ${BLOCK_GAP}`,
-  padding: '8px 0 0',
-};
-
 /**
- * The size of a heading, by how far it is below the text's highest one.
+ * The styles of a text that take the email's colours.
  *
- * @param below - 0 for the text's highest heading, 1 for the next, and so on.
+ * @param colors - The email's colours.
  */
-function headingStyle(below: number): CSSProperties {
+function coloured(colors: EmailColours) {
+  /** A table's cell. */
+  const cell: CSSProperties = {
+    border: `1px solid ${colors.border}`,
+    padding: '6px 10px',
+    verticalAlign: 'top',
+  };
   return {
-    color: colors.foreground,
-    fontSize: below === 0 ? '17px' : '15px',
-    fontWeight: 600,
-    lineHeight: '24px',
-    margin: `0 0 8px`,
+    /** The text around every block. */
+    root: {
+      color: colors.foreground,
+      fontSize: '15px',
+      lineHeight: '24px',
+      overflowWrap: 'anywhere',
+    } satisfies CSSProperties,
+    /** A link someone wrote. */
+    link: { color: colors.primary, textDecoration: 'underline' } satisfies CSSProperties,
+    /** A mention of a person. */
+    mention: { color: colors.primary, fontWeight: 600 } satisfies CSSProperties,
+    /** Code in a sentence. */
+    inlineCode: {
+      backgroundColor: colors.background,
+      border: `1px solid ${colors.border}`,
+      borderRadius: '4px',
+      fontFamily: monoFontFamily,
+      fontSize: '13px',
+      padding: '1px 4px',
+    } satisfies CSSProperties,
+    /** A block of code: every line break kept, long lines wrapped. */
+    codeBlock: {
+      backgroundColor: colors.background,
+      border: `1px solid ${colors.border}`,
+      borderRadius: '8px',
+      fontFamily: monoFontFamily,
+      fontSize: '13px',
+      lineHeight: '20px',
+      margin: `0 0 ${BLOCK_GAP}`,
+      padding: '12px',
+      whiteSpace: 'pre-wrap',
+    } satisfies CSSProperties,
+    /** A quotation. */
+    quote: {
+      borderLeft: `3px solid ${colors.border}`,
+      color: colors.muted,
+      margin: `0 0 ${BLOCK_GAP}`,
+      padding: '0 0 0 12px',
+    } satisfies CSSProperties,
+    /** A table's cell. */
+    cell,
+    /** A table's header cell. */
+    headerCell: { ...cell, backgroundColor: colors.background } satisfies CSSProperties,
+    /** The line between two parts of a text. */
+    rule: {
+      border: 'none',
+      borderTop: `1px solid ${colors.border}`,
+      margin: '16px 0',
+    } satisfies CSSProperties,
+    /** The notes at the end of a text. */
+    footnotes: {
+      borderTop: `1px solid ${colors.border}`,
+      color: colors.muted,
+      fontSize: '13px',
+      lineHeight: '20px',
+      margin: `0 0 ${BLOCK_GAP}`,
+      padding: '8px 0 0',
+    } satisfies CSSProperties,
+    /**
+     * The size of a heading, by how far it is below the text's highest one.
+     *
+     * @param below - 0 for the text's highest heading, 1 for the next, and so on.
+     */
+    heading(below: number): CSSProperties {
+      return {
+        color: colors.foreground,
+        fontSize: below === 0 ? '17px' : '15px',
+        fontWeight: 600,
+        lineHeight: '24px',
+        margin: `0 0 8px`,
+      };
+    },
   };
 }
 
@@ -183,6 +194,7 @@ function alignment(align: unknown): CSSProperties['textAlign'] {
  * @param options.locale - The email's language, for what an image is called.
  * @param options.highest - How many `#` the text's highest heading was written with.
  * @param options.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
+ * @param options.colours - The email's colours.
  * @returns The components to render the text's tree with.
  */
 function emailElements({
@@ -190,13 +202,16 @@ function emailElements({
   locale,
   highest,
   appUrl,
+  colours,
 }: {
   mentions: Readonly<Record<string, string>>;
   locale: Locale;
   highest: number;
   appUrl: string | null;
+  colours: EmailColours;
 }): Components {
   const t = translator(locale, 'common.markdown');
+  const styles = coloured(colours);
 
   /**
    * Builds the component of a heading written with `depth` marks. The text's
@@ -216,7 +231,7 @@ function emailElements({
       const below = Math.max(depth - highest, 0);
       const Tag = `h${Math.min(FIRST_HEADING_LEVEL + below, LOWEST_HEADING)}` as 'h3';
       return (
-        <Tag dir="auto" style={headingStyle(below)}>
+        <Tag dir="auto" style={styles.heading(below)}>
           {children}
         </Tag>
       );
@@ -241,13 +256,13 @@ function emailElements({
     const name = mentionOf(href, mentions);
     if (name !== undefined) {
       // The sign of a mention, the same in every language, then the name.
-      return <span style={mention}>{`@${name}`}</span>;
+      return <span style={styles.mention}>{`@${name}`}</span>;
     }
     const target = typeof href === 'string' ? textLinkTarget(href, appUrl) : null;
     return target === null ? (
       <span>{children}</span>
     ) : (
-      <a href={target} rel="noopener noreferrer nofollow" style={link}>
+      <a href={target} rel="noopener noreferrer nofollow" style={styles.link}>
         {children}
       </a>
     );
@@ -267,7 +282,7 @@ function emailElements({
     return target === null ? (
       <span>{label}</span>
     ) : (
-      <a href={target} rel="noopener noreferrer nofollow" style={link}>
+      <a href={target} rel="noopener noreferrer nofollow" style={styles.link}>
         {label}
       </a>
     );
@@ -323,26 +338,24 @@ function emailElements({
      * A quotation.
      */
     blockquote: ({ children = null }: ComponentProps<'blockquote'>) => (
-      <blockquote style={quote}>{children}</blockquote>
+      <blockquote style={styles.quote}>{children}</blockquote>
     ),
     /**
      * A line between two parts of a text.
      */
-    hr: () => (
-      <hr style={{ border: 'none', borderTop: `1px solid ${colors.border}`, margin: '16px 0' }} />
-    ),
+    hr: () => <hr style={styles.rule} />,
     /**
      * Code in a sentence.
      */
     code: ({ children = null }: ComponentProps<'code'>) => (
-      <code style={inlineCode}>{children}</code>
+      <code style={styles.inlineCode}>{children}</code>
     ),
     /**
      * A block of code, as it was written and always left to right. The
      * highlighter's parts are dropped: an email has no colours for them.
      */
     pre: ({ node }: ComponentProps<'pre'> & ExtraProps) => (
-      <pre dir="ltr" style={codeBlock}>
+      <pre dir="ltr" style={styles.codeBlock}>
         {writtenCode(node)}
       </pre>
     ),
@@ -362,8 +375,7 @@ function emailElements({
       <th
         dir="auto"
         style={{
-          ...cell,
-          backgroundColor: colors.background,
+          ...styles.headerCell,
           fontWeight: 600,
           textAlign: alignment(align) ?? 'left',
         }}
@@ -375,7 +387,7 @@ function emailElements({
      * A table's cell.
      */
     td: ({ align, children = null }: ComponentProps<'td'>) => (
-      <td dir="auto" style={{ ...cell, textAlign: alignment(align) }}>
+      <td dir="auto" style={{ ...styles.cell, textAlign: alignment(align) }}>
         {children}
       </td>
     ),
@@ -383,7 +395,7 @@ function emailElements({
      * The notes at the end of a text.
      */
     section: ({ children = null }: ComponentProps<'section'>) => (
-      <div style={footnotes}>{children}</div>
+      <div style={styles.footnotes}>{children}</div>
     ),
   };
 }
@@ -429,8 +441,18 @@ function asWritten(text: string, appUrl: string | null): string {
  * @param props - Component props.
  * @param props.text - The text, as {@link asWritten} gives it.
  * @param props.appUrl - Adiutor's own address (see `MarkdownElementsOptions.appUrl`).
+ * @param props.colours - The email's colours.
  */
-function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null }) {
+function PlainEmailText({
+  text,
+  appUrl,
+  colours,
+}: {
+  text: string;
+  appUrl: string | null;
+  colours: EmailColours;
+}) {
+  const { link } = coloured(colours);
   return (
     <p dir="auto" style={{ ...paragraph, whiteSpace: 'pre-wrap' }}>
       {placed(splitLinks(text)).map((part) => {
@@ -461,22 +483,26 @@ function PlainEmailText({ text, appUrl }: { text: string; appUrl: string | null 
  * @param props.locale - The email's language.
  * @param props.appUrl - Adiutor's own address (the email's `appUrl`), for a text the company
  *   reads; `null` for an internal note, which links to the staff's pages.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
 export default function EmailMarkdown({
   value,
   id,
   locale,
   appUrl,
+  colours,
 }: {
   value: EmailText;
   id: string;
   locale: Locale;
   appUrl: string | null;
+  colours: EmailColours;
 }) {
+  const { root } = coloured(colours);
   if (value.format !== 'markdown') {
     return (
       <div style={root}>
-        <PlainEmailText text={asWritten(value.text, appUrl)} appUrl={appUrl} />
+        <PlainEmailText text={asWritten(value.text, appUrl)} appUrl={appUrl} colours={colours} />
       </div>
     );
   }
@@ -497,7 +523,7 @@ export default function EmailMarkdown({
     );
     return (
       <div style={root}>
-        <PlainEmailText text={named} appUrl={appUrl} />
+        <PlainEmailText text={named} appUrl={appUrl} colours={colours} />
       </div>
     );
   }
@@ -512,6 +538,7 @@ export default function EmailMarkdown({
           locale,
           highest: highestHeading(tree),
           appUrl,
+          colours,
         }),
         // A block of code reads its code from its node.
         passNode: true,

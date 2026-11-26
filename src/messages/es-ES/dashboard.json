@@ -36,7 +36,7 @@
       },
       "settings": {
         "title": "Ajustes",
-        "description": "Gestiona el personal, los idiomas, la zona horaria y los tipos de solicitud."
+        "description": "Gestiona el personal, los idiomas, la zona horaria, los tipos de solicitud y los webhooks."
       },
       "logs": {
         "title": "Registros",

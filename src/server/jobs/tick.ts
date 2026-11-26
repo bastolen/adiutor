@@ -33,7 +33,8 @@ export const WRAP_UP_SECONDS = 5;
  * before this deadline must still end, and be recorded, before the platform
  * stops the function. The longest such piece of work is one email (or one
  * group of emails sent together), which takes at most `SEND_TIMEOUT_MS`, 15
- * seconds; when it fails for good, the staff Admins' alert follows
+ * seconds (an attempt to deliver to a webhook takes at most 10,
+ * `WEBHOOK_TIMEOUT_MS`); when it fails for good, the staff Admins' alert follows
  * (`alertStaffAdmins`, one group of emails sent together), up to another 15.
  * So: 60 − 15 − 15 − 5 = 25. The recurring jobs get the first half of it. A
  * run that the platform stops anyway stays `running` for its 15-minute lease

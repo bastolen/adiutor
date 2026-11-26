@@ -7,6 +7,7 @@
  * short connection to the test database (`withTestDatabase`). Resetting and
  * seeding the database is `seed.ts`.
  */
+import { symmetricEncrypt } from 'better-auth/crypto';
 import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
@@ -14,6 +15,7 @@ import { Client } from 'pg';
 import * as schema from '../../src/db/schema';
 import type { AuditAction } from '../../src/lib/audit-actions';
 import type { CompanyRole } from '../../src/lib/authz/roles';
+import type { HexColour } from '../../src/lib/branding';
 import { firstRow } from '../../src/lib/defined';
 import { type Locale, LOCALES } from '../../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../../src/lib/invitation-lifetimes';
@@ -630,6 +632,33 @@ export async function setStaffName(name: string): Promise<void> {
 }
 
 /**
+ * Sets the brand colours directly, e.g. to put Adiutor's own back after a
+ * test chose some in Settings.
+ *
+ * @param colours - Each colour as `#rrggbb`; left out (or `null`) for the theme's own.
+ * @param colours.accent - The accent.
+ * @param colours.accentDark - The accent in dark mode.
+ * @param colours.tint - The tint.
+ */
+export async function setBrandColours(
+  colours: {
+    accent?: HexColour | null;
+    accentDark?: HexColour | null;
+    tint?: HexColour | null;
+  } = {},
+): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction((tx) =>
+      writeSettings(tx, {
+        'brand.accent': colours.accent ?? null,
+        'brand.accent_dark': colours.accentDark ?? null,
+        'brand.tint': colours.tint ?? null,
+      }),
+    );
+  });
+}
+
+/**
  * Reactivates an account straight in the database: the other way round of
  * {@link deactivateAccount}, to put a deactivated account back.
  *
@@ -1120,4 +1149,59 @@ export async function storeAttachment(
     file.contentType,
   );
   return id;
+}
+
+/**
+ * Removes the webhooks a spec added, by name, so later specs' request changes
+ * queue no deliveries to a receiver that's gone.
+ *
+ * @param names - The webhooks' names.
+ */
+export async function removeWebhooks(names: readonly string[]): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.delete(schema.webhook).where(inArray(schema.webhook.name, [...names]));
+  });
+}
+
+/**
+ * Stores a webhook that's off, sealed as the app seals its address and
+ * secret (with the test server's auth secret), with two tests among its
+ * deliveries (one delivered, one that failed), for a test that only looks
+ * at its page: off, so no request change sends it anything.
+ *
+ * @param name - Its name, unique to the test.
+ * @returns Its ID.
+ */
+export async function storeWebhookToLookAt(name: string): Promise<string> {
+  /**
+   * Seals a value as the app does, with the test server's auth secret.
+   *
+   * @param data - The value.
+   * @returns It, sealed.
+   */
+  const seal = (data: string) => symmetricEncrypt({ key: E2E_AUTH_SECRET, data });
+  return withTestDatabase(async (db) => {
+    const stored = firstRow(
+      await db
+        .insert(schema.webhook)
+        .values({
+          name,
+          urlSealed: await seal('https://hooks.adiutor.test/in'),
+          urlHost: 'hooks.adiutor.test',
+          format: 'json',
+          events: ['raised', 'reply', 'status'],
+          secretSealed: await seal(`whsec_${Buffer.alloc(32, 9).toString('base64')}`),
+          turnedOffAt: new Date(),
+          turnedOffReason: 'failing',
+          failingSince: new Date(Date.now() - 3 * 24 * 60 * 60_000),
+        })
+        .returning({ id: schema.webhook.id }),
+      'the stored webhook',
+    );
+    await db.insert(schema.webhookDelivery).values([
+      { webhookId: stored.id, test: true, status: 'delivered', attempts: 1, lastStatus: 200 },
+      { webhookId: stored.id, test: true, status: 'failed', attempts: 1, lastError: 'timeout' },
+    ]);
+    return stored.id;
+  });
 }

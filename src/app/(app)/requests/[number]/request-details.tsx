@@ -1,9 +1,10 @@
 /**
  * @file The details of a request next to its conversation: its status, who
  * it's assigned to, who is subscribed to it, its type and (for the staff)
- * priority, its company, who raised it and when, when the staff first
- * replied and when it last had activity, with the controls its viewer may
- * use. Its text comes from `requests.detail`.
+ * priority, its company, who raised it (and the staff member who raised it
+ * for them) and when, when the staff first replied and when it last had
+ * activity, with the controls its viewer may use. Its text comes from
+ * `requests.detail`.
  */
 import { getLocale, getTimeZone, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -15,6 +16,7 @@ import TextLink from '@/components/ui/text-link';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import type { RequestDetail } from '@/server/requests';
 
+import RaisedForNote from '../../_requests/raised-for-note';
 import {
   PriorityBadge,
   ReopenedBadge,
@@ -178,6 +180,14 @@ export default async function RequestDetails({
         </Detail>
         <Detail term={t('raisedBy')}>
           <PersonLine person={detail.raisedBy} names={names} />
+          {detail.raisedOnBehalf && (
+            <RaisedForNote
+              staff={detail.raisedOnBehalf}
+              person={detail.raisedBy}
+              names={names}
+              separated={false}
+            />
+          )}
         </Detail>
         <Detail term={t('raised')}>
           <time dateTime={detail.createdAt.toISOString()}>

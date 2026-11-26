@@ -8,15 +8,22 @@ import { Heading, Link, Text } from 'react-email';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 
-import { colors, paragraph, small } from './theme';
+import { type EmailColours, paragraph, small } from './theme';
 
 /**
  * The email's main heading.
  *
  * @param props - Heading props.
  * @param props.children - Heading text.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
-export function EmailHeading({ children }: { children: ReactNode }) {
+export function EmailHeading({
+  children,
+  colours: colors,
+}: {
+  children: ReactNode;
+  colours: EmailColours;
+}) {
   return (
     <Heading
       as="h1"
@@ -39,9 +46,16 @@ export function EmailHeading({ children }: { children: ReactNode }) {
  *
  * @param props - Paragraph props.
  * @param props.children - The text.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
-export function EmailParagraph({ children }: { children: ReactNode }) {
-  return <Text style={paragraph}>{children}</Text>;
+export function EmailParagraph({
+  children,
+  colours,
+}: {
+  children: ReactNode;
+  colours: EmailColours;
+}) {
+  return <Text style={paragraph(colours)}>{children}</Text>;
 }
 
 /**
@@ -49,22 +63,64 @@ export function EmailParagraph({ children }: { children: ReactNode }) {
  *
  * @param props - Note props.
  * @param props.children - The text.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
-export function EmailNote({ children }: { children: ReactNode }) {
-  return <Text style={{ ...small, marginBottom: '16px' }}>{children}</Text>;
+export function EmailNote({ children, colours }: { children: ReactNode; colours: EmailColours }) {
+  return <Text style={{ ...small(colours), marginBottom: '16px' }}>{children}</Text>;
+}
+
+/**
+ * A link in the email's own words, in the brand's colours.
+ *
+ * @param props - Link props.
+ * @param props.href - Where it goes.
+ * @param props.tone - `primary` for the brand's colour, `muted` for the secondary text's.
+ * @param props.bold - Whether the link is semibold.
+ * @param props.underline - Whether the link is underlined.
+ * @param props.children - The link's text.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
+ */
+export function EmailLink({
+  href,
+  tone,
+  bold = false,
+  underline = false,
+  children,
+  colours,
+}: {
+  href: string;
+  tone: 'primary' | 'muted';
+  bold?: boolean;
+  underline?: boolean;
+  children: ReactNode;
+  colours: EmailColours;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        color: colours[tone],
+        ...(bold ? { fontWeight: 600 } : {}),
+        ...(underline ? { textDecoration: 'underline' } : {}),
+      }}
+    >
+      {children}
+    </Link>
+  );
 }
 
 /**
  * The button's link, for the `<link>` tag of `emails.linkFallback`.
  *
  * @param href - The link.
+ * @param colours - The email's colours.
  */
-function fallbackLinkTag(href: string) {
+function fallbackLinkTag(href: string, colours: EmailColours) {
   return function linkTag(chunks: ReactNode) {
     return (
-      <Link href={href} style={{ color: colors.primary }}>
+      <EmailLink href={href} tone="primary" colours={colours}>
         {chunks}
-      </Link>
+      </EmailLink>
     );
   };
 }
@@ -75,11 +131,23 @@ function fallbackLinkTag(href: string) {
  * @param props - Fallback props.
  * @param props.url - The button's link.
  * @param props.locale - The recipient's language.
+ * @param props.colours - The email's colours (`emailColours(props.brand)`).
  */
-export function LinkFallback({ url, locale }: { url: string; locale: Locale }) {
+export function LinkFallback({
+  url,
+  locale,
+  colours,
+}: {
+  url: string;
+  locale: Locale;
+  colours: EmailColours;
+}) {
   return (
-    <Text style={{ ...small, wordBreak: 'break-all' }}>
-      {translator(locale, 'emails').rich('linkFallback', { url, link: fallbackLinkTag(url) })}
+    <Text style={{ ...small(colours), wordBreak: 'break-all' }}>
+      {translator(locale, 'emails').rich('linkFallback', {
+        url,
+        link: fallbackLinkTag(url, colours),
+      })}
     </Text>
   );
 }

@@ -13,6 +13,7 @@ import {
   memberActor,
   setupTestContext,
 } from '../../../../tests/integration/helpers';
+import { loadEmailBrand } from '../../branding';
 import { createSentInvitation } from './record';
 
 vi.mock('@/emails/invitation', async (importOriginal) => {
@@ -38,7 +39,7 @@ describe('an invitation’s email', () => {
       expect(invitationEmail).not.toHaveBeenCalled();
       return result;
     });
-    const email = await created.renderEmail();
+    const email = await created.renderEmail(await loadEmailBrand(db));
 
     expect(invitationEmail).toHaveBeenCalledOnce();
     expect(email.to).toBe('new@adiutor.test');

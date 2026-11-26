@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_EMAIL_COLOURS, emailColoursOf } from '@/components/email/theme';
+import { derivePalette } from '@/lib/branding';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
 import { LOCALES, type Locale } from '@/lib/i18n/locales';
@@ -14,6 +16,7 @@ import { accountCreatedEmail } from './account-created';
 import { addedToCompanyEmail } from './added-to-company';
 import { alreadyInvitedEmail } from './already-invited';
 import { alreadyMemberEmail } from './already-member';
+import type { EmailBrand } from './base-props';
 import { invitationEmail } from './invitation';
 import { invitationReminderEmail } from './invitation-reminder';
 import { inviteLinkConfirmationEmail } from './invite-link-confirmation';
@@ -25,6 +28,7 @@ import { securityNoticeEmail } from './security-notice';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';
+import { webhookTurnedOffEmail } from './webhook-turned-off';
 
 /** The app URL used in every test email. */
 const appUrl = 'https://adiutor.test';
@@ -419,6 +423,31 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('tells someone a request was raised for, with its description in full', async () => {
+    const url = `${appUrl}/requests/142#request-description`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'raised',
+          by: 'Sam Support',
+          text: { text: 'It prints **blank** pages.', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('Sam Support raised this request for you:');
+    expect(email.html).toContain('<strong>blank</strong>');
+    expect(email.html).toContain('Sam Support raised this request for you.');
+    expectBasics(email, url);
+  });
+
   it('shows the staff an internal note in full, marked as one', async () => {
     const url = `${appUrl}/requests/142`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
@@ -606,6 +635,39 @@ describe('background jobs', () => {
       url,
     });
     expect(several.text).toContain('4 security-notice jobs were given up after their last attempt');
+  });
+});
+
+describe('webhooks', () => {
+  const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+
+  it('tells a staff Admin which webhook Adiutor turned off and why, never its address', async () => {
+    const failing = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'failing',
+      url,
+    });
+    expect(failing.subject).toBe('Adiutor turned off the webhook “Procurement”');
+    expect(failing.text).toContain('Every delivery to it has failed for 3 days');
+    expect(failing.text).toContain('turn it on in Settings');
+    expectBasics(failing, url);
+
+    const gone = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'gone',
+      url,
+    });
+    expect(gone.text).toContain('gone for good (410 Gone)');
+
+    const unreadable = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'unreadable',
+      url,
+    });
+    expect(unreadable.text).toContain('Enter its address again and renew its secret');
   });
 });
 
@@ -1062,6 +1124,11 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           where: 'description',
           text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
         },
+        {
+          event: 'raised',
+          by: 'Sam Support',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
       ],
     });
     return { email, url };
@@ -1133,6 +1200,23 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
       newAdminEmail: 'sam@adiutor.test',
       how: 'invitation',
       byName: 'Jane Admin',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "a webhook was turned off" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'a webhook turned off': async (locale) => {
+    const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+    const email = await webhookTurnedOffEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      name: 'Procurement',
+      reason: 'failing',
       url,
     });
     return { email, url };
@@ -1367,5 +1451,81 @@ describe('request emails: links to the staff’s pages', () => {
     expect(email.text.split(userPage)).toHaveLength(2);
     expect(email.text.match(/Ask Sam Support\./g)).toHaveLength(2);
     expectBasics(email, url);
+  });
+});
+
+describe('brand colours', () => {
+  /** A brand whose colours differ from the theme's in every colour that matters. */
+  const brand: EmailBrand = {
+    colours: emailColoursOf(
+      derivePalette({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' }),
+    ),
+  };
+
+  it('draws the page, the button and the links in the brand’s colours', async () => {
+    const url = `${appUrl}/api/auth/request-link/sign-in?token=adiutor-tests-token`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      brand,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: { text: 'See https://adiutor.test/manual.', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(brand.colours.primary).not.toBe(DEFAULT_EMAIL_COLOURS.primary);
+    expect(email.html).toContain(`background-color:${brand.colours.background}`);
+    expect(email.html).toContain(`background-color:${brand.colours.primary}`);
+    expect(email.html).toContain(
+      `color:${brand.colours.primary};text-decoration-line:none;font-weight:600`,
+    );
+    expect(email.html).toContain(`color:${brand.colours.primary};text-decoration:underline`);
+    expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.primary);
+    expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.background);
+  });
+
+  it('draws the code box and the role summary in the brand’s colours', async () => {
+    const [code, invitation] = await Promise.all([
+      twoFactorCodeEmail('jane@adiutor.test', { ...english, brand, code: '482915' }),
+      invitationEmail('jane@adiutor.test', {
+        ...english,
+        brand,
+        inviterName: 'Sam Doe',
+        companyName: 'Adiutor Tests',
+        role: 'client',
+        url: `${appUrl}/invite/abc`,
+        validDays: 7,
+      }),
+    ]);
+
+    for (const email of [code, invitation]) {
+      expect(email.html).toContain(`border:1px solid ${brand.colours.border}`);
+      expect(email.html).not.toContain(DEFAULT_EMAIL_COLOURS.border);
+    }
+  });
+
+  it('keeps the theme’s colours without a brand', async () => {
+    const email = await magicLinkEmail('jane@adiutor.test', {
+      ...english,
+      url: `${appUrl}/auth/email-link?token=abc`,
+    });
+    const withDefaults = await magicLinkEmail('jane@adiutor.test', {
+      ...english,
+      brand: { colours: DEFAULT_EMAIL_COLOURS },
+      url: `${appUrl}/auth/email-link?token=abc`,
+    });
+
+    expect(email.html).toContain('background-color:#0e5655');
+    expect(email.html).toContain('background-color:#f7f7f9');
+    expect(withDefaults.html).toBe(email.html);
   });
 });

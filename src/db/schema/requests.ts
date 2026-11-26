@@ -136,16 +136,30 @@ export const request = pgTable(
     reopenedAt: timestampTz('reopened_at'),
     /** Who raised it, while their account exists. */
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
-    /** Which side raised it: someone at the company, or the staff for the company. */
+    /**
+     * Which side raised it: someone at the company (also when a staff member
+     * raised it for them, `createdOnBehalf`), or the staff for the company.
+     */
     createdBySide: text('created_by_side', { enum: REQUEST_SIDES }).notNull(),
     /**
-     * Whether a staff member raised it while signed in as `createdBy`
-     * (decision 0028). Kept once the staff member's account is gone, so the
-     * request still says a staff member did it.
+     * Whether a staff member raised it while signed in as whoever raised it
+     * (decision 0028): `createdOnBehalfBy` for a request raised for someone,
+     * `createdBy` otherwise. Kept once the staff member's account is gone, so
+     * the request still says a staff member did it.
      */
     createdSignedInAs: boolean('created_signed_in_as').default(false).notNull(),
-    /** The staff member who was signed in as `createdBy`, while their account exists. */
+    /** The staff member who was signed in as whoever raised it, while their account exists. */
     createdSignedInAsStaffId: uuid('created_signed_in_as_staff_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * Whether a staff member raised it for `createdBy`, someone at the company
+     * who asked them (decision 0047). Kept once the staff member's account is
+     * gone, so the request still says a staff member raised it for them.
+     */
+    createdOnBehalf: boolean('created_on_behalf').default(false).notNull(),
+    /** The staff member who raised it for `createdBy`, while their account exists. */
+    createdOnBehalfBy: uuid('created_on_behalf_by').references(() => user.id, {
       onDelete: 'set null',
     }),
     /** When it was raised: the moment its number was taken (`raiseRequest`), not this default. */
@@ -162,6 +176,7 @@ export const request = pgTable(
     index('request_activity_idx').on(table.lastActivityAt, table.id),
     index('request_created_by_idx').on(table.createdBy),
     index('request_created_signed_in_as_staff_idx').on(table.createdSignedInAsStaffId),
+    index('request_created_on_behalf_by_idx').on(table.createdOnBehalfBy),
     /** The requests of a type; also serves the type foreign key. */
     index('request_type_idx').on(table.type),
     oneOf('request_priority_valid', table.priority, REQUEST_PRIORITIES),
@@ -172,6 +187,14 @@ export const request = pgTable(
     check(
       'request_created_signed_in_as_fits',
       sql`${table.createdSignedInAsStaffId} is null or ${table.createdSignedInAs}`,
+    ),
+    /**
+     * A staff member is named only for a request raised for someone, and
+     * that someone is at the company.
+     */
+    check(
+      'request_created_on_behalf_fits',
+      sql`(${table.createdOnBehalfBy} is null or ${table.createdOnBehalf}) and (not ${table.createdOnBehalf} or ${table.createdBySide} = 'company')`,
     ),
   ],
 );

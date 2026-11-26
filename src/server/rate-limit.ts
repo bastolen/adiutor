@@ -106,6 +106,17 @@ export const RATE_LIMITS = {
    * `DAILY_UPLOAD_BYTES`): far more than anyone attaches by hand.
    */
   attachmentUploadsPerUser: { limit: 100, windowSeconds: 60 * 60 },
+  /**
+   * Changes one staff Admin makes to webhooks: adding, changing, renewing a
+   * secret, turning on or off and removing. Each change can look an address
+   * up, and points request texts somewhere new.
+   */
+  webhookChangesPerUser: { limit: 30, windowSeconds: 60 * 60 },
+  /**
+   * Tests one staff Admin sends to webhooks, and deliveries they send again:
+   * each makes the server connect to an address.
+   */
+  webhookSendsPerUser: { limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

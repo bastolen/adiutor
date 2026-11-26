@@ -42,12 +42,21 @@ import { join } from 'node:path';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { impersonation, invitation, inviteLink, membership, requestEntry, user } from '@/db/schema';
+import {
+  impersonation,
+  invitation,
+  inviteLink,
+  membership,
+  requestEntry,
+  user,
+  webhookDelivery,
+} from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
+  actorFor,
   addMember as addMembership,
   connectProvider,
   createCompany,
@@ -61,6 +70,8 @@ import {
   setupTestContext,
   staffActor,
   storeQueuedJob,
+  storeRequest,
+  storeWebhook,
   tokenFrom,
   addPassword,
 } from '../../tests/integration/helpers';
@@ -73,6 +84,7 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
+import { getBrandColours, setBrandColours } from './branding';
 import { notFoundError, ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
@@ -157,6 +169,7 @@ import {
   listAssignableStaff,
   listBoard,
   listMentionable,
+  listRaisableFor,
   listRequestCompanies,
   listRequests,
   listRequestTypes,
@@ -181,6 +194,18 @@ import {
   saveAttachmentStorage,
   setUpStorage,
 } from './storage';
+import {
+  addWebhook,
+  getWebhook,
+  listDeliveries,
+  listWebhooks,
+  removeWebhook,
+  renewWebhookSecret,
+  resendDelivery,
+  sendTestEvent,
+  setWebhookOn,
+  updateWebhook,
+} from './webhooks';
 
 const { ctx, db, sent, storage } = setupTestContext();
 
@@ -263,6 +288,13 @@ interface World {
    * one on the own one to remove.
    */
   attachments: { own: string; other: string; ownNote: string; removable: string };
+  /**
+   * A webhook to view, test and change, with a failed delivery to send again;
+   * one that's off (to turn on); and one to remove.
+   */
+  webhooks: { kept: string; failed: string; off: string; removable: string };
+  /** The key of each company's Admin, to raise a request for (`listRaisableFor`). */
+  raiseFor: { own: string; other: string };
 }
 
 /**
@@ -531,6 +563,7 @@ function listOperations(): Operation[] {
     ['list staff invitations', (w) => listPendingInvitations(ctx, w.actor, null)],
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
+    ['view brand colours', (w) => getBrandColours(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
@@ -554,6 +587,10 @@ function listOperations(): Operation[] {
       (w) => setLanguages(ctx, w.actor, { defaultLocale: 'nl-NL', offered: ['en-US', 'nl-NL'] }),
     ],
     ['set default time zone', (w) => setDefaultTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
+    [
+      'set brand colours',
+      (w) => setBrandColours(ctx, w.actor, { accent: '#c2185b', accentDark: '', tint: '' }),
+    ],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     // Settings decide, whatever the checkout's environment says (`{}`); a new folder for each try.
     ['view attachment settings', (w) => getAttachmentSettings(ctx, w.actor, {})],
@@ -627,6 +664,48 @@ function listOperations(): Operation[] {
     ['move request type', (w) => moveRequestType(ctx, w.actor, { type: 'bug', direction: 'up' })],
     ['archive request type', (w) => archiveRequestType(ctx, w.actor, { type: 'new_feature' })],
     ['restore request type', (w) => restoreRequestType(ctx, w.actor, { type: 'new_feature' })],
+    ['list webhooks', (w) => listWebhooks(ctx, w.actor)],
+    ['view webhook', (w) => getWebhook(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'add webhook',
+      (w) =>
+        addWebhook(ctx, w.actor, {
+          name: 'Procurement',
+          url: 'https://hooks.adiutor.test/in',
+          format: 'json',
+          events: ['raised', 'reply'],
+          allTypes: true,
+          types: [],
+        }),
+    ],
+    [
+      'change webhook',
+      (w) =>
+        updateWebhook(ctx, w.actor, {
+          webhook: w.webhooks.kept,
+          name: 'Purchasing',
+          url: '',
+          format: 'chat',
+          events: ['raised'],
+          allTypes: false,
+          types: ['bug'],
+        }),
+    ],
+    ['renew webhook secret', (w) => renewWebhookSecret(ctx, w.actor, { webhook: w.webhooks.kept })],
+    ['list webhook deliveries', (w) => listDeliveries(ctx, w.actor, { webhook: w.webhooks.kept })],
+    // To an address that never resolves (`.test`): it fails at once, which a test only reports.
+    ['send a webhook test', (w) => sendTestEvent(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'send a webhook delivery again',
+      (w) =>
+        resendDelivery(ctx, w.actor, { webhook: w.webhooks.kept, delivery: w.webhooks.failed }),
+    ],
+    [
+      'turn webhook off',
+      (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.kept, on: false }),
+    ],
+    ['turn webhook on', (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.off, on: true })],
+    ['remove webhook', (w) => removeWebhook(ctx, w.actor, { webhook: w.webhooks.removable })],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -695,6 +774,29 @@ function listOperations(): Operation[] {
     [
       'raise request (other)',
       (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.other.id }),
+    ],
+    ['list who a request can be raised for (own)', (w) => listRaisableFor(ctx, w.actor, w.own.id)],
+    [
+      'list who a request can be raised for (other)',
+      (w) => listRaisableFor(ctx, w.actor, w.other.id),
+    ],
+    [
+      'raise request for someone (own)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: w.own.id,
+          raisedFor: w.raiseFor.own,
+        }),
+    ],
+    [
+      'raise request for someone (other)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: w.other.id,
+          raisedFor: w.raiseFor.other,
+        }),
     ],
     [
       'reply to request (own)',
@@ -887,6 +989,7 @@ const READS: ReadonlySet<string> = new Set([
   "download a description's file (own)",
   "download a description's file (other)",
   "download an internal note's file (own)",
+  'view brand colours',
   'list request types',
   'list users',
   'view user',
@@ -908,6 +1011,8 @@ const READS: ReadonlySet<string> = new Set([
   'show requests as a board (own)',
   'show requests as a board (other)',
   'list companies to raise a request for',
+  'list who a request can be raised for (own)',
+  'list who a request can be raised for (other)',
   'look up a request (own)',
   'look up a request (other)',
   'view request (own)',
@@ -934,6 +1039,8 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'upload a file to attach',
   'raise request (own)',
   'raise request (other)',
+  'raise request for someone (own)',
+  'raise request for someone (other)',
   'reply to request (own)',
   'reply to request (other)',
   'reply and wait for the company (own)',
@@ -1056,6 +1163,7 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
+  'view brand colours': 'FFFFFFA',
   // Everyone chooses their own language, time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
   'save own first time zone': 'AAAAAAA',
@@ -1075,6 +1183,7 @@ const EXPECTED: Record<string, string> = {
   'rename staff': 'FFFFFFA',
   'set languages': 'FFFFFFA',
   'set default time zone': 'FFFFFFA',
+  'set brand colours': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
   // Where files are kept, and how large they may be: staff Admins only, like the other settings.
   'view attachment settings': 'FFFFFFA',
@@ -1098,6 +1207,18 @@ const EXPECTED: Record<string, string> = {
   'move request type': 'FFFFFFA',
   'archive request type': 'FFFFFFA',
   'restore request type': 'FFFFFFA',
+  // Webhooks send request texts out of Adiutor: only staff Admins, who manage the types, set them up.
+  'list webhooks': 'FFFFFFA',
+  'view webhook': 'FFFFFFA',
+  'add webhook': 'FFFFFFA',
+  'change webhook': 'FFFFFFA',
+  'renew webhook secret': 'FFFFFFA',
+  'list webhook deliveries': 'FFFFFFA',
+  'send a webhook test': 'FFFFFFA',
+  'send a webhook delivery again': 'FFFFFFA',
+  'turn webhook off': 'FFFFFFA',
+  'turn webhook on': 'FFFFFFA',
+  'remove webhook': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
@@ -1145,6 +1266,11 @@ const EXPECTED: Record<string, string> = {
   // Watchers follow requests and Finance reads them: neither raises one.
   'raise request (own)': 'FAAAFAA',
   'raise request (other)': 'NNNAFAA',
+  // Only the staff who work on requests raise one for someone at the company, and list who.
+  'list who a request can be raised for (own)': 'FFFAFAA',
+  'list who a request can be raised for (other)': 'NNNAFAA',
+  'raise request for someone (own)': 'FFFAFAA',
+  'raise request for someone (other)': 'NNNAFAA',
   'reply to request (own)': 'FAAAFAA',
   'reply to request (other)': 'NNNAFAA',
   // Only the staff who work on requests set a request to waiting.
@@ -1259,6 +1385,28 @@ async function openInvitation(admin: Actor, companyId: string, email: string): P
 }
 
 /**
+ * Stores the webhooks a world is given: one to view, test and change, with a
+ * failed delivery of a request to send again; one that's off; one to remove.
+ *
+ * @returns Their IDs, and the delivery's.
+ */
+async function storeMatrixWebhooks(): Promise<World['webhooks']> {
+  const kept = await storeWebhook(db, { name: 'Kept' });
+  const company = await createCompany(db, { name: 'Adiutor Tests Hooks' });
+  const { id: requestId } = await storeRequest(db, company.id);
+  const [failed] = await db
+    .insert(webhookDelivery)
+    .values({ webhookId: kept, requestId, status: 'failed', attempts: 6 })
+    .returning({ id: webhookDelivery.id });
+  return {
+    kept,
+    failed: defined(failed, 'the failed delivery').id,
+    off: await storeWebhook(db, { name: 'Off', off: { at: new Date(), reason: 'manual' } }),
+    removable: await storeWebhook(db, { name: 'Removable' }),
+  };
+}
+
+/**
  * Creates the world for one role.
  *
  * @param role - The role to act as.
@@ -1316,6 +1464,19 @@ async function createWorld(role: MatrixRole): Promise<World> {
       .returning({ id: requestEntry.id }),
     'the note',
   );
+  const keyFinder = await actorFor(db, staffToRemove);
+  /**
+   * Finds a company's Admin by the key the staff's form names them by.
+   *
+   * @param companyId - The company.
+   * @param person - Its Admin.
+   * @returns Their key there.
+   */
+  const raiseForKey = async (companyId: string, person: Actor) =>
+    defined(
+      (await listRaisableFor(ctx, keyFinder, companyId)).find(({ name }) => name === person.name),
+      'the key of the person to raise a request for',
+    ).key;
   return {
     actor,
     own,
@@ -1366,6 +1527,11 @@ async function createWorld(role: MatrixRole): Promise<World> {
       other: await storeAttachment(db, storage, { requestId: otherRequest.id }),
       ownNote: await storeAttachment(db, storage, { requestId: ownRequest.id, entryId: note.id }),
       removable: await storeAttachment(db, storage, { requestId: ownRequest.id }),
+    },
+    webhooks: await storeMatrixWebhooks(),
+    raiseFor: {
+      own: await raiseForKey(own.id, ownAdmin),
+      other: await raiseForKey(other.id, otherAdmin),
     },
   };
 }

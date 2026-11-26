@@ -1,7 +1,7 @@
 /**
  * @file Tests for the settings' definitions: the fallback of every setting,
- * the values each refuses, how a moment is stored and read, and the check
- * that keeps the default language offered.
+ * the values each refuses, how a moment is stored and read, and the checks
+ * that keep the default language offered and a dark accent with an accent.
  */
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
@@ -23,6 +23,9 @@ const FALLBACKS: SettingValues = {
   'staff.offered_locales': LOCALES,
   'staff.default_time_zone': 'UTC',
   'requests.prefix': 'AD',
+  'brand.accent': null,
+  'brand.accent_dark': null,
+  'brand.tint': null,
   'requests.last_number': 0,
   'jobs.last_tick': null,
   'setup.completed_at': null,
@@ -45,6 +48,9 @@ describe('the settings', () => {
     ['staff.offered_locales', ['en-US', 'fr-FR']],
     ['staff.default_time_zone', 'Mars/Olympus_Mons'],
     ['requests.prefix', '1AD'],
+    ['brand.accent', 'teal'],
+    ['brand.accent_dark', '#12345'],
+    ['brand.tint', '#0e5655;}body{color:red'],
     ['requests.last_number', -1],
     ['requests.last_number', 1.5],
     ['jobs.last_tick', 'yesterday'],
@@ -60,6 +66,8 @@ describe('the settings', () => {
   it.each([
     ['staff.default_locale', 'fr-FR'],
     ['staff.offered_locales', 'en-US'],
+    ['brand.accent', 'red'],
+    ['brand.tint', '#0E5655;}'],
     ['requests.last_number', '142'],
     ['jobs.last_tick', 1_795_000_000_000],
     ['attachments.storage', { driver: 's3', endpoint: 'not an address' }],
@@ -70,6 +78,9 @@ describe('the settings', () => {
 
   it('write a value as their schema gives it, e.g. a prefix in capitals', () => {
     expect(settingValue('requests.prefix', ' help ')).toBe('HELP');
+    expect(settingValue('brand.accent', ' C2185B ')).toBe('#c2185b');
+    expect(settingValue('brand.tint', '#2E7D32')).toBe('#2e7d32');
+    expect(settingValue('brand.accent_dark', null)).toBeNull();
     expect(settingValue('staff.offered_locales', ['nl-NL'])).toEqual(['nl-NL']);
   });
 
@@ -101,5 +112,11 @@ describe('the checks between settings', () => {
     ).toBe(false);
     // Before setup there's no default, so any languages may be offered.
     expect(holds({ 'staff.offered_locales': ['es-ES'] })).toBe(true);
+  });
+
+  it('keep a dark accent only with an accent', () => {
+    expect(holds({ 'brand.accent': '#c2185b' })).toBe(true);
+    expect(holds({ 'brand.accent': '#c2185b', 'brand.accent_dark': '#ff80ab' })).toBe(true);
+    expect(holds({ 'brand.accent_dark': '#ff80ab' })).toBe(false);
   });
 });

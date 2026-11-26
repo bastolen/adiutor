@@ -22,6 +22,7 @@ import { emailSchema } from '@/lib/validation';
 
 import { assertStillManagesPeople } from '../../access';
 import { recordEvent } from '../../audit';
+import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
 import { type ErrorMessageKey, ServiceError } from '../../errors';
 import {
@@ -359,7 +360,7 @@ export async function claimInviteLink(
   }
   try {
     // Rendered only now, once the transaction has committed and released its locks.
-    await ctx.sendEmail(await created.renderEmail());
+    await ctx.sendEmail(await created.renderEmail(await loadEmailBrand(ctx.db)));
   } catch (error) {
     await undoUnsentClaim(ctx, created.claim, error);
     throw error;

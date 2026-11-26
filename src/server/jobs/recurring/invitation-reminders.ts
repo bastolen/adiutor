@@ -8,12 +8,14 @@ import { and, asc, eq, exists, gt, isNotNull, isNull, lt, notExists, or, sql } f
 import { alias } from 'drizzle-orm/pg-core';
 
 import { company, invitation, membership, user } from '@/db/schema';
+import type { EmailBrand } from '@/emails/base-props';
 import { invitationReminderEmail } from '@/emails/invitation-reminder';
 import displayName from '@/lib/display-name';
 import { sendFailureOf } from '@/lib/email';
 import { SMTP_MAX_CONNECTIONS } from '@/lib/email-limits';
 import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
+import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
 import getStaffName from '../../people/staff-name';
 import recipientLocale from '../../recipient-locale';
@@ -166,12 +168,14 @@ type ReminderResult = 'sent' | 'failed' | 'skipped';
  * @param ctx - Service context.
  * @param found - The invitation.
  * @param staffName - The name the staff are shown with, for staff invitations.
+ * @param brand - The brand colours to draw the email with.
  * @returns How it went.
  */
 async function remind(
   ctx: ServiceContext,
   found: DueInvitation,
   staffName: string,
+  brand: EmailBrand,
 ): Promise<ReminderResult> {
   const targetName = found.companyName ?? staffName;
   const [claimed] = await ctx.db
@@ -187,6 +191,7 @@ async function remind(
     await ctx.sendEmail(
       await invitationReminderEmail(found.email, {
         appUrl: ctx.baseUrl,
+        brand,
         // Their own language, else the invitation's, each only while it's offered.
         locale: await recipientLocale(ctx, found.recipientLocale, found.locale),
         // The inviter's account may be gone since; the target's name stands in then.
@@ -257,7 +262,11 @@ async function sendInvitationReminders(
   ctx: ServiceContext,
   deadline: Date,
 ): Promise<ReminderResults> {
-  const [staffName, due] = await Promise.all([getStaffName(ctx.db), loadDueInvitations(ctx)]);
+  const [staffName, due, brand] = await Promise.all([
+    getStaffName(ctx.db),
+    loadDueInvitations(ctx),
+    loadEmailBrand(ctx.db),
+  ]);
   const results: ReminderResult[] = [];
   for (
     let start = 0;
@@ -267,7 +276,9 @@ async function sendInvitationReminders(
     // One group at a time on purpose, so the deadline is checked between them.
     // eslint-disable-next-line no-await-in-loop -- See above.
     const group = await Promise.all(
-      due.slice(start, start + REMINDER_GROUP_SIZE).map((found) => remind(ctx, found, staffName)),
+      due
+        .slice(start, start + REMINDER_GROUP_SIZE)
+        .map((found) => remind(ctx, found, staffName, brand)),
     );
     results.push(...group);
   }

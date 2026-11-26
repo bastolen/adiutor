@@ -34,6 +34,8 @@ export type {
 export { editReply, editRequestDescription } from './edits';
 export { default as addNote } from './notes';
 export { default as raiseRequest } from './raise';
+export { listRaisableFor } from './raise-for';
+export type { RaisableForPerson } from './raise-for';
 export { default as replyToRequest } from './reply';
 export { default as changeRequestStatus } from './status';
 export { default as answerSolution } from './solutions';
@@ -56,6 +58,13 @@ export {
   unsubscribeFrom,
 } from './subscribers';
 export type { SubscribablePerson } from './subscribers';
+export {
+  type QueuedWebhookNews,
+  readWebhookNews,
+  type WebhookNews,
+  type WebhookNewsEvent,
+  type WebhookPerson,
+} from './read-webhook-news';
 export { readRequestUpdate } from './updates';
 export type { QueuedRequestNews, RequestUpdate, RequestUpdateItem } from './updates';
 export type { MentionablePerson } from './mentions';

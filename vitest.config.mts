@@ -48,11 +48,16 @@ export default defineConfig({
            * Every provider that can prove MFA (`MFA_PROVIDERS`) counts as
            * configured (dummy values; nothing calls the providers), so its MFA
            * rules apply as in production, whatever the local `.env` says. A new
-           * one needs its credentials here too.
+           * one needs its credentials here too. Loopback is allowed for webhooks.
            */
           env: {
             GITHUB_CLIENT_ID: 'adiutor-tests-github-client',
             GITHUB_CLIENT_SECRET: 'adiutor-tests-github-secret',
+            /**
+             * Webhooks never reach loopback, except where the operator allows it: the tests'
+             * receivers listen on 127.0.0.1 (`tests/http/webhook-receiver.ts`).
+             */
+            WEBHOOK_ALLOWED_NETWORKS: '127.0.0.1/32',
           },
         },
       },
