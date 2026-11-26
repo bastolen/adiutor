@@ -1,6 +1,6 @@
 # 0022. Profile pictures from providers, served through Adiutor
 
-- **Status:** Accepted
+- **Status:** Superseded by [0051](0051-profile-pictures-each-choice-for-its-owner.md)
 - **Date:** 2026-11-20
 
 ## Context

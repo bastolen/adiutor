@@ -10,7 +10,9 @@
  * even as a fingerprint anyone could check a guess against. The route
  * there (`src/app/avatars/[account]/route.ts`) fetches the image from the
  * provider each time a browser asks for it (`loadPicture`), within limits,
- * and stores nothing. See decision 0022.
+ * and stores nothing. It serves the picture someone shows to everyone signed
+ * in, and the other pictures they can choose (`choiceAccounts`) to them
+ * alone, for the account page. See decision 0051.
  */
 import { createHmac } from 'node:crypto';
 
@@ -140,6 +142,36 @@ async function accountsOf(
 }
 
 /**
+ * The accounts whose pictures someone can choose on the account page: each
+ * provider's first connected confirmed account, in the order they connected
+ * them, with a picture or without one yet.
+ *
+ * @param rows - Their connected accounts, the first connected first.
+ * @returns One account per provider.
+ */
+function choiceAccounts<T extends PictureAccount>(
+  rows: readonly T[],
+): { providerId: OAuthProvider; row: T }[] {
+  return pictureProviders(rows).flatMap((providerId) => {
+    const row = rows.find((found) => found.providerId === providerId && found.confirmed);
+    return row ? [{ providerId, row }] : [];
+  });
+}
+
+/**
+ * Whether a viewer gets the pictures someone can choose but doesn't show,
+ * for the account page: only that person themselves. A staff member signed
+ * in as them gets what the user's page shows the staff, the picture in use.
+ *
+ * @param viewer - The signed-in user.
+ * @param userId - The person whose pictures they are.
+ * @returns Whether the viewer gets them.
+ */
+function getsOtherChoices(viewer: Actor, userId: string): boolean {
+  return viewer.id === userId && viewer.signedInAs === null;
+}
+
+/**
  * Loads the picture each of some users shows: the address of the picture
  * of the account the rule picks (`pictureAccount`), or `null` for their
  * initials. Two queries, however many users, for a page of people.
@@ -174,14 +206,25 @@ export interface PictureChoice {
   providerId: OAuthProvider;
   /** The account's name at the provider (a GitHub username), when it's known. */
   accountName: string | null;
-  /** The picture's address in Adiutor, or `null` while the account has none yet. */
+  /**
+   * Whether the account has a picture to choose: not yet when it was
+   * connected before pictures were kept.
+   */
+  hasPicture: boolean;
+  /**
+   * The picture's address in Adiutor, or `null` when the reader doesn't get
+   * it: while the account has none yet, or for a staff member signed in as
+   * the user, a picture the user doesn't show (`getsOtherChoices`).
+   */
   picture: string | null;
 }
 
 /**
  * The pictures someone can choose from, for the account page's Picture
  * card: each provider's first connected confirmed account, with its picture
- * (or none yet), what they chose, and what they show by that.
+ * (or none yet), what they chose, and what they show by that. A staff member
+ * signed in as them gets the address of the picture in use only, as the
+ * route serves them (`loadPicture`).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -197,19 +240,17 @@ export async function ownPictureChoices(
 }> {
   const { rows, sources } = await accountsOf(ctx.db, [actor.id]);
   const source = sources.get(actor.id) ?? null;
-  const choices = pictureProviders(rows).flatMap((providerId) => {
-    const first = rows.find((row) => row.providerId === providerId && row.confirmed);
-    return first
-      ? [
-          {
-            providerId,
-            accountName: first.accountName,
-            picture: first.image ? picturePath({ id: first.id, image: first.image }) : null,
-          },
-        ]
-      : [];
-  });
   const shownAccount = pictureAccount(source, rows);
+  const getsOthers = getsOtherChoices(actor, actor.id);
+  const choices = choiceAccounts(rows).map(({ providerId, row }) => ({
+    providerId,
+    accountName: row.accountName,
+    hasPicture: row.image !== null,
+    picture:
+      row.image && (getsOthers || row.id === shownAccount?.id)
+        ? picturePath({ id: row.id, image: row.image })
+        : null,
+  }));
   const shownProvider = shownAccount?.providerId;
   return {
     choices,
@@ -243,7 +284,7 @@ export async function setOwnPicture(
   }
   if (choice !== 'initials') {
     const { choices } = await ownPictureChoices(ctx, actor);
-    if (!choices.some(({ providerId, picture }) => providerId === choice && picture !== null)) {
+    if (!choices.some(({ providerId, hasPicture }) => providerId === choice && hasPicture)) {
       throw new ServiceError('invalid', 'errors.account.pictureUnavailable');
     }
   }
@@ -337,16 +378,21 @@ async function fetchPicture(
 
 /**
  * Loads the picture served at `/avatars/<account>`: the picture of that
- * account, but only while it's the picture its owner shows. After they
- * choose another one or their initials, or disconnect it, the address no
- * longer serves anything.
+ * account while it's the picture its owner shows, to everyone signed in.
+ * After they choose another one or their initials, or disconnect it, the
+ * address serves others nothing. Its owner also gets the other pictures they
+ * can choose (`choiceAccounts`), whichever they show, so the account page
+ * previews each choice: not a staff member signed in as them
+ * (`getsOtherChoices`).
  *
  * @param ctx - Service context.
+ * @param viewer - The signed-in user whose browser asks for it.
  * @param accountId - The account's ID from the address (unchecked).
  * @returns The picture, or `null` when there's none to serve.
  */
 export async function loadPicture(
   ctx: ServiceContext,
+  viewer: Actor,
   accountId: string,
 ): Promise<ServedPicture | null> {
   const id = idSchema.safeParse(accountId);
@@ -362,8 +408,12 @@ export async function loadPicture(
   }
   const { rows, sources } = await accountsOf(ctx.db, [owner.userId]);
   const shown = pictureAccount(sources.get(owner.userId) ?? null, rows);
-  if (!shown || shown.id !== id.data || !shown.image || !isOAuthProvider(shown.providerId)) {
+  const otherChoice = getsOtherChoices(viewer, owner.userId)
+    ? choiceAccounts(rows).find(({ row }) => row.id === id.data)?.row
+    : undefined;
+  const served = shown?.id === id.data ? shown : otherChoice;
+  if (!served?.image || !isOAuthProvider(served.providerId)) {
     return null;
   }
-  return fetchPicture(shown.providerId, shown.image);
+  return fetchPicture(served.providerId, served.image);
 }

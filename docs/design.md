@@ -226,7 +226,7 @@ keyboard support.
 ### Avatars, buttons and menus
 
 - **Avatars** (`Avatar`) show initials, or a person's picture over them (`src`, from
-  `/avatars/<account>`, see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). The
+  `/avatars/<account>`, see [decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)). The
   picture (`AvatarPicture`) takes itself away when it can't load, also when it failed before the
   page's scripts were running, so the initials behind it show; a new address gets a new try. Avatars
   are decorative (`alt=""`): the name stands next to them, or, where several stand in a row without

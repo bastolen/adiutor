@@ -1,8 +1,9 @@
 /**
  * @file Integration tests for people's pictures: which one shows, the
- * account page's choices, saving a choice, and fetching a picture from its
- * provider for `/avatars/<account>`, within its limits. Which roles may
- * choose is in the authorization matrix.
+ * account page's choices, saving a choice, and serving a picture at
+ * `/avatars/<account>`: to whom (the picture shown to everyone, the other
+ * choices to their owner alone), fetched from its provider within its
+ * limits. Which roles may choose is in the authorization matrix.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -10,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { account, user } from '@/db/schema';
+import type { Permission } from '@/lib/authz/permissions';
 
 import {
   connectProvider,
@@ -18,6 +20,7 @@ import {
   setupTestContext,
   actorFor,
 } from '../../../tests/integration/helpers';
+import type { Actor } from '../actor';
 import {
   loadPicture,
   loadPictures,
@@ -79,6 +82,25 @@ async function personWithTwoPictures() {
   });
   return { userId, github, google };
 }
+
+/**
+ * A user as the actor while a staff member with these global permissions is
+ * signed in as them.
+ *
+ * @param own - The user, as their own actor.
+ * @param staffPermissions - The staff member's own global permissions.
+ * @returns The actor.
+ */
+const signedInAsBy = (own: Actor, staffPermissions: Permission[]): Actor => ({
+  ...own,
+  signedInAs: {
+    staffId: '01900000-0000-7000-8000-000000000001',
+    staffName: 'Sam Support',
+    endsAt: new Date(Date.now() + 30 * 60_000),
+    returnTo: '/dashboard',
+    staffPermissions,
+  },
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -189,14 +211,37 @@ describe('choosing a picture', () => {
       {
         providerId: 'github',
         accountName: 'adiutor-tests',
+        hasPicture: true,
         picture: expect.stringMatching(servedFrom(github)),
       },
       {
         providerId: 'google',
         accountName: 'person@adiutor.test',
+        hasPicture: true,
         picture: expect.stringMatching(servedFrom(google)),
       },
     ]);
+  });
+
+  it('gives a staff member signed in as the user the address of the picture in use only', async () => {
+    const { userId, google } = await personWithTwoPictures();
+    await db.update(user).set({ avatarSource: 'google' }).where(eq(user.id, userId));
+    // Even a staff Admin, who sees the accounts' names: the route wouldn't serve them the other.
+    const staff = signedInAsBy(await actorFor(db, userId), ['users:manage', 'audit:view']);
+
+    const { choices, shown } = await ownPictureChoices(ctx, staff);
+
+    expect(shown).toBe('google');
+    expect(
+      choices.map(({ providerId, hasPicture, picture }) => [providerId, hasPicture, picture]),
+    ).toEqual([
+      ['github', true, null],
+      ['google', true, expect.stringMatching(servedFrom(google))],
+    ]);
+    // With initials shown, no address at all.
+    await db.update(user).set({ avatarSource: 'initials' }).where(eq(user.id, userId));
+    const initials = await ownPictureChoices(ctx, staff);
+    expect(initials.choices.map(({ picture }) => picture)).toEqual([null, null]);
   });
 
   it('offers an account without a picture yet, which can’t be chosen', async () => {
@@ -205,7 +250,7 @@ describe('choosing a picture', () => {
     const actor = await actorFor(db, userId);
 
     expect((await ownPictureChoices(ctx, actor)).choices).toEqual([
-      { providerId: 'github', accountName: 'adiutor-tests', picture: null },
+      { providerId: 'github', accountName: 'adiutor-tests', hasPicture: false, picture: null },
     ]);
     await expect(setOwnPicture(ctx, actor, 'github')).rejects.toMatchObject({
       code: 'invalid',
@@ -220,7 +265,13 @@ describe('choosing a picture', () => {
     expect(await setOwnPicture(ctx, actor, 'google')).toBe('google');
     expect((await ownPictureChoices(ctx, actor)).shown).toBe('google');
     expect(await setOwnPicture(ctx, actor, 'initials')).toBe('initials');
-    expect((await ownPictureChoices(ctx, actor)).shown).toBe('initials');
+    const afterInitials = await ownPictureChoices(ctx, actor);
+    expect(afterInitials.shown).toBe('initials');
+    // They still see each picture they can choose.
+    expect(afterInitials.choices.map(({ picture }) => picture)).toEqual([
+      expect.stringMatching(/^\/avatars\//),
+      expect.stringMatching(/^\/avatars\//),
+    ]);
 
     await expect(setOwnPicture(ctx, actor, 'gitlab')).rejects.toMatchObject({ code: 'invalid' });
     const nobody = await actorFor(db, await createUser(db, 'nothing@adiutor.test'));
@@ -231,6 +282,9 @@ describe('choosing a picture', () => {
 describe('loadPicture', () => {
   /** A tiny PNG's first bytes: enough to tell it from anything else. */
   const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  /** The picture served when the provider answers with {@link PNG}. */
+  const SERVED = { body: PNG, contentType: 'image/png' };
 
   /**
    * Makes the provider answer every fetch with this response.
@@ -244,33 +298,97 @@ describe('loadPicture', () => {
     return fetchMock;
   };
 
+  /**
+   * Makes the provider answer every fetch with a picture.
+   *
+   * @returns The stubbed fetch, to see what was asked.
+   */
+  const providerServesPictures = () =>
+    providerAnswers(() => new Response(PNG, { headers: { 'Content-Type': 'image/png' } }));
+
+  /**
+   * Someone signed in who isn't the pictures' owner.
+   *
+   * @returns Their actor.
+   */
+  const someoneElse = async () =>
+    actorFor(db, await createUser(db, `viewer-${randomUUID().slice(0, 8)}@adiutor.test`));
+
   it('serves the picture someone shows, fetched from its provider without following redirects', async () => {
     const { github } = await personWithTwoPictures();
-    const fetchMock = providerAnswers(
-      () => new Response(PNG, { headers: { 'Content-Type': 'image/png' } }),
-    );
+    const fetchMock = providerServesPictures();
 
-    const picture = await loadPicture(ctx, github);
+    const picture = await loadPicture(ctx, await someoneElse(), github);
 
-    expect(picture).toEqual({ body: PNG, contentType: 'image/png' });
+    expect(picture).toEqual(SERVED);
     expect(fetchMock).toHaveBeenCalledWith(
       GITHUB_PICTURE,
       expect.objectContaining({ redirect: 'error', signal: expect.any(AbortSignal) }),
     );
   });
 
-  it('serves nothing for an account that isn’t the picture its owner shows', async () => {
+  it('serves others nothing for an account that isn’t the picture its owner shows', async () => {
     const { userId, github, google } = await personWithTwoPictures();
-    const fetchMock = providerAnswers(
-      () => new Response(PNG, { headers: { 'Content-Type': 'image/png' } }),
-    );
+    const fetchMock = providerServesPictures();
+    const viewer = await someoneElse();
 
     // Google isn't shown (GitHub was connected first), and nothing is after choosing initials.
-    expect(await loadPicture(ctx, google)).toBeNull();
+    expect(await loadPicture(ctx, viewer, google)).toBeNull();
     await db.update(user).set({ avatarSource: 'initials' }).where(eq(user.id, userId));
-    expect(await loadPicture(ctx, github)).toBeNull();
-    expect(await loadPicture(ctx, randomUUID())).toBeNull();
-    expect(await loadPicture(ctx, 'not-an-id')).toBeNull();
+    expect(await loadPicture(ctx, viewer, github)).toBeNull();
+    expect(await loadPicture(ctx, viewer, randomUUID())).toBeNull();
+    expect(await loadPicture(ctx, viewer, 'not-an-id')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['until they choose', null],
+    ['after choosing Google', 'google'],
+    ['after choosing initials', 'initials'],
+  ] as const)('serves its owner every picture they can choose, %s', async (_when, choice) => {
+    // What the account page asks for once the browser's own copies have expired: the server
+    // keeps none, so each is fetched from its provider again, the one in use or not.
+    const { userId, github, google } = await personWithTwoPictures();
+    await db.update(user).set({ avatarSource: choice }).where(eq(user.id, userId));
+    const fetchMock = providerServesPictures();
+    const owner = await actorFor(db, userId);
+
+    expect(await loadPicture(ctx, owner, github)).toEqual(SERVED);
+    expect(await loadPicture(ctx, owner, google)).toEqual(SERVED);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, GITHUB_PICTURE, expect.anything());
+    expect(fetchMock).toHaveBeenNthCalledWith(2, GOOGLE_PICTURE, expect.anything());
+  });
+
+  it('serves a staff member signed in as the owner only the picture they show', async () => {
+    const { userId, github, google } = await personWithTwoPictures();
+    const fetchMock = providerServesPictures();
+    // Even a staff Admin, who sees the accounts' names.
+    const staff = signedInAsBy(await actorFor(db, userId), ['users:manage', 'audit:view']);
+
+    expect(await loadPicture(ctx, staff, github)).toEqual(SERVED);
+    expect(await loadPicture(ctx, staff, google)).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('never serves its owner an account they can’t choose', async () => {
+    const userId = await createUser(db, `owner-${randomUUID().slice(0, 8)}@adiutor.test`);
+    await connectProvider(db, userId, { accountImage: GITHUB_PICTURE, createdAt: minutesAgo(10) });
+    // A second GitHub account (the first one is GitHub's choice), and one not confirmed yet.
+    const secondGithub = await connectProvider(db, userId, {
+      accountImage: 'https://avatars.githubusercontent.com/u/2?v=4',
+      createdAt: minutesAgo(5),
+    });
+    const unconfirmed = await connectProvider(db, userId, {
+      providerId: 'google',
+      accountImage: GOOGLE_PICTURE,
+      confirmed: false,
+    });
+    const fetchMock = providerServesPictures();
+    const owner = await actorFor(db, userId);
+
+    expect(await loadPicture(ctx, owner, secondGithub)).toBeNull();
+    expect(await loadPicture(ctx, owner, unconfirmed)).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -308,7 +426,7 @@ describe('loadPicture', () => {
     providerAnswers(response);
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(await loadPicture(ctx, github)).toBeNull();
+    expect(await loadPicture(ctx, await someoneElse(), github)).toBeNull();
     // Never the address in the logs.
     expect(JSON.stringify(errors.mock.calls)).not.toContain('githubusercontent');
     errors.mockRestore();
@@ -319,11 +437,9 @@ describe('loadPicture', () => {
     const github = await connectProvider(db, userId, {
       accountImage: 'https://pictures.adiutor.test/me.png',
     });
-    const fetchMock = providerAnswers(
-      () => new Response(PNG, { headers: { 'Content-Type': 'image/png' } }),
-    );
+    const fetchMock = providerServesPictures();
 
-    expect(await loadPicture(ctx, github)).toBeNull();
+    expect(await loadPicture(ctx, await actorFor(db, userId), github)).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
