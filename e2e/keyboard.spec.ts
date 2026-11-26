@@ -1170,6 +1170,8 @@ test.describe('requests', () => {
     }) => {
       const number = await storeOwnRequest({ title: 'A file attached with the keyboard' });
       await page.goto(`/requests/${number}`);
+      // The editor loads once the page's scripts run, so the button answers by then.
+      await markdownEditor(page, 'Your reply');
       const attach = page.getByRole('button', { name: 'Attach files' });
       expect(await cursorOf(attach)).toBe('pointer');
 
