@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import UNLINKED_CASES from '../../../../tests/ui/unlinked-markdown';
 import {
   editorExtensions,
+  followedAddress,
   pasteMarkdown,
   readMarkdown,
   withoutOwnLooks,
@@ -613,11 +614,12 @@ describe('links to the staff’s pages', () => {
   /**
    * Makes an editor for a text, with the extensions its field gives it.
    *
-   * @param appUrl - Adiutor's address, for a text the company reads; `null` for an internal note.
+   * @param appUrl - Adiutor's address, for a text the company reads; `null` for an internal note;
+   *   a function for a text whose readers change while it's written.
    * @param markdown - The text it starts with.
    * @returns The editor.
    */
-  function fieldEditor(appUrl: string | null, markdown = ''): Editor {
+  function fieldEditor(appUrl: string | null | (() => string | null), markdown = ''): Editor {
     const editor = new Editor({
       element: document.createElement('div'),
       extensions: editorExtensions(
@@ -718,6 +720,24 @@ describe('links to the staff’s pages', () => {
     pasteIn(editor, AUTHOR_LINE);
 
     expect(writeMarkdown(editor)).toBe(`[Sam Support](${USER_PAGE}) Adiutor Tests 2 hours ago`);
+  });
+
+  it('follows the text’s readers when they change while it’s written, as a new internal request', () => {
+    const own = followedAddress(APP);
+    const editor = fieldEditor(own.get);
+
+    // Becomes an internal request, which only the staff read.
+    own.set(null);
+    pasteIn(editor, AUTHOR_LINE);
+    expect(writeMarkdown(editor)).toBe(`[Sam Support](${USER_PAGE}) Adiutor Tests 2 hours ago`);
+
+    // A company's again: what's written stays, and a new link to such a page doesn't come in.
+    own.set(APP);
+    editor.commands.focus('end');
+    paste(editor, { 'text/plain': ` And [Casey](${USER_PAGE}).` });
+    expect(writeMarkdown(editor)).toBe(
+      `[Sam Support](${USER_PAGE}) Adiutor Tests 2 hours ago And Casey.`,
+    );
   });
 
   it('reads an image of such a page as its description, as when the text is saved', () => {

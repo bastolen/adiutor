@@ -7,7 +7,14 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { request, requestEntry, requestMention, requestTextVersion, user } from '@/db/schema';
+import {
+  request,
+  requestAttachment,
+  requestEntry,
+  requestMention,
+  requestTextVersion,
+  user,
+} from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { appUrl } from '@/lib/env';
 import { storedMentionMarker, writtenMentionMarker } from '@/lib/requests';
@@ -18,11 +25,12 @@ import {
   minutesAgo,
   staffActor,
   inSequence,
+  storeAttachment,
 } from '../../../tests/integration/helpers';
 import { getRequest } from './detail';
 import { editReply, editRequestDescription } from './edits';
 import mentionKey from './mention-key';
-import { ctx, db, storeEntry, storeRequest, storedRequest } from './test-helpers';
+import { ctx, db, storage, storeEntry, storeRequest, storedRequest } from './test-helpers';
 
 /**
  * The versions of a request's texts, as stored, oldest first.
@@ -55,7 +63,7 @@ describe('editRequestDescription', () => {
       edits: 0,
     });
 
-    expect(result).toEqual({ changed: true });
+    expect(result).toEqual({ changed: true, attached: 0 });
     const stored = await storedRequest(raised.id);
     expect(stored?.description).toBe('It prints blank pages since Monday.');
     expect(stored?.descriptionFormat).toBe('markdown');
@@ -115,7 +123,7 @@ describe('editRequestDescription', () => {
 
     expect(
       await editRequestDescription(ctx, client, { request: raised.id, text: 'Same.', edits: 0 }),
-    ).toEqual({ changed: false });
+    ).toEqual({ changed: false, attached: 0 });
     expect(await versionsOf(raised.id)).toEqual([]);
     expect((await storedRequest(raised.id))?.descriptionEditedAt).toBeNull();
   });
@@ -193,7 +201,7 @@ describe('editReply', () => {
         text: 'On it: back tomorrow.',
         edits: 0,
       }),
-    ).toEqual({ changed: true });
+    ).toEqual({ changed: true, attached: 0 });
     const [stored] = await db.select().from(requestEntry).where(eq(requestEntry.id, reply.id));
     expect(stored?.body).toBe('On it: back tomorrow.');
     expect(stored?.editedAt).toBeInstanceOf(Date);
@@ -220,6 +228,103 @@ describe('editReply', () => {
         editReply(ctx, support, { request: raised.id, entry, text: 'Mine now.', edits: 0 }),
       ).rejects.toMatchObject({ code: 'not_found' });
     });
+  });
+});
+
+/**
+ * Where a file is now: its request and its entry.
+ *
+ * @param id - The file.
+ * @returns Its place.
+ */
+async function placeOf(id: string) {
+  const [row] = await db
+    .select({ requestId: requestAttachment.requestId, entryId: requestAttachment.entryId })
+    .from(requestAttachment)
+    .where(eq(requestAttachment.id, id));
+  return row;
+}
+
+describe('editing: adding files', () => {
+  it('adds files to a description without keeping a version or marking it edited', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id, { description: 'Same.' });
+    const file = await storeAttachment(db, storage, { uploadedBy: client.id });
+
+    expect(
+      await editRequestDescription(ctx, client, {
+        request: raised.id,
+        text: 'Same.',
+        edits: 0,
+        attachments: [file],
+      }),
+    ).toEqual({ changed: true, attached: 1 });
+    expect(await placeOf(file)).toEqual({ requestId: raised.id, entryId: null });
+    expect(await versionsOf(raised.id)).toEqual([]);
+    expect((await storedRequest(raised.id))?.descriptionEditedAt).toBeNull();
+  });
+
+  it('adds files to a reply with its new text, which keeps the old one as a version', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    const reply = await storeEntry(raised.id, {
+      authorId: support.id,
+      authorSide: 'staff',
+      body: 'On it.',
+    });
+    const file = await storeAttachment(db, storage, { uploadedBy: support.id });
+
+    expect(
+      await editReply(ctx, support, {
+        request: raised.id,
+        entry: reply.id,
+        text: 'On it: the log is attached.',
+        edits: 0,
+        attachments: [file],
+      }),
+    ).toEqual({ changed: true, attached: 1 });
+    expect(await placeOf(file)).toEqual({ requestId: raised.id, entryId: reply.id });
+    expect(await versionsOf(raised.id)).toEqual([[reply.id, 'On it.', 'staff']]);
+  });
+
+  it('takes no file with an edit of a text someone edited meanwhile', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const support = await staffActor(db, 'support');
+    const raised = await storeRequest(company.id);
+    await editRequestDescription(ctx, support, { request: raised.id, text: 'Staff’s.', edits: 0 });
+    const file = await storeAttachment(db, storage, { uploadedBy: client.id });
+
+    await expect(
+      editRequestDescription(ctx, client, {
+        request: raised.id,
+        text: 'Staff’s.',
+        edits: 0,
+        attachments: [file],
+      }),
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.requests.textChanged' });
+    expect(await placeOf(file)).toEqual({ requestId: null, entryId: null });
+  });
+
+  it('saves nothing of an edit with a file that can’t be added', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client');
+    const colleague = await memberActor(db, company.id, 'client');
+    const raised = await storeRequest(company.id, { description: 'Before.' });
+    const theirs = await storeAttachment(db, storage, { uploadedBy: colleague.id });
+
+    await expect(
+      editRequestDescription(ctx, client, {
+        request: raised.id,
+        text: 'After.',
+        edits: 0,
+        attachments: [theirs],
+      }),
+    ).rejects.toMatchObject({ code: 'conflict', key: 'errors.attachments.someUnavailable' });
+    expect((await storedRequest(raised.id))?.description).toBe('Before.');
+    expect(await versionsOf(raised.id)).toEqual([]);
   });
 });
 

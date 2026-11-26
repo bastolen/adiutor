@@ -11,6 +11,17 @@
  * `style` attributes, which a nonce can't cover.
  */
 
+/**
+ * The policy of a file served from `/attachments/` (an attached file, always
+ * a download): nothing in it may load or run, and it's sandboxed, should a
+ * browser ever show one instead of saving it. Fixed: a file has no scripts
+ * to give a nonce to.
+ */
+export const FILE_POLICY = "default-src 'none'; sandbox";
+
+/** Where attached files are served from: the paths that get {@link FILE_POLICY}. */
+export const ATTACHMENTS_PATH = '/attachments/';
+
 /** Request header the proxy passes the nonce in, for the root layout. */
 export const NONCE_HEADER = 'x-nonce';
 

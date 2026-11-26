@@ -10,8 +10,9 @@ and the name users see and Adiutor's default language and time zone are settings
 `src/server/settings/` reads and writes ([decision 0034](decisions/0034-settings-in-one-key-value-table.md)).
 **Users** can belong to several companies, with one company role (Admin, Client or Watcher) in
 each. Staff can also be members of companies. Each company manages its own users (its Admins invite
-and manage them), and the staff see every company. What each role may do with requests is in
-[Requests](requests.md).
+and manage them), and the staff see every company, and requests of their own that no company
+sees ([internal requests](requests.md#internal-requests)). What each role may do with requests is
+in [Requests](requests.md).
 
 In the interface, staff screens say **users**, **companies** and **staff** (the `Staff` badge),
 and screens for company users talk about their company by name and about **requests**.
@@ -145,6 +146,16 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
+  - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
+    it's saved and with the staff Admin's second step from the last 15 minutes, whether people can
+    attach files (only once there's a storage), and the largest file anyone may attach; each only
+    shown when the server's environment chooses it (see
+    [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
+  - **Email** (`/admin/settings/email`): the mail server emails go out through and their sender,
+    tried with a test email to the staff Admin before it's saved, with their second step from the
+    last 15 minutes; only shown when the server's environment names it (`SMTP_URL`, `EMAIL_FROM`;
+    see [Sending email](deploying.md#sending-email)). A change is in the audit log, and every
+    staff Admin is emailed about it.
   - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
     the staff's own systems and chat channels, each with whether it's on, its format, the host it
     sends to, its types and events, and adding one; each webhook's page has its controls and its

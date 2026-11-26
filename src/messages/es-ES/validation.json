@@ -122,6 +122,32 @@
       "accentDark": "Escribe el color de acento del tema oscuro con seis dígitos hexadecimales, por ejemplo #25dc89.",
       "tint": "Escribe el tono con seis dígitos hexadecimales, por ejemplo #0e0e2d.",
       "darkNeedsAccent": "Elige primero un color de acento y después uno para el tema oscuro."
+    },
+    "storage": {
+      "driver": "Elige dónde se guardan los archivos.",
+      "folder": "Indica la ruta absoluta de la carpeta, por ejemplo /data/attachments.",
+      "endpoint": "Indica la dirección del servicio, empezando por https://.",
+      "region": "Revisa la región.",
+      "bucket": "Indica el nombre del bucket.",
+      "bucketName": "Usa de 3 a 63 letras minúsculas, cifras, puntos y guiones, empezando y terminando por una letra o cifra.",
+      "accessKeyId": "Indica el ID de la clave de acceso.",
+      "secret": "Ese secreto es demasiado largo.",
+      "host": "Indica el nombre de host o la dirección del servidor.",
+      "port": "Indica un puerto del 1 al 65535.",
+      "username": "Indica el usuario con el que iniciar sesión.",
+      "hostKey": "Indica la huella de la clave de host tal como la muestra ssh-keygen -lf, empezando por SHA256:.",
+      "maxFileMb": {
+        "whole": "Indica un número entero de megabytes, al menos 1.",
+        "tooBig": "Elige como máximo {maximum, number} megabytes."
+      }
+    },
+    "smtp": {
+      "host": "Indica el nombre de host o la dirección del servidor de correo.",
+      "port": "Indica un puerto del 1 al 65535.",
+      "security": "Elige cómo se protege la conexión.",
+      "username": "Ese nombre de usuario es demasiado largo.",
+      "password": "Esa contraseña es demasiado larga.",
+      "fromName": "Ese nombre es demasiado largo."
     }
   }
 }

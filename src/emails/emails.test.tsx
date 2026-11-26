@@ -26,6 +26,8 @@ import { magicLinkEmail } from './magic-link';
 import { requestUpdateEmail } from './request-update';
 import { resetPasswordEmail } from './reset-password';
 import { securityNoticeEmail } from './security-notice';
+import { smtpChangedEmail } from './smtp-changed';
+import { smtpTestEmail } from './smtp-test';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';
@@ -449,6 +451,41 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('names the files of a reply under it, with their sizes and without a link', async () => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: {
+            text: 'The test page is attached.',
+            format: 'plain',
+            mentions: {},
+            attachments: [
+              { name: 'test-page.pdf', size: 184_000 },
+              { name: 'printer.log', size: 15 },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('2 files attached, to download from the request:');
+    expect(email.text).toContain('test-page.pdf (184 kB)');
+    expect(email.text).toContain('printer.log (15 bytes)');
+    // Named only: nothing links to a file, and nothing is attached.
+    expect(email.html).not.toContain('/attachments/');
+    expectBasics(email, url);
+  });
+
   it('tells someone a request was raised for, with its description in full', async () => {
     const url = `${appUrl}/requests/142#request-description`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
@@ -615,6 +652,46 @@ describe('staff-made changes', () => {
       'Jane Admin reactivated the account of Sam Tester (sam@adiutor.test), which is a staff Admin',
     );
     expectBasics(reactivated, url);
+  });
+
+  it('tries a mail server with a test email to the staff Admin saving it', async () => {
+    const url = `${appUrl}/admin/settings/email`;
+    const test = await smtpTestEmail('jane@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      url,
+    });
+    expect(test.subject).toBe('Adiutor can send email through this mail server');
+    expect(test.text).toContain('Adiutor sent this test email through smtp.adiutor.test:587');
+    expect(test.text).toContain('saving a mail server on the Email tab');
+    expectBasics(test, url);
+  });
+
+  it('tells the other staff Admins who changed the mail server, and why it matters', async () => {
+    const url = `${appUrl}/admin/settings/email`;
+    const changed = await smtpChangedEmail('alex@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      byName: 'Jane Admin',
+      url,
+    });
+    expect(changed.subject).toBe('Adiutor sends email through another mail server');
+    expect(changed.text).toContain(
+      'Jane Admin changed the mail server Adiutor sends email through to smtp.adiutor.test:587.',
+    );
+    expect(changed.text).toContain('can read the sign-in links and codes Adiutor sends');
+    expect(changed.text).not.toMatch(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+    expectBasics(changed, url);
+
+    const byNobody = await smtpChangedEmail('alex@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      byName: null,
+      url,
+    });
+    expect(byNobody.text).toContain(
+      'The mail server Adiutor sends email through was changed to smtp.adiutor.test:587.',
+    );
   });
 });
 
@@ -1315,7 +1392,12 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale, brand?: EmailBrand) => Pro
           {
             event: 'reply',
             by: 'Sam Support',
-            text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
+            text: {
+              text: 'https://adiutor.test/manual',
+              format: 'markdown',
+              mentions: {},
+              attachments: [{ name: 'Adiutor Tests.pdf', size: 184_000 }],
+            },
           },
           { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'open', to: 'waiting' },
           {
@@ -1432,6 +1514,43 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale, brand?: EmailBrand) => Pro
         brand,
         name: 'Procurement',
         reason: 'failing',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The mail server's test email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'mail server test': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/email`;
+      const email = await smtpTestEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        server: 'smtp.adiutor.test:587',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "the mail server changed" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'mail server changed': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/email`;
+      const email = await smtpChangedEmail('alex@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        server: 'smtp.adiutor.test:587',
+        byName: 'Jane Admin',
         url,
       });
       return { email, url };
@@ -1820,6 +1939,68 @@ describe('request emails: links to the staff’s pages', () => {
     expect(email.html.match(new RegExp(`href="${userPage}"`, 'g'))).toHaveLength(1);
     expect(email.text.split(userPage)).toHaveLength(2);
     expect(email.text.match(/Ask Sam Support\./g)).toHaveLength(2);
+    expectBasics(email, url);
+  });
+
+  it('keeps a link to one in an internal request’s reply, which only the staff read', async () => {
+    const url = `${appUrl}/requests/142`;
+    const userPage = `${appUrl}/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b`;
+    const props = {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [
+        {
+          event: 'reply',
+          by: 'Morgan Manager',
+          text: { text: `Ask [Sam Support](${userPage}).`, format: 'markdown', mentions: {} },
+        },
+      ],
+    } as const;
+
+    const internal = await requestUpdateEmail('jane@adiutor.test', {
+      ...props,
+      companyName: null,
+    });
+    const inCompany = await requestUpdateEmail('jane@adiutor.test', {
+      ...props,
+      companyName: 'Adiutor Tests',
+    });
+
+    expect(internal.html).toContain(`href="${userPage}"`);
+    expect(inCompany.html).not.toContain(`href="${userPage}"`);
+    expectBasics(internal, url);
+  });
+});
+
+describe('request emails: an internal request', () => {
+  it.each([
+    ['en-US', 'AD-142 · Internal'],
+    ['nl-NL', 'AD-142 · Intern'],
+    ['es-ES', 'AD-142 · Interna'],
+  ] as const)('%s: says Internal where the company would be', async (locale, where) => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: null,
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [{ event: 'assigned', by: 'Sam Support' }],
+    });
+
+    // The reference is the link in the HTML, so the label follows its closing tag.
+    expect(email.html).toMatch(new RegExp(`AD-142</a> · ${where.split('· ')[1]}`));
+    // In the plain text the reference is followed by its link.
+    expect(email.text).toMatch(new RegExp(`AD-142 \\S+ · ${where.split('· ')[1]}`));
+    expect(email.text).not.toMatch(/[{}]/);
+    expect(email.text.match(/https?:\/\/\S+/)?.[0]).toBe(url);
     expectBasics(email, url);
   });
 });

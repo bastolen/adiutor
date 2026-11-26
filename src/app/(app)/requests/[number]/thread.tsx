@@ -26,9 +26,15 @@ import {
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
+import AttachmentList, {
+  attachedCount,
+  type AttachmentRemoval,
+} from '../../_requests/attachment-list';
+import type { Attaching } from '../../_requests/attachment-picker';
 import PersonLine, {
   PersonAvatar,
   personName,
+  requestSideNames,
   type SideNames,
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
@@ -173,20 +179,27 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
  * @param props.detail - The request, as its reader gets it.
  * @param props.address - The whole address of the request's page, for the note above code copied from a reply.
  * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
+ * @param props.attaching - What attaching needs, while people can attach files: an edited text
+ *   can then get files too.
+ * @param props.removal - What removing a file needs, for a reader who may.
  * @returns The list of entries, or a line saying there are none.
  */
 export default function Thread({
   detail,
   address,
   earlierHref,
+  attaching = null,
+  removal = null,
 }: {
   detail: RequestDetail;
   address: string;
   earlierHref: string | null;
+  attaching?: Attaching | null;
+  removal?: AttachmentRemoval | null;
 }) {
   const t = useTranslations('requests.detail');
   const tNote = useTranslations('requests.note');
-  const names: SideNames = { company: detail.company.name, staff: detail.staffName };
+  const names = requestSideNames(detail);
 
   if (detail.entries.length === 0 && detail.activity.groups !== null) {
     return (
@@ -218,6 +231,9 @@ export default function Thread({
           // An internal note reads like a reply, on the amber surface and with a badge that says
           // only the staff see it.
           const note = entry.kind === 'note';
+          // Only the staff read a note, or any text of an internal request (which has no company):
+          // its links to the staff's pages stay links.
+          const staffOnly = note || detail.company === null;
           const source = {
             url: address,
             writer: personName(entry.author, names),
@@ -233,7 +249,7 @@ export default function Thread({
               )}
               source={source}
               names={names}
-              staffOnly={note}
+              staffOnly={staffOnly}
             />
           );
           return (
@@ -259,7 +275,7 @@ export default function Thread({
                       id={entry.id}
                       source={source}
                       names={names}
-                      staffOnly={note}
+                      staffOnly={staffOnly}
                     />
                   )}
                 </>
@@ -270,13 +286,21 @@ export default function Thread({
                   request={detail.number}
                   entry={entry.id}
                   note={note}
+                  staffOnly={staffOnly}
                   edit={entry.body.edit}
+                  attaching={attaching}
+                  attached={attachedCount(entry.body.attachments)}
                 >
                   {text}
                 </EditableText>
               ) : (
                 text
               )}
+              <AttachmentList
+                attachments={entry.body?.attachments}
+                names={names}
+                removal={removal}
+              />
             </Entry>
           );
         }

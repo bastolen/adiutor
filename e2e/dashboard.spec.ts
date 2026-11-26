@@ -98,8 +98,11 @@ test('company users get Requests in the menu and on the dashboard, and their com
   // The tile and the menu item both open the requests they may see.
   await main.getByRole('link', { name: /^Requests/ }).click();
   await expect(page).toHaveURL('/requests');
-  await expect(main.getByText(SEEDED_REQUESTS.open.title)).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');
+  // Their company's requests are there. Specs before this one add requests to it too, so the seeded
+  // one is found by its title rather than on the first page.
+  await page.goto(`/requests?q=${encodeURIComponent(SEEDED_REQUESTS.open.title)}`);
+  await expect(main.getByRole('link', { name: SEEDED_REQUESTS.open.title })).toBeVisible();
   await nav.getByRole('link', { name: 'Dashboard' }).click();
   await expect(page).toHaveURL('/dashboard');
 

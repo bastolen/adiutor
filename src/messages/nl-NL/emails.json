@@ -112,6 +112,22 @@
       "advice": "Beheerders van de medewerkers kunnen alles beheren op {staff}, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
       "button": "Instellingen voor medewerkers openen"
     },
+    "smtpChanged": {
+      "subject": "{staff} verstuurt e-mail via een andere mailserver",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders horen het altijd wanneer de mailserver wijzigt.",
+      "heading": "De mailserver is gewijzigd",
+      "changedBy": "{by} heeft de mailserver waarmee {staff} e-mail verstuurt gewijzigd in {server}.",
+      "changed": "De mailserver waarmee {staff} e-mail verstuurt is gewijzigd in {server}.",
+      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die {staff} verstuurt. Herken je dit niet, controleer dan de instellingen voor e-mail en de auditlog.",
+      "button": "Instellingen voor e-mail openen"
+    },
+    "smtpTest": {
+      "subject": "{staff} kan e-mail versturen via deze mailserver",
+      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad E-mail van de instellingen.",
+      "heading": "Deze mailserver werkt",
+      "body": "{staff} stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
+      "button": "Instellingen voor e-mail openen"
+    },
     "jobFailing": {
       "subject": "Achtergrondtaak {job} blijft mislukken op {staff}",
       "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",
@@ -255,9 +271,12 @@
       "preview": "{event, select, reply {{name} heeft gereageerd.} status {{name} heeft de status gewijzigd.} assigned {{name} heeft dit verzoek aan jou toegewezen.} mentioned {{name} heeft je genoemd.} note {{name} heeft een interne notitie geschreven.} raised {{name} heeft dit verzoek voor jou ingediend.} other {{name} heeft je op dit verzoek geabonneerd.}}",
       "reason": "{role, select, assignee {Je ontvangt dit omdat dit verzoek aan jou is toegewezen. Je kunt e-mails over verzoeken uitzetten in <account>je account</account>.} other {Je ontvangt dit omdat je op dit verzoek bent geabonneerd. Wil je dat niet meer, open dan het verzoek en kies Abonnement opzeggen, of zet e-mails over verzoeken uit in <account>je account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
+      "whereInternal": "<link>{reference}</link> · Intern",
       "reply": "<strong>{name}</strong> heeft gereageerd:",
       "note": "<strong>{name}</strong> heeft een interne notitie geschreven:",
       "noteOnlyStaff": "Interne notitie: alleen medewerkers zien dit.",
+      "files": "{count, plural, one {# bestand toegevoegd, te downloaden vanuit het verzoek:} other {# bestanden toegevoegd, te downloaden vanuit het verzoek:}}",
+      "file": "{name} ({size})",
       "status": "{change, select, reopened {<strong>{name}</strong> heeft dit verzoek heropend.} done {<strong>{name}</strong> heeft dit verzoek als afgerond gemarkeerd.} cancelled {<strong>{name}</strong> heeft dit verzoek geannuleerd.} proposed {<strong>{name}</strong> heeft een oplossing voorgesteld.} approved {<strong>{name}</strong> heeft de oplossing goedgekeurd.} denied {<strong>{name}</strong> heeft de oplossing niet goedgekeurd.} other {<strong>{name}</strong> heeft de status gewijzigd van {from} naar {to}.}}",
       "assigned": "<strong>{name}</strong> heeft dit verzoek aan jou toegewezen.",
       "mentioned": "{where, select, description {<strong>{name}</strong> heeft je genoemd in de beschrijving:} note {<strong>{name}</strong> heeft je genoemd in een interne notitie:} other {<strong>{name}</strong> heeft je genoemd in een reactie:}}",

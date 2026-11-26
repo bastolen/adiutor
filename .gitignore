@@ -44,10 +44,15 @@ next-env.d.ts
 # end-to-end test emails
 /e2e/.outbox/
 
+# end-to-end test attachments
+/e2e/.attachments/
+
 
 # Personal notes or local files
 /.personal/
 /.local/
+# Claude Security scan reports (each folder also ignores itself)
+CLAUDE-SECURITY-*
 
 # Other checkouts of the repository that Claude Code sessions work in. Ignored here (not only in
 # a local exclude) so Prettier, which reads this file, never formats them from this checkout.

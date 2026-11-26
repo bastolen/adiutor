@@ -35,6 +35,10 @@
  * removing, reactivating, accepting) gets a target of its own in
  * `createWorld`.
  */
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
@@ -43,11 +47,13 @@ import {
   invitation,
   inviteLink,
   membership,
+  requestEntry,
   user,
   webhookDelivery,
 } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
+import { INTERNAL_CHOICE } from '@/lib/requests';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
@@ -57,6 +63,8 @@ import {
   createCompany,
   createSession,
   createStaffSettings,
+  saveSettings,
+  storeAttachment,
   createUser,
   inSequence,
   memberActor,
@@ -78,7 +86,7 @@ import {
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
 import { getBrandColours, setBrandColours } from './branding';
-import { ServiceError, type ServiceErrorCode } from './errors';
+import { notFoundError, ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
   listFailedJobs,
@@ -148,8 +156,8 @@ import { listUsers } from './people/users';
 import { findErrorReference, listRecentErrors } from './recorded-errors';
 import {
   addNote,
-  answerSolution,
   addRequestType,
+  answerSolution,
   archiveRequestType,
   changeAssignees,
   changeRequestStatus,
@@ -176,7 +184,18 @@ import {
   unsubscribe,
   updateRequestDetails,
   updateRequestType,
+  loadAttachment,
+  removeAttachment,
+  uploadAttachment,
 } from './requests';
+import { getSmtpSettings, saveSmtpSettings } from './smtp';
+import {
+  getAttachmentSettings,
+  saveAttachmentLimit,
+  saveAttachmentsEnabled,
+  saveAttachmentStorage,
+  setUpStorage,
+} from './storage';
 import {
   addWebhook,
   getWebhook,
@@ -190,7 +209,20 @@ import {
   updateWebhook,
 } from './webhooks';
 
-const { ctx, db, sent } = setupTestContext();
+const { ctx, db, sent, storage } = setupTestContext();
+
+/**
+ * Downloads an attached file, refusing as "not found" when there's none for
+ * the reader (`loadAttachment` answers nothing then), as the route does.
+ *
+ * @param actor - The reader.
+ * @param id - The attachment.
+ */
+async function download(actor: Actor, id: string): Promise<void> {
+  if (!(await loadAttachment(ctx, actor, id))) {
+    throw notFoundError();
+  }
+}
 
 /** The roles in the matrix. Company roles are members of company A. */
 const ROLES = [
@@ -251,8 +283,16 @@ interface World {
   invitationFromLink: string;
   /** A queued job that was given up, to retry, and another to discard. */
   failedJobs: { retry: string; discard: string };
-  /** The number of a request in each company, raised by its Admin. */
-  requests: { own: string; other: string };
+  /**
+   * The number of a request in each company, raised by its Admin, and of an internal request
+   * (decision 0048), raised by a staff member.
+   */
+  requests: { own: string; other: string; internal: string };
+  /**
+   * A file attached to each request's description, one to an internal note on the own one, and
+   * one on the own one to remove.
+   */
+  attachments: { own: string; other: string; ownNote: string; removable: string };
   /**
    * A webhook to view, test and change, with a failed delivery to send again;
    * one that's off (to turn on); and one to remove.
@@ -557,6 +597,76 @@ function listOperations(): Operation[] {
       (w) => setBrandColours(ctx, w.actor, { accent: '#c2185b', accentDark: '', tint: '' }),
     ],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
+    // Settings decide, whatever the checkout's environment says (`{}`); a new folder for each try.
+    ['view attachment settings', (w) => getAttachmentSettings(ctx, w.actor, {})],
+    [
+      'choose where attachments are kept',
+      (w) =>
+        saveAttachmentStorage(
+          ctx,
+          w.actor,
+          { driver: 'local', dir: mkdtempSync(join(tmpdir(), 'adiutor-matrix-')) },
+          {},
+        ),
+    ],
+    ['choose the largest attachment', (w) => saveAttachmentLimit(ctx, w.actor, '20', {})],
+    [
+      'set up where attachments are kept',
+      (w) =>
+        setUpStorage(ctx, w.actor, {
+          ATTACHMENTS_STORAGE: 'local',
+          ATTACHMENTS_DIR: mkdtempSync(join(tmpdir(), 'adiutor-matrix-')),
+        }),
+    ],
+    // A file nobody may download is missing to them: `loadAttachment` answers nothing.
+    ["download a description's file (own)", (w) => download(w.actor, w.attachments.own)],
+    ["download a description's file (other)", (w) => download(w.actor, w.attachments.other)],
+    ["download an internal note's file (own)", (w) => download(w.actor, w.attachments.ownNote)],
+    [
+      'upload a file to attach',
+      (w) =>
+        uploadAttachment(ctx, w.actor, {
+          name: 'screenshot.png',
+          size: 8,
+          /**
+           * Reads the file's bytes.
+           *
+           * @returns The bytes.
+           */
+          read: async () => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        }),
+    ],
+    // After the upload, which it would refuse.
+    ['turn attaching files off', (w) => saveAttachmentsEnabled(ctx, w.actor, false, {})],
+    [
+      'remove an attachment',
+      (w) =>
+        removeAttachment(ctx, w.actor, {
+          request: w.requests.own,
+          attachment: w.attachments.removable,
+        }),
+    ],
+    // Settings decide (`{}`), and the test email goes nowhere: what's checked is who may.
+    ['view email settings', (w) => getSmtpSettings(ctx, w.actor, {})],
+    [
+      'choose the mail server',
+      (w) =>
+        saveSmtpSettings(
+          ctx,
+          w.actor,
+          {
+            host: 'localhost',
+            port: '1025',
+            security: 'none',
+            username: '',
+            password: '',
+            fromName: '',
+            fromAddress: 'no-reply@adiutor.test',
+          },
+          {},
+          async () => {},
+        ),
+    ],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -678,11 +788,102 @@ function listOperations(): Operation[] {
     ['show requests as a board', (w) => listBoard(ctx, w.actor)],
     ['show requests as a board (own)', (w) => listBoard(ctx, w.actor, { company: w.own.id })],
     ['show requests as a board (other)', (w) => listBoard(ctx, w.actor, { company: w.other.id })],
+    ['list requests (internal)', (w) => listRequests(ctx, w.actor, { company: INTERNAL_CHOICE })],
+    [
+      'show requests as a board (internal)',
+      (w) => listBoard(ctx, w.actor, { company: INTERNAL_CHOICE }),
+    ],
     ['list companies to raise a request for', (w) => listRequestCompanies(ctx, w.actor)],
     ['look up a request (own)', (w) => findRequest(ctx, w.actor, w.requests.own)],
     ['look up a request (other)', (w) => findRequest(ctx, w.actor, w.requests.other)],
     ['view request (own)', (w) => getRequest(ctx, w.actor, w.requests.own)],
     ['view request (other)', (w) => getRequest(ctx, w.actor, w.requests.other)],
+    ['look up a request (internal)', (w) => findRequest(ctx, w.actor, w.requests.internal)],
+    ['view request (internal)', (w) => getRequest(ctx, w.actor, w.requests.internal)],
+    [
+      'raise request (internal)',
+      (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: INTERNAL_CHOICE }),
+    ],
+    [
+      'raise request for someone (internal)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: INTERNAL_CHOICE,
+          raisedFor: w.raiseFor.own,
+        }),
+    ],
+    [
+      'reply to request (internal)',
+      (w) => replyToRequest(ctx, w.actor, { request: w.requests.internal, body: 'Any news?' }),
+    ],
+    [
+      'send a reply as the solution (internal)',
+      (w) =>
+        replyToRequest(ctx, w.actor, {
+          request: w.requests.internal,
+          body: 'Renewed.',
+          status: 'proposed',
+        }),
+    ],
+    [
+      'answer a solution (internal)',
+      (w) => answerSolution(ctx, w.actor, { request: w.requests.internal, answer: 'approve' }),
+    ],
+    [
+      'set request status (internal)',
+      (w) => changeRequestStatus(ctx, w.actor, { request: w.requests.internal, status: 'todo' }),
+    ],
+    [
+      'edit request details (internal)',
+      (w) => updateRequestDetails(ctx, w.actor, { ...NEW_DETAILS, request: w.requests.internal }),
+    ],
+    [
+      'assign request (internal)',
+      (w) =>
+        changeAssignees(ctx, w.actor, {
+          request: w.requests.internal,
+          add: [w.actor.id],
+          remove: [],
+        }),
+    ],
+    [
+      'edit request description (internal)',
+      (w) =>
+        editRequestDescription(ctx, w.actor, {
+          request: w.requests.internal,
+          text: 'The certificates run out on Friday.',
+          edits: 0,
+        }),
+    ],
+    [
+      'add internal note (internal)',
+      (w) => addNote(ctx, w.actor, { request: w.requests.internal, body: 'Ask the host.' }),
+    ],
+    [
+      'list who can be mentioned in a request (internal)',
+      (w) => listMentionable(ctx, w.actor, { request: w.requests.internal }),
+    ],
+    [
+      'list who can be mentioned in a new request (internal)',
+      (w) => listMentionable(ctx, w.actor, { internal: true }),
+    ],
+    [
+      'subscribe to request (internal)',
+      (w) => subscribe(ctx, w.actor, { request: w.requests.internal }),
+    ],
+    [
+      'unsubscribe from request (internal)',
+      (w) => unsubscribe(ctx, w.actor, { request: w.requests.internal }),
+    ],
+    [
+      'change request subscribers (internal)',
+      (w) => changeSubscribers(ctx, w.actor, { request: w.requests.internal, add: [], remove: [] }),
+    ],
+    [
+      'list who can be subscribed to a request (internal)',
+      (w) => listSubscribable(ctx, w.actor, w.requests.internal),
+    ],
     [
       'raise request (own)',
       (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.own.id }),
@@ -901,7 +1102,12 @@ const READS: ReadonlySet<string> = new Set([
   'list staff invitations',
   'list staff',
   'view staff settings',
+  'view attachment settings',
+  "download a description's file (own)",
+  "download a description's file (other)",
+  "download an internal note's file (own)",
   'view brand colours',
+  'view email settings',
   'list request types',
   'list users',
   'view user',
@@ -919,9 +1125,11 @@ const READS: ReadonlySet<string> = new Set([
   'list requests',
   'list requests (own)',
   'list requests (other)',
+  'list requests (internal)',
   'show requests as a board',
   'show requests as a board (own)',
   'show requests as a board (other)',
+  'show requests as a board (internal)',
   'list companies to raise a request for',
   'list who a request can be raised for (own)',
   'list who a request can be raised for (other)',
@@ -929,6 +1137,11 @@ const READS: ReadonlySet<string> = new Set([
   'look up a request (other)',
   'view request (own)',
   'view request (other)',
+  'look up a request (internal)',
+  'view request (internal)',
+  'list who can be mentioned in a request (internal)',
+  'list who can be mentioned in a new request (internal)',
+  'list who can be subscribed to a request (internal)',
   'list staff to assign',
   'list who can be mentioned in a request (own)',
   'list who can be mentioned in a request (other)',
@@ -947,6 +1160,8 @@ const READS: ReadonlySet<string> = new Set([
  */
 const OWN_WORK: ReadonlySet<string> = new Set([
   'dismiss own MFA recommendation',
+  'remove an attachment',
+  'upload a file to attach',
   'raise request (own)',
   'raise request (other)',
   'raise request for someone (own)',
@@ -977,6 +1192,20 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'unsubscribe from request (other)',
   'change request subscribers (own)',
   'change request subscribers (other)',
+  // And on internal requests, which only a staff role's own rights reach (decision 0048).
+  'raise request (internal)',
+  'raise request for someone (internal)',
+  'reply to request (internal)',
+  'send a reply as the solution (internal)',
+  'answer a solution (internal)',
+  'set request status (internal)',
+  'edit request details (internal)',
+  'assign request (internal)',
+  'edit request description (internal)',
+  'add internal note (internal)',
+  'subscribe to request (internal)',
+  'unsubscribe from request (internal)',
+  'change request subscribers (internal)',
 ]);
 
 /** What happens when a role tries an operation. */
@@ -1095,6 +1324,24 @@ const EXPECTED: Record<string, string> = {
   'set default time zone': 'FFFFFFA',
   'set brand colours': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
+  // Where files are kept, and how large they may be: staff Admins only, like the other settings.
+  'view attachment settings': 'FFFFFFA',
+  'choose where attachments are kept': 'FFFFFFA',
+  'choose the largest attachment': 'FFFFFFA',
+  'set up where attachments are kept': 'FFFFFFA',
+  'turn attaching files off': 'FFFFFFA',
+  // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
+  'upload a file to attach': 'FAAAFAA',
+  // A file on a request, removed by the staff who work on requests only.
+  'remove an attachment': 'FFFAFAA',
+  // A file is read by whoever reads its text: a description's by everyone who sees the request,
+  // a note's by the staff.
+  "download a description's file (own)": 'AAAAAAA',
+  "download a description's file (other)": 'NNNAAAA',
+  "download an internal note's file (own)": 'NNNAAAA',
+  // Where every email goes, and who sends it: staff Admins only, like the other settings.
+  'view email settings': 'FFFFFFA',
+  'choose the mail server': 'FFFFFFA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',
   'add request type': 'FFFFFFA',
@@ -1213,6 +1460,30 @@ const EXPECTED: Record<string, string> = {
   'change request subscribers (other)': 'NNNAFAA',
   'list who can be subscribed to a request (own)': 'FFAAFAA',
   'list who can be subscribed to a request (other)': 'NNNAFAA',
+  // Internal requests (decision 0048) are the staff's, by their staff role alone: nobody at a
+  // company finds one, as with a company they aren't in; Finance reads them and works on none.
+  'list requests (internal)': 'NNNAAAA',
+  'show requests as a board (internal)': 'NNNAAAA',
+  'look up a request (internal)': 'NNNAAAA',
+  'view request (internal)': 'NNNAAAA',
+  'raise request (internal)': 'NNNAFAA',
+  // An internal request is the staff's own, never raised for someone at a company.
+  'raise request for someone (internal)': 'NNNFFFF',
+  'reply to request (internal)': 'NNNAFAA',
+  // Nobody could approve a solution on an internal request, so nobody sends or answers one.
+  'send a reply as the solution (internal)': 'NNNFFFF',
+  'answer a solution (internal)': 'NNNFFFF',
+  'set request status (internal)': 'NNNAFAA',
+  'edit request details (internal)': 'NNNAFAA',
+  'assign request (internal)': 'NNNAFAA',
+  'edit request description (internal)': 'NNNAFAA',
+  'add internal note (internal)': 'NNNAFAA',
+  'list who can be mentioned in a request (internal)': 'NNNAFAA',
+  'list who can be mentioned in a new request (internal)': 'NNNAFAA',
+  'subscribe to request (internal)': 'NNNAAAA',
+  'unsubscribe from request (internal)': 'NNNAAAA',
+  'change request subscribers (internal)': 'NNNAFAA',
+  'list who can be subscribed to a request (internal)': 'NNNAFAA',
   // Everyone may deactivate their own account (each world has other Admins).
   'deactivate own account': 'AAAAAAA',
 };
@@ -1309,6 +1580,8 @@ async function storeMatrixWebhooks(): Promise<World['webhooks']> {
  */
 async function createWorld(role: MatrixRole): Promise<World> {
   await createStaffSettings(db);
+  // Attaching is on, with the test file's own folder as the storage.
+  await saveSettings(db, { 'attachments.enabled': true });
   const own = await createCompany(db, { name: 'Adiutor Tests A' });
   const other = await createCompany(db, { name: 'Adiutor Tests B' });
   // Each company keeps an admin, so changes never hit the last-admin rule.
@@ -1347,6 +1620,16 @@ async function createWorld(role: MatrixRole): Promise<World> {
   await claimInviteLink(ctx, (await createLink(otherAdmin, other.id)).token, actor.email);
   const invitationFromLink = tokenFrom(defined(sent.at(-1), 'the invitation email'));
   const outsider = await createUser(db, 'outsider@adiutor.test');
+  const ownRequest = await raiseRequest(ctx, ownAdmin, { ...NEW_REQUEST, companyId: own.id });
+  const otherRequest = await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id });
+  // An internal note on the own request, with a file of its own.
+  const note = firstRow(
+    await db
+      .insert(requestEntry)
+      .values({ requestId: ownRequest.id, kind: 'note', authorSide: 'staff', body: 'Toner?' })
+      .returning({ id: requestEntry.id }),
+    'the note',
+  );
   const keyFinder = await actorFor(db, staffToRemove);
   /**
    * Finds a company's Admin by the key the staff's form names them by.
@@ -1405,12 +1688,16 @@ async function createWorld(role: MatrixRole): Promise<World> {
       discard: await storeQueuedJob(db, 'security-notice'),
     },
     requests: {
-      own: String(
-        (await raiseRequest(ctx, ownAdmin, { ...NEW_REQUEST, companyId: own.id })).number,
-      ),
-      other: String(
-        (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
-      ),
+      own: String(ownRequest.number),
+      other: String(otherRequest.number),
+      // Stored as a staff member raised it, so the world doesn't depend on raising one.
+      internal: String((await storeRequest(db, null, { createdBy: staffMember })).number),
+    },
+    attachments: {
+      own: await storeAttachment(db, storage, { requestId: ownRequest.id }),
+      other: await storeAttachment(db, storage, { requestId: otherRequest.id }),
+      ownNote: await storeAttachment(db, storage, { requestId: ownRequest.id, entryId: note.id }),
+      removable: await storeAttachment(db, storage, { requestId: ownRequest.id }),
     },
     webhooks: await storeMatrixWebhooks(),
     raiseFor: {

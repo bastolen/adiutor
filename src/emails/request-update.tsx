@@ -2,17 +2,19 @@
  * @file Email telling someone on a request what happened to it: who replied,
  * with the reply, who changed its status, and what put them on it (assigned
  * to them, a text that mentions them, someone who subscribed them). Several
- * pieces of news about one request are one email.
+ * pieces of news about one request are one email. A text's files are named
+ * under it, never attached or linked: the request's page downloads them.
  */
 import type { ReactNode } from 'react';
-import { Section } from 'react-email';
+import { Section, Text } from 'react-email';
 
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import EmailMarkdown, { type EmailText } from '@/components/email/email-markdown';
 import { EmailHeading, EmailLink, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { type EmailColours, emailColours, emailName } from '@/components/email/theme';
+import { type EmailColours, emailColours, emailName, small } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
+import { formatFileSize } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 import {
@@ -27,6 +29,12 @@ import { REQUEST_LINK_DAYS } from '@/lib/sign-in/request-link';
 import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
+/** A text the email shows, with the people it mentions by name and the files attached to it. */
+export interface RequestUpdateEmailText extends EmailText {
+  /** The files attached to it, oldest first: named, never attached or linked. */
+  attachments?: readonly { name: string; size: number }[];
+}
+
 /** One thing the email tells its reader. Each names who did it, as the request's page names them. */
 export type RequestUpdateEmailItem =
   | {
@@ -34,16 +42,16 @@ export type RequestUpdateEmailItem =
       event: 'reply';
       /** Who. */
       by: string;
-      /** The reply, with the people it mentions by name. */
-      text: EmailText;
+      /** The reply, with the people it mentions by name and its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone wrote an internal note: only ever in an email to the staff. */
       event: 'note';
       /** Who. */
       by: string;
-      /** The note, with the people it mentions by name. */
-      text: EmailText;
+      /** The note, with the people it mentions by name and its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone changed the status. */
@@ -70,8 +78,8 @@ export type RequestUpdateEmailItem =
       by: string;
       /** Where: in the request's description, a reply, or an internal note (for the staff). */
       where: 'description' | 'reply' | 'note';
-      /** The text that mentions them. */
-      text: EmailText;
+      /** The text that mentions them, with its files. */
+      text: RequestUpdateEmailText;
     }
   | {
       /** Someone subscribed the reader to the request. */
@@ -96,8 +104,11 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   reference: string;
   /** The request's title. */
   title: string;
-  /** The name of the request's company. */
-  companyName: string;
+  /**
+   * The name of the request's company; `null` for an internal request
+   * (decision 0048), which only the staff read.
+   */
+  companyName: string | null;
   /**
    * The reader's link that signs them in to Adiutor and opens the request
    * (`requestLinkPath`, decision 0036).
@@ -166,7 +177,8 @@ function accountLinkTag(href: string, colours: EmailColours) {
 
 /**
  * A text someone wrote, set apart from the email's own words by a line on
- * its left, formatted as on the request's page (`EmailMarkdown`).
+ * its left, formatted as on the request's page (`EmailMarkdown`), with the
+ * names and sizes of its files below it.
  *
  * @param props - Component props.
  * @param props.text - The text.
@@ -183,12 +195,14 @@ function WrittenText({
   appUrl,
   colours: colors,
 }: {
-  text: EmailText;
+  text: RequestUpdateEmailText;
   id: string;
   locale: Locale;
   appUrl: string | null;
   colours: EmailColours;
 }) {
+  const t = translator(locale, 'emails.requestUpdate');
+  const files = text.attachments ?? [];
   return (
     <Section
       style={{
@@ -198,6 +212,19 @@ function WrittenText({
       }}
     >
       <EmailMarkdown value={text} id={id} locale={locale} appUrl={appUrl} colours={colors} />
+      {files.length > 0 && (
+        <>
+          <Text style={{ ...small(colors), margin: '4px 0' }}>
+            {t('files', { count: files.length })}
+          </Text>
+          {files.map((file, index) => (
+            // eslint-disable-next-line react/no-array-index-key -- a fixed list, rendered once; names can repeat
+            <Text key={index} style={{ ...small(colors), margin: '0', overflowWrap: 'anywhere' }}>
+              {t('file', { name: file.name, size: formatFileSize(file.size, locale) })}
+            </Text>
+          ))}
+        </>
+      )}
     </Section>
   );
 }
@@ -211,7 +238,9 @@ function WrittenText({
  * @param props.id - A name no other piece of news in the email has, for its text.
  * @param props.audience - How to word the request's statuses for the reader.
  * @param props.locale - The email's language.
- * @param props.appUrl - Adiutor's own address.
+ * @param props.textAppUrl - Adiutor's own address, for a text the company reads (its links to
+ *   the staff's pages show as their text); `null` for a text only the staff read (an internal
+ *   request's).
  * @param props.colours - The email's colours.
  */
 function UpdateItem({
@@ -219,14 +248,14 @@ function UpdateItem({
   id,
   audience,
   locale,
-  appUrl,
+  textAppUrl,
   colours,
 }: {
   item: RequestUpdateEmailItem;
   id: string;
   audience: RequestAudience;
   locale: Locale;
-  appUrl: string;
+  textAppUrl: string | null;
   colours: EmailColours;
 }) {
   const t = translator(locale, 'emails.requestUpdate');
@@ -236,7 +265,13 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph colours={colours}>{t.rich('reply', who)}</EmailParagraph>
-        <WrittenText colours={colours} text={item.text} id={id} locale={locale} appUrl={appUrl} />
+        <WrittenText
+          colours={colours}
+          text={item.text}
+          id={id}
+          locale={locale}
+          appUrl={textAppUrl}
+        />
       </Section>
     );
   }
@@ -261,7 +296,7 @@ function UpdateItem({
           text={item.text}
           id={id}
           locale={locale}
-          appUrl={item.where === 'note' ? null : appUrl}
+          appUrl={item.where === 'note' ? null : textAppUrl}
         />
         {item.where === 'note' && <EmailNote colours={colours}>{t('noteOnlyStaff')}</EmailNote>}
       </Section>
@@ -271,7 +306,13 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph colours={colours}>{t.rich('raised', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} colours={colours} />
+        <WrittenText
+          text={item.text}
+          id={id}
+          locale={locale}
+          appUrl={textAppUrl}
+          colours={colours}
+        />
       </Section>
     );
   }
@@ -299,6 +340,8 @@ function UpdateItem({
  * raised for them are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
+ * Only the staff read an internal request, so its texts keep their links to
+ * the staff's pages, as a note does, and its company reads "Internal".
  * A button opens the request; for someone at the company who may answer a
  * solution the email tells of, Approve and Deny buttons (`answerLinks`, links
  * that work once and only for them) take its place. A note says replies to
@@ -336,7 +379,13 @@ export default function RequestUpdateEmail({
     >
       <EmailHeading colours={colours}>{title}</EmailHeading>
       <EmailNote colours={colours}>
-        {t.rich('where', { reference, company: companyName, link: requestLinkTag(url, colours) })}
+        {companyName === null
+          ? t.rich('whereInternal', { reference, link: requestLinkTag(url, colours) })
+          : t.rich('where', {
+              reference,
+              company: companyName,
+              link: requestLinkTag(url, colours),
+            })}
       </EmailNote>
       {items.map((item, index) => (
         <UpdateItem
@@ -346,7 +395,8 @@ export default function RequestUpdateEmail({
           id={`text-${index}`}
           audience={audience}
           locale={locale}
-          appUrl={appUrl}
+          // Only the staff read an internal request: its links to their pages stay links.
+          textAppUrl={companyName === null ? null : appUrl}
           colours={colours}
         />
       ))}
@@ -400,6 +450,10 @@ RequestUpdateEmail.PreviewProps = {
         ].join('\n'),
         format: 'markdown',
         mentions: {},
+        attachments: [
+          { name: 'test-page.pdf', size: 184_000 },
+          { name: 'printer.log', size: 3_200 },
+        ],
       },
     },
     { event: 'status', by: 'Sam Doe', bySide: 'staff', from: 'in_progress', to: 'waiting' },

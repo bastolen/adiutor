@@ -1,11 +1,12 @@
 /**
  * @file One request as its readers see it: its details, who it's assigned
- * to, the company it's in, what the reader may do with it, and its
+ * to, the company it's in (none for an internal request), what the reader may do with it, and its
  * conversation, filtered and ordered the way the reader reads it (their
  * saved activity view).
  */
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -22,6 +23,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core';
 
 import {
+  requestAttachment,
   requestEntry,
   requestMention,
   requestParticipant,
@@ -36,6 +38,7 @@ import { appUrl } from '@/lib/env';
 import {
   type ActivityView,
   activityKinds,
+  attachmentTypeOf,
   effectiveActivityGroups,
   mayContribute,
   mayEditDescription,
@@ -109,6 +112,30 @@ export interface MentionedPerson extends RequestPerson {
   key: string | null;
 }
 
+/**
+ * A file attached to a request's text, as its reader gets it (decision
+ * 0044): to download from `/attachments/<id>`, or, once it's removed, who
+ * removed it and when. Never who uploaded it: that's the text's author, or
+ * whoever added it while editing the text.
+ */
+export interface RequestAttachmentView {
+  /** Its ID, which its address holds. */
+  id: string;
+  /** Its name. */
+  name: string;
+  /** Its size in bytes. */
+  size: number;
+  /** Whether the page shows it as a thumbnail (an image every browser shows). */
+  thumbnail: boolean;
+  /**
+   * Who removed it and when, once it's removed (its file is gone then);
+   * `null` while it's there. A staff member removes files, so `by` is on the
+   * staff's side; whether they did it while signed in as someone, only for
+   * the readers who may know.
+   */
+  removed: { by: RequestPerson; at: Date; signedInAs?: SignedInAsMark } | null;
+}
+
 /** A text someone wrote in a request, with the format it's written in. */
 export interface RequestText {
   /** The text as it was written. */
@@ -143,6 +170,8 @@ export interface RequestText {
   edit?: { markdown: string; edits: number };
   /** Its earlier versions, newest first, for the staff (`requests:view-internal`) only. */
   versions?: TextVersion[];
+  /** The files attached to it, oldest first; left out for a text without any. */
+  attachments?: RequestAttachmentView[];
 }
 
 /** An earlier version of a request's text, as the staff read it. */
@@ -249,8 +278,12 @@ export interface RequestDetail {
   firstResponseAt: Date | null;
   /** When it was raised, replied to or changed last (a change of priority doesn't count). */
   lastActivityAt: Date;
-  /** Its company. A deactivated company's requests can only be read. */
-  company: { id: string; name: string; slug: string; deactivated: boolean };
+  /**
+   * Its company. A deactivated company's requests can only be read. `null` for an internal
+   * request (decision 0048), which only the staff read: its texts keep their links to the
+   * staff's pages, as a note does.
+   */
+  company: { id: string; name: string; slug: string; deactivated: boolean } | null;
   /** What the reader may do in that company. */
   permissions: Set<Permission>;
   /** How to address the reader: as the staff, as someone who takes part, or as a follower. */
@@ -551,7 +584,10 @@ async function loadPeople(ctx: ServiceContext, found: RequestRow) {
  */
 function ofShownText(
   internal: boolean,
-  entryId: typeof requestMention.entryId | typeof requestTextVersion.entryId,
+  entryId:
+    | typeof requestMention.entryId
+    | typeof requestTextVersion.entryId
+    | typeof requestAttachment.entryId,
 ): SQL | undefined {
   return internal
     ? undefined
@@ -560,7 +596,8 @@ function ofShownText(
 
 /**
  * Loads what the texts the reader is shown come with ({@link ofShownText}):
- * the people each mentions, and each one's earlier versions, newest first.
+ * the people each mentions, each one's earlier versions, newest first, and
+ * the files attached to each, oldest first (sent ones only).
  * Every reader gets the versions' rows, since the newest says who made the
  * last edit and how and their number is what an edit sends back; only the
  * staff get the versions themselves ({@link requestText}).
@@ -568,10 +605,10 @@ function ofShownText(
  * @param ctx - Service context.
  * @param requestId - The request.
  * @param internal - Whether the reader sees what only the staff see.
- * @returns The mentions' and the versions' rows.
+ * @returns The mentions', the versions' and the attachments' rows.
  */
 async function loadTextRows(ctx: ServiceContext, requestId: string, internal: boolean) {
-  const [mentioned, versions] = await Promise.all([
+  const [mentioned, versions, attached] = await Promise.all([
     ctx.db
       .select({
         id: requestMention.id,
@@ -607,8 +644,30 @@ async function loadTextRows(ctx: ServiceContext, requestId: string, internal: bo
         ),
       )
       .orderBy(desc(requestTextVersion.id)),
+    ctx.db
+      .select({
+        id: requestAttachment.id,
+        entryId: requestAttachment.entryId,
+        name: requestAttachment.name,
+        size: requestAttachment.size,
+        removedAt: requestAttachment.removedAt,
+        removedBy: { id: user.id, name: user.name },
+        removedSignedInAs: requestAttachment.removedSignedInAs,
+        removedSignedInAsStaff: { name: signedInAsStaff.name },
+      })
+      .from(requestAttachment)
+      .leftJoin(user, eq(requestAttachment.removedBy, user.id))
+      .leftJoin(signedInAsStaff, eq(requestAttachment.removedSignedInAsStaffId, signedInAsStaff.id))
+      .leftJoin(requestEntry, eq(requestAttachment.entryId, requestEntry.id))
+      .where(
+        and(
+          eq(requestAttachment.requestId, requestId),
+          ofShownText(internal, requestAttachment.entryId),
+        ),
+      )
+      .orderBy(asc(requestAttachment.createdAt), asc(requestAttachment.id)),
   ]);
-  return { mentioned, versions };
+  return { mentioned, versions, attached };
 }
 
 /**
@@ -622,6 +681,8 @@ interface ShownTexts {
   storedMentions: Map<string | null, TextMention[]>;
   /** Each text's earlier versions, newest first. */
   versions: Map<string | null, TextVersion[]>;
+  /** The files attached to each text, oldest first. */
+  attachments: Map<string | null, RequestAttachmentView[]>;
 }
 
 /**
@@ -632,26 +693,33 @@ interface ShownTexts {
  * without an account or a name to show can't be mentioned, so has none.
  *
  * @param reader - Who reads them.
- * @param company - The request's company.
- * @param rows - The texts' mentions and versions ({@link loadTextRows}).
- * @returns The texts' mentions and versions, by text.
+ * @param company - The request's company; `null` for an internal request.
+ * @param rows - The texts' mentions, versions and attachments ({@link loadTextRows}).
+ * @returns The texts' mentions, versions and attachments, by text.
  */
 function shownTexts(
   reader: PageReader,
-  company: Company,
+  company: Company | null,
   rows: Awaited<ReturnType<typeof loadTextRows>>,
 ): ShownTexts {
-  const writes = mayContribute(reader.permissions, {
-    deactivated: company.deactivatedAt !== null,
-  });
-  const texts: ShownTexts = { mentions: new Map(), storedMentions: new Map(), versions: new Map() };
+  const writes = mayContribute(
+    reader.permissions,
+    company && { deactivated: company.deactivatedAt !== null },
+  );
+  const companyId = company?.id ?? null;
+  const texts: ShownTexts = {
+    mentions: new Map(),
+    storedMentions: new Map(),
+    versions: new Map(),
+    attachments: new Map(),
+  };
   rows.mentioned.forEach(({ entryId, ...mention }) => {
     const { id, side, person } = mention;
     const ofText = texts.mentions.get(entryId) ?? {};
     const asShown = requestPerson(person ?? { id: null, name: null }, side, reader.actor);
     ofText[id] = {
       ...asShown,
-      key: writes && person?.id && asShown.name !== null ? mentionKey(company.id, person.id) : null,
+      key: writes && person?.id && asShown.name !== null ? mentionKey(companyId, person.id) : null,
     };
     texts.mentions.set(entryId, ofText);
     texts.storedMentions.set(entryId, [...(texts.storedMentions.get(entryId) ?? []), mention]);
@@ -668,6 +736,30 @@ function shownTexts(
       texts.versions.set(entryId, ofText);
     },
   );
+  rows.attached.forEach((row) => {
+    const ofText = texts.attachments.get(row.entryId) ?? [];
+    let removed: RequestAttachmentView['removed'] = null;
+    if (row.removedAt) {
+      const mark = signedInAsMark(
+        reader,
+        { signedInAs: row.removedSignedInAs, staff: row.removedSignedInAsStaff },
+        row.removedBy?.id,
+      );
+      removed = {
+        by: requestPerson(row.removedBy ?? { id: null, name: null }, 'staff', reader.actor),
+        at: row.removedAt,
+        ...(mark && { signedInAs: mark }),
+      };
+    }
+    ofText.push({
+      id: row.id,
+      name: row.name,
+      size: row.size,
+      thumbnail: attachmentTypeOf(row.name)?.thumbnail ?? false,
+      removed,
+    });
+    texts.attachments.set(row.entryId, ofText);
+  });
   return texts;
 }
 
@@ -677,8 +769,8 @@ interface PageContext {
   reader: PageReader;
   /** The request. */
   found: RequestRow;
-  /** Its company. */
-  company: Company;
+  /** Its company; `null` for an internal request. */
+  company: Company | null;
   /** The name the staff are shown with. */
   staffName: string;
   /** Its texts' mentions and versions ({@link shownTexts}). */
@@ -694,7 +786,8 @@ interface PageContext {
  * it was edited (and, for the readers who may know, whether that edit was
  * made while signed in as its editor), what its editor starts from (for a
  * reader who may edit it, without links to the staff's pages unless they
- * may open them or it's an internal note), and its versions (staff).
+ * may open them, or it's an internal note or an internal request's text),
+ * its versions (staff), and the files attached to it.
  *
  * @param page - What the page is built from.
  * @param stored - The text.
@@ -720,13 +813,15 @@ function requestText(
 ): RequestText {
   const { reader, texts, company } = page;
   const versions = texts.versions.get(stored.entryId) ?? [];
+  const attachments = texts.attachments.get(stored.entryId);
   // The newest version is the last edit's.
   const lastEdit = versions[0];
   // Nothing of a deactivated company's request changes, so nothing of it is edited.
-  const editable = company.deactivatedAt === null;
+  const editable = company === null || company.deactivatedAt === null;
   // Only a reader who may open the staff's pages gets a text to edit with links to them (and a
-  // note keeps them for whoever edits it).
-  const keepsStaffLinks = reader.globalPermissions.has('users:view') || stored.staffOnly;
+  // note, or an internal request's text, which only the staff read, keeps them for whoever edits it).
+  const keepsStaffLinks =
+    reader.globalPermissions.has('users:view') || stored.staffOnly || company === null;
   return {
     text: stored.text,
     format: stored.format,
@@ -741,13 +836,15 @@ function requestText(
           markdown: editableText(
             keepsStaffLinks ? stored.text : withoutStaffPageLinksToEdit(stored.text, appUrl),
             texts.storedMentions.get(stored.entryId) ?? [],
-            company.id,
-            { company: company.name, staff: page.staffName },
+            company?.id ?? null,
+            // An internal request has nobody on the company's side to name.
+            { company: company?.name ?? page.staffName, staff: page.staffName },
           ),
           edits: versions.length,
         },
       }),
     ...(reader.internal && versions.length > 0 && { versions }),
+    ...(attachments && { attachments }),
   };
 }
 
@@ -958,7 +1055,7 @@ export async function getRequest(
     createdAt: found.createdAt,
     firstResponseAt,
     lastActivityAt: found.lastActivityAt,
-    company: {
+    company: company && {
       id: company.id,
       name: company.name,
       slug: company.slug,

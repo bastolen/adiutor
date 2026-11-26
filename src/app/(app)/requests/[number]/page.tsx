@@ -48,6 +48,7 @@ import {
   mayChangeStatus,
   mayContribute,
   mayProposeSolution,
+  mayRemoveAttachment,
   mayWaitWithReply,
   mayWriteNote,
   offeredActivityGroups,
@@ -63,6 +64,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
+  attachmentsOn,
   findRequest,
   findRequestNumber,
   getRequest,
@@ -73,11 +75,22 @@ import {
   type RequestDetail,
 } from '@/server/requests';
 
+import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
+import InternalLabel from '../../_requests/internal-label';
 import RaisedForNote from '../../_requests/raised-for-note';
-import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
+import PersonLine, {
+  PersonAvatar,
+  personName,
+  requestSideNames,
+} from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
-import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
+import {
+  changeAssigneesAction,
+  changeStatusAction,
+  changeSubscriptionAction,
+  removeAttachmentAction,
+} from './actions';
 import { ActivityControls, ActivityError, ActivityViewProvider } from './activity-view';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import ChangeSubscribers from './change-subscribers';
@@ -173,6 +186,9 @@ async function RequestContent({
           ...(entry && { entry }),
         })}`
       : null;
+  // An internal request has no company (decision 0048): only the staff read it, so its texts keep
+  // their links to the staff's pages, as a note does.
+  const internal = detail.company === null;
   // Nobody changes the requests of a deactivated company; the services refuse it too.
   const contributes = mayContribute(detail.permissions, detail.company);
   const manages = contributes && detail.permissions.has('requests:manage');
@@ -181,8 +197,11 @@ async function RequestContent({
   const fields = { request: String(detail.number) };
   // "Send and wait for the company": only on a request that's worked on and doesn't wait already.
   const canWait = manages && mayWaitWithReply(detail.permissions, detail.status);
-  // "Send as solution": the staff, on a request that's worked on and doesn't wait for approval.
-  const canPropose = manages && mayProposeSolution(detail.permissions, detail.status);
+  // "Send as solution": the staff, on a company's request that's worked on and doesn't wait for
+  // approval. Nobody could approve one on an internal request.
+  const canPropose =
+    manages &&
+    mayProposeSolution(detail.permissions, detail.status, internal ? 'internal' : 'company');
   // The company's Admins and Clients answer a solution that waits for them.
   const answers = contributes && mayAnswerSolution(detail.permissions, detail.status);
   // Who the staff may assign: everyone who can be, and anyone assigned now who no longer could
@@ -209,11 +228,19 @@ async function RequestContent({
     });
   }
   // Whose subscriptions the viewer changes besides their own, and who they can subscribe then.
-  const scope = detail.company.deactivated ? 'self' : subscriberScope(detail.permissions);
+  const scope = detail.company?.deactivated ? 'self' : subscriberScope(detail.permissions);
   const subscriberChoices =
     scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
+  // Files go with what the reader writes, while people can attach files.
+  const on = contributes ? await attachmentsOn(appContext) : null;
+  const attaching = on && { maxFileMb: on.maxFileMb };
+  // The staff who work on requests remove files, whatever the switch says.
+  const removal =
+    contributes && mayRemoveAttachment(detail.permissions)
+      ? { request: detail.number, action: removeAttachmentAction }
+      : null;
 
-  const names = { company: detail.company.name, staff: detail.staffName };
+  const names = requestSideNames(detail);
   // The request's whole address, for the note above code copied from its texts.
   const address = `${appContext.baseUrl}${requestPath(detail.number)}`;
 
@@ -222,7 +249,14 @@ async function RequestContent({
   // the reply form again: a reply that's half written stays.
   const newestFirst = detail.activity.order === 'newest';
   const thread = (
-    <Thread key="thread" detail={detail} address={address} earlierHref={earlierHref} />
+    <Thread
+      key="thread"
+      detail={detail}
+      address={address}
+      earlierHref={earlierHref}
+      attaching={attaching}
+      removal={removal}
+    />
   );
   const writing = contributes && (
     <div
@@ -237,9 +271,21 @@ async function RequestContent({
       {answers && <SolutionNotice request={detail.number} />}
       {mayWriteNote(detail.permissions) ? (
         // The staff who work on requests also write internal notes, on a tab of their own.
-        <WriteTabs request={detail.number} canWait={canWait} canPropose={canPropose} />
+        <WriteTabs
+          request={detail.number}
+          canWait={canWait}
+          canPropose={canPropose}
+          staffOnly={internal}
+          attaching={attaching}
+        />
       ) : (
-        <ReplyForm request={detail.number} canWait={canWait} canPropose={canPropose} />
+        <ReplyForm
+          request={detail.number}
+          canWait={canWait}
+          canPropose={canPropose}
+          staffOnly={internal}
+          attaching={attaching}
+        />
       )}
     </div>
   );
@@ -257,6 +303,7 @@ async function RequestContent({
       className="text-sm text-foreground"
       source={descriptionSource}
       names={names}
+      staffOnly={internal}
     />
   );
 
@@ -268,9 +315,13 @@ async function RequestContent({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{formatRequestNumber(detail.prefix, detail.number)}</span>
             <span aria-hidden="true">·</span>
-            <TextLink standalone href={`/companies/${detail.company.slug}`}>
-              {detail.company.name}
-            </TextLink>
+            {detail.company ? (
+              <TextLink standalone href={`/companies/${detail.company.slug}`}>
+                {detail.company.name}
+              </TextLink>
+            ) : (
+              <InternalLabel />
+            )}
           </span>
         }
         back={{ href: '/requests', label: t('back') }}
@@ -281,7 +332,7 @@ async function RequestContent({
         <ToastOnArrival message={t('justRaised')} param="raised" />
       )}
 
-      {detail.company.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
+      {detail.company?.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
 
       {/* On a wide screen the details stand next to the description and the conversation; on a
           narrower one they come between the two, in the order they're read. */}
@@ -315,17 +366,30 @@ async function RequestContent({
                       id="description"
                       source={descriptionSource}
                       names={names}
+                      staffOnly={internal}
                     />
                   </span>
                 </PersonLine>
               </div>
               {detail.description.edit ? (
-                <EditableText request={detail.number} entry={null} edit={detail.description.edit}>
+                <EditableText
+                  request={detail.number}
+                  entry={null}
+                  edit={detail.description.edit}
+                  staffOnly={internal}
+                  attaching={attaching}
+                  attached={attachedCount(detail.description.attachments)}
+                >
                   {descriptionText}
                 </EditableText>
               ) : (
                 descriptionText
               )}
+              <AttachmentList
+                attachments={detail.description.attachments}
+                names={names}
+                removal={removal}
+              />
             </div>
           </Card>
         </div>
@@ -368,12 +432,13 @@ async function RequestContent({
                     request={detail.number}
                     choices={assigneeChoices}
                     assigned={assigned}
+                    internal={internal}
                   />
                 </>
               )
             }
             subscriberControls={
-              !detail.company.deactivated && (
+              !detail.company?.deactivated && (
                 <>
                   {/* Someone it's assigned to follows it as that. One button that stays where it
                       is, so the keyboard keeps its place when its text changes. */}
@@ -393,8 +458,9 @@ async function RequestContent({
                     <ChangeSubscribers
                       request={detail.number}
                       choices={subscriberChoices}
-                      company={detail.company.name}
+                      company={names.company}
                       scope={scope}
+                      internal={internal}
                     />
                   )}
                 </>
@@ -406,6 +472,7 @@ async function RequestContent({
                   {manages && detail.priority && (
                     <EditDetails
                       request={detail.number}
+                      internal={internal}
                       details={{
                         title: detail.title,
                         type: detail.type,

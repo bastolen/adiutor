@@ -16,7 +16,8 @@ describe('parseEnv', () => {
   it('accepts the required variables and fills in defaults', () => {
     const env = parseEnv(validEnv);
     expect(env.DATABASE_URL).toBe(validEnv.DATABASE_URL);
-    expect(env.EMAIL_FROM).toBe('Adiutor <no-reply@adiutor.dev>');
+    // Unset, so the sender saved in Settings (or Adiutor's default) is used.
+    expect(env.EMAIL_FROM).toBeUndefined();
     expect(env.NODE_ENV).toBeUndefined();
     expect(env.CLIENT_IP_HEADERS).toEqual(['x-forwarded-for']);
     expect(env.TRUSTED_PROXIES).toEqual([]);
@@ -26,7 +27,7 @@ describe('parseEnv', () => {
     const env = parseEnv({ ...validEnv, GITHUB_CLIENT_ID: '', SMTP_URL: '', EMAIL_FROM: '' });
     expect(env.GITHUB_CLIENT_ID).toBeUndefined();
     expect(env.SMTP_URL).toBeUndefined();
-    expect(env.EMAIL_FROM).toBe('Adiutor <no-reply@adiutor.dev>');
+    expect(env.EMAIL_FROM).toBeUndefined();
   });
 
   it('rejects a missing database URL', () => {
@@ -92,6 +93,129 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...validEnv, EMAIL_OUTBOX_DIR: '/tmp/outbox' }).EMAIL_OUTBOX_DIR).toBe(
       '/tmp/outbox',
     );
+  });
+
+  describe('attachment storage', () => {
+    /** A bucket with everything it needs. */
+    const bucket = {
+      ATTACHMENTS_STORAGE: 's3',
+      ATTACHMENTS_S3_ENDPOINT: 'https://files.adiutor.dev',
+      ATTACHMENTS_S3_BUCKET: 'adiutor',
+      ATTACHMENTS_S3_ACCESS_KEY_ID: 'key-id',
+      ATTACHMENTS_S3_SECRET_ACCESS_KEY: 'key-secret',
+    };
+
+    it('leaves storage to Settings when nothing chooses one', () => {
+      const env = parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: '', ATTACHMENTS_MAX_FILE_MB: '' });
+      expect(env.ATTACHMENTS_STORAGE).toBeUndefined();
+      expect(env.ATTACHMENTS_MAX_FILE_MB).toBeUndefined();
+    });
+
+    it('accepts a folder or a bucket with what it needs, and off', () => {
+      expect(
+        parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'local', ATTACHMENTS_DIR: '/data/files' })
+          .ATTACHMENTS_DIR,
+      ).toBe('/data/files');
+      expect(parseEnv({ ...validEnv, ...bucket }).ATTACHMENTS_S3_BUCKET).toBe('adiutor');
+      // A name that isn't a bucket's would become part of another host name.
+      expect(() =>
+        parseEnv({ ...validEnv, ...bucket, ATTACHMENTS_S3_BUCKET: 'evil.adiutor.test/x' }),
+      ).toThrow(/ATTACHMENTS_S3_BUCKET/);
+      expect(parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'off' }).ATTACHMENTS_STORAGE).toBe('off');
+    });
+
+    it('names everything a driver is missing', () => {
+      expect(() => parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'local' })).toThrow(
+        /Required when ATTACHMENTS_STORAGE is local\.\n\s+→ at ATTACHMENTS_DIR/,
+      );
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          ...bucket,
+          ATTACHMENTS_S3_BUCKET: '',
+          ATTACHMENTS_S3_SECRET_ACCESS_KEY: '',
+        }),
+      ).toThrow(/ATTACHMENTS_S3_BUCKET[\s\S]*ATTACHMENTS_S3_SECRET_ACCESS_KEY/);
+      expect(() => parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'ftp' })).toThrow(
+        /ATTACHMENTS_STORAGE/,
+      );
+    });
+
+    it('refuses a relative folder, and a folder on Vercel', () => {
+      expect(() =>
+        parseEnv({ ...validEnv, ATTACHMENTS_STORAGE: 'local', ATTACHMENTS_DIR: 'files' }),
+      ).toThrow(/absolute path/);
+      expect(() =>
+        parseEnv({
+          ...validEnv,
+          VERCEL: '1',
+          ATTACHMENTS_STORAGE: 'local',
+          ATTACHMENTS_DIR: '/data/files',
+        }),
+      ).toThrow(/Vercel's disk doesn't keep files/);
+    });
+
+    it('takes an SFTP server with a password or a key, and its host key fingerprint', () => {
+      const server = {
+        ...validEnv,
+        ATTACHMENTS_STORAGE: 'sftp',
+        ATTACHMENTS_SFTP_HOST: 'files.adiutor.dev',
+        ATTACHMENTS_SFTP_USERNAME: 'adiutor',
+        ATTACHMENTS_SFTP_HOST_KEY: 'SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls',
+        ATTACHMENTS_SFTP_DIR: '/srv/adiutor',
+      };
+      const withPassword = { ...server, ATTACHMENTS_SFTP_PASSWORD: 'secret' };
+      expect(
+        parseEnv({ ...withPassword, ATTACHMENTS_SFTP_PORT: '2222' }).ATTACHMENTS_SFTP_PORT,
+      ).toBe(2222);
+      expect(() => parseEnv(server)).toThrow(
+        /Required, or ATTACHMENTS_SFTP_PRIVATE_KEY, when ATTACHMENTS_STORAGE is sftp/,
+      );
+      expect(() => parseEnv({ ...withPassword, ATTACHMENTS_SFTP_HOST_KEY: 'ab:cd' })).toThrow(
+        /SHA256: fingerprint/,
+      );
+      expect(() => parseEnv({ ...server, ATTACHMENTS_SFTP_PRIVATE_KEY: 'not base64!' })).toThrow(
+        /ATTACHMENTS_SFTP_PRIVATE_KEY/,
+      );
+      expect(() => parseEnv({ ...withPassword, ATTACHMENTS_SFTP_DIR: 'adiutor' })).toThrow(
+        /absolute path[\s\S]*ATTACHMENTS_SFTP_DIR/,
+      );
+    });
+
+    it('takes a limit from 1 to 50 megabytes, and at most 4 on Vercel', () => {
+      expect(parseEnv({ ...validEnv, ATTACHMENTS_MAX_FILE_MB: '25' }).ATTACHMENTS_MAX_FILE_MB).toBe(
+        25,
+      );
+      expect(() => parseEnv({ ...validEnv, ATTACHMENTS_MAX_FILE_MB: '51' })).toThrow(
+        /ATTACHMENTS_MAX_FILE_MB/,
+      );
+      expect(() => parseEnv({ ...validEnv, ATTACHMENTS_MAX_FILE_MB: '0' })).toThrow(
+        /ATTACHMENTS_MAX_FILE_MB/,
+      );
+      expect(() => parseEnv({ ...validEnv, VERCEL: '1', ATTACHMENTS_MAX_FILE_MB: '5' })).toThrow(
+        /At most 4 on Vercel/,
+      );
+    });
+
+    it('refuses a bucket over plain http in production, except on this computer', () => {
+      const production = {
+        ...validEnv,
+        BETTER_AUTH_URL: 'https://adiutor.dev',
+        NODE_ENV: 'production',
+        ...bucket,
+      };
+      expect(() =>
+        parseEnv({ ...production, ATTACHMENTS_S3_ENDPOINT: 'http://files.adiutor.dev' }),
+      ).toThrow(/https:\/\/ address in production/);
+      expect(
+        parseEnv({ ...production, ATTACHMENTS_S3_ENDPOINT: 'http://localhost:8333' })
+          .ATTACHMENTS_S3_ENDPOINT,
+      ).toBe('http://localhost:8333');
+      expect(
+        parseEnv({ ...validEnv, ...bucket, ATTACHMENTS_S3_ENDPOINT: 'http://files.adiutor.dev' })
+          .ATTACHMENTS_S3_ENDPOINT,
+      ).toBe('http://files.adiutor.dev');
+    });
   });
 
   describe('in production', () => {

@@ -1,8 +1,9 @@
 # Deploying and running Adiutor
 
 What to set up on a server, and how to run and look after it: installing and upgrading, deploying
-on Vercel, the Docker image and health check, the client IP address, background jobs, logs, looking up the reference of
-an error, rotating the auth secret, and what to do after a suspected leak. Back to the
+on Vercel, the Docker image and health check, the client IP address, background jobs, where
+attached files are kept, logs, looking up the reference of an error, rotating the auth secret, and
+what to do after a suspected leak. Back to the
 [documentation](README.md).
 
 ## Installing and upgrading
@@ -129,9 +130,9 @@ image is in [decision 0013](decisions/0013-one-docker-image-with-the-whole-appli
 docker build -t adiutor .
 ```
 
-`.dockerignore` keeps your `node_modules`, builds, test output, database files, `.env` files and
-other checkouts of the repository (`.claude/`, which have their own `.env` files) out of the
-image, wherever they are in the folder; the build uses placeholder settings and connects to nothing. Give the real settings when
+`.dockerignore` keeps your `node_modules`, builds, test output, database files, `.env` files,
+Claude Security scan reports (`CLAUDE-SECURITY-*`) and other checkouts of the repository
+(`.claude/`, which have their own `.env` files) out of the image, wherever they are in the folder; the build uses placeholder settings and connects to nothing. Give the real settings when
 you run it, never at build time, so they don't end up in the image:
 
 ```bash
@@ -140,9 +141,10 @@ docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
 
 The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
 changes it). The application's files belong to root and only `.next`, where Next.js keeps its
-caches, is writable by that user, so a flaw that lets the server write files can't change the
+caches, is writable by that user (and `/data/attachments`, for a volume of attached files: see
+[Attachments](#attachments)), so a flaw that lets the server write files can't change the
 application's own code. The settings are the same as without Docker (see the checklist below,
-including `EMAIL_FROM`, and finish setup right after the first start: until then whoever opens
+including the mail server, and finish setup right after the first start: until then whoever opens
 `/setup` first becomes the staff Admin); when the
 database runs on the host, `DATABASE_URL` points at the host's address (such as
 `host.docker.internal` on Docker Desktop), not `localhost`.
@@ -223,18 +225,9 @@ What to set up on a server before sharing its address:
   (`getProviderMfaWarning`), and the Users list shows them as "Needs MFA".
 - **First run:** complete `/setup` (or run `pnpm setup:platform`) right after deploying. Until then
   the first visitor becomes the staff Admin (see [First run](companies-and-roles.md#first-run)).
-- **Email:** set `SMTP_URL` (without it, every email fails, and the server logs a warning when it
-  starts) and `EMAIL_FROM`, the sender, such as `Adiutor <no-reply@yourdomain>` on a domain you
-  control: left unset, it defaults to an address on `adiutor.dev`, which providers that check the
-  sender reject and which isn't yours. Use TLS, since the emails carry sign-in links:
-  `smtps://user:password@smtp.adiutor.dev:465` (TLS from the start), or
-  `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` (STARTTLS, required). A plain
-  `smtp://` URL only uses STARTTLS when the server offers it, so someone on the network could strip
-  it and read the links; with `NODE_ENV=production` the app refuses one, except to a mail server on
-  this computer. The app keeps up to 3 connections open and reuses them (nodemailer's pool), so a
-  bulk invitation doesn't connect and sign in once per email; settings in the URL win, e.g.
-  `?maxConnections=1` for a provider that allows one connection, or `?pool=false`. Never set
-  `EMAIL_OUTBOX_DIR`.
+- **Email:** right after setup, set up the mail server on the Email tab of Settings, or set
+  `SMTP_URL` and `EMAIL_FROM` (see [Sending email](#sending-email)). Without one, every email
+  fails, and the server logs a warning when it starts. Never set `EMAIL_OUTBOX_DIR`.
 - **No test data:** never run `pnpm db:seed` on a server. It deletes all data and adds a staff Admin
   whose password and authenticator secret are in the repository. It refuses to run when
   `BETTER_AUTH_URL` isn't on this computer (see [Test accounts](development.md#test-accounts)).
@@ -243,6 +236,8 @@ What to set up on a server before sharing its address:
   a random `CRON_SECRET` of at least 32 characters too.
 - **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
+- **Attachments:** choose where files are kept, or leave them off, and back them up with the
+  database (see [Attachments](#attachments)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
   address an email failed for, a user's name, and so on (database values are left out, see
   [Logs](#logs)). Treat the app's output and the jobs log as personal data:
@@ -341,6 +336,127 @@ monitoring notices, for example when the mail setup is broken and reminders can'
 run tries again. `pnpm jobs:list` shows every job with its last and next run, and
 `pnpm jobs:run <name>` runs one job now.
 
+## Sending email
+
+Adiutor sends sign-in links, password resets, invitations, security notices and the emails about
+requests through a mail server that a staff Admin sets up on the **Email** tab of Settings, unless
+the server's environment names one ([decision 0045](decisions/0045-mail-server-in-settings.md)).
+Without either, every email fails, and a production server logs a warning when it starts.
+
+- **In Settings,** a mail server is tried before it's saved: Adiutor sends a test email through it
+  to the staff Admin who saves it, and says what went wrong if that fails (couldn't connect, didn't
+  answer in time, couldn't secure the connection, refused the login, the address or the email),
+  never the server's own reply. Saving needs the staff Admin's second step from the last 15
+  minutes, is in the audit log, and tells every staff Admin by email, the one saving it too. Whoever controls the mail
+  server can read every sign-in link and code Adiutor sends, so that email goes out straight away
+  through the mail server that was in use before the change, which the new one can't hold back;
+  when there was none, or it fails, it goes through the new one. The password is encrypted with the
+  auth secret, like authenticator secrets, so [Rotating the auth secret](#rotating-the-auth-secret)
+  holds for it. It's never shown again, and it's kept only for the server it was saved for: another
+  host, port or username must be given it again.
+- **In the environment,** `SMTP_URL` wins over Settings, which then only shows the mail server,
+  without its password, and `EMAIL_FROM` wins for the sender. A mail server in Settings lets staff
+  Admins choose where every email goes, and make the server connect to any address it reaches, so
+  set `SMTP_URL` yourself if that's not what you want.
+- **The sender** is an address on a domain you control, such as `Adiutor <no-reply@yourdomain>`:
+  without one, it's an address on `adiutor.dev`, which providers that check the sender reject and
+  which isn't yours.
+- **Use TLS,** since the emails carry sign-in links: TLS from the start (usually port 465) or
+  STARTTLS that must succeed (usually 587), in Settings, or in the URL:
+  `smtps://user:password@smtp.adiutor.dev:465`, or
+  `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true`. Without either, nodemailer uses
+  STARTTLS only when the server offers it, so someone on the network could strip it and read the
+  links; with `NODE_ENV=production` the app refuses that, in Settings and in `SMTP_URL`, except for a
+  mail server on this computer.
+- **Connections:** the app keeps up to 3 connections open and reuses them (nodemailer's pool), so a
+  bulk invitation doesn't connect and sign in once per email; settings in `SMTP_URL` win, e.g.
+  `?maxConnections=1` for a provider that allows one connection, or `?pool=false`.
+
+## Attachments
+
+Files people attach to requests are kept in a storage a staff Admin chooses on the **Attachments**
+tab of Settings, unless the server's environment chooses it
+([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
+a folder on another server over SFTP. Without one, attachments are off. Once there's a storage, a
+staff Admin turns on **People can attach files** on the same tab; while it's off, nobody can attach
+files, and the files already attached can still be downloaded.
+
+- **In Settings,** a storage is tried before it's saved: Adiutor writes a small file there, reads
+  it back and deletes it, and says what went wrong if any step fails (unreachable, keys refused,
+  folder missing, and so on, never the server's own reply). Saving needs the staff Admin's second
+  step from the last 15 minutes, and is in the audit log. Its secrets (the S3 secret key, the SFTP
+  password or private key) are encrypted with the auth secret, like authenticator secrets, so
+  [Rotating the auth secret](#rotating-the-auth-secret) holds for them: keep the old version until
+  the storage has been saved again. A saved secret is never shown again, and is kept only for the
+  place it was saved for: another S3 service or key, or another SFTP server, port, user or host key, must be
+  given it again.
+- **In the environment,** `ATTACHMENTS_STORAGE` and the variables below win over Settings, which
+  then only shows the storage, without its secrets. `ATTACHMENTS_STORAGE=off` turns attachments
+  off and keeps staff Admins from choosing a storage: a storage in Settings lets them make the
+  server connect to any address it reaches (which a server of your own on the local network needs),
+  so set the storage yourself, or `off`, if that's not what you want.
+
+The storages, with the variables each one takes when the environment chooses it (Settings asks for
+the same):
+
+- **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
+  exists and the app can write to). It serves one server only, and never Vercel, whose disk doesn't
+  keep files. A marker file in it (`.adiutor-attachments`) says it's Adiutor's: without it, Adiutor
+  refuses to store, read or delete files there, so a server started without its folder (or a
+  container without its volume) fails instead of keeping files on a disk that goes away or taking
+  every file for gone. Only setting the folder up writes the marker, never an upload: saving the
+  storage on the Attachments tab (its test before saving), or, for a folder the environment
+  chooses, **Set up this folder** on that tab, which a staff Admin presses once the folder is the
+  right one (the tab says when a folder isn't set up). Keep the marker with the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
+  the app's container and on every container that runs the jobs:
+
+  ```bash
+  docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 \
+    -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor
+  docker run --rm --env-file .env -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor pnpm jobs:run
+  ```
+
+- **`s3`: a bucket of an S3-compatible service** (`ATTACHMENTS_S3_ENDPOINT`, `ATTACHMENTS_S3_REGION`,
+  `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID`, `ATTACHMENTS_S3_SECRET_ACCESS_KEY`, and
+  `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` for a path-style address). This is the way for Vercel, and
+  works anywhere. The endpoint must be `https` in production (a server on this computer aside):
+
+  | Service                        | Endpoint                                        | Region                              | Notes                                      |
+  | ------------------------------ | ----------------------------------------------- | ----------------------------------- | ------------------------------------------ |
+  | Cloudflare R2                  | `https://<account ID>.r2.cloudflarestorage.com` | `auto`                              | 10 GB free, and downloads cost nothing     |
+  | Backblaze B2                   | `https://s3.<region>.backblazeb2.com`           | the bucket's, e.g. `eu-central-003` | 10 GB free                                 |
+  | AWS S3                         | `https://s3.<region>.amazonaws.com`             | the bucket's                        | paid once its free plan ends               |
+  | Garage or SeaweedFS (your own) | your server's address                           | yours, or `us-east-1`               | set `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` |
+
+  Keep the bucket private: Adiutor serves every file itself, after checking who may read it. Its key
+  only needs to read, write and delete objects in that bucket.
+
+- **`sftp`: a folder on another server, over SFTP** (`ATTACHMENTS_SFTP_HOST`, `ATTACHMENTS_SFTP_PORT`
+  (22 when unset), `ATTACHMENTS_SFTP_USERNAME`, `ATTACHMENTS_SFTP_PASSWORD` or
+  `ATTACHMENTS_SFTP_PRIVATE_KEY`, `ATTACHMENTS_SFTP_HOST_KEY` and `ATTACHMENTS_SFTP_DIR`). Any server
+  with SSH will do, a storage box or a NAS included, and it works from Vercel too. The private key
+  is the PEM file in base64 (`base64 < key`), so it fits on one line (Settings takes the PEM text
+  as it is). The host key is required: Adiutor connects only to the server whose key has that
+  fingerprint, as `ssh-keyscan <host> | ssh-keygen -lf -` prints it (`SHA256:…`). A server has a
+  key per type, and Adiutor is given its ED25519 key when it has one (else ECDSA, then RSA); check
+  the fingerprint against the server's own `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`,
+  since a scan can't tell an impostor. The
+  folder must exist, with an absolute path, and like the local disk it's set up with the marker file.
+  Each upload or download opens its own connection, so it's slower than the others.
+
+**Back up the files with the database.** A file is found by its row in the database, and a row
+whose file is gone can't be downloaded. Files are kept at the same paths in every storage
+(`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
+`attachments/` there as it is (with `rclone copy`, say), then switching.
+
+**The largest file** anyone may attach is chosen on the Attachments tab too (10 MB until it's
+changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
+Vercel, which refuses a larger request body. Behind a reverse proxy, let it pass request bodies that
+large to `/api/attachments` (with nginx, `client_max_body_size 51m;`, which defaults to 1 MB), or
+it refuses larger uploads itself.
+
 ## Webhooks
 
 Staff Admins can have Adiutor send what happens to requests to addresses they choose (webhooks).
@@ -371,8 +487,8 @@ replaced too (`invalid input syntax for type uuid: "[redacted]"`: it quotes the 
 read), unless it's the constraint, table, column, schema or data type the error names. That covers
 Next's own logging of errors pages and server actions throw, Better Auth's logger and the app's own
 messages. Other text in the message of an error that isn't the database's stays, such as the
-address an SMTP server refused. In development without
-`SMTP_URL`, emails are printed in full so their links can be opened (never in production).
+address an SMTP server refused. In development without a mail server, emails are printed in full
+so their links can be opened (never in production).
 
 ## Looking up an error reference
 

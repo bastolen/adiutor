@@ -25,20 +25,21 @@ import { userIdOf, withTestDatabase } from './db';
 import {
   ACTIVITY_CLIENT,
   ACTIVITY_SUPPORT,
+  ATTACHMENTS_DIR,
   CLIENT_WATCHER,
   CLOSED_COMPANY_ADMIN,
   CLOSED_COMPANY_NAME,
   CLOSED_COMPANY_SLUG,
   COMPANY_NAME,
-  COMPANY_SLUG,
   COMPANY_OWNER,
-  STAFF_NAME,
+  COMPANY_SLUG,
   DEACTIVATE_CLIENT,
   E2E_AUTH_SECRET,
   E2E_TIME_ZONE,
-  INVITE_LINK_LIFETIME_MS,
   FINANCE_STAFF,
   GITHUB_ONLY_MANAGER,
+  INVITE_LINK_LIFETIME_MS,
+  LINK_JOINER,
   MFA_CLIENT,
   NAMELESS_SUPPORT,
   OWNED_COMPANY_NAME,
@@ -52,21 +53,21 @@ import {
   PAGING_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PASSKEY_CLIENT,
+  PAUSED_CLIENT,
   PLATFORM_ADMIN,
   PLATFORM_MANAGER,
-  LINK_JOINER,
-  PAUSED_CLIENT,
   RECENT_MFA_CLIENT,
   REQUESTS_CLIENT,
   RESET_CLIENT,
   RETURNING_FINANCE,
   ROLE_KEYS_WATCHER,
   SEEDED_REQUESTS,
-  STEP_UP_MANAGER,
+  SESSIONS_CLIENT,
+  STAFF_NAME,
   STEP_UP_CLIENT,
+  STEP_UP_MANAGER,
   SUPPORT_STAFF,
   SUPPORT_STAFF_PICTURE,
-  SESSIONS_CLIENT,
   UNVERIFIED_USER,
 } from './fixtures';
 
@@ -156,6 +157,10 @@ export default async function seedTestDatabase(): Promise<void> {
         'staff.default_time_zone': E2E_TIME_ZONE,
         // A tick just ran, so pages don't warn that background jobs aren't running.
         'jobs.last_tick': new Date(),
+        // Attached files go to a folder of the tests' own (emptied by the global setup), and
+        // people can attach them.
+        'attachments.storage': { driver: 'local', dir: ATTACHMENTS_DIR },
+        'attachments.enabled': true,
       });
     });
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });
@@ -423,6 +428,21 @@ export default async function seedTestDatabase(): Promise<void> {
             mentions: [byStaff],
           },
           { by: byStaff, at: hoursAgo(450), change: 'status', from: 'in_progress', to: 'done' },
+        ],
+      },
+      {
+        // The staff's own (decision 0048): no company sees it.
+        companyId: null,
+        title: SEEDED_REQUESTS.internal.title,
+        description: 'It runs out next week. Ask the host for the new one.',
+        type: 'support',
+        priority: 'high',
+        status: 'done',
+        raisedBy: byStaff,
+        at: hoursAgo(550),
+        entries: [
+          { by: byStaff, at: hoursAgo(540), reply: 'Installed, and the old one revoked.' },
+          { by: byStaff, at: hoursAgo(540), change: 'status', from: 'open', to: 'done' },
         ],
       },
       ...Array.from({ length: PAGED_REQUEST_COUNT }, (_, index) => ({

@@ -1,10 +1,14 @@
 /**
  * @file End-to-end tests for Settings: the staff's name, the request number
- * prefix, request types, inviting staff, staff roles and the last-Admin
- * guard, and confirming it's you before giving a staff role or a company's
- * Admin role. A test that changes a setting puts it back.
+ * prefix, request types, where attached files are kept, inviting staff,
+ * staff roles and the last-Admin guard, and confirming it's you before
+ * giving a staff role or a company's Admin role. A test that changes a
+ * setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { type Page } from '@playwright/test';
 
@@ -12,12 +16,16 @@ import { derivePalette, type HexColour, THEME_PALETTE } from '../src/lib/brandin
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import expectAccessible from './support/axe';
 import {
+  attachmentSettingRows,
   backdateMfaConfirmation,
+  restoreAttachmentSettings,
+  restoreSmtpSetting,
   setBrandColours,
   setDefaultLocale,
   setDefaultTimeZone,
   setRequestPrefix,
   setStaffName,
+  smtpSettingRow,
 } from './support/db';
 import {
   COMPANY_SLUG,
@@ -40,7 +48,13 @@ import {
   useOwnClientIp,
   invitationForm,
 } from './support/helpers';
-import { countEmails, linkIn, waitForEmail, waitForNewEmail } from './support/outbox';
+import {
+  countEmails,
+  linkIn,
+  waitForEmail,
+  waitForEmailAbout,
+  waitForNewEmail,
+} from './support/outbox';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
@@ -258,6 +272,131 @@ test('an Admin chooses the prefix request numbers are shown with', async ({ page
     await expect(prefix).toHaveValue('AD');
   } finally {
     await setRequestPrefix('AD');
+  }
+});
+
+test('an Admin chooses a folder for attached files, which is tried first, turns attaching on and chooses the largest file', async ({
+  page,
+}) => {
+  const before = await attachmentSettingRows();
+  const folder = await mkdtemp(join(tmpdir(), 'adiutor-e2e-files-'));
+  try {
+    await restoreAttachmentSettings([]);
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/attachments');
+    await expect(
+      page.getByText('No storage is chosen yet, so nobody can attach files.'),
+    ).toBeVisible();
+    // Attaching can only be turned on once there's a storage.
+    const attaching = page.getByRole('checkbox', { name: 'People can attach files' });
+    await expect(attaching).toBeDisabled();
+    await expect(attaching).toHaveAccessibleDescription('Choose where files are kept first.');
+
+    await page.getByRole('combobox', { name: 'Storage' }).click();
+    await page.getByRole('option', { name: /A folder on this server/ }).click();
+    const dir = page.getByRole('textbox', { name: 'Folder' });
+
+    // A folder that isn't there fails its test, and what was typed stays.
+    await dir.fill(join(folder, 'missing'));
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      "The bucket or the folder doesn't exist. Create it first.",
+    );
+    await expect(dir).toHaveValue(join(folder, 'missing'));
+
+    await dir.fill(folder);
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(toasts(page)).toContainText('Storage saved.');
+    await expect(page.getByText('No storage is chosen yet')).toBeHidden();
+    await expect(dir).toHaveValue(folder);
+    // The test file is gone; the marker stays.
+    expect(await readdir(folder)).toContain('.adiutor-attachments');
+
+    await attaching.check();
+    await page
+      .getByRole('region', { name: 'Attaching files' })
+      .getByRole('button', { name: 'Save' })
+      .click();
+    await expect(toasts(page)).toContainText('People can attach files now.');
+
+    const megabytes = page.getByRole('spinbutton', { name: 'Megabytes' });
+    await expect(megabytes).toHaveAccessibleDescription('From 1 to 50.');
+    await megabytes.fill('20');
+    await page.getByRole('button', { name: 'Save size' }).click();
+    await expect(toasts(page)).toContainText('Largest file saved.');
+    await page.reload();
+    await expect(megabytes).toHaveValue('20');
+    await expect(attaching).toBeChecked();
+  } finally {
+    await restoreAttachmentSettings(before);
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('an Admin sets up the mail server, which is tried with a test email first', async ({
+  page,
+}) => {
+  const before = await smtpSettingRow();
+  try {
+    await restoreSmtpSetting(null);
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/email');
+    // The tests' server runs in production, where a missing mail server means no sign-in links.
+    await expect(
+      page.getByText(
+        'No mail server is set up yet: until one is, nobody gets sign-in links, password resets or invitations.',
+      ),
+    ).toBeVisible();
+
+    const host = page.getByRole('textbox', { name: 'Server' });
+    await host.fill('smtp.adiutor.test');
+    await page.getByRole('combobox', { name: 'Security' }).click();
+    await page.getByRole('option', { name: /^None/ }).click();
+    await page.getByRole('textbox', { name: 'Username' }).fill('mailer@adiutor.test');
+    await page.getByLabel('Password').fill('e2e-mail-password');
+    await page.getByRole('textbox', { name: 'Sender name' }).fill('Adiutor Tests');
+    await page.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
+
+    // Without TLS to another computer, production refuses it, and what was typed stays.
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      'Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted.',
+    );
+    await expect(host).toHaveValue('smtp.adiutor.test');
+
+    await page.getByRole('combobox', { name: 'Security' }).click();
+    await page.getByRole('option', { name: /^STARTTLS/ }).click();
+    await page.getByLabel('Password').fill('e2e-mail-password');
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(toasts(page)).toContainText(
+      'Mail server saved. A test email reached you through it.',
+    );
+
+    // The test email went to the Admin (the tests' outbox stands in for the mail server), and so
+    // did the notice every staff Admin gets, the one who saved it too.
+    const testEmail = await waitForEmailAbout(
+      PLATFORM_ADMIN.email,
+      `${STAFF_NAME} can send email through this mail server`,
+    );
+    expect(testEmail.text).toContain('smtp.adiutor.test:587');
+    const notice = await waitForEmailAbout(
+      PLATFORM_ADMIN.email,
+      `${STAFF_NAME} sends email through another mail server`,
+    );
+    expect(notice.text).toContain('smtp.adiutor.test:587');
+
+    // Saved without the password, which is emptied and never shown again.
+    await page.reload();
+    await expect(host).toHaveValue('smtp.adiutor.test');
+    await expect(page.getByRole('spinbutton', { name: 'Port' })).toHaveValue('587');
+    const password = page.getByLabel('Password');
+    await expect(password).toHaveValue('');
+    await expect(password).toHaveAccessibleDescription(
+      'A password is saved. Leave this empty to keep it while the server, port and username stay the same.',
+    );
+    await expect(page.getByText('No mail server is set up yet')).toBeHidden();
+  } finally {
+    await restoreSmtpSetting(before);
   }
 });
 

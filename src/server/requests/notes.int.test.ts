@@ -301,7 +301,7 @@ describe('internal notes for their readers', () => {
         text: 'The toner, ordered.',
         edits: 0,
       }),
-    ).toEqual({ changed: true });
+    ).toEqual({ changed: true, attached: 0 });
     const edited = (await getRequest(ctx, manager, raised.id)).entries[0]?.body;
     expect(edited?.text).toBe('The toner, ordered.');
     expect(edited?.versions?.map(({ text }) => text)).toEqual(['Probably the toner.']);

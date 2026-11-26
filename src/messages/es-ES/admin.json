@@ -253,14 +253,16 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes y adónde envían los webhooks.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, dónde se guardan los archivos adjuntos y adónde envían los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
         "staff": "Personal",
         "requests": "Solicitudes",
         "webhooks": "Webhooks",
-        "appearance": "Apariencia"
+        "appearance": "Apariencia",
+        "attachments": "Archivos adjuntos",
+        "email": "Correo"
       },
       "general": {
         "name": {
@@ -414,7 +416,7 @@
           "allTypesHint": "Todos los tipos, también los que se añadan más adelante.",
           "chosenTypes": "Tipos elegidos",
           "eventsLegend": "Enviar",
-          "staffOnly": "Las notas internas y las prioridades son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
+          "staffOnly": "Todos los webhooks reciben las solicitudes internas, y los que las eligen reciben las notas internas y las prioridades. Las tres son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
         },
         "add": {
           "button": "Añadir webhook",
@@ -555,6 +557,128 @@
               "dark": "Aclarado para que se pueda leer en el tema oscuro: {colour}."
             }
           }
+        }
+      },
+      "attachments": {
+        "title": "Archivos adjuntos",
+        "storage": {
+          "title": "Dónde se guardan los archivos",
+          "description": "Los archivos que se adjuntan a las solicitudes se guardan aquí. Cada uno se sirve desde este servidor, a quien pueda leerlo.",
+          "none": "Aún no se ha elegido un almacenamiento, así que nadie puede adjuntar archivos.",
+          "driver": "Almacenamiento",
+          "choose": "Elige un almacenamiento",
+          "drivers": {
+            "local": "Una carpeta en este servidor",
+            "s3": "Un bucket compatible con S3",
+            "sftp": "Una carpeta en otro servidor (SFTP)"
+          },
+          "driverHints": {
+            "local": "Archivos en el disco de este servidor. No en Vercel, y para un solo servidor.",
+            "s3": "AWS S3, Cloudflare R2, Backblaze B2 o un servidor propio como Garage o SeaweedFS.",
+            "sftp": "Cualquier servidor al que llegues por SSH, como un storage box o un NAS."
+          },
+          "dir": "Carpeta",
+          "localDirHint": "Una ruta absoluta en este servidor, por ejemplo /data/attachments. Debe existir y admitir escritura.",
+          "endpoint": "Dirección del servicio",
+          "endpointHint": "Por ejemplo https://tu-id-de-cuenta.r2.cloudflarestorage.com para Cloudflare R2.",
+          "region": "Región",
+          "regionHint": "auto en Cloudflare R2. Déjala vacía para us-east-1.",
+          "bucket": "Bucket",
+          "accessKeyId": "ID de la clave de acceso",
+          "secretAccessKey": "Clave de acceso secreta",
+          "s3SecretSaved": "Hay una clave secreta guardada. Deja esto vacío para conservarla mientras la dirección del servicio y la clave de acceso sigan siendo las mismas.",
+          "forcePathStyle": "Bucket en la ruta",
+          "forcePathStyleHint": "Lo necesitan la mayoría de los servidores propios, como Garage o SeaweedFS.",
+          "host": "Servidor",
+          "port": "Puerto",
+          "username": "Usuario",
+          "password": "Contraseña",
+          "privateKey": "Clave privada",
+          "privateKeyHint": "El texto PEM de la clave. Indica una contraseña o una clave privada.",
+          "sftpSecretSaved": {
+            "password": "Hay una contraseña guardada. Deja ambos vacíos para conservarla mientras el servidor, el puerto y el usuario sigan siendo los mismos.",
+            "key": "Hay una clave privada guardada. Deja ambos vacíos para conservarla mientras el servidor, el puerto y el usuario sigan siendo los mismos."
+          },
+          "hostKey": "Huella de la clave de host",
+          "hostKeyHint": "Tal como la muestra ssh-keygen -lf, empezando por SHA256:. Compruébala en el propio servidor: no se acepta ninguna otra clave.",
+          "sftpDirHint": "Una ruta absoluta en el servidor. Debe existir.",
+          "bucketAddress": "Dirección del bucket",
+          "inPath": "En la ruta",
+          "inHost": "En el nombre de host",
+          "signsInWith": "Inicia sesión con",
+          "signsInWithPassword": "Una contraseña",
+          "signsInWithKey": "Una clave privada",
+          "save": "Probar y guardar",
+          "saved": "Almacenamiento guardado. Se escribió, se leyó y se borró un archivo de prueba ahí.",
+          "confirmFirst": "Para elegir dónde se guardan los archivos, primero confirma que eres tú.",
+          "offInEnvironment": "Los archivos adjuntos están desactivados en el entorno del servidor (ATTACHMENTS_STORAGE=off).",
+          "dirPlaceholder": "/data/attachments",
+          "endpointPlaceholder": "https://",
+          "hostKeyPlaceholder": "SHA256:",
+          "notSetUp": "Esta carpeta aún no está configurada para los archivos adjuntos, así que no se pueden guardar, leer ni quitar archivos en ella. Si es la carpeta correcta (en un servidor, con su volumen montado), configúrala.",
+          "notSetUpSettings": "Esta carpeta no está configurada para los archivos adjuntos, así que no se pueden guardar, leer ni quitar archivos en ella. Si es la carpeta correcta (en un servidor, con su volumen montado), pruébala y guárdala de nuevo para configurarla.",
+          "setUp": "Configurar esta carpeta",
+          "setUpTitle": "¿Configurar esta carpeta?",
+          "setUpDescription": "Hazlo solo si es la carpeta correcta: en un servidor, el volumen que guarda los archivos adjuntos tiene que estar montado ahí. Los archivos se guardarán entonces aquí.",
+          "setUpConfirm": "Configurar carpeta",
+          "setUpDone": "Carpeta configurada. Se escribió, se leyó y se borró un archivo de prueba ahí."
+        },
+        "attaching": {
+          "title": "Adjuntar archivos",
+          "description": "Si las personas pueden adjuntar archivos a las solicitudes, las respuestas y las notas internas. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
+          "label": "Las personas pueden adjuntar archivos",
+          "storageFirst": "Primero elige dónde se guardan los archivos.",
+          "save": "Guardar",
+          "savedOn": "Ahora las personas pueden adjuntar archivos.",
+          "savedOff": "Adjuntar archivos está desactivado."
+        },
+        "largestFile": {
+          "title": "Archivo más grande",
+          "description": "El archivo más grande que alguien puede adjuntar.",
+          "label": "Megabytes",
+          "hint": "Del 1 al {ceiling, number}.",
+          "save": "Guardar tamaño",
+          "saved": "Archivo más grande guardado."
+        }
+      },
+      "email": {
+        "title": "Correo",
+        "server": {
+          "title": "Servidor de correo",
+          "description": "Los enlaces de inicio de sesión, los restablecimientos de contraseña, las invitaciones, los avisos de seguridad y los correos sobre solicitudes se envían a través de este servidor.",
+          "none": "Aún no hay ningún servidor de correo configurado.",
+          "noneWarning": "Aún no hay ningún servidor de correo configurado: hasta que lo haya, nadie recibe enlaces de inicio de sesión, enlaces para restablecer la contraseña ni invitaciones.",
+          "unreadable": "El entorno del servidor elige el servidor de correo, pero no se puede leer su dirección.",
+          "host": "Servidor",
+          "hostHint": "El nombre de host del servidor de correo, p. ej. smtp.tudominio.es.",
+          "security": "Seguridad",
+          "securities": {
+            "tls": "TLS",
+            "starttls": "STARTTLS",
+            "none": "Ninguna"
+          },
+          "securityHints": {
+            "tls": "Cifrado desde el principio, normalmente en el puerto 465.",
+            "starttls": "Cifrado una vez conectado, normalmente en el puerto 587.",
+            "none": "Sin cifrar. En producción, solo para un servidor de correo en este equipo."
+          },
+          "port": "Puerto",
+          "portHint": "Déjalo vacío para el puerto habitual: 465 con TLS, 587 con STARTTLS, 25 sin cifrar.",
+          "username": "Nombre de usuario",
+          "usernameHint": "Déjalo vacío para un servidor que acepta correo sin iniciar sesión.",
+          "password": "Contraseña",
+          "passwordSaved": "Hay una contraseña guardada. Deja esto vacío para conservarla mientras el servidor, el puerto y el nombre de usuario sigan siendo los mismos.",
+          "signsIn": "Inicia sesión como",
+          "signsInNone": "Sin iniciar sesión",
+          "sender": "Remitente",
+          "fromName": "Nombre del remitente",
+          "fromNameHint": "Se muestra junto a la dirección en las aplicaciones de correo, p. ej. Adiutor.",
+          "fromAddress": "Dirección del remitente",
+          "fromAddressHint": "Una dirección de un dominio que controlas, desde la que este servidor puede enviar.",
+          "whoIsTold": "Al guardar, te llega un correo de prueba a través de este servidor y después se avisa a todos los administradores del personal, también a ti.",
+          "save": "Probar y guardar",
+          "saved": "Servidor de correo guardado. Te ha llegado un correo de prueba a través de él.",
+          "confirmFirst": "Para cambiar el servidor de correo, primero confirma que eres tú."
         }
       }
     },

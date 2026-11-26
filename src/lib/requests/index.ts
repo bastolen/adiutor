@@ -2,7 +2,7 @@
  * @file Requests: what companies raise with the staff and work through with
  * them. This is the module's public API: the values a request can have, the
  * rules of working on one, how its activity is read, the board's lanes, its
- * number and its text. The code lives in the
+ * number, its text and the files that may be attached to it. The code lives in the
  * files next to it, and nothing outside this folder imports them directly.
  *
  * Everything here is free of zod and of server code, so the database schema,
@@ -14,6 +14,7 @@ export {
   ASSIGNMENT_CHANGES,
   CLOSED_REQUEST_STATUSES,
   DEFAULT_REQUEST_STATUS_FILTER,
+  INTERNAL_CHOICE,
   isAssignmentChange,
   isClosedStatus,
   isRequestPriority,
@@ -56,6 +57,7 @@ export {
   mayChangeStatus,
   mayContribute,
   mayProposeSolution,
+  mayRemoveAttachment,
   mayReplyWithStatus,
   maySetStatus,
   mayWaitWithReply,
@@ -69,7 +71,7 @@ export {
   statusChoices,
   subscriberScope,
 } from './rules';
-export type { RequestAudience, SolutionAnswer, SubscriberScope } from './rules';
+export type { RequestAudience, RequestPlace, SolutionAnswer, SubscriberScope } from './rules';
 export {
   ACTIVITY_GROUPS,
   ACTIVITY_ORDERS,
@@ -136,3 +138,16 @@ export {
   writtenMentionKeys,
   writtenMentionMarker,
 } from './mentions';
+export type { AttachmentCheck, AttachmentType } from './attachments';
+export {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_CONTENT_TYPES,
+  ATTACHMENT_NAME_HEADER,
+  ATTACHMENT_NAME_MAX_LENGTH,
+  ATTACHMENT_TYPES,
+  ATTACHMENT_UPLOAD_PATH,
+  attachmentTypeOf,
+  cleanAttachmentName,
+  MAX_ATTACHMENTS_PER_TEXT,
+  UPLOADS_AT_ONCE,
+} from './attachments';

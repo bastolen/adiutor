@@ -1,0 +1,2 @@
+ALTER TABLE "request" ALTER COLUMN "company_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "request" ADD CONSTRAINT "request_internal_by_staff" CHECK ("request"."company_id" is not null or "request"."created_by_side" = 'staff');

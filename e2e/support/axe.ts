@@ -25,7 +25,9 @@ const TARGETS = [
  * Links inside a sentence (`display: inline`) don't count, as WCAG exempts
  * them, nor do visually hidden controls and those hidden from assistive
  * technology. A checkbox or radio counts together with its label, since
- * tapping the label ticks it.
+ * tapping the label ticks it, and a link stretched over its card by an
+ * absolutely positioned `::after` (like `FileTile`'s) counts by that area,
+ * which is what a tap lands on.
  *
  * @param page - The browser page, loaded.
  * @param layer - Selector of the open modal layer to check instead of the whole page.
@@ -59,10 +61,19 @@ async function expectTargetsAtLeast24px(page: Page, layer?: string): Promise<voi
               ...[...(element.labels ?? [])].map((label) => label.getBoundingClientRect()),
             );
           }
-          const width =
-            Math.max(...boxes.map((box) => box.right)) - Math.min(...boxes.map((box) => box.left));
-          const height =
-            Math.max(...boxes.map((box) => box.bottom)) - Math.min(...boxes.map((box) => box.top));
+          const stretch = getComputedStyle(element, '::after');
+          const stretched =
+            stretch.content !== 'none' && stretch.position === 'absolute'
+              ? { width: parseFloat(stretch.width) || 0, height: parseFloat(stretch.height) || 0 }
+              : { width: 0, height: 0 };
+          const width = Math.max(
+            Math.max(...boxes.map((box) => box.right)) - Math.min(...boxes.map((box) => box.left)),
+            stretched.width,
+          );
+          const height = Math.max(
+            Math.max(...boxes.map((box) => box.bottom)) - Math.min(...boxes.map((box) => box.top)),
+            stretched.height,
+          );
           const name = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim();
           return { width, height, name: `${element.tagName.toLowerCase()} "${name.slice(0, 40)}"` };
         })

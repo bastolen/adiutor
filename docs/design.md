@@ -19,8 +19,14 @@ keyboard support.
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
   values), `ColourField` (a colour in hex, with a swatch that opens the browser's colour picker),
-  `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
-  view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
+  `FileTile` (a file as a tile: a thumbnail or its kind's icon, its name and a line under it, a
+  download link over the whole tile when given one, and room for actions in a corner; the
+  attachments under a request's texts use it, with Remove for the staff and a dashed tile for a
+  removed one, and so do the files waiting to be sent, with their progress), `SetByEnvironment`
+  (for a setting the server's environment chooses: the sentence that says so, naming the
+  variable, above what was chosen; `useSetByEnvironment` gives it for a locked field's
+  description), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own
+  for a view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
   follows the WAI-ARIA patterns: arrow keys, typeahead, Escape to close, focus kept inside

@@ -37,7 +37,9 @@ describe('AddWebhookDialog', () => {
     expect(screen.getByRole('radio', { name: 'Signed JSON' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'All request types' })).toBeChecked();
     expect(screen.queryByRole('checkbox', { name: 'Hotfix' })).not.toBeInTheDocument();
-    expect(dialog).toHaveTextContent('Internal notes and priorities are only for the staff');
+    // Internal requests go to every webhook (decision 0048), so the warning names them too.
+    expect(dialog).toHaveTextContent('Every webhook gets the internal requests');
+    expect(dialog).toHaveTextContent('send them only to a place that the staff alone read');
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Procurement');
     await user.type(

@@ -7,10 +7,18 @@
  *
  * The staff who work on requests (`requests:manage`) set any status. People
  * who take part from the company (`requests:contribute`) can mark a request
- * done, cancel it and reopen it, and nothing else.
+ * done, cancel it and reopen it, and nothing else. An internal request, the
+ * staff's own without a company (decision 0048), has nobody to approve a
+ * solution, so it never waits for one.
  */
 import type { Permission } from '../authz/permissions';
 import { isClosedStatus, REQUEST_STATUSES, type RequestSide, type RequestStatus } from './values';
+
+/**
+ * Where a request is: in a company, or internal, the staff's own without one
+ * (decision 0048), which only the staff read.
+ */
+export type RequestPlace = 'company' | 'internal';
 
 /**
  * Who reads a request, for the wording of what it shows (a request waiting
@@ -77,13 +85,22 @@ const CONTRIBUTOR_STATUSES: readonly RequestStatus[] = ['open', 'done', 'cancell
  * it is by then ({@link mayChangeStatus}). Waiting for approval (`proposed`)
  * is the staff's, and comes only with the reply that holds the solution
  * ({@link mayProposeSolution}); the company leaves it by approving or denying
- * ({@link mayAnswerSolution}), or by cancelling.
+ * ({@link mayAnswerSolution}), or by cancelling. An internal request never
+ * waits for an approval, which nobody could give.
  *
  * @param permissions - Their permissions in the request's company.
  * @param to - The status they want.
+ * @param place - Where the request is.
  * @returns Whether they may ever set it.
  */
-export function maySetStatus(permissions: ReadonlySet<Permission>, to: RequestStatus): boolean {
+export function maySetStatus(
+  permissions: ReadonlySet<Permission>,
+  to: RequestStatus,
+  place: RequestPlace,
+): boolean {
+  if (place === 'internal' && to === 'proposed') {
+    return false;
+  }
   if (permissions.has('requests:manage')) {
     return true;
   }
@@ -106,7 +123,8 @@ export function mayChangeStatus(
   from: RequestStatus,
   to: RequestStatus,
 ): boolean {
-  if (from === to || to === 'proposed' || !maySetStatus(permissions, to)) {
+  // Waiting for approval, the one status where the request is decides, is refused first.
+  if (from === to || to === 'proposed' || !maySetStatus(permissions, to, 'company')) {
     return false;
   }
   if (permissions.has('requests:manage')) {
@@ -155,15 +173,15 @@ export function statusChangeKind(
  * them (`requestToChange`).
  *
  * @param permissions - Their permissions in the request's company.
- * @param company - The request's company.
- * @param company.deactivated - Whether it's deactivated.
+ * @param company - The request's company, with whether it's deactivated; `null` for an internal
+ *   request, which has none.
  * @returns Whether they may.
  */
 export function mayContribute(
   permissions: ReadonlySet<Permission>,
-  company: { deactivated: boolean },
+  company: { deactivated: boolean } | null,
 ): boolean {
-  return !company.deactivated && permissions.has('requests:contribute');
+  return company?.deactivated !== true && permissions.has('requests:contribute');
 }
 
 /**
@@ -187,18 +205,26 @@ export function mayWaitWithReply(
 /**
  * Whether someone may send a reply as the solution, so the request waits for
  * the company's approval (`proposed`, decision 0033): the staff who work on
- * requests, on a request that's still worked on and doesn't wait for an
- * approval already.
+ * requests, on a company's request that's still worked on and doesn't wait
+ * for an approval already. Never on an internal request, where nobody could
+ * answer it.
  *
  * @param permissions - Their permissions in the request's company.
  * @param from - The status the request has.
+ * @param place - Where the request is.
  * @returns Whether they may.
  */
 export function mayProposeSolution(
   permissions: ReadonlySet<Permission>,
   from: RequestStatus,
+  place: RequestPlace,
 ): boolean {
-  return permissions.has('requests:manage') && !isClosedStatus(from) && from !== 'proposed';
+  return (
+    place === 'company' &&
+    permissions.has('requests:manage') &&
+    !isClosedStatus(from) &&
+    from !== 'proposed'
+  );
 }
 
 /**
@@ -211,15 +237,17 @@ export function mayProposeSolution(
  * @param permissions - Their permissions in the request's company.
  * @param from - The status the request has.
  * @param to - The status asked for with the reply.
+ * @param place - Where the request is.
  * @returns Whether the reply sets it.
  */
 export function mayReplyWithStatus(
   permissions: ReadonlySet<Permission>,
   from: RequestStatus,
   to: RequestStatus,
+  place: RequestPlace,
 ): boolean {
   if (to === 'proposed') {
-    return mayProposeSolution(permissions, from);
+    return mayProposeSolution(permissions, from, place);
   }
   if (to === 'waiting') {
     return mayWaitWithReply(permissions, from);
@@ -352,6 +380,19 @@ export function mayEditReply(
  * @returns Whether they may.
  */
 export function mayWriteNote(permissions: ReadonlySet<Permission>): boolean {
+  return permissions.has('requests:manage');
+}
+
+/**
+ * Whether someone may remove a file attached to a request's text: only the
+ * staff who work on requests (`requests:manage`), whoever attached it and
+ * whatever the request's status (decision 0044). Its file is deleted then,
+ * and its place in the text says who removed it.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns Whether they may.
+ */
+export function mayRemoveAttachment(permissions: ReadonlySet<Permission>): boolean {
   return permissions.has('requests:manage');
 }
 

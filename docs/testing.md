@@ -122,10 +122,12 @@ configurations in VS Code, which turn the time limit off (see
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
     checks of paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its
-    data. The same goes for the six seeded requests the pages are read with (`SEEDED_REQUESTS`
+    data. The same goes for the seven seeded requests the pages are read with (`SEEDED_REQUESTS`
     in `e2e/support/fixtures.ts`): a test that changes a request raises its own. One of them is
     written in Markdown with every kind of formatting (`tests/database/formatted-request.ts`),
-    and the first one's description is still plain text, as every text was before Markdown. Two
+    and the first one's description is still plain text, as every text was before Markdown. One
+    is an internal request, without a company (done and assigned to nobody, so it adds to no count
+    of what's active or assigned). Two
     are assigned to the seeded Support member (one also to the seeded Admin), with the lines that
     say so in their history. Both seeds store their requests with
     `tests/database/store-requests.ts`.
@@ -172,4 +174,13 @@ account)` where a spec needs the state itself) and open each test with those coo
     except in `e2e/security.spec.ts`: its tests use up state in order, so it doesn't retry and
     keeps a trace of its first failure instead (traces are in the `playwright-report` artifact).
 
-`pnpm services:up` must be running for integration and end-to-end tests.
+`pnpm services:up` must be running for integration and end-to-end tests. The integration tests
+also reach its S3-compatible server (SeaweedFS) and its SFTP server (OpenSSH), which the storage
+drivers' tests use; CI starts them with `docker compose` too. The other integration tests keep
+attached files in a temporary folder (the test context's `storage`), and store them with
+`storeAttachment` (`tests/integration/helpers/requests.ts`), as an upload and a text would have.
+
+The end-to-end tests keep attached files in `e2e/.attachments`, which the global setup empties
+before every run; the seed chooses it as the storage and turns attaching on. A test that needs a
+request with files stores its own with `storeAttachment` (`e2e/support/db.ts`), and one that
+attaches files picks them with the file chooser, drops or pastes them (`e2e/attachments.spec.ts`).

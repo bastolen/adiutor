@@ -122,6 +122,32 @@
       "accentDark": "Vul de accentkleur voor het donkere thema in als zes hexadecimale tekens, bijvoorbeeld #25dc89.",
       "tint": "Vul de tint in als zes hexadecimale tekens, bijvoorbeeld #0e0e2d.",
       "darkNeedsAccent": "Kies eerst een accentkleur, dan pas een accentkleur voor het donkere thema."
+    },
+    "storage": {
+      "driver": "Kies waar bestanden worden bewaard.",
+      "folder": "Geef het absolute pad van de map, bijvoorbeeld /data/attachments.",
+      "endpoint": "Geef het adres van de dienst, beginnend met https://.",
+      "region": "Controleer de regio.",
+      "bucket": "Geef de naam van de bucket.",
+      "bucketName": "Gebruik 3 tot 63 kleine letters, cijfers, punten en streepjes, beginnend en eindigend met een letter of cijfer.",
+      "accessKeyId": "Geef de ID van de toegangssleutel.",
+      "secret": "Dat geheim is te lang.",
+      "host": "Geef de hostnaam of het adres van de server.",
+      "port": "Geef een poort van 1 tot 65535.",
+      "username": "Geef de gebruiker om mee in te loggen.",
+      "hostKey": "Geef de vingerafdruk van de hostsleutel zoals ssh-keygen -lf die toont, beginnend met SHA256:.",
+      "maxFileMb": {
+        "whole": "Geef een heel aantal megabytes, minstens 1.",
+        "tooBig": "Kies hoogstens {maximum, number} megabyte."
+      }
+    },
+    "smtp": {
+      "host": "Geef de hostnaam of het adres van de mailserver.",
+      "port": "Geef een poort van 1 tot 65535.",
+      "security": "Kies hoe de verbinding wordt beveiligd.",
+      "username": "Die gebruikersnaam is te lang.",
+      "password": "Dat wachtwoord is te lang.",
+      "fromName": "Die naam is te lang."
     }
   }
 }

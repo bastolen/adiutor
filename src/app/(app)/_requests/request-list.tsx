@@ -1,8 +1,9 @@
 /**
  * @file A list of requests with its filters (`request-filters.tsx`, loaded
  * with `loadRequestFilters` as the board does), search, sorting and pages:
- * the requests the viewer may see across companies (`/requests`), or one
- * company's on its own page. Its text comes from `requests.list`. The
+ * the requests the viewer may see across companies (`/requests`, with the
+ * staff's internal requests, shown as "Internal"), or one company's on its
+ * own page. Its text comes from `requests.list`. The
  * Company filter names a company by its URL name too when another has the
  * same name (`companyChoiceLabels`).
  */
@@ -24,8 +25,10 @@ import type { SearchParams } from '@/lib/search-params';
 import { createPageUrl } from '@/lib/tables/page-url';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
+import { getInternalRequestPermissions } from '@/server/authz';
 import { listRequests, type RequestListItem } from '@/server/requests';
 
+import InternalLabel from './internal-label';
 import loadRequestFilters from './load-request-filters';
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
 import { RequestFilterBar, type RequestFilters } from './request-filters';
@@ -162,9 +165,11 @@ export default async function RequestList({
     filters.definition,
     { ...requested, page: requests.page },
   );
+  // Across companies, the staff who work on requests may also raise an internal one.
   const canRaise = company
     ? companies.some(({ slug, canRaise: may }) => slug === company && may)
-    : companies.some(({ canRaise: may }) => may);
+    : companies.some(({ canRaise: may }) => may) ||
+      getInternalRequestPermissions(actor).has('requests:contribute');
   const newButton = canRaise && <NewRequestButton company={company} label={t('new')} />;
   // What an empty list says, and whether it invites a request: only where one would show up.
   const emptyKind = emptyKindOf(status, filters.narrowed);
@@ -288,7 +293,9 @@ export default async function RequestList({
                               <span aria-hidden="true" className="2xl:hidden">
                                 ·
                               </span>
-                              <span className="2xl:hidden">{request.company.name}</span>
+                              <span className="2xl:hidden">
+                                {request.company ? request.company.name : <InternalLabel />}
+                              </span>
                             </>
                           )}
                         </span>
@@ -312,7 +319,7 @@ export default async function RequestList({
                     </Td>
                     {showsCompany && (
                       <Td className="hidden wrap-anywhere text-muted-foreground 2xl:table-cell">
-                        {request.company.name}
+                        {request.company ? request.company.name : <InternalLabel />}
                       </Td>
                     )}
                     <Td className="hidden md:table-cell">

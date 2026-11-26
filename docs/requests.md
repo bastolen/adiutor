@@ -9,15 +9,18 @@ requests behave and where the code is; why they're built this way is in
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
 the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), for the
-board in [decision 0037](decisions/0037-a-board-of-requests.md), and for raising one for someone
-in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md).
-
-Not built yet, for a later change: attachments.
+board in [decision 0037](decisions/0037-a-board-of-requests.md), for raising one for someone
+in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md), for internal requests
+in [decision 0048](decisions/0048-internal-requests-have-no-company.md), and for its attachments
+in [decision 0044](decisions/0044-attachments.md).
 
 ## Words
 
 - **Request:** one thing a company asks. It has a number, a title, a description, a type, a
-  priority and a status, and belongs to one company.
+  priority and a status, and belongs to one company, or to none as an internal request.
+- **Internal request:** the staff's own request, without a company, which only the staff read
+  (see [Internal requests](#internal-requests)). The screens show "Internal" where a request's
+  company would be.
 - **Reply:** a message in the request's conversation, from either side ("comment" in the database:
   `request_entry.kind`).
 - **The staff's side and the company's side:** whoever works on requests as staff acts as the
@@ -58,6 +61,9 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
 - The staff who work on requests (`requests:manage`) can **raise a request for someone** at the
   company, an Admin or a Client, who is then who raised it (see
   [Raising a request for someone](#raising-a-request-for-someone)).
+- **Internal requests** have no company, so only someone's staff role counts for them: the staff
+  who work on requests raise them and work on them, Finance reads them, and nobody at a company
+  finds one (see [Internal requests](#internal-requests)).
 - While a staff member is **signed in as a user**, they can do that user's request work, which
   records them (see [Signed in as a user](#signed-in-as-a-user)); managing request types stays
   off.
@@ -109,8 +115,8 @@ The staff can say a request is fixed without closing it, for the company to conf
 ([decision 0033](decisions/0033-solutions-the-company-approves.md)).
 
 - **Sending one:** the reply form has a third button for the staff who work on requests, **Send
-  as solution** (`mayProposeSolution`: a request that's still worked on and doesn't wait for an
-  approval already). It sends the reply and sets **Waiting for approval** (`proposed`) in one
+  as solution** (`mayProposeSolution`: a company's request that's still worked on and doesn't wait
+  for an approval already). An internal request never gets one, since nobody could answer it. It sends the reply and sets **Waiting for approval** (`proposed`) in one
   change and one email (`replyToRequest` with `status: 'proposed'`). The status select never
   offers it, and `changeRequestStatus` refuses it, so a proposal always has its text.
 - **Its words:** "Waiting for approval" (the staff), "Waiting for your approval" (Admins and
@@ -236,7 +242,8 @@ Someone subscribed to a request follows it: a request's assignees and subscriber
   updates as an assignee, so a request lists them once, as that.
 - **Who can be subscribed:** an active account that can read the request: a staff member (Finance
   too, who read requests without working on them) or someone at the request's company (Watchers
-  too, who follow without taking part).
+  too, who follow without taking part). An internal request has no company, so only the staff
+  (`membershipIn` in `participants.ts` joins no membership for it).
 - **Who changes it** (`subscriberScope` in `src/lib/requests/rules.ts`): everyone subscribes and
   unsubscribes themselves (`subscribe` and `unsubscribe` in `src/server/requests/subscribers.ts`).
   The staff who work on requests do so for anyone who can be subscribed, and a company's Admins
@@ -315,9 +322,11 @@ written and sent is in [Email](email.md), and the jobs that send them in
   batch key, so a reply and the status change that came with it, a note beside them, or three
   replies in five minutes, are one email, in the order they happened.
 - **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
-  number as a link, its company, who did what, and each reply (and a text that mentions the
+  number as a link, its company (or "Internal", `whereInternal`), who did what, and each reply (and a text that mentions the
   reader) in full, formatted as on the page
-  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)). People are
+  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)), with the
+  names and sizes of its files under it (as they are by then: a removed one is left out), never
+  the files themselves or a link to one: the request's page downloads them. People are
   named as the request's page names them, their own name or their side's, never by an address or
   an ID, and the people a reply mentions by name. The statuses are worded for the reader
   ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
@@ -367,7 +376,8 @@ type, whoever made the change.
 
 ## Numbers
 
-- Requests are numbered in **one series** across Adiutor: 1, 2, 3. The number comes from the
+- Requests are numbered in **one series** across Adiutor, internal ones too: 1, 2, 3. The number
+  comes from the
   `requests.last_number` setting (`incrementSetting` in `src/server/settings/`), raised inside the
   transaction that stores the request, so a failed attempt uses no number and two requests raised
   at the same moment get consecutive ones.
@@ -419,7 +429,8 @@ type, whoever made the change.
   to one of Adiutor's own pages for the staff (`/admin` and under it, on Adiutor's host, however
   the path is spelled: in capitals, percent-encoded, or on the host with a trailing dot;
   `isStaffPage` in `src/lib/requests/text.ts`) is kept out of a description or reply four times
-  over; an internal note, which only the staff read, keeps such links each time:
+  over; an internal note, and every text of an internal request, which only the staff read, keep
+  such links each time:
   - **When it's saved** (`withoutStaffPageLinks` in `src/server/requests/staff-links.ts`, applied
     by `raiseRequest`, `replyToRequest`, `answerSolution` for a denial's reason,
     `editRequestDescription` and `editReply` once the text is cleaned and the rate limit taken,
@@ -444,8 +455,8 @@ type, whoever made the change.
     (stored as plain text, or too costly to format) shows only the label of a link to one, never
     its address (`staffLinksAsLabels` in `RequestText` and `EmailMarkdown`, on the text as it's
     stored, before the people it mentions are named, so no name can change how its links read).
-    `RequestText`, `EditedNote` and `EmailMarkdown` are told when the text is a note
-    (`staffOnly`, or no `appUrl`).
+    `RequestText`, `EditedNote` and `EmailMarkdown` are told when the text is a note or an
+    internal request's (`staffOnly`, or no `appUrl`).
   - **In the editor's starting text:** a reader who may not open the staff's pages (without
     `users:view`: everyone at a company, also a staff member signed in as one) gets a
     description or reply to edit without them (`editableText` in `getRequest`, through
@@ -561,7 +572,8 @@ A description and a reply are written in a **Markdown field** (`MarkdownField` i
   a row of the list of users) or as Markdown, typed, or pasted over a selection, and the link
   dialog refuses one and says why. An image of one is its description, as when the text is
   saved. The page's own address is the one checked, as a browser copies a link from it. The
-  note's field keeps such links (`MarkdownField`'s `staffOnly`).
+  note's field keeps such links (`MarkdownField`'s `staffOnly`), and so does every field of an
+  internal request.
 - **What the editor doesn't have:** footnotes (one typed in it is sent as plain text) and a way to
   build a table from scratch (a pasted Markdown table stays a table, with cells to edit).
 - **Its size:** a reply's field starts eight lines high and a description's fourteen. It grows
@@ -593,6 +605,10 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
 - **No edit is lost:** the editor sends how many times the text was edited when they started; an
   edit made meanwhile is refused (`errors.requests.textChanged`) and the page shows the text as it
   is. An unchanged text saves nothing.
+- **Files:** while people can attach files, the editor can add files to the text too (see
+  [Attachments](#attachments)), up to the 10 a text may have. The version check comes first, then
+  the files are claimed, then the text is saved; an edit that only adds files keeps no version
+  and doesn't mark the text edited, and the toast says how many were added.
 - **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
   conversation.
 - **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
@@ -724,6 +740,98 @@ A description, a reply or a note can mention people. Why it's built this way is 
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
 
+## Attachments
+
+Files attached to a request's texts: its description, its replies and its internal notes. Why
+they're built this way is in [decision 0044](decisions/0044-attachments.md); where they're kept is
+in [Attachments](deploying.md#attachments).
+
+- **A file belongs to a text** (`request_attachment`, with the request and the reply or note, or
+  none for the description), so it's read by whoever reads that text: a note's files only by the
+  staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
+  filtered like its mentions; `loadAttachment` checks the same for a download).
+- **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
+  files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
+  request, reply and write a note, and a text's editor (see [Editing a text](#editing-a-text)),
+  have an "Attach files" button, take files dropped on the form,
+  and take files or a screenshot pasted into it (a paste that also holds text, such as a copy from
+  a document, stays a paste of the text). The browser checks each file's kind, its size and how
+  many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it, three at a time (`UPLOADS_AT_ONCE`; the rest say they're waiting), with its progress
+  shown (`upload-attachment.ts`, to `POST /api/attachments`), and the form sends its ID as an
+  `attachment` field; the file never rides along with the form. While a file uploads, the send
+  buttons wait, still focusable, and say why. A text still needs its words: files don't replace
+  them.
+- **Sending** (`claimAttachments`, in the transaction that stores or edits the text, after the
+  text's row):
+  only the writer's own finished uploads that no text has claimed yet, from the last 24 hours, and
+  with the same staff member signed in as them if one was, so a file uploaded while signed in as
+  someone isn't theirs alone to send. A file that can't be sent, or more than 10 on the text,
+  refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
+  is no longer available. Attach it again."), anyone else's isn't.
+- **On a request's page,** each text shows its files under it (`AttachmentList` in
+  `src/app/(app)/_requests/`, a `FileTile` each): a thumbnail for a PNG, JPEG, GIF or WebP image,
+  loaded from Adiutor itself, or an icon for the file's kind, with its name and size. A tile is a
+  link that downloads the file ("Download error.png, 240 kB" to screen readers); nothing opens in
+  the page.
+- **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
+  kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
+  Someone signed out is sent to sign in and back; a file they may not read is "not found".
+- **In emails** about a request, a reply, a note or a text that mentions the reader names its
+  files and their sizes under it, as they are when the email is sent; nothing is attached or
+  linked (see [Emails](#emails)). Adding files in an edit, and removing one, emails nobody.
+- **Removing** (`removeAttachment`, `mayRemoveAttachment` in `rules.ts`): only the staff who work
+  on requests, on any of a request's texts, whatever its status, and whether attaching is on or
+  not; a Remove button on each file's tile asks first (`RowAction`), and focus then goes to the
+  card's heading. The row stays, so the file's place says "Removed by Sam" (with the staff member
+  signed in as the remover, for the readers told about that work), and its file is deleted once
+  the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
+  told, the request's last activity doesn't move, and a removed file is "not found" from then on.
+
+## Internal requests
+
+The staff's own requests, which no company sees: renewing a certificate, a hand-over, work on
+Adiutor itself ([decision 0048](decisions/0048-internal-requests-have-no-company.md)).
+
+- **No company:** an internal request's `company_id` is null (a check, `request_internal_by_staff`,
+  keeps it on the staff's side). Its company never changes, so it stays internal.
+- **Who reads it:** only someone's staff role counts (`getInternalRequestPermissions` in
+  `src/lib/authz/permissions.ts`, the request permissions the role gives in every company), never
+  a membership: no invitation, invite link or added member reaches one. The staff who work on
+  requests (Admins, Managers and Support) raise it and work on it; Finance reads it, with its
+  internal notes, and changes nothing. For anyone else it's "not found", like a company they
+  aren't in, also on the lists, where a company user's requests are those of their companies
+  (`visibleRequests`). A staff member who is also in a company reads it as the staff, whatever
+  their role there.
+- **Like a company's request for the staff:** the same numbers, types, priorities, statuses
+  (Waiting for the company and its words too), assignees, subscribers, mentions, internal notes,
+  history and emails. Who can be mentioned or subscribed is the staff who read requests, named
+  by keys made for the internal requests (`mentionKey` without a company), so a key made in a
+  company stands for nobody there.
+- **No solutions:** Waiting for approval needs someone at a company to answer it, so "Send as
+  solution" isn't offered and `replyToRequest` refuses `proposed` on one (`mayProposeSolution`
+  and `mayReplyWithStatus` take where the request is, `RequestPlace`).
+- **Links to the staff's pages** stay links in every text of one, as in a note: only the staff
+  read it (see [Text](#text)).
+- **Raising one:** the new-request form offers "Internal" first in its Company select to the
+  staff who work on requests, also when there's one company to choose from or none
+  (`INTERNAL_CHOICE`, `_internal`, a value no URL name can take). Choosing it hides "Raise it for"
+  (an internal request is the staff's own, never raised for someone: `raiseRequest` refuses
+  `raisedFor` with it), lists only the staff at "@", says only the staff see it, and lets the
+  description link to the staff's pages from then on (the editor follows the choice, and what's
+  written already stays as it is). `?company=_internal` opens the form with it chosen, and so
+  does an Adiutor without companies yet.
+- **Finding them:** on the staff's lists and board, the Company filter offers "Internal"
+  (`?company=_internal`, the internal requests only), and a request without a company shows
+  "Internal" with a lock where its company would be (`InternalLabel`): in the request's header and
+  its Details, and in the list and on a card wherever those name companies (once there's a
+  choice: Internal and at least one company). The Active and Waiting lists keep them (they have no
+  company to be deactivated), and the dashboard's Assigned to you counts them.
+- **In the code:** every query that joins a request with its company is a left join, and every
+  reader of a request's company handles none (`RequestAccess.company`, `RequestDetail.company`
+  and `RequestListItem.company` are `null` for one). A change checks the actor's staff role again
+  in its transaction (`assertStillManages` with `internalRequest`); there's no company to lock or
+  read.
+
 ## Raising a request for someone
 
 Someone at a company who asks by phone or by email can have a staff member raise the request for
@@ -835,7 +943,8 @@ says so with a "Show everything" button.
 
 - **`/requests`**, for everyone signed in: every request they may see. The status links (Active,
   Waiting, Closed, All) open on Active; next to them a search on title and number, and menus for
-  the company (when there's more than one), the type and, for the staff, the priority
+  the company (when there's more than one; for the staff, "Internal" counts as one, see
+  [Internal requests](#internal-requests)), the type and, for the staff, the priority
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#tables)). The staff also filter by
@@ -861,8 +970,9 @@ says so with a "Show everything" button.
 - **`/companies/<URL name>/board`**: that company's requests as a board, for everyone who may see
   them (its people and the staff), under the company's header with its Requests tab still current
   (see [The board](#the-board)).
-- **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
-  type with what each is for, and a description. The staff also choose who it's for, themselves
+- **`/requests/new`**: the company (only when there's more than one to choose from; for the staff
+  who work on requests always, with "Internal" first, see [Internal requests](#internal-requests)),
+  a title, a type with what each is for, and a description. The staff also choose who it's for, themselves
   ("Yourself") or someone at the company (see
   [Raising a request for someone](#raising-a-request-for-someone)), and a priority, or leave it to
   the type. The people come with a company that's chosen already; choosing another asks for its
@@ -873,7 +983,7 @@ says so with a "Show everything" button.
   change (and, for the staff, every internal note), oldest first unless the reader chose otherwise
   (see [Reading the activity](#reading-the-activity)), and a Details bar: status, who
   it's assigned to, who is subscribed, type, priority (staff),
-  company, who raised it (and who raised it for them) and when, the staff's first response and the
+  company (or "Internal"), who raised it (and who raised it for them) and when, the staff's first response and the
   last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
@@ -1013,11 +1123,13 @@ no Move menu.
 - `src/lib/requests/` (a folder module, free of zod and server code, so the database schema,
   the services and client components all import it): the values, the rules above, how the
   activity is read, the number and the text. Not to be confused with `src/lib/request/`, which is about HTTP requests.
-- `src/db/schema/requests.ts`: `request`, `request_participant` (who's assigned and who's
-  subscribed), `request_entry`
+- `src/db/schema/requests.ts`: `request` (its `company_id` null for an internal request),
+  `request_participant` (who's assigned and who's subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests` (built from
+- `src/server/requests/` (a folder module): `attachmentsOn`, `uploadAttachment`,
+  `loadAttachment` and `removeAttachment` (attached files, which the services that store a text claim with
+  `claimAttachments`), `listRequestCompanies`, `listRequests` (built from
   `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
   sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into
   `RequestListItem`s), `listBoard` (the board's lanes, see [The board](#the-board)), `findRequest`,

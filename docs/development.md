@@ -52,6 +52,17 @@ away, as in production ([The endpoint](jobs.md#the-endpoint)).
 `pnpm jobs:run` runs a tick at once, and `pnpm jobs:run <job>` one job. Production servers never
 tick themselves: see [Background jobs](deploying.md#background-jobs) in the deployment docs.
 
+## Attachments
+
+Attaching files is off until there's a storage and **People can attach files** is on (see
+[Attachments](requests.md#attachments)). To try it locally, make a folder (`mkdir -p
+.local/attachments`, which git ignores) and choose it on the Attachments tab of Settings as a
+staff Admin, by its absolute path (`pwd` prints the start of it); saving asks for your second step
+when your account has one. Then turn on People can attach files on the same tab. Setting
+`ATTACHMENTS_STORAGE=local` and `ATTACHMENTS_DIR` in `.env` instead chooses the folder for the
+whole server and locks the Storage card. The S3 and SFTP servers that `pnpm services:up` starts
+work too: `.env.example` has the values to try them with.
+
 ## Starting over
 
 The database files live in `docker/database/` (git-ignored). To start over with an empty database
@@ -71,8 +82,8 @@ Manager with email codes only, which don't count for Managers), plus
 invitations and invite links in every state (one due for its expiry reminder), varied "last active"
 times, some audit log entries, sample errors from the last few days to look up under Logs →
 Errors (`scripts/sample-errors.ts`; the `retention` job removes them once they're 7 days old) and
-sample requests in every status, with replies and changes from both sides
-(`scripts/sample-requests.ts`).
+sample requests in every status, with replies and changes from both sides, and two internal
+requests, the staff's own (`scripts/sample-requests.ts`).
 `scripts/seed-dev.ts` lists the accounts and their password. The open invitations are emailed to
 Mailpit, and the script prints the authenticator setup key, backup codes and the links that still
 work. It reads the same validated `.env` as the app (so `BETTER_AUTH_URL` must be set), and refuses
@@ -151,7 +162,7 @@ Things that can look like a problem but aren't:
 | `pnpm test:e2e`            | Run the end-to-end tests (Playwright)                                                                       |
 | `pnpm check:schema`        | Check that Better Auth's tables and the migrations match the config and the schema, as CI does              |
 | `pnpm ci:local`            | Run every check CI runs, one after another (see [CI](ci-and-releases.md))                                   |
-| `pnpm services:up`         | Start PostgreSQL and Mailpit (Docker)                                                                       |
+| `pnpm services:up`         | Start PostgreSQL, Mailpit, and an S3 and an SFTP server for the storage tests (Docker)                      |
 | `pnpm services:down`       | Stop them (database data is kept)                                                                           |
 | `pnpm email:dev`           | Preview the email templates at <http://localhost:3001>                                                      |
 | `pnpm db:generate`         | Write a migration for schema changes (drizzle-kit)                                                          |

@@ -29,6 +29,10 @@ const FALLBACKS: SettingValues = {
   'requests.last_number': 0,
   'jobs.last_tick': null,
   'setup.completed_at': null,
+  'attachments.storage': null,
+  'attachments.max_file_mb': 10,
+  'attachments.enabled': false,
+  'email.smtp': null,
 };
 
 describe('the settings', () => {
@@ -52,6 +56,10 @@ describe('the settings', () => {
     ['requests.last_number', 1.5],
     ['jobs.last_tick', 'yesterday'],
     ['setup.completed_at', null],
+    ['attachments.storage', { driver: 'local', dir: '' }],
+    ['attachments.storage', { driver: 'ftp', dir: '/data' }],
+    ['attachments.max_file_mb', 0],
+    ['attachments.max_file_mb', 51],
   ] as const)('refuse to write %s as %j', (key, value) => {
     expect(() => settingValue(key, value)).toThrow(ZodError);
   });
@@ -63,6 +71,8 @@ describe('the settings', () => {
     ['brand.tint', '#0E5655;}'],
     ['requests.last_number', '142'],
     ['jobs.last_tick', 1_795_000_000_000],
+    ['attachments.storage', { driver: 's3', endpoint: 'not an address' }],
+    ['attachments.max_file_mb', 'ten'],
   ] as const)('read %s stored as %j as their fallback', (key, stored) => {
     expect(storedSettingValue(key, stored)).toEqual(FALLBACKS[key]);
   });

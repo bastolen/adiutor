@@ -37,7 +37,9 @@ A webhook has:
 - **Its events**, at least one: a request raised, a reply (a solution included), a status change,
   a staff member assigned or removed, a change of title, type or priority, an internal note.
   Internal notes and priorities go wherever the webhook sends, so choose them only for a place
-  that the staff alone read.
+  that the staff alone read. Every webhook also gets the internal requests, the staff's own
+  ([decision 0048](decisions/0048-internal-requests-have-no-company.md)), so a webhook is for a
+  place that the staff alone read in any case; Settings says so beside the events.
 - **A signing secret** (`whsec_` and 32 random bytes), made by Adiutor, sealed, and shown once:
   when the webhook is added and when it's renewed. A renewed secret replaces the old one straight
   away.
@@ -190,7 +192,10 @@ The Standard Webhooks shape, `{ type, timestamp, data }` (`jsonBody` in
 
 - **The request:** its status, priority and type key are the values Adiutor stores (`open`,
   `todo`, `in_progress`, `waiting`, `proposed`, `done`, `cancelled`; `low`, `normal`, `high`), its
-  link opens its page at the first event that has a place there.
+  link opens its page at the first event that has a place there. Its `company` is `null` for an
+  internal request, the staff's own, which has none
+  ([decision 0048](decisions/0048-internal-requests-have-no-company.md)); a webhook is told about
+  internal requests like any other.
 - **The events**, each with an `id` (the entry of the request's history; the request's for
   `raised`), `at` and `by` (a name and a side, `company` or `staff`):
   - `raised`: the request was raised, with its description as `text`;

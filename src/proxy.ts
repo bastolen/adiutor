@@ -19,7 +19,13 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { contentSecurityPolicy, createNonce, NONCE_HEADER } from '@/lib/request/csp';
+import {
+  ATTACHMENTS_PATH,
+  contentSecurityPolicy,
+  createNonce,
+  FILE_POLICY,
+  NONCE_HEADER,
+} from '@/lib/request/csp';
 import PATHNAME_HEADER from '@/lib/request/pathname-header';
 
 /**
@@ -62,7 +68,9 @@ export function isPublicPath(pathname: string): boolean {
 export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const nonce = createNonce();
-  const policy = contentSecurityPolicy(nonce);
+  // An attached file gets a fixed policy: Next.js puts the proxy's headers over a route's own,
+  // so the route can't set it itself.
+  const policy = pathname.startsWith(ATTACHMENTS_PATH) ? FILE_POLICY : contentSecurityPolicy(nonce);
   /**
    * Adds the policy to a response.
    *
@@ -96,14 +104,19 @@ export default function proxy(request: NextRequest) {
 }
 
 /**
- * Runs on every request except Next.js's own files and the static files in
+ * Runs on every request except Next.js's own files, the static files in
  * `public/brand/` and the app icons, `/icon.svg` and `/favicon.ico` (those
- * get a fixed policy from `next.config.ts`). The icons must answer a
- * signed-out visitor, and a tool that asks for `/favicon.ico` without
- * reading the page, with the icon and not with the way to sign in. Paths
- * aren't skipped by their extension: a page URL like `/companies/x.png`
- * still renders the app and must get the policy.
+ * get a fixed policy from `next.config.ts`), and the attachments' upload,
+ * `/api/attachments` exactly. The icons must answer a signed-out visitor,
+ * and a tool that asks for `/favicon.ico` without reading the page, with the
+ * icon and not with the way to sign in. The upload is left alone because the
+ * proxy holds every request's body in memory (up to 10 MB, cutting a longer
+ * one short without a word), whoever sends it; its route checks the session
+ * and where the request came from itself, and reads its body up to the
+ * largest file (decision 0044). Paths aren't skipped by their extension: a
+ * page URL like `/companies/x.png` still renders the app and must get the
+ * policy.
  */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|icon\\.svg|favicon\\.ico|brand/).*)'],
+  matcher: ['/((?!_next/static|_next/image|icon\\.svg|favicon\\.ico|brand/|api/attachments$).*)'],
 };

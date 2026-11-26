@@ -112,6 +112,22 @@
       "advice": "Staff Admins can manage everything on {staff}, the staff included. If you don't recognise this, remove their staff access in the staff settings and check the audit log.",
       "button": "Open the staff settings"
     },
+    "smtpChanged": {
+      "subject": "{staff} sends email through another mail server",
+      "reason": "You're receiving this because you're a staff Admin on {staff}: staff Admins are told whenever the mail server changes.",
+      "heading": "The mail server changed",
+      "changedBy": "{by} changed the mail server {staff} sends email through to {server}.",
+      "changed": "The mail server {staff} sends email through was changed to {server}.",
+      "advice": "Whoever controls the mail server can read the sign-in links and codes {staff} sends. If you don't recognise this, check the Email settings and the audit log.",
+      "button": "Open the Email settings"
+    },
+    "smtpTest": {
+      "subject": "{staff} can send email through this mail server",
+      "reason": "You're receiving this because you're saving a mail server on the Email tab of Settings.",
+      "heading": "This mail server works",
+      "body": "{staff} sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
+      "button": "Open the Email settings"
+    },
     "jobFailing": {
       "subject": "Background job {job} keeps failing on {staff}",
       "reason": "You're receiving this because you're a staff Admin on {staff}: staff Admins are told when a background job keeps failing, at most once a day per job.",
@@ -255,9 +271,12 @@
       "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} raised {{name} raised this request for you.} other {{name} subscribed you to this request.}}",
       "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
+      "whereInternal": "<link>{reference}</link> · Internal",
       "reply": "<strong>{name}</strong> replied:",
       "note": "<strong>{name}</strong> wrote an internal note:",
       "noteOnlyStaff": "Internal note: only the staff see this.",
+      "files": "{count, plural, one {# file attached, to download from the request:} other {# files attached, to download from the request:}}",
+      "file": "{name} ({size})",
       "status": "{change, select, reopened {<strong>{name}</strong> reopened this request.} done {<strong>{name}</strong> marked this request as done.} cancelled {<strong>{name}</strong> cancelled this request.} proposed {<strong>{name}</strong> proposed a solution.} approved {<strong>{name}</strong> approved the solution.} denied {<strong>{name}</strong> didn’t approve the solution.} other {<strong>{name}</strong> changed the status from {from} to {to}.}}",
       "assigned": "<strong>{name}</strong> assigned this request to you.",
       "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} note {<strong>{name}</strong> mentioned you in an internal note:} other {<strong>{name}</strong> mentioned you in a reply:}}",

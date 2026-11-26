@@ -1,0 +1,196 @@
+/**
+ * @file Tests for the storage rules: how the environment chooses a storage,
+ * what makes one unfit for where it runs, and the size limit's ceiling.
+ */
+import { describe, expect, it } from 'vitest';
+
+import {
+  DEFAULT_S3_REGION,
+  maxFileMbCeiling,
+  type S3StorageConfig,
+  storageFromEnvironment,
+  storageProblems,
+  storageView,
+} from './storage';
+
+/** A bucket's settings. */
+const bucket: S3StorageConfig = {
+  driver: 's3',
+  endpoint: 'https://files.adiutor.dev',
+  region: 'auto',
+  bucket: 'adiutor',
+  accessKeyId: 'key-id',
+  secretAccessKey: 'key-secret',
+  forcePathStyle: false,
+};
+
+/** A host key's fingerprint, as `ssh-keygen -lf` prints one. */
+const HOST_KEY = 'SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls';
+
+/** A development server that isn't on Vercel. */
+const development = { production: false, vercel: false };
+
+describe('storageFromEnvironment', () => {
+  it('leaves storage to Settings without a driver, and says off when it is', () => {
+    expect(storageFromEnvironment({})).toEqual({ state: 'unset' });
+    expect(storageFromEnvironment({ ATTACHMENTS_STORAGE: 'off' })).toEqual({ state: 'off' });
+  });
+
+  it('reads a folder', () => {
+    expect(
+      storageFromEnvironment({ ATTACHMENTS_STORAGE: 'local', ATTACHMENTS_DIR: '/data/files' }),
+    ).toEqual({ state: 'set', config: { driver: 'local', dir: '/data/files' } });
+  });
+
+  it('reads a bucket, with the default region and path style off unless said', () => {
+    const environment = {
+      ATTACHMENTS_STORAGE: 's3',
+      ATTACHMENTS_S3_ENDPOINT: 'https://files.adiutor.dev',
+      ATTACHMENTS_S3_BUCKET: 'adiutor',
+      ATTACHMENTS_S3_ACCESS_KEY_ID: 'key-id',
+      ATTACHMENTS_S3_SECRET_ACCESS_KEY: 'key-secret',
+    } as const;
+    expect(storageFromEnvironment(environment)).toEqual({
+      state: 'set',
+      config: { ...bucket, region: DEFAULT_S3_REGION },
+    });
+    expect(
+      storageFromEnvironment({
+        ...environment,
+        ATTACHMENTS_S3_REGION: 'auto',
+        ATTACHMENTS_S3_FORCE_PATH_STYLE: 'true',
+      }),
+    ).toEqual({ state: 'set', config: { ...bucket, forcePathStyle: true } });
+  });
+
+  it('reads an SFTP server, with a password or a key in base64, and port 22 unless said', () => {
+    const server = {
+      ATTACHMENTS_STORAGE: 'sftp',
+      ATTACHMENTS_SFTP_HOST: 'files.adiutor.dev',
+      ATTACHMENTS_SFTP_USERNAME: 'adiutor',
+      ATTACHMENTS_SFTP_HOST_KEY: HOST_KEY,
+      ATTACHMENTS_SFTP_DIR: '/srv/adiutor',
+    } as const;
+    expect(storageFromEnvironment({ ...server, ATTACHMENTS_SFTP_PASSWORD: 'secret' })).toEqual({
+      state: 'set',
+      config: {
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: 22,
+        username: 'adiutor',
+        password: 'secret',
+        hostKey: HOST_KEY,
+        dir: '/srv/adiutor',
+      },
+    });
+    const pem = '-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----\n';
+    expect(
+      storageFromEnvironment({
+        ...server,
+        ATTACHMENTS_SFTP_PORT: 2222,
+        ATTACHMENTS_SFTP_PRIVATE_KEY: btoa(pem),
+      }),
+    ).toMatchObject({ state: 'set', config: { port: 2222, privateKey: pem } });
+    expect(storageFromEnvironment(server)).toEqual({
+      state: 'incomplete',
+      missing: ['ATTACHMENTS_SFTP_PASSWORD'],
+    });
+  });
+
+  it('names what a driver is missing', () => {
+    expect(storageFromEnvironment({ ATTACHMENTS_STORAGE: 'local' })).toEqual({
+      state: 'incomplete',
+      missing: ['ATTACHMENTS_DIR'],
+    });
+    expect(
+      storageFromEnvironment({ ATTACHMENTS_STORAGE: 's3', ATTACHMENTS_S3_BUCKET: 'adiutor' }),
+    ).toEqual({
+      state: 'incomplete',
+      missing: [
+        'ATTACHMENTS_S3_ENDPOINT',
+        'ATTACHMENTS_S3_ACCESS_KEY_ID',
+        'ATTACHMENTS_S3_SECRET_ACCESS_KEY',
+      ],
+    });
+  });
+});
+
+describe('storageProblems', () => {
+  it('accepts an absolute folder off Vercel, and a bucket', () => {
+    expect(storageProblems({ driver: 'local', dir: '/data/files' }, development)).toEqual([]);
+    expect(storageProblems({ driver: 'local', dir: 'C:\\files' }, development)).toEqual([]);
+    expect(storageProblems(bucket, { production: true, vercel: true })).toEqual([]);
+  });
+
+  it('refuses a relative folder, and any folder on Vercel', () => {
+    expect(storageProblems({ driver: 'local', dir: 'files' }, development)).toEqual([
+      'relative_folder',
+    ]);
+    const server = {
+      driver: 'sftp',
+      host: 'files.adiutor.dev',
+      port: 22,
+      username: 'adiutor',
+      password: 'secret',
+      hostKey: HOST_KEY,
+    } as const;
+    expect(storageProblems({ ...server, dir: 'adiutor' }, development)).toEqual([
+      'relative_folder',
+    ]);
+    // A folder on another server is fine on Vercel.
+    expect(
+      storageProblems({ ...server, dir: '/srv/adiutor' }, { production: true, vercel: true }),
+    ).toEqual([]);
+    expect(
+      storageProblems({ driver: 'local', dir: '/data/files' }, { production: true, vercel: true }),
+    ).toEqual(['local_on_vercel']);
+  });
+
+  it('refuses a bucket over plain http in production, except on this computer', () => {
+    const plain = { ...bucket, endpoint: 'http://files.adiutor.dev' };
+    expect(storageProblems(plain, { production: true, vercel: false })).toEqual([
+      'insecure_endpoint',
+    ]);
+    expect(
+      storageProblems(
+        { ...bucket, endpoint: 'http://localhost:8333' },
+        { production: true, vercel: false },
+      ),
+    ).toEqual([]);
+    expect(storageProblems(plain, development)).toEqual([]);
+  });
+});
+
+describe('maxFileMbCeiling', () => {
+  it('allows 50 megabytes, or 4 on Vercel', () => {
+    expect(maxFileMbCeiling(false)).toBe(50);
+    expect(maxFileMbCeiling(true)).toBe(4);
+  });
+});
+
+describe('storageView', () => {
+  it('leaves out every secret', () => {
+    expect(storageView(bucket)).toEqual({ ...bucket, secretAccessKey: undefined });
+    expect('secretAccessKey' in storageView(bucket)).toBe(false);
+    const server = {
+      driver: 'sftp',
+      host: 'files.adiutor.dev',
+      port: 22,
+      username: 'adiutor',
+      hostKey: HOST_KEY,
+      dir: '/srv/adiutor',
+    } as const;
+    expect(storageView({ ...server, password: 'secret' })).toEqual({
+      ...server,
+      signsInWith: 'password',
+    });
+    expect(storageView({ ...server, privateKey: 'PEM' })).toEqual({
+      ...server,
+      signsInWith: 'key',
+    });
+    expect(storageView({ driver: 'local', dir: '/data' })).toEqual({
+      driver: 'local',
+      dir: '/data',
+    });
+  });
+});

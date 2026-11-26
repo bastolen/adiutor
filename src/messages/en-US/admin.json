@@ -253,14 +253,16 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where webhooks send.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, where attached files are kept, and where webhooks send.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",
         "staff": "Staff",
         "requests": "Requests",
         "webhooks": "Webhooks",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "attachments": "Attachments",
+        "email": "Email"
       },
       "general": {
         "name": {
@@ -414,7 +416,7 @@
           "allTypesHint": "Every type, also the ones added later.",
           "chosenTypes": "Chosen types",
           "eventsLegend": "Send",
-          "staffOnly": "Internal notes and priorities are only for the staff: send them only to a place that the staff alone read."
+          "staffOnly": "Every webhook gets the internal requests, and the webhooks that choose them get internal notes and priorities. All three are only for the staff: send them only to a place that the staff alone read."
         },
         "add": {
           "button": "Add webhook",
@@ -555,6 +557,128 @@
               "dark": "Made lighter so it stays readable in dark mode: {colour}."
             }
           }
+        }
+      },
+      "attachments": {
+        "title": "Attachments",
+        "storage": {
+          "title": "Where files are kept",
+          "description": "Files people attach to requests are kept here. Each one is served from this server, to whoever may read it.",
+          "none": "No storage is chosen yet, so nobody can attach files.",
+          "driver": "Storage",
+          "choose": "Choose a storage",
+          "drivers": {
+            "local": "A folder on this server",
+            "s3": "An S3-compatible bucket",
+            "sftp": "A folder on another server (SFTP)"
+          },
+          "driverHints": {
+            "local": "Files on this server's disk. Not on Vercel, and for one server only.",
+            "s3": "AWS S3, Cloudflare R2, Backblaze B2, or a server of your own such as Garage or SeaweedFS.",
+            "sftp": "Any server you reach over SSH, such as a storage box or a NAS."
+          },
+          "dir": "Folder",
+          "localDirHint": "An absolute path on this server, e.g. /data/attachments. It must exist and be writable.",
+          "endpoint": "Service address",
+          "endpointHint": "E.g. https://your-account-id.r2.cloudflarestorage.com for Cloudflare R2.",
+          "region": "Region",
+          "regionHint": "auto on Cloudflare R2. Leave it empty for us-east-1.",
+          "bucket": "Bucket",
+          "accessKeyId": "Access key ID",
+          "secretAccessKey": "Secret access key",
+          "s3SecretSaved": "A secret key is saved. Leave this empty to keep it while the service address and the access key stay the same.",
+          "forcePathStyle": "Bucket in the path",
+          "forcePathStyleHint": "Most servers of your own, such as Garage or SeaweedFS, need this.",
+          "host": "Server",
+          "port": "Port",
+          "username": "User",
+          "password": "Password",
+          "privateKey": "Private key",
+          "privateKeyHint": "The key's PEM text. Give a password or a private key.",
+          "sftpSecretSaved": {
+            "password": "A password is saved. Leave both empty to keep it while the server, port and user stay the same.",
+            "key": "A private key is saved. Leave both empty to keep it while the server, port and user stay the same."
+          },
+          "hostKey": "Host key fingerprint",
+          "hostKeyHint": "As ssh-keygen -lf prints it, starting with SHA256:. Check it on the server itself: no other key is accepted.",
+          "sftpDirHint": "An absolute path on the server. It must exist.",
+          "bucketAddress": "Bucket address",
+          "inPath": "In the path",
+          "inHost": "In the host name",
+          "signsInWith": "Signs in with",
+          "signsInWithPassword": "A password",
+          "signsInWithKey": "A private key",
+          "save": "Test and save",
+          "saved": "Storage saved. A test file was written, read back and deleted there.",
+          "confirmFirst": "Choosing where files are kept needs you to confirm it’s you first.",
+          "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
+          "dirPlaceholder": "/data/attachments",
+          "endpointPlaceholder": "https://",
+          "hostKeyPlaceholder": "SHA256:",
+          "notSetUp": "This folder isn’t set up for attached files yet, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), set it up.",
+          "notSetUpSettings": "This folder isn’t set up for attached files, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), test and save it again to set it up.",
+          "setUp": "Set up this folder",
+          "setUpTitle": "Set up this folder?",
+          "setUpDescription": "Do this only if it’s the right folder: on a server, the volume that keeps the attached files must be mounted there. Files are then kept here.",
+          "setUpConfirm": "Set up folder",
+          "setUpDone": "Folder set up. A test file was written, read back and deleted there."
+        },
+        "attaching": {
+          "title": "Attaching files",
+          "description": "Whether people can attach files to requests, replies and internal notes. While it’s off, files already attached can still be downloaded.",
+          "label": "People can attach files",
+          "storageFirst": "Choose where files are kept first.",
+          "save": "Save",
+          "savedOn": "People can attach files now.",
+          "savedOff": "Attaching files is turned off."
+        },
+        "largestFile": {
+          "title": "Largest file",
+          "description": "The largest file anyone may attach.",
+          "label": "Megabytes",
+          "hint": "From 1 to {ceiling, number}.",
+          "save": "Save size",
+          "saved": "Largest file saved."
+        }
+      },
+      "email": {
+        "title": "Email",
+        "server": {
+          "title": "Mail server",
+          "description": "Sign-in links, password resets, invitations, security notices and the emails about requests are sent through this server.",
+          "none": "No mail server is set up yet.",
+          "noneWarning": "No mail server is set up yet: until one is, nobody gets sign-in links, password resets or invitations.",
+          "unreadable": "The server's environment chooses the mail server, but its address can't be read.",
+          "host": "Server",
+          "hostHint": "The mail server's host name, e.g. smtp.yourdomain.com.",
+          "security": "Security",
+          "securities": {
+            "tls": "TLS",
+            "starttls": "STARTTLS",
+            "none": "None"
+          },
+          "securityHints": {
+            "tls": "Encrypted from the start, usually on port 465.",
+            "starttls": "Encrypted once connected, usually on port 587.",
+            "none": "Not encrypted. In production, only for a mail server on this computer."
+          },
+          "port": "Port",
+          "portHint": "Leave it empty for the usual port: 465 with TLS, 587 with STARTTLS, 25 without.",
+          "username": "Username",
+          "usernameHint": "Leave it empty for a server that takes email without signing in.",
+          "password": "Password",
+          "passwordSaved": "A password is saved. Leave this empty to keep it while the server, port and username stay the same.",
+          "signsIn": "Signs in as",
+          "signsInNone": "Without signing in",
+          "sender": "Sender",
+          "fromName": "Sender name",
+          "fromNameHint": "Shown with the address in mail apps, e.g. Adiutor.",
+          "fromAddress": "Sender address",
+          "fromAddressHint": "An address on a domain you control, which this server may send from.",
+          "whoIsTold": "Saving sends a test email to you through this server, then tells every staff Admin, you included.",
+          "save": "Test and save",
+          "saved": "Mail server saved. A test email reached you through it.",
+          "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }
       }
     },

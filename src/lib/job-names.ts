@@ -19,6 +19,7 @@ export const RECURRING_JOB_NAMES = [
   'finished-sign-ins-as-users',
   'expired-sign-in-data',
   'invitation-reminders',
+  'attachment-files',
   'retention',
 ] as const;
 
@@ -27,6 +28,7 @@ export const QUEUED_JOB_NAMES = [
   'security-notice',
   'added-to-company',
   'staff-admin-added',
+  'smtp-changed',
   'request-update',
   'webhook-delivery',
   'webhook-turned-off',
@@ -83,6 +85,10 @@ const JOB_SUMMARY_KEYS = [
   'signInErrors',
   'jobRuns',
   'queuedJobs',
+  /** Attached files that were never sent (or never finished uploading) and were purged. */
+  'unsentFiles',
+  /** Removed attachments whose files were deleted, because that failed when they were removed. */
+  'removedFiles',
   /** Deliveries to webhooks deleted after 30 days. */
   'webhookDeliveries',
 ] as const;

@@ -29,6 +29,7 @@ const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'admin.settings.general.name.description':
     'what the name replaces, Adiutor, and the credit it adds',
   'admin.addCompany.form.namePlaceholder': 'an example of a company’s name',
+  'admin.settings.email.server.fromNameHint': 'an example of the name mail apps show',
   'auth.setup.title': 'setting up the software, before the staff have a name',
   'auth.setup.heading': 'setting up the software, before the staff have a name',
   'auth.setup.submit': 'setting up the software, before the staff have a name',

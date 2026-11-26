@@ -21,6 +21,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError } from '../errors';
 import { signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import {
   assertReplyLimit,
   CHANGE_MOMENT,
@@ -47,7 +48,9 @@ import { tellPeopleOnRequest } from './updates';
  *
  * Everyone else on the request is told by email (`tellPeopleOnRequest`).
  * The reply is stored without links to the staff's pages
- * (`withoutStaffPageLinks`): the company reads it.
+ * (`withoutStaffPageLinks`): the company reads it. A reply to an internal
+ * request keeps them, since only the staff read it, and is never sent as a
+ * solution: nobody could approve it (decision 0048).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -55,30 +58,34 @@ import { tellPeopleOnRequest } from './updates';
  * @param input.request - The request's number or ID.
  * @param input.body - The reply.
  * @param input.status - A status to set with it (`REQUEST_STATUSES`); empty to leave that to the reply.
+ * @param input.attachments - Files the actor uploaded for the reply (`claimAttachments`).
  * @returns The request's status after the reply.
  * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
- *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
+ *   `requests:contribute`, when the status isn't theirs to set, or for a solution on an
+ *   internal request, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has replied too often
- *   (`RATE_LIMITS.requestRepliesPerUser`).
+ *   (`RATE_LIMITS.requestRepliesPerUser`); `invalid` or `conflict` for files that can't be sent
+ *   with it.
  * @throws {ZodError} When the reply or the status isn't valid.
  */
 export default async function replyToRequest(
   ctx: ServiceContext,
   actor: Actor,
-  input: { request: string; body: string; status?: string },
+  input: { request: string; body: string; status?: string; attachments?: readonly string[] },
 ): Promise<{ status: RequestStatus }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
+  const place = access.company === null ? 'internal' : 'company';
   const written = requestReplySchema.parse(input.body);
   const asked = input.status ? requestStatusSchema.parse(input.status) : null;
-  if (asked && !maySetStatus(permissions, asked)) {
+  if (asked && !maySetStatus(permissions, asked, place)) {
     throw forbiddenError();
   }
   await assertReplyLimit(ctx, actor);
   // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
-  // as reading the text costs time.
-  const body = withoutStaffPageLinks(written, appUrl);
+  // as reading the text costs time. Only the staff read an internal request, which keeps them.
+  const body = place === 'internal' ? written : withoutStaffPageLinks(written, appUrl);
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
@@ -96,6 +103,12 @@ export default async function replyToRequest(
         .returning({ id: requestEntry.id }),
       'the new reply',
     );
+    await claimAttachments(
+      tx,
+      actor,
+      { requestId: locked.id, entryId: reply.id },
+      input.attachments ?? [],
+    );
     // Whoever replies follows the request from then on, and so do the people the reply mentions.
     await subscribeAutomatically(tx, locked.id, [actor.id]);
     // The people the reply mentions, once the reply they belong to is there.
@@ -107,7 +120,7 @@ export default async function replyToRequest(
     });
     // A status the request can't move to as it is by now is left alone: the reply still counts. A
     // reply sent as the solution makes it wait for the company's approval (decision 0033).
-    const allowed = asked !== null && mayReplyWithStatus(permissions, locked.status, asked);
+    const allowed = asked !== null && mayReplyWithStatus(permissions, locked.status, asked, place);
     const status = asked && allowed ? asked : statusAfterReply(side, locked.status);
     const told = { request: locked, actorId: actor.id };
     if (status === locked.status) {

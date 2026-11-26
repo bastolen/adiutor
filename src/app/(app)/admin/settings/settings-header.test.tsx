@@ -1,7 +1,7 @@
 /**
  * @file Tests for the heading and tabs of the Settings pages: General, Staff,
- * Requests, Webhooks and Appearance, in that order, the open one marked as
- * current.
+ * Requests, Attachments, Email, Webhooks and Appearance, in that order, the
+ * open one marked as current.
  */
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,6 +32,8 @@ describe('SettingsHeader', () => {
       ['General', '/admin/settings'],
       ['Staff', '/admin/settings/staff'],
       ['Requests', '/admin/settings/requests'],
+      ['Attachments', '/admin/settings/attachments'],
+      ['Email', '/admin/settings/email'],
       ['Webhooks', '/admin/settings/webhooks'],
       ['Appearance', '/admin/settings/appearance'],
     ]);
@@ -48,6 +50,8 @@ describe('SettingsHeader', () => {
   it.each([
     ['staff', 'Staff'],
     ['requests', 'Requests'],
+    ['attachments', 'Attachments'],
+    ['email', 'Email'],
     ['webhooks', 'Webhooks'],
   ])('marks the tab of the %s page as current', (segment, name) => {
     useSelectedLayoutSegment.mockReturnValue(segment);

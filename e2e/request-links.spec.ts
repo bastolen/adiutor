@@ -32,7 +32,14 @@ import {
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
-import { clickLinkInEmail, signIn, signOut, toasts, invitationForm } from './support/helpers';
+import {
+  clickLinkInEmail,
+  invitationForm,
+  markdownEditor,
+  signIn,
+  signOut,
+  toasts,
+} from './support/helpers';
 import { linkIn, waitForEmailAbout } from './support/outbox';
 import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
@@ -56,7 +63,7 @@ test('the link in an email about a request signs its reader in and opens the req
   const { title, number } = await ownRequest(STEP_UP_CLIENT.email);
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Is it plugged in?');
+  await (await markdownEditor(page, 'Your reply')).fill('Is it plugged in?');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
   await signOut(page);

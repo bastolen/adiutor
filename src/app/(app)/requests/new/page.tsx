@@ -2,8 +2,8 @@
  * @file The page that raises a request, served at `/requests/new`. For
  * everyone who may raise one somewhere: a company's Admins and Clients in
  * their own companies, and the staff who work on requests in any active
- * company, also for someone there (decision 0047). Everyone else gets the
- * 404 page.
+ * company, also for someone there (decision 0047), or as an internal request
+ * (decision 0048). Everyone else gets the 404 page.
  */
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -13,12 +13,18 @@ import Card from '@/components/ui/card';
 import PageHeader from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
+import { INTERNAL_CHOICE } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
-import { getActor, getStaffPermissionsInCompanies } from '@/server/authz';
+import {
+  getActor,
+  getInternalRequestPermissions,
+  getStaffPermissionsInCompanies,
+} from '@/server/authz';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
+  attachmentsOn,
   getRequestSettings,
   listRaisableFor,
   listRequestCompanies,
@@ -28,14 +34,18 @@ import {
 import RaiseRequestForm from './raise-request-form';
 
 /**
- * The companies someone may raise a request in.
+ * Where someone may raise a request: the companies, and whether they may
+ * raise an internal request (the staff who work on requests).
  *
  * @param actor - The acting user.
- * @returns The companies; empty when they may raise none.
+ * @returns The companies, and whether internal requests are theirs to raise.
  */
-async function raisableCompanies(actor: Actor) {
+async function placesToRaise(actor: Actor) {
   const companies = await listRequestCompanies(appContext, actor);
-  return companies.filter(({ canRaise }) => canRaise);
+  return {
+    companies: companies.filter(({ canRaise }) => canRaise),
+    internal: getInternalRequestPermissions(actor).has('requests:contribute'),
+  };
 }
 
 /**
@@ -44,39 +54,48 @@ async function raisableCompanies(actor: Actor) {
  * page.
  */
 // i18n-check t('requests.new.title')
-export const generateMetadata = checkedPageMetadata('requests.new.title', async (actor) =>
-  (await raisableCompanies(actor)).length > 0 ? {} : null,
-);
+export const generateMetadata = checkedPageMetadata('requests.new.title', async (actor) => {
+  const places = await placesToRaise(actor);
+  return places.internal || places.companies.length > 0 ? {} : null;
+});
 
 /**
  * Loads and shows the form. The company in the address (`?company=`, from a
  * company's own list) is chosen already when it's one the viewer may raise a
- * request in. For the staff, the people a request in a company that's chosen
- * already can be raised for come with it; the form asks for them when
- * another company is chosen.
+ * request in, and so is an internal request (`INTERNAL_CHOICE`) for the
+ * staff who may raise one. For the staff, the people a request in a company
+ * that's chosen already can be raised for come with it; the form asks for
+ * them when another company is chosen.
  *
  * @param props - Component props.
- * @param props.searchParams - Query parameters: `company`, a company's URL name.
+ * @param props.searchParams - Query parameters: `company`, a company's URL name or
+ *   `INTERNAL_CHOICE`.
  */
 async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('requests.new');
   const actor = await getActor();
-  const [params, companies, settings, types] = await Promise.all([
+  const [params, { companies, internal }, settings, types, attaching] = await Promise.all([
     searchParams,
-    raisableCompanies(actor),
+    placesToRaise(actor),
     getRequestSettings(appContext),
     listRequestTypes(appContext, actor),
+    attachmentsOn(appContext),
   ]);
-  if (companies.length === 0) {
+  if (companies.length === 0 && !internal) {
     notFound();
   }
   const asked = searchParam(params.company);
   const staff = getStaffPermissionsInCompanies(actor).has('requests:manage');
   const [only] = companies;
+  // With one company and no internal requests to raise, there's nothing to choose.
   const chosen =
-    companies.length === 1 && only ? only : companies.find(({ slug }) => slug === asked);
+    companies.length === 1 && only && !internal
+      ? only
+      : companies.find(({ slug }) => slug === asked);
   const raiseForChoices =
     staff && chosen ? await listRaisableFor(appContext, actor, chosen.id) : [];
+  // Asked for, or the only place there is (before any company is registered).
+  const startsInternal = internal && (asked === INTERNAL_CHOICE || companies.length === 0);
 
   return (
     <>
@@ -96,8 +115,10 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
               .filter(({ archived }) => !archived)
               .map(({ key, name, description }) => ({ key, name, description }))}
             companies={companies.map(({ slug, name }) => ({ slug, name }))}
-            company={chosen?.slug}
+            raisesInternal={internal}
+            company={startsInternal ? INTERNAL_CHOICE : chosen?.slug}
             choosesPriority={staff}
+            attaching={attaching && { maxFileMb: attaching.maxFileMb }}
             raisesFor={staff}
             raiseForChoices={raiseForChoices}
           />

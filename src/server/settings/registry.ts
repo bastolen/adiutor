@@ -9,11 +9,16 @@ import { z } from 'zod';
 import { type Locale, LOCALES } from '@/lib/i18n/locales';
 import { DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 import { DEFAULT_REQUEST_PREFIX } from '@/lib/requests';
+import type { SmtpConfig } from '@/lib/smtp';
+import { DEFAULT_MAX_FILE_MB, MAX_FILE_MB, type StorageConfig } from '@/lib/storage';
 import {
   brandColourSchema,
   localeSchema,
+  maxFileMbSchema,
   requestPrefixSchema,
   staffNameSchema,
+  storedSmtpSchema,
+  storedStorageSchema,
   timeZoneSchema,
 } from '@/lib/validation';
 
@@ -102,6 +107,33 @@ export const SETTINGS = {
    * once, by setup (`addSetting`).
    */
   'setup.completed_at': defineSetting(momentSchema, null),
+  /**
+   * Where attached files are kept, chosen on the Attachments tab of Settings
+   * (decision 0044), with its secrets encrypted (`sealStorage`). The server's
+   * environment wins over it when it chooses a storage (`ATTACHMENTS_STORAGE`).
+   * `null` until a staff Admin chooses one.
+   */
+  'attachments.storage': defineSetting(storedStorageSchema, null as StorageConfig | null),
+  /**
+   * The largest file anyone may attach, in megabytes, unless the server's
+   * environment chooses it (`ATTACHMENTS_MAX_FILE_MB`). On Vercel the
+   * services refuse more than 4 whatever is saved.
+   */
+  'attachments.max_file_mb': defineSetting(maxFileMbSchema(MAX_FILE_MB), DEFAULT_MAX_FILE_MB),
+  /**
+   * Whether people can attach files ("People can attach files" on the
+   * Attachments tab of Settings): off until a staff Admin turns it on, and
+   * it counts only while a storage is chosen. Off, files already attached
+   * stay downloadable.
+   */
+  'attachments.enabled': defineSetting(z.boolean(), false),
+  /**
+   * The mail server emails go out through, and their sender, chosen on the
+   * Email tab of Settings, with its password encrypted (`sealSecret`). The
+   * server's environment wins over it: `SMTP_URL` for the server, and
+   * `EMAIL_FROM` for the sender. `null` until a staff Admin saves one.
+   */
+  'email.smtp': defineSetting(storedSmtpSchema, null as SmtpConfig | null),
 } as const;
 
 /** The key of a setting, e.g. `staff.name`. */

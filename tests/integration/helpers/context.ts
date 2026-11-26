@@ -1,9 +1,14 @@
 /**
  * @file The test service context and its reset between tests, the switch for
  * GitHub sign-in, and contexts of a request's language or IP address, a mail
- * server that's down and a time a number of minutes ago.
+ * server that's down and a time a number of minutes ago. Attached files go
+ * to a folder of the test file's own, removed after it.
  */
-import { afterAll, beforeEach, inject } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterAll, beforeAll, beforeEach, inject } from 'vitest';
 
 import { createDatabase, type Database } from '@/db';
 import type { Email } from '@/lib/email';
@@ -11,6 +16,7 @@ import type { Locale } from '@/lib/i18n/locales';
 import { MFA_PROVIDERS } from '@/lib/sign-in/oauth-providers';
 import { availableProviders, configuredProviders } from '@/lib/sign-in/providers';
 import type { ServiceContext } from '@/server/context';
+import { type FileStorage, storageFor } from '@/server/storage';
 
 import emptyDatabase from '../../database/empty-database';
 
@@ -22,6 +28,8 @@ export interface TestContext {
   db: Database;
   /** Emails sent during the current test. */
   sent: Email[];
+  /** The storage the context's files go to: a folder of the test file's own on local disk. */
+  storage: FileStorage;
 }
 
 /**
@@ -35,6 +43,8 @@ export interface TestContext {
 export function setupTestContext(): TestContext {
   const db = createDatabase(inject('databaseUrl'));
   const sent: Email[] = [];
+  const folder = mkdtempSync(join(tmpdir(), 'adiutor-files-'));
+  const storage = storageFor({ driver: 'local', dir: folder });
   const ctx: ServiceContext = {
     db,
     baseUrl: 'https://adiutor.test',
@@ -46,7 +56,18 @@ export function setupTestContext(): TestContext {
     sendEmail: async (email) => {
       sent.push(email);
     },
+    /**
+     * The test file's own folder.
+     *
+     * @returns Its storage.
+     */
+    storage: async () => storage,
   };
+
+  // Set up on purpose, as a staff Admin's test before saving would.
+  beforeAll(async () => {
+    await storage.setUp();
+  });
 
   beforeEach(async () => {
     sent.length = 0;
@@ -61,9 +82,10 @@ export function setupTestContext(): TestContext {
 
   afterAll(async () => {
     await db.$client.end();
+    rmSync(folder, { recursive: true, force: true });
   });
 
-  return { ctx, db, sent };
+  return { ctx, db, sent, storage };
 }
 
 /**

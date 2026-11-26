@@ -44,6 +44,9 @@ import {
   slugSchema,
   staffNameSchema,
   staffRoleSchema,
+  maxFileMbSchema,
+  smtpFormSchema,
+  storageFormSchema,
   webhookEventsSchema,
   webhookFormatSchema,
   webhookNameSchema,
@@ -667,6 +670,118 @@ describe('messages', () => {
   });
 });
 
+describe('storageFormSchema', () => {
+  it('reads a bucket, with the default region and an empty secret as none', () => {
+    expect(
+      storageFormSchema.parse({
+        driver: 's3',
+        endpoint: 'https://files.adiutor.dev',
+        region: ' ',
+        bucket: 'adiutor',
+        accessKeyId: 'key-id',
+        secretAccessKey: '',
+        forcePathStyle: false,
+      }),
+    ).toEqual({
+      driver: 's3',
+      endpoint: 'https://files.adiutor.dev',
+      region: 'us-east-1',
+      bucket: 'adiutor',
+      accessKeyId: 'key-id',
+      secretAccessKey: undefined,
+      forcePathStyle: false,
+    });
+  });
+
+  it('reads an SFTP server, with port 22 when it was left empty', () => {
+    expect(
+      storageFormSchema.parse({
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: '',
+        username: 'adiutor',
+        password: 'secret',
+        privateKey: '',
+        hostKey: ' SHA256:8Tn3u1YtizSXC8tJi132t6S2H2YZA9+pMADqWxgBdls ',
+        dir: '/srv/adiutor',
+      }),
+    ).toMatchObject({ port: 22, password: 'secret', privateKey: undefined });
+  });
+
+  it.each([
+    [{ driver: 'ftp', dir: '/data' }, 'validation.storage.driver'],
+    [{ driver: 'local', dir: '' }, 'validation.storage.folder'],
+    [
+      { driver: 's3', endpoint: 'ftp://files.adiutor.dev', bucket: 'a', accessKeyId: 'b' },
+      'validation.storage.endpoint',
+    ],
+    [
+      {
+        driver: 'sftp',
+        host: 'files.adiutor.dev',
+        port: '70000',
+        username: 'adiutor',
+        hostKey: 'SHA256:x',
+        dir: '/srv',
+      },
+      'validation.storage.port',
+    ],
+  ])('refuses %j with %s', (input, message) => {
+    const result = storageFormSchema.safeParse({
+      region: '',
+      secretAccessKey: '',
+      forcePathStyle: false,
+      password: '',
+      privateKey: '',
+      ...input,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(message);
+  });
+});
+
+describe('storageFormSchema: bucket names', () => {
+  /**
+   * The issue a bucket's name gets, if any.
+   *
+   * @param bucket - The name.
+   * @returns The first issue's message, or `undefined` for a name that holds.
+   */
+  const issueOf = (bucket: string) =>
+    storageFormSchema.safeParse({
+      driver: 's3',
+      endpoint: 'https://files.adiutor.dev',
+      region: '',
+      bucket,
+      accessKeyId: 'key-id',
+      secretAccessKey: '',
+      forcePathStyle: false,
+    }).error?.issues[0]?.message;
+
+  it('takes a name by S3’s own rules', () => {
+    expect(issueOf('adiutor-files.2026')).toBeUndefined();
+  });
+
+  it.each(['evil.adiutor.test/x', 'Adiutor', 'ab', 'a..b', '192.168.0.1', '-adiutor'])(
+    'refuses %s, which isn’t one',
+    (bucket) => {
+      expect(issueOf(bucket)).toBe('validation.storage.bucketName');
+    },
+  );
+});
+
+describe('maxFileMbSchema', () => {
+  it('takes a whole number of megabytes from 1 to the ceiling', () => {
+    expect(maxFileMbSchema(50).parse('25')).toBe(25);
+    expect(maxFileMbSchema(4).safeParse('5').error?.issues[0]?.message).toBe(
+      'validation.storage.maxFileMb.tooBig',
+    );
+    expect(maxFileMbSchema(50).safeParse('2.5').error?.issues[0]?.message).toBe(
+      'validation.storage.maxFileMb.whole',
+    );
+  });
+});
+
 describe('the webhook schemas', () => {
   /**
    * The messages a value gets.
@@ -727,5 +842,62 @@ describe('the webhook schemas', () => {
     expect(messagesFor(webhookTypesSchema, ['Not a key'])).toEqual([
       'validation.webhookTypes.unknown',
     ]);
+  });
+});
+
+describe('smtpFormSchema', () => {
+  /** The Email tab's form, as a browser sends it. */
+  const FORM = {
+    host: ' smtp.adiutor.test ',
+    port: '',
+    security: 'starttls',
+    username: '',
+    password: '',
+    fromName: ' Adiutor Tests ',
+    fromAddress: 'No-Reply@Adiutor.test',
+  };
+
+  it('fills in the usual port, and reads empty fields as none typed', () => {
+    expect(smtpFormSchema.parse(FORM)).toEqual({
+      host: 'smtp.adiutor.test',
+      port: 587,
+      security: 'starttls',
+      username: null,
+      password: undefined,
+      fromName: 'Adiutor Tests',
+      fromAddress: 'no-reply@adiutor.test',
+    });
+    expect(smtpFormSchema.parse({ ...FORM, security: 'tls' }).port).toBe(465);
+    expect(smtpFormSchema.parse({ ...FORM, port: '2525' }).port).toBe(2525);
+  });
+
+  it('keeps a password as it was typed, spaces included', () => {
+    expect(smtpFormSchema.parse({ ...FORM, password: ' pass word ' }).password).toBe(' pass word ');
+  });
+
+  it('takes an IP address as the host, and refuses what isn’t a host', () => {
+    expect(smtpFormSchema.parse({ ...FORM, host: '192.0.2.10' }).host).toBe('192.0.2.10');
+    expect(
+      smtpFormSchema.safeParse({ ...FORM, host: 'smtp adiutor' }).error?.issues[0]?.message,
+    ).toBe('validation.smtp.host');
+  });
+
+  it('refuses a port out of range, an unknown security and a sender that isn’t an address', () => {
+    /**
+     * The messages of the form's issues, with some fields changed.
+     *
+     * @param input - The fields to change.
+     * @returns The messages.
+     */
+    const issues = (input: Record<string, unknown>) =>
+      smtpFormSchema.safeParse({ ...FORM, ...input }).error?.issues.map((issue) => issue.message);
+
+    expect(issues({ port: '70000' })).toEqual(['validation.smtp.port']);
+    expect(issues({ security: 'ssl' })).toEqual(['validation.smtp.security']);
+    expect(issues({ fromAddress: 'no-reply' })).toEqual(['validation.email']);
+  });
+
+  it('leaves the sender’s address out when the form didn’t send it', () => {
+    expect(smtpFormSchema.parse({ ...FORM, fromAddress: null }).fromAddress).toBeUndefined();
   });
 });

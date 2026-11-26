@@ -11,6 +11,7 @@
 export { defineQueuedKind } from './define';
 export type { JobPayload, QueuedJobKind } from './define';
 export { queueJob, queueJobs } from './queue-job';
+export { smtpChangedJob } from './mail-server-emails';
 export { addedToCompanyJob, staffAdminAddedJob } from './people-emails';
 export { isWebhookNews, REQUEST_UPDATES_GROUP, requestUpdateJob } from './request-updates';
 export type { RequestUpdateEvent, WebhookNewsPayload } from './request-updates';

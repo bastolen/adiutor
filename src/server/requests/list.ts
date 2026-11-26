@@ -1,7 +1,9 @@
 /**
  * @file Lists of requests: the companies someone sees requests of, and the
  * requests themselves, across companies or in one, one page at a time, with
- * who each is assigned to.
+ * who each is assigned to. The staff's lists hold the internal requests too,
+ * which have no company (decision 0048), so every query left-joins a
+ * request's company.
  */
 import { and, count, eq, ilike, inArray, isNull, like, not, or, type SQL, sql } from 'drizzle-orm';
 
@@ -9,6 +11,7 @@ import { company, request, requestParticipant, requestType, user } from '@/db/sc
 import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
+  INTERNAL_CHOICE,
   isRequestPriority,
   isRequestStatus,
   isRequestStatusFilter,
@@ -105,7 +108,10 @@ export interface ListRequestsOptions extends Partial<TableState<StaffRequestSort
   status?: string;
   /** One status only (`REQUEST_STATUSES`), instead of `status`'s group; anything else is ignored. */
   only?: string;
-  /** One company's requests only: its ID or URL name. */
+  /**
+   * One company's requests only: its ID or URL name; or the internal requests only
+   * (`INTERNAL_CHOICE`), for the staff.
+   */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
   type?: string;
@@ -137,8 +143,8 @@ export interface RequestListItem {
   typeName: string;
   /** Its priority, or `null` for readers who don't see priorities. */
   priority: RequestPriority | null;
-  /** Its company. */
-  company: { id: string; name: string; slug: string };
+  /** Its company; `null` for an internal request, which only the staff read. */
+  company: { id: string; name: string; slug: string } | null;
   /** The staff members it's assigned to, by name; empty while nobody is. */
   assignees: RequestPerson[];
   /** When it was raised, replied to or changed last. */
@@ -290,7 +296,10 @@ export interface RequestListFilters {
    * requests across companies.
    */
   statuses: readonly RequestStatus[] | null;
-  /** One company's requests only: its ID or URL name. */
+  /**
+   * One company's requests only: its ID or URL name; or the internal requests only
+   * (`INTERNAL_CHOICE`).
+   */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
   type?: string;
@@ -301,21 +310,24 @@ export interface RequestListFilters {
 }
 
 /**
- * The WHERE of a list of requests, for a query on `request` joined with
- * `company`: what the actor may see, narrowed by the filters. It's what
+ * The WHERE of a list of requests, for a query on `request` left-joined with
+ * `company` (an internal request has none): what the actor may see, narrowed
+ * by the filters. It's what
  * {@link listRequests} and any other view of the requests (a board) share.
  * (`visibleRequests` in `access.ts` is only the part that is about access.)
  *
  * Across companies, the requests of a deactivated company are left out when
  * every status asked for is still worked on (they're in the other lists and
- * in the company's own). Priority and assignee only narrow the list for
+ * in the company's own); an internal request has no company to be
+ * deactivated, so it stays. Priority and assignee only narrow the list for
  * readers with `requests:view-internal`.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
  * @param filters - What narrows the list down.
  * @returns The condition; `undefined` when nothing narrows the list.
- * @throws {ServiceError} `not_found` when asked for a company the actor may not see.
+ * @throws {ServiceError} `not_found` when asked for a company the actor may not see, or for
+ *   the internal requests by someone who isn't on the staff.
  */
 export async function requestListCondition(
   ctx: ServiceContext,
@@ -325,13 +337,20 @@ export async function requestListCondition(
   const scope = requestScope(actor);
   const { search = '', statuses, company: companyRef, type, priority, assignee } = filters;
   const conditions: (SQL | undefined)[] = [visibleRequests(scope)];
-  if (companyRef) {
+  if (companyRef === INTERNAL_CHOICE) {
+    // Only the staff read internal requests: for anyone else they're like a company they can't see.
+    if (!scope.everyCompany) {
+      throw notFoundError();
+    }
+    conditions.push(isNull(request.companyId));
+  } else if (companyRef) {
     const access = await getCompanyAccess(ctx.db, actor, companyRef);
     if (!access.permissions.has('requests:view')) {
       throw notFoundError();
     }
     conditions.push(eq(request.companyId, access.company.id));
   } else if (statuses && statuses.every((status) => !isClosedStatus(status))) {
+    // Left-joined, an internal request has no company, so none that's deactivated: it stays.
     conditions.push(isNull(company.deactivatedAt));
   }
   if (statuses) {
@@ -359,7 +378,10 @@ export async function requestListCondition(
   return and(...conditions);
 }
 
-/** The columns {@link loadRequestListItems} needs of each request, from `request` joined with its company and type. */
+/**
+ * The columns {@link loadRequestListItems} needs of each request, from `request` left-joined
+ * with its company (none for an internal request) and joined with its type.
+ */
 export const requestListColumns = {
   id: request.id,
   number: request.number,
@@ -378,7 +400,7 @@ export const requestListColumns = {
 export type RequestListRow = Omit<RequestListItem, 'assignees' | 'reopened' | 'audience'> & {
   /** When it was reopened, or `null`. */
   reopenedAt: Date | null;
-  /** When its company was deactivated, or `null`. */
+  /** When its company was deactivated, or `null` (also for an internal request). */
   companyDeactivatedAt: Date | null;
 };
 
@@ -409,16 +431,17 @@ export async function loadRequestListItems(
     reopened: reopenedAt !== null,
     priority: internal ? row.priority : null,
     // Per company: someone can take part in one and only follow another.
-    audience: requestAudienceIn(actor, {
-      id: row.company.id,
-      deactivatedAt: companyDeactivatedAt,
-    }),
+    audience: requestAudienceIn(
+      actor,
+      row.company && { id: row.company.id, deactivatedAt: companyDeactivatedAt },
+    ),
   }));
 }
 
 /**
- * Lists the requests the actor sees, one page at a time: every company's for
- * the staff, their active companies' for everyone else, or one company's.
+ * Lists the requests the actor sees, one page at a time: every company's and
+ * the internal ones for the staff, their active companies' for everyone
+ * else, or one company's (or only the internal ones).
  * By default the requests that are still worked on, the one with the latest
  * activity first.
  *
@@ -434,7 +457,8 @@ export async function loadRequestListItems(
  * @param actor - The acting user.
  * @param options - Filters, search, sort and page.
  * @returns The page of requests.
- * @throws {ServiceError} `not_found` when asked for a company the actor may not see.
+ * @throws {ServiceError} `not_found` when asked for a company the actor may not see, or for
+ *   the internal requests by someone who isn't on the staff.
  */
 export async function listRequests(
   ctx: ServiceContext,
@@ -463,7 +487,7 @@ export async function listRequests(
         await ctx.db
           .select({ total: count() })
           .from(request)
-          .innerJoin(company, eq(request.companyId, company.id))
+          .leftJoin(company, eq(request.companyId, company.id))
           .where(where),
         'the request count',
       ).total,
@@ -471,7 +495,7 @@ export async function listRequests(
       ctx.db
         .select(requestListColumns)
         .from(request)
-        .innerJoin(company, eq(request.companyId, company.id))
+        .leftJoin(company, eq(request.companyId, company.id))
         .innerJoin(requestType, eq(request.type, requestType.key))
         .where(where)
         .orderBy(...order)

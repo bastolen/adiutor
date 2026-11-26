@@ -108,6 +108,66 @@
       "unreadable": "La dirección o el secreto de este webhook ya no se pueden leer. Escribe de nuevo su dirección y después renueva su secreto.",
       "off": "Activa primero el webhook: no se envía nada a un webhook desactivado.",
       "stillSending": "Este envío aún se está enviando. Espera a que terminen sus intentos."
+    },
+    "attachments": {
+      "storageFromEnvironment": "El entorno del servidor elige dónde se guardan los archivos, así que no puedes cambiarlo aquí.",
+      "limitFromEnvironment": "El entorno del servidor elige el archivo más grande, así que no puedes cambiarlo aquí.",
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de elegir dónde se guardan los archivos.",
+      "secretNeeded": {
+        "s3": "Vuelve a indicar la clave secreta: una guardada solo se conserva para el mismo servicio y la misma clave de acceso.",
+        "sftp": "Vuelve a indicar la contraseña o la clave privada: una guardada solo se conserva para el mismo servidor, usuario y clave de host."
+      },
+      "storageProblem": {
+        "local_on_vercel": "El disco de Vercel no conserva archivos. Elige un bucket compatible con S3 o un servidor SFTP.",
+        "relative_folder": "Indica la carpeta como ruta absoluta, empezando por /.",
+        "insecure_endpoint": "Usa una dirección https://, o los archivos y las claves viajarían sin cifrar."
+      },
+      "storageCheck": {
+        "unreachable": "No se ha podido llegar al almacenamiento. Revisa su dirección y su puerto.",
+        "refused": "El almacenamiento ha rechazado las claves o la contraseña. Revísalas.",
+        "host_key": "La clave de host del servidor no coincide con la huella. Compruébala en el propio servidor antes de volver a intentarlo.",
+        "not_found": "El bucket o la carpeta no existe. Créalo primero.",
+        "not_writable": "No se puede escribir ahí. Revisa los permisos de la carpeta y el espacio libre.",
+        "not_set_up": "Esa carpeta no está configurada para los archivos adjuntos. Revisa su ruta.",
+        "timed_out": "El almacenamiento ha tardado demasiado en responder. Vuelve a intentarlo o revisa su dirección.",
+        "failed": "No se ha podido guardar, leer y borrar un archivo de prueba ahí. Revisa la configuración."
+      },
+      "off": "Adjuntar archivos está desactivado.",
+      "typeNotAllowed": "Ese tipo de archivo no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
+      "empty": "Ese archivo está vacío.",
+      "tooLarge": "Ese archivo es demasiado grande: adjunta archivos de como máximo {maximum, number} MB.",
+      "notItsType": "Ese archivo no es lo que dice su nombre, así que no se puede adjuntar.",
+      "dailyTotal": "Hoy ya has adjuntado mucho. Vuelve a intentarlo mañana.",
+      "unavailable": "{name} ya no está disponible. Vuelve a adjuntarlo.",
+      "storageFailed": "No se ha podido guardar el archivo ahora. Vuelve a intentarlo en un momento.",
+      "noLength": "Tu navegador envió el archivo sin su tamaño. Prueba con otro navegador.",
+      "incomplete": "El archivo llegó incompleto. Vuelve a intentarlo.",
+      "badName": "No se ha podido leer el nombre del archivo. Cámbiale el nombre y vuelve a intentarlo.",
+      "signedOut": "Vuelve a iniciar sesión para adjuntar archivos.",
+      "confirmFirst": "Confirma que eres tú antes de adjuntar archivos.",
+      "offByEnvironment": "El entorno del servidor ha desactivado adjuntar archivos, así que no se puede activar aquí.",
+      "storageFirst": "Elige dónde se guardan los archivos antes de que las personas puedan adjuntarlos.",
+      "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
+      "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo.",
+      "tooManyAtOnce": "Ya estás subiendo {maximum, number} archivos. Espera a que termine uno.",
+      "notSetUp": "Adjuntar archivos aún no está configurado. Pide a un administrador que configure dónde se guardan los archivos."
+    },
+    "email": {
+      "serverFromEnvironment": "El entorno del servidor elige el servidor de correo, así que no se puede cambiar aquí.",
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar el servidor de correo.",
+      "passwordNeeded": "Vuelve a escribir la contraseña: una guardada solo se conserva para el mismo servidor, puerto y nombre de usuario.",
+      "senderNeeded": "Indica la dirección del remitente.",
+      "problem": {
+        "tlsRequired": "Usa TLS o STARTTLS: sin ellos, los correos y los enlaces de inicio de sesión que contienen viajarían sin cifrar."
+      },
+      "check": {
+        "unreachable": "No se ha podido llegar al servidor de correo. Revisa su nombre y su puerto.",
+        "timedOut": "El servidor de correo ha tardado demasiado en responder. Vuelve a intentarlo o revisa su nombre y su puerto.",
+        "tls": "No se ha podido proteger la conexión. Revisa la seguridad y el puerto.",
+        "loginRefused": "El servidor de correo ha rechazado el nombre de usuario o la contraseña. Revísalos.",
+        "addressRefused": "El servidor de correo ha rechazado la dirección del remitente o la tuya. Comprueba que puede enviar desde la dirección del remitente.",
+        "refused": "El servidor de correo ha rechazado el correo de prueba. Revisa su configuración con tu proveedor."
+      }
     }
   }
 }
