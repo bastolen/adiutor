@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getGlobalPermissions,
+  getInternalRequestPermissions,
   getPermissions,
   getStaffPermissionsInCompanies,
   managePermission,
@@ -208,6 +209,31 @@ describe('getStaffPermissionsInCompanies', () => {
 
   it('gives nothing without a staff role', () => {
     expect(getStaffPermissionsInCompanies({ platformRole: null }).size).toBe(0);
+  });
+});
+
+describe('getInternalRequestPermissions', () => {
+  it.each<[PlatformRole, string[]]>([
+    [
+      'platform_admin',
+      ['requests:contribute', 'requests:manage', 'requests:view', 'requests:view-internal'],
+    ],
+    [
+      'manager',
+      ['requests:contribute', 'requests:manage', 'requests:view', 'requests:view-internal'],
+    ],
+    [
+      'support',
+      ['requests:contribute', 'requests:manage', 'requests:view', 'requests:view-internal'],
+    ],
+    // Finance reads internal requests, as it reads every company's, and works on none.
+    ['finance', ['requests:view', 'requests:view-internal']],
+  ])('gives %s only the request permissions of their staff role', (role, expected) => {
+    expect(sorted(getInternalRequestPermissions({ platformRole: role }))).toEqual(expected);
+  });
+
+  it('gives nothing without a staff role, whatever someone’s company roles', () => {
+    expect(getInternalRequestPermissions({ platformRole: null }).size).toBe(0);
   });
 });
 

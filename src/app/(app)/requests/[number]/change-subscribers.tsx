@@ -92,17 +92,21 @@ function SubscriberFields({
  * @param props.company - The name of the request's company.
  * @param props.scope - Whose subscriptions the viewer changes: `everyone` (the staff) or
  *   `colleagues` (a company's Admin); it words the explanation.
+ * @param props.internal - Whether it's an internal request, where only the staff can be
+ *   subscribed: that words the explanation instead.
  */
 export default function ChangeSubscribers({
   request,
   choices,
   company,
   scope,
+  internal = false,
 }: {
   request: number;
   choices: readonly SubscriberChoice[];
   company: string;
   scope: 'everyone' | 'colleagues';
+  internal?: boolean;
 }) {
   const t = useTranslations('requests.controls');
   return (
@@ -111,7 +115,7 @@ export default function ChangeSubscribers({
       fields={{ request: String(request) }}
       triggerLabel={t('changeSubscribers')}
       title={t('subscribersTitle')}
-      description={t('subscribersDescription', { scope })}
+      description={t('subscribersDescription', { scope: internal ? 'internal' : scope })}
       confirmLabel={t('saveSubscribers')}
       tone="primary"
       allowedWhileSignedInAs

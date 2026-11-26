@@ -231,7 +231,7 @@ function FormattedText({
  * unless formatting it would cost too much (a text nested hundreds of levels
  * deep): then it's shown as it was written, too. Either way a link to one of
  * the staff's pages shows as its text, without its address, unless only the
- * staff read the text (an internal note, `staffOnly`).
+ * staff read the text (an internal note or an internal request's, `staffOnly`).
  *
  * @param props - Component props.
  * @param props.text - The text and its format.
@@ -239,7 +239,8 @@ function FormattedText({
  * @param props.className - Extra classes for the element around the text.
  * @param props.source - Where the text is from, for the note above code copied from it.
  * @param props.names - The names of the two sides, for the people the text mentions.
- * @param props.staffOnly - Whether only the staff read the text (an internal note).
+ * @param props.staffOnly - Whether only the staff read the text (an internal note, or any text of
+ *   an internal request).
  */
 export default function RequestText({
   text,

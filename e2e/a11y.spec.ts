@@ -138,6 +138,8 @@ const APP_PATHS = [
   // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
   // a footnote, and highlighted code, whose colours have to be readable in both modes.
   `/requests/${SEEDED_REQUESTS.formatted.number}`,
+  // An internal request: "Internal" in its header and Details, and no solution to send.
+  `/requests/${SEEDED_REQUESTS.internal.number}`,
   '/companies/does-not-exist',
   '/does-not-exist',
 ];

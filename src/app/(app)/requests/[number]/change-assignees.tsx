@@ -90,15 +90,18 @@ function AssigneeFields({
  * @param props.request - The request's number.
  * @param props.choices - The staff members who can be assigned, and anyone assigned now.
  * @param props.assigned - The user IDs of those assigned now.
+ * @param props.internal - Whether it's an internal request, which no company reads.
  */
 export default function ChangeAssignees({
   request,
   choices,
   assigned,
+  internal = false,
 }: {
   request: number;
   choices: readonly AssigneeChoice[];
   assigned: readonly string[];
+  internal?: boolean;
 }) {
   const t = useTranslations('requests.controls');
   return (
@@ -107,7 +110,7 @@ export default function ChangeAssignees({
       fields={{ request: String(request) }}
       triggerLabel={t('changeAssignees')}
       title={t('assigneesTitle')}
-      description={t('assigneesDescription')}
+      description={t('assigneesDescription', { place: internal ? 'internal' : 'company' })}
       confirmLabel={t('saveAssignees')}
       tone="primary"
       allowedWhileSignedInAs

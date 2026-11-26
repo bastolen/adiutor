@@ -29,6 +29,11 @@ interface EditableTextProps {
   entry: string | null;
   /** Whether the entry is an internal note: the button and field say "note". */
   note?: boolean;
+  /**
+   * Whether only the staff read the text (an internal note, or any text of an internal
+   * request): its editor keeps links to the staff's pages. A note's by default.
+   */
+  staffOnly?: boolean;
   /** What the editor starts from, and how many times the text was edited (sent back). */
   edit: { markdown: string; edits: number };
   /** The text as it reads, rendered on the server. */
@@ -53,6 +58,7 @@ export default function EditableText({
   request,
   entry,
   note = false,
+  staffOnly = note,
   edit,
   children,
 }: EditableTextProps) {
@@ -117,7 +123,7 @@ export default function EditableText({
           defaultValue={edit.markdown}
           autoFocus
           mentions={loadMentions}
-          staffOnly={note}
+          staffOnly={staffOnly}
         />
         <div className="flex flex-wrap gap-2">
           <Button type="submit" loading={pending}>

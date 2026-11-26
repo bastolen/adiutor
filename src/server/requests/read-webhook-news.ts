@@ -8,7 +8,8 @@
  * email address or a user ID, and never who did something while signed in as
  * someone else (decision 0028): a webhook isn't one of the readers who may
  * know. Webhooks are the staff's (decision 0046), so internal notes and
- * priorities are in it, for the webhooks that chose them.
+ * priorities are in it, for the webhooks that chose them, and so are internal
+ * requests, which have no company (decision 0048).
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -187,8 +188,8 @@ export interface WebhookNews {
     type: WebhookRequestType;
     /** Its priority. */
     priority: RequestPriority;
-    /** Its company. */
-    company: { id: string; name: string };
+    /** Its company; `null` for an internal request, which has none (decision 0048). */
+    company: { id: string; name: string } | null;
     /**
      * The path of its page, opened at the first event that has a place
      * there (`/requests/142?entry=<ID>#entry-<ID>`); never a link that signs
@@ -205,7 +206,8 @@ export interface WebhookNews {
 }
 
 /**
- * Loads the request news is about, with its company and who raised it.
+ * Loads the request news is about, with its company (none for an internal
+ * request) and who raised it.
  *
  * @param db - Database client.
  * @param requestId - The request.
@@ -230,7 +232,7 @@ async function loadRequest(db: DatabaseOrTransaction, requestId: string) {
       createdBySide: request.createdBySide,
     })
     .from(request)
-    .innerJoin(company, eq(request.companyId, company.id))
+    .leftJoin(company, eq(request.companyId, company.id))
     .leftJoin(user, eq(request.createdBy, user.id))
     .where(eq(request.id, requestId));
   return found;
@@ -318,7 +320,11 @@ export async function readWebhookNews(
     getRequestPrefix(db),
     requestTypeNames(db),
   ]);
-  const sideNames: Record<RequestSide, string> = { company: found.companyName, staff: staffName };
+  // An internal request has nobody on the company's side to name.
+  const sideNames: Record<RequestSide, string> = {
+    company: found.companyName ?? staffName,
+    staff: staffName,
+  };
   const mentionNames = await loadMentionNames(db, requestId, sideNames);
   /**
    * A text with the people it mentions named, so no marker (and no row ID) is left in it.
@@ -430,7 +436,10 @@ export async function readWebhookNews(
       status: found.status,
       type: typeOf(found.type),
       priority: found.priority,
-      company: { id: found.companyId, name: found.companyName },
+      company:
+        found.companyId === null || found.companyName === null
+          ? null
+          : { id: found.companyId, name: found.companyName },
       path: requestPathAt(found.number, firstEntry ? entryAnchor(firstEntry.id) : null),
       raisedAt: found.createdAt,
       lastActivityAt: found.lastActivityAt,

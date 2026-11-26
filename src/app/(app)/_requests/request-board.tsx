@@ -36,6 +36,7 @@ import { type BoardCard, listBoard } from '@/server/requests';
 
 import Board from './board';
 import type { BoardCardView } from './board-card';
+import InternalLabel from './internal-label';
 import loadRequestFilters from './load-request-filters';
 import { PriorityBadge, ReopenedBadge, StatusBadge } from './request-badges';
 import { RequestFilterBar, viewParams } from './request-filters';
@@ -97,7 +98,9 @@ function CardBody({
         </RowLink>
       </span>
       {showsCompany && (
-        <span className="text-xs wrap-anywhere text-muted-foreground">{card.company.name}</span>
+        <span className="text-xs wrap-anywhere text-muted-foreground">
+          {card.company ? card.company.name : <InternalLabel />}
+        </span>
       )}
       {(card.priority || card.reopened || ownWords) && (
         <span className="flex flex-wrap items-center gap-1.5">

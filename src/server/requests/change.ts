@@ -34,7 +34,8 @@ export const CHANGE_MOMENT = sql`clock_timestamp()`;
 /**
  * Loads the request a change is about and checks that the actor may make
  * it: only with the permission, and never in a deactivated company, whose
- * requests can only be read. A staff member signed in as the actor may make
+ * requests can only be read. An internal request has no company, so only
+ * the permission counts. A staff member signed in as the actor may make
  * it too, as the user's own work: the actor's rights decide, and the change
  * records the staff member (`signedInAsWork`, decision 0028).
  *
@@ -42,7 +43,8 @@ export const CHANGE_MOMENT = sql`clock_timestamp()`;
  * @param actor - The acting user.
  * @param ref - The request's number or ID.
  * @param permission - The permission the change needs.
- * @returns The request, its company and the actor's permissions there.
+ * @returns The request, its company (`null` for an internal request) and the actor's
+ *   permissions there.
  * @throws {ServiceError} `not_found` when the actor may not see the request,
  *   `forbidden` without the permission, `invalid` when the company is deactivated.
  */
@@ -54,7 +56,7 @@ export async function requestToChange(
 ): Promise<RequestAccess> {
   const access = await getRequestAccess(ctx.db, actor, ref);
   assertPermission(access.permissions, permission);
-  if (access.company.deactivatedAt) {
+  if (access.company?.deactivatedAt) {
     throw companyDeactivatedError();
   }
   return access;
@@ -163,7 +165,8 @@ async function assertStillSignedInAs(tx: DatabaseTransaction, actor: Actor): Pro
  *
  * @param tx - The change's transaction.
  * @param actor - The acting user.
- * @param companyId - The request's company (or the one a request is raised in).
+ * @param companyId - The request's company (or the one a request is raised in), or `null` for
+ *   an internal request, where the actor's staff role alone counts.
  * @param permission - The permission to check again.
  * @param alsoLock - Other users the change is about (the staff members it assigns), locked
  *   `FOR SHARE` in the same statement as the actor, in ID order.
@@ -175,7 +178,7 @@ async function assertStillSignedInAs(tx: DatabaseTransaction, actor: Actor): Pro
 export async function assertStillMayChange(
   tx: DatabaseTransaction,
   actor: Actor,
-  companyId: string,
+  companyId: string | null,
   permission: Permission,
   alsoLock: readonly string[] = [],
 ): Promise<Map<string, LockedUser>> {
@@ -184,7 +187,7 @@ export async function assertStillMayChange(
     actor,
     companyId,
     permission,
-    { alsoLock },
+    { alsoLock, internalRequest: companyId === null },
   );
   if (companyDeactivatedAt) {
     throw companyDeactivatedError();
@@ -227,7 +230,7 @@ export function changeRequest<T>(
     const users = await assertStillMayChange(
       tx,
       actor,
-      access.company.id,
+      access.company?.id ?? null,
       permission,
       options.alsoLock,
     );

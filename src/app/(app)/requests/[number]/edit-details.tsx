@@ -114,15 +114,19 @@ function DetailsFields({ details, types }: { details: Details; types: readonly E
  * @param props.request - The request's number.
  * @param props.details - Its details as they are.
  * @param props.types - The types to choose from: the active ones, and the request's own.
+ * @param props.internal - Whether it's an internal request, which no company reads: the dialog
+ *   then says nothing about what the company sees.
  */
 export default function EditDetails({
   request,
   details,
   types,
+  internal = false,
 }: {
   request: number;
   details: Details;
   types: readonly EditableType[];
+  internal?: boolean;
 }) {
   const t = useTranslations('requests.controls');
   return (
@@ -131,7 +135,7 @@ export default function EditDetails({
       fields={{ request: String(request) }}
       triggerLabel={t('editDetails')}
       title={t('editTitle')}
-      description={t('editDescription')}
+      description={t('editDescription', { place: internal ? 'internal' : 'company' })}
       confirmLabel={t('saveDetails')}
       tone="primary"
       allowedWhileSignedInAs

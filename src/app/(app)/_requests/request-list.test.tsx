@@ -378,6 +378,25 @@ describe('a request list for the staff', () => {
       expect(within(request ?? document.body).getByText('Adiutor Tests')).toHaveClass('2xl:hidden');
     });
 
+    it('names a request without a company Internal, in the company column and under the title', async () => {
+      vi.mocked(listRequests).mockResolvedValue({
+        items: [{ ...itemOf('Ours', []), company: null }],
+        total: 1,
+        page: 1,
+        size: 25,
+      });
+      await renderForStaff();
+
+      const [row] = screen.getAllByRole('row').slice(1);
+      const [request, company] = within(row ?? document.body).getAllByRole('cell');
+      expect(company).toHaveTextContent('Internal');
+      expect(
+        within(request ?? document.body)
+          .getByText('Internal')
+          .closest('.\\32xl\\:hidden'),
+      ).not.toBeNull();
+    });
+
     it("names no company on one company's list", async () => {
       render(
         await RequestList({

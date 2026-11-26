@@ -196,6 +196,16 @@ describe('the board of requests', () => {
     expect(within(waiting).queryByRole('button', { name: 'Move AD-2' })).not.toBeInTheDocument();
   });
 
+  it('names a card without a company Internal where the company would show', async () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
+    boardOf([card({ number: 3, title: 'Order new laptops', company: null })]);
+
+    await renderBoard();
+
+    const internal = within(lane('Open')).getByText('Order new laptops').closest('li');
+    expect(internal).toHaveTextContent('Internal');
+  });
+
   it('shows the staff each card’s priority and who it’s assigned to', async () => {
     vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
     boardOf([

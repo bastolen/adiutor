@@ -17,7 +17,9 @@
  * - **What a person's email shows** is decided again when it's sent
  *   ({@link readRequestUpdate}): nothing for someone who is no longer on the
  *   request or can no longer read it, and people by the names the request's
- *   page gives them, never an address or an ID.
+ *   page gives them, never an address or an ID. Only the staff read an
+ *   internal request, which has no company (decision 0048), so only they
+ *   are told about one.
  */
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 
@@ -32,6 +34,7 @@ import {
   user,
 } from '@/db/schema';
 import {
+  getInternalRequestPermissions,
   getPermissions,
   getStaffPermissionsInCompanies,
   type Permission,
@@ -57,7 +60,7 @@ import type { ServiceContext } from '../context';
 import getRequestPrefix from '../people/request-prefix';
 import getStaffName from '../people/staff-name';
 import { queueJobs, requestUpdateJob, type RequestUpdateEvent } from '../queue';
-import { loadPeopleOn } from './participants';
+import { loadPeopleOn, membershipIn } from './participants';
 import currentProposalEntryId from './proposals';
 
 /** A reply or a status change, as the change that made it queues it for the people on the request. */
@@ -105,7 +108,7 @@ async function queueNews(tx: DatabaseTransaction, jobs: readonly NewsJob[]): Pro
  * @param about - The request, and who made the change.
  * @param about.request - The request.
  * @param about.request.id - Its ID.
- * @param about.request.companyId - Its company.
+ * @param about.request.companyId - Its company; `null` for an internal request.
  * @param about.actorId - Who made the change: they aren't told about it.
  * @param news - What happened, in order.
  * @param mentioned - The people a reply among the news mentions.
@@ -113,7 +116,7 @@ async function queueNews(tx: DatabaseTransaction, jobs: readonly NewsJob[]): Pro
  */
 export async function tellPeopleOnRequest(
   tx: DatabaseTransaction,
-  about: { request: { id: string; companyId: string }; actorId: string },
+  about: { request: { id: string; companyId: string | null }; actorId: string },
   news: readonly RequestNews[],
   mentioned: readonly string[] = [],
 ): Promise<number> {
@@ -183,7 +186,7 @@ export async function staffWhoReadNotes(
  * @param about - The request, and who wrote the note.
  * @param about.request - The request.
  * @param about.request.id - Its ID.
- * @param about.request.companyId - Its company.
+ * @param about.request.companyId - Its company; `null` for an internal request.
  * @param about.actorId - Who wrote the note: they aren't told about it.
  * @param entryId - The note.
  * @param mentioned - The people the note mentions.
@@ -191,7 +194,7 @@ export async function staffWhoReadNotes(
  */
 export async function tellStaffOnRequest(
   tx: DatabaseTransaction,
-  about: { request: { id: string; companyId: string }; actorId: string },
+  about: { request: { id: string; companyId: string | null }; actorId: string },
   entryId: string,
   mentioned: readonly string[] = [],
 ): Promise<number> {
@@ -436,8 +439,8 @@ export interface RequestUpdate {
     reference: string;
     /** Its title. */
     title: string;
-    /** Its company's name. */
-    companyName: string;
+    /** Its company's name; `null` for an internal request, which has none. */
+    companyName: string | null;
   };
   /** What happened, in the order it was queued. */
   items: RequestUpdateItem[];
@@ -461,7 +464,8 @@ export interface RequestUpdate {
 }
 
 /**
- * Loads the request an email is about, with its company.
+ * Loads the request an email is about, with its company (none for an
+ * internal request).
  *
  * @param db - Database client.
  * @param requestId - The request.
@@ -482,7 +486,7 @@ async function loadNewsRequest(db: Database, requestId: string) {
       companyDeactivatedAt: company.deactivatedAt,
     })
     .from(request)
-    .innerJoin(company, eq(company.id, request.companyId))
+    .leftJoin(company, eq(company.id, request.companyId))
     .where(eq(request.id, requestId));
   return found;
 }
@@ -495,11 +499,12 @@ type NewsRequest = NonNullable<Awaited<ReturnType<typeof loadNewsRequest>>>;
  * no entry names them for, each with their role in the request's company.
  *
  * @param db - Database client.
- * @param companyId - The request's company.
+ * @param companyId - The request's company; `null` for an internal request, where nobody has a
+ *   role but the staff's.
  * @param userIds - The reader's ID, then the others'.
  * @returns Their rows, in no order; nobody whose account is gone.
  */
-function loadNewsPeople(db: Database, companyId: string, userIds: readonly string[]) {
+function loadNewsPeople(db: Database, companyId: string | null, userIds: readonly string[]) {
   return db
     .select({
       id: user.id,
@@ -512,7 +517,7 @@ function loadNewsPeople(db: Database, companyId: string, userIds: readonly strin
       companyRole: membership.role,
     })
     .from(user)
-    .leftJoin(membership, and(eq(membership.userId, user.id), eq(membership.companyId, companyId)))
+    .leftJoin(membership, membershipIn(companyId))
     .where(inArray(user.id, [...userIds]));
 }
 
@@ -520,19 +525,24 @@ function loadNewsPeople(db: Database, companyId: string, userIds: readonly strin
 type NewsPerson = Awaited<ReturnType<typeof loadNewsPeople>>[number];
 
 /**
- * Someone's permissions in a request's company, as they are now.
+ * Someone's permissions in a request's company, as they are now; in an
+ * internal request, those of their staff role alone.
  *
  * @param person - Their roles.
  * @param person.platformRole - Their staff role, if they have one.
  * @param person.companyRole - Their role in the company, if they're in it.
  * @param found - The request.
+ * @param found.companyId - Its company; `null` for an internal request.
  * @param found.companyDeactivatedAt - When its company was deactivated, or `null`.
  * @returns The permissions.
  */
 function permissionsInCompanyOf(
   person: { platformRole: PlatformRole | null; companyRole: CompanyRole | null },
-  found: { companyDeactivatedAt: Date | null },
+  found: { companyId: string | null; companyDeactivatedAt: Date | null },
 ): Set<Permission> {
+  if (found.companyId === null) {
+    return getInternalRequestPermissions(person);
+  }
   return getPermissions({
     platformRole: person.platformRole,
     companyRole: person.companyRole,
@@ -945,7 +955,8 @@ export async function readRequestUpdate(
       told,
       entries: new Map(entries.map((entry) => [entry.id, entry])),
       mentions,
-      sideNames: { company: found.companyName, staff: staffName },
+      // An internal request has nobody on the company's side to name.
+      sideNames: { company: found.companyName ?? staffName, staff: staffName },
     },
     news,
   );

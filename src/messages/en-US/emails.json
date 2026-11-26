@@ -254,6 +254,7 @@
       "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} raised {{name} raised this request for you.} other {{name} subscribed you to this request.}}",
       "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
+      "whereInternal": "<link>{reference}</link> · Internal",
       "reply": "<strong>{name}</strong> replied:",
       "note": "<strong>{name}</strong> wrote an internal note:",
       "noteOnlyStaff": "Internal note: only the staff see this.",

@@ -23,15 +23,19 @@ import ReplyForm from './reply-form';
  * @param props.request - The request's number.
  * @param props.canWait - Whether the reply form offers "Send and wait for the company".
  * @param props.canPropose - Whether the reply form offers "Send as solution".
+ * @param props.staffOnly - Whether only the staff read a reply (an internal request's): its
+ *   editor keeps links to the staff's pages.
  */
 export default function WriteTabs({
   request,
   canWait,
   canPropose = false,
+  staffOnly = false,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
+  staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.note');
   return (
@@ -42,7 +46,14 @@ export default function WriteTabs({
           value: 'reply',
           label: t('replyTab'),
           icon: MessageSquare,
-          content: <ReplyForm request={request} canWait={canWait} canPropose={canPropose} />,
+          content: (
+            <ReplyForm
+              request={request}
+              canWait={canWait}
+              canPropose={canPropose}
+              staffOnly={staffOnly}
+            />
+          ),
         },
         {
           value: 'note',

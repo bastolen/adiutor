@@ -70,7 +70,8 @@ export type ListBoardOptions = Omit<ListRequestsOptions, 'status' | 'only' | 'pa
  * and still knows its total.
  *
  * @param ctx - Service context.
- * @param where - The requests the reader may see, filtered (on `request` joined with `company`).
+ * @param where - The requests the reader may see, filtered (on `request` left-joined with
+ *   `company`, which an internal request has none of).
  * @param order - The order inside each lane, ending with the request's ID.
  * @param limit - How many cards a lane shows.
  * @returns The picked requests' IDs, statuses and their status's total, in order within each status.
@@ -91,7 +92,7 @@ async function pickCards(
       total: sql<string>`count(*) over (partition by ${request.status})`.as('lane_total'),
     })
     .from(request)
-    .innerJoin(company, eq(request.companyId, company.id))
+    .leftJoin(company, eq(request.companyId, company.id))
     .where(where)
     .as('ranked');
   const rows = await ctx.db
@@ -105,9 +106,9 @@ async function pickCards(
 
 /**
  * The lanes the reader may move a card to: `statusChoices` with their
- * permissions in its company, and none while the company is deactivated
- * (its requests can only be read, also by the staff, who keep their rights
- * there).
+ * permissions in its company (an internal request's: their staff role's),
+ * and none while the company is deactivated (its requests can only be read,
+ * also by the staff, who keep their rights there).
  *
  * @param actor - The reader.
  * @param row - The card's request, as selected.
@@ -117,10 +118,10 @@ function movesOf(actor: Actor, row: RequestListRow): RequestStatus[] {
   if (row.companyDeactivatedAt !== null) {
     return [];
   }
-  const permissions = permissionsIn(actor, {
-    id: row.company.id,
-    deactivatedAt: row.companyDeactivatedAt,
-  });
+  const permissions = permissionsIn(
+    actor,
+    row.company && { id: row.company.id, deactivatedAt: row.companyDeactivatedAt },
+  );
   return statusChoices(permissions, row.status);
 }
 
@@ -176,7 +177,7 @@ export async function listBoard(
       : await ctx.db
           .select(requestListColumns)
           .from(request)
-          .innerJoin(company, eq(request.companyId, company.id))
+          .leftJoin(company, eq(request.companyId, company.id))
           .innerJoin(requestType, eq(request.type, requestType.key))
           .where(
             inArray(

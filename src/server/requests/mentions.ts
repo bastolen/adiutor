@@ -10,11 +10,14 @@
  * it (or raised it for someone), replied to it, changed it, is assigned to
  * it or was assigned. They
  * learn nothing else about who is on the staff. Nobody mentions themselves,
- * a deactivated account, or someone without a name to show.
+ * a deactivated account, or someone without a name to show. In an internal
+ * request, which has no company (decision 0048), only the staff are
+ * mentioned.
  *
  * A text never holds a user ID. While it's written, a person is named by a
- * key that's only valid in the request's company ({@link mentionKey}); once
- * it's stored, by the ID of the mention's row.
+ * key that's only valid in the request's company, or in the internal
+ * requests ({@link mentionKey}); once it's stored, by the ID of the mention's
+ * row.
  */
 import { and, eq, inArray, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 
@@ -49,7 +52,8 @@ import { subscribeAutomatically } from './subscribers';
 export interface MentionablePerson {
   /**
    * What stands for them in a text that's being written. It's only valid in
-   * the company it was made for, and says nothing about who they are.
+   * the company it was made for (or in the internal requests), and says
+   * nothing about who they are.
    */
   key: string;
   /** Their name. */
@@ -70,8 +74,8 @@ interface Mentionable {
 
 /** Where a text is, or will be: its company, and its request once there is one. */
 interface TextPlace {
-  /** The company's ID. */
-  companyId: string;
+  /** The company's ID; `null` for an internal request, which has none. */
+  companyId: string | null;
   /** The request's ID; `null` for a request that's still being written. */
   requestId: string | null;
 }
@@ -94,11 +98,15 @@ async function mentionable(
   const active = isNull(user.deactivatedAt);
   const readsRequests = inArray(user.platformRole, READING_STAFF_ROLES);
   const person = { id: user.id, name: user.name };
-  const colleagues = await db
-    .select(person)
-    .from(membership)
-    .innerJoin(user, eq(membership.userId, user.id))
-    .where(and(eq(membership.companyId, place.companyId), active));
+  // An internal request has no company, and so nobody at one to mention.
+  const colleagues =
+    place.companyId === null
+      ? []
+      : await db
+          .select(person)
+          .from(membership)
+          .innerJoin(user, eq(membership.userId, user.id))
+          .where(and(eq(membership.companyId, place.companyId), active));
 
   let staff: { id: string; name: string }[] = [];
   if (getStaffPermissionsInCompanies(actor).has('requests:view-internal')) {
@@ -214,13 +222,14 @@ export async function listMentionable(
   }
   const { company, permissions } = access;
   assertPermission(permissions, 'requests:contribute');
-  if (company.deactivatedAt) {
+  if (company?.deactivatedAt) {
     return [];
   }
-  const people = await mentionable(ctx.db, actor, { companyId: company.id, requestId });
+  const companyId = company?.id ?? null;
+  const people = await mentionable(ctx.db, actor, { companyId, requestId });
   return people
     .map(({ id, name, side }) => ({
-      key: mentionKey(company.id, id),
+      key: mentionKey(companyId, id),
       name,
       staff: side === 'staff',
     }))
@@ -244,7 +253,7 @@ export async function listMentionable(
  * @param tx - The transaction that stored the text.
  * @param actor - Whoever wrote it.
  * @param text - The text as it was stored, and where it is.
- * @param text.companyId - The request's company.
+ * @param text.companyId - The request's company; `null` for an internal request.
  * @param text.requestId - The request.
  * @param text.entryId - The reply the text is; `null` for the request's description.
  * @param text.written - The text.
@@ -258,7 +267,7 @@ export async function storeMentions(
   tx: DatabaseTransaction,
   actor: Actor,
   text: {
-    companyId: string;
+    companyId: string | null;
     requestId: string;
     entryId: string | null;
     written: string;

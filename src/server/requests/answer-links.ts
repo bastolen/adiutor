@@ -141,7 +141,12 @@ async function mayStillAnswer(
 ): Promise<boolean> {
   try {
     const { company, permissions } = await getRequestAccess(ctx.db, person, found.requestId);
-    return company.deactivatedAt === null && mayAnswerSolution(permissions, 'proposed');
+    // An internal request has no company, and nobody who could answer a solution.
+    return (
+      company !== null &&
+      company.deactivatedAt === null &&
+      mayAnswerSolution(permissions, 'proposed')
+    );
   } catch (error) {
     if (error instanceof ServiceError) {
       return false;

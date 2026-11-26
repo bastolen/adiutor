@@ -37,11 +37,12 @@ export const { ctx, db, sent } = setupTestContext();
  * Stores a request without going through the service, with the next number
  * (`requests.last_number`, so requests raised afterwards continue from it).
  *
- * @param companyId - The company it's in.
- * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at the company).
+ * @param companyId - The company it's in, or `null` for an internal request.
+ * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at
+ *   the company, or by nobody on the staff for an internal request).
  * @returns The stored request.
  */
-export async function storeRequest(companyId: string, values: RequestValues = {}) {
+export async function storeRequest(companyId: string | null, values: RequestValues = {}) {
   return storeRequestIn(db, companyId, values);
 }
 

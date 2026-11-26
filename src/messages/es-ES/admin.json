@@ -414,7 +414,7 @@
           "allTypesHint": "Todos los tipos, también los que se añadan más adelante.",
           "chosenTypes": "Tipos elegidos",
           "eventsLegend": "Enviar",
-          "staffOnly": "Las notas internas y las prioridades son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
+          "staffOnly": "Todos los webhooks reciben las solicitudes internas, y los que las eligen reciben las notas internas y las prioridades. Las tres son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
         },
         "add": {
           "button": "Añadir webhook",

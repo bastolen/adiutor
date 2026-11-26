@@ -5,7 +5,8 @@
  * a copy of it stays one), and in the dialog that changes who is
  * subscribed to a request.
  * Someone at a company never gets a user ID; a key says nothing about who
- * the person is, and is only valid in the company it was made for.
+ * the person is, and is only valid in the company it was made for (or, for
+ * an internal request, in the internal requests: decision 0048).
  */
 import { createHmac } from 'node:crypto';
 
@@ -20,19 +21,26 @@ import derivedSecret from '../derived-secret';
 const KEY_PURPOSE = 'adiutor mention keys';
 
 /**
- * The key that stands for a person in a company. It's the same every time,
- * so a text that was kept in the browser still names them, and it can't be
- * turned back into who they are or used in another company. Nothing is
- * stored for it: the server makes the keys of the people who may be named
- * again and compares.
+ * Where the keys of an internal request (decision 0048), which has no company,
+ * are made: a scope of their own, which no company's ID can be.
+ */
+const INTERNAL_SCOPE = 'internal';
+
+/**
+ * The key that stands for a person in a company, or in the internal
+ * requests. It's the same every time, so a text that was kept in the browser
+ * still names them, and it can't be turned back into who they are or used in
+ * another company. Nothing is stored for it: the server makes the keys of
+ * the people who may be named again and compares.
  *
- * @param companyId - The company the text is written in, or the request is in.
+ * @param companyId - The company the text is written in, or the request is in; `null` for an
+ *   internal request.
  * @param userId - The person.
  * @returns Their key there.
  */
-export default function mentionKey(companyId: string, userId: string): string {
+export default function mentionKey(companyId: string | null, userId: string): string {
   return createHmac('sha256', derivedSecret(KEY_PURPOSE))
-    .update(`${companyId}:${userId}`)
+    .update(`${companyId ?? INTERNAL_SCOPE}:${userId}`)
     .digest('base64url')
     .slice(0, MENTION_KEY_LENGTH);
 }
