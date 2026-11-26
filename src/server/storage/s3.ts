@@ -1,15 +1,16 @@
 /**
  * @file The S3-compatible driver: files in a bucket, at their key, on AWS
  * S3, Cloudflare R2, Backblaze B2 or a server of your own (Garage,
- * SeaweedFS). Requests are signed with `aws4fetch` (AWS Signature V4), a
- * small signer on top of `fetch`, rather than the AWS SDK. Every upload is
- * signed with its SHA-256, so the service refuses one that arrives changed.
- * What a service replies is only read for its error code, and never logged
- * or shown.
+ * SeaweedFS). Requests are signed with `aws4fetch`'s signer (AWS Signature
+ * V4) rather than the AWS SDK, and sent with `fetch`, given the address and
+ * options, never a `Request` (see `signedFetch`). Every upload is signed with
+ * its SHA-256, so the service refuses one that arrives changed. What a
+ * service replies is only read for its error code, and never logged or
+ * shown.
  */
 import { createHash } from 'node:crypto';
 
-import { AwsClient } from 'aws4fetch';
+import { AwsV4Signer } from 'aws4fetch';
 
 import type { S3StorageConfig } from '@/lib/storage';
 
@@ -28,6 +29,11 @@ export interface BucketTimeouts {
   idle: number;
   /** For a delete. */
   delete: number;
+  /**
+   * The longest wait before trying a server error or 429 again; each next
+   * wait may be twice as long, the wait itself chosen at random up to it.
+   */
+  retry: number;
 }
 
 /** The time limits a server uses. */
@@ -36,7 +42,34 @@ const TIMEOUTS: BucketTimeouts = {
   firstByte: 15_000,
   idle: 30_000,
   delete: 15_000,
+  retry: 200,
 };
+
+/** How often a server error or 429 is tried again: twice, as a request handler can't wait longer. */
+const RETRIES = 2;
+
+/** A request to the bucket, as `signedFetch` sends it. */
+interface BucketRequest {
+  /** Its method. */
+  method: 'GET' | 'PUT' | 'DELETE';
+  /** Headers to sign and send, besides the date and the signature. */
+  headers?: Record<string, string>;
+  /** The file, for an upload. */
+  body?: Uint8Array<ArrayBuffer>;
+  /** Ends the request, every try of it together. */
+  signal: AbortSignal;
+}
+
+/**
+ * Waits.
+ *
+ * @param ms - For how long, in milliseconds.
+ */
+async function wait(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 /** How much of an error reply is read for its code. */
 const ERROR_READ_BYTES = 2048;
@@ -124,15 +157,53 @@ export default function bucketStorage(
   config: S3StorageConfig,
   timeouts: BucketTimeouts = TIMEOUTS,
 ): FileStorage {
-  const client = new AwsClient({
-    accessKeyId: config.accessKeyId,
-    secretAccessKey: config.secretAccessKey,
-    service: 's3',
-    region: config.region,
-    // A server error or 429 is tried again twice; a request handler can't wait longer.
-    retries: 2,
-    initRetryMs: 200,
-  });
+  /** The signing keys made so far (one a day), kept for the next requests. */
+  const signingKeys = new Map<string, ArrayBuffer>();
+
+  /**
+   * Signs a request and sends it, trying a server error or 429 again
+   * (`RETRIES`), each try signed anew. `fetch` is given the address and the
+   * options, never a `Request`: inside a request, Next.js's `fetch` rebuilds
+   * a `Request` around its body's stream, which loses the body's length, so
+   * an upload went out in chunks, and Cloudflare R2 refuses an upload without
+   * `Content-Length` (411 Length Required). Given the bytes themselves,
+   * `fetch` sends their length.
+   *
+   * @param url - The address.
+   * @param request - The request.
+   * @param attempt - How many tries came before this one.
+   * @returns The reply to the last try.
+   */
+  const signedFetch = async (
+    url: string,
+    request: BucketRequest,
+    attempt = 0,
+  ): Promise<Response> => {
+    const signed = await new AwsV4Signer({
+      url,
+      method: request.method,
+      headers: request.headers,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+      service: 's3',
+      region: config.region,
+      cache: signingKeys,
+    }).sign();
+    const response = await fetch(signed.url, {
+      method: signed.method,
+      headers: signed.headers,
+      body: request.body,
+      signal: request.signal,
+    });
+    if (attempt >= RETRIES || (response.status < 500 && response.status !== 429)) {
+      return response;
+    }
+    // A reply that already broke off can't be cancelled, and is tried again all the same.
+    await response.body?.cancel().catch(() => {});
+    await wait(Math.random() * timeouts.retry * 2 ** attempt);
+    return signedFetch(url, request, attempt + 1);
+  };
+
   const endpoint = new URL(config.endpoint);
   const basePath = endpoint.pathname.replace(/\/+$/, '');
 
@@ -158,7 +229,7 @@ export default function bucketStorage(
     driver: 's3',
 
     /**
-     * Uploads a file, signed with its SHA-256.
+     * Uploads a file, signed with its SHA-256 and sent with its length.
      *
      * @param key - Where.
      * @param bytes - The file.
@@ -166,7 +237,7 @@ export default function bucketStorage(
      */
     async put(key, bytes, contentType) {
       const response = await send(
-        client.fetch(urlOf(key), {
+        signedFetch(urlOf(key), {
           method: 'PUT',
           body: bytes,
           headers: {
@@ -198,7 +269,7 @@ export default function bucketStorage(
       );
       let response: Response;
       try {
-        response = await send(client.fetch(urlOf(key), { signal: answered.signal }));
+        response = await send(signedFetch(urlOf(key), { method: 'GET', signal: answered.signal }));
       } finally {
         clearTimeout(timer);
       }
@@ -226,7 +297,7 @@ export default function bucketStorage(
      */
     async delete(key) {
       const response = await send(
-        client.fetch(urlOf(key), {
+        signedFetch(urlOf(key), {
           method: 'DELETE',
           signal: AbortSignal.timeout(timeouts.delete),
         }),

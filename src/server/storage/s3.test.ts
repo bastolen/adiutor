@@ -6,9 +6,11 @@
  * @vitest-environment node
  */
 import { createHash } from 'node:crypto';
+import { createServer, type IncomingHttpHeaders } from 'node:http';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { defined } from '@/lib/defined';
 import type { S3StorageConfig } from '@/lib/storage';
 
 import { attachmentKey } from './keys';
@@ -29,7 +31,7 @@ const config: S3StorageConfig = {
 };
 
 /** Short time limits, so the tests don't wait. */
-const quick: BucketTimeouts = { put: 200, firstByte: 50, idle: 50, delete: 200 };
+const quick: BucketTimeouts = { put: 200, firstByte: 50, idle: 50, delete: 200, retry: 1 };
 
 /**
  * An S3 error reply.
@@ -43,19 +45,87 @@ function errorReply(status: number, code: string): Response {
 }
 
 /**
- * Replaces `fetch`, keeping every request it's given.
+ * Replaces `fetch`, keeping every request it's given (its address and
+ * options, as a `Request`).
  *
  * @param reply - What it answers each request with.
  * @returns The requests it was given.
  */
 function stubFetch(reply: (request: Request) => Promise<Response> | Response): Request[] {
   const requests: Request[] = [];
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-    const request = input as Request;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
     requests.push(request);
     return reply(request);
   });
   return requests;
+}
+
+/**
+ * Starts a server on this computer that answers like Cloudflare R2 about an
+ * upload's length: one sent without `Content-Length` (in chunks) is refused
+ * with 411 Length Required, any other request succeeds.
+ *
+ * @returns Its address, the headers of each request it was sent, and a way to stop it.
+ */
+async function startLengthCheckingServer(): Promise<{
+  endpoint: string;
+  received: IncomingHttpHeaders[];
+  stop: () => Promise<void>;
+}> {
+  const received: IncomingHttpHeaders[] = [];
+  const server = createServer((request, response) => {
+    received.push(request.headers);
+    request.resume();
+    request.on('end', () => {
+      const unsized = request.method === 'PUT' && request.headers['content-length'] === undefined;
+      response.writeHead(unsized ? 411 : 200).end();
+    });
+  });
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('The server has no port.');
+  }
+  return {
+    endpoint: `http://127.0.0.1:${address.port}`,
+    received,
+    /**
+     * Stops the server, with the connections still open.
+     *
+     * @returns When it has stopped.
+     */
+    stop: () =>
+      new Promise((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      }),
+  };
+}
+
+/**
+ * Replaces `fetch` with one that acts as Next.js's does inside a request
+ * (`doOriginalFetch` in `next/dist/server/lib/patch-fetch.js`): a `Request`
+ * it's given is rebuilt around its body's stream, so the body's length is
+ * lost and it's sent in chunks. Everything is then sent for real.
+ */
+function fetchAsNextJsDoes(): void {
+  const realFetch = globalThis.fetch;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (!(input instanceof Request)) {
+      return realFetch(input, init);
+    }
+    const rebuilt: RequestInit & { duplex: 'half' } = {
+      method: input.method,
+      headers: input.headers,
+      body: input.body,
+      signal: input.signal,
+      duplex: 'half',
+    };
+    return realFetch(new Request(input.url, rebuilt), init);
+  });
 }
 
 afterEach(() => {
@@ -92,6 +162,72 @@ describe('bucketStorage', () => {
     expect(request?.headers.get('authorization')).toMatch(
       /^AWS4-HMAC-SHA256 Credential=key-id\/\d{8}\/auto\/s3\/aws4_request/,
     );
+  });
+
+  it('sends an upload with its length, even through a fetch that rebuilds requests as Next.js does', async () => {
+    const server = await startLengthCheckingServer();
+    fetchAsNextJsDoes();
+    try {
+      const storage = bucketStorage({ ...config, endpoint: server.endpoint, forcePathStyle: true });
+      await storage.put(attachmentKey(ID), new TextEncoder().encode('printer log'), 'text/plain');
+
+      expect(server.received).toHaveLength(1);
+      expect(server.received[0]?.['content-length']).toBe('11');
+      expect(server.received[0]?.['transfer-encoding']).toBeUndefined();
+    } finally {
+      await server.stop();
+    }
+  });
+
+  it('tries a server error or 429 again twice, with the whole file, and a refusal never', async () => {
+    const storage = bucketStorage(config, quick);
+    /**
+     * Uploads a one-byte file.
+     *
+     * @returns When it's stored.
+     */
+    const upload = () => storage.put(attachmentKey(ID), new Uint8Array([7]), 'image/png');
+
+    const replies = [503, 429];
+    const recovered = stubFetch(() => new Response(null, { status: replies.shift() ?? 200 }));
+    await expect(upload()).resolves.toBeUndefined();
+    expect(recovered).toHaveLength(3);
+    const lastTry = defined(recovered[2], 'the last try');
+    expect(new Uint8Array(await lastTry.arrayBuffer())).toEqual(new Uint8Array([7]));
+
+    const failing = stubFetch(() => new Response(null, { status: 500 }));
+    await expect(upload()).rejects.toMatchObject({ failure: 'failed' });
+    expect(failing).toHaveLength(3);
+
+    const refused = stubFetch(() => errorReply(400, 'InvalidRequest'));
+    await expect(upload()).rejects.toMatchObject({ failure: 'failed' });
+    expect(refused).toHaveLength(1);
+  });
+
+  it('tries a server error again even when its reply broke off', async () => {
+    let tries = 0;
+    stubFetch(() => {
+      tries += 1;
+      if (tries > 1) {
+        return new Response(null, { status: 200 });
+      }
+      const brokenOff = new ReadableStream<Uint8Array>({
+        /**
+         * Ends the reply with an error before it sends anything.
+         *
+         * @param controller - The stream's controller.
+         */
+        start(controller) {
+          controller.error(new TypeError('terminated'));
+        },
+      });
+      return new Response(brokenOff, { status: 503 });
+    });
+
+    await expect(
+      bucketStorage(config, quick).put(attachmentKey(ID), new Uint8Array([7]), 'image/png'),
+    ).resolves.toBeUndefined();
+    expect(tries).toBe(2);
   });
 
   it('reads a file with its size, and a missing one as nothing', async () => {
