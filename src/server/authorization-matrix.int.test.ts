@@ -55,6 +55,7 @@ import {
   setupTestContext,
   staffActor,
   storeQueuedJob,
+  storeWebhook,
   tokenFrom,
   addPassword,
 } from '../../tests/integration/helpers';
@@ -165,6 +166,15 @@ import {
   updateRequestDetails,
   updateRequestType,
 } from './requests';
+import {
+  addWebhook,
+  getWebhook,
+  listWebhooks,
+  removeWebhook,
+  renewWebhookSecret,
+  setWebhookOn,
+  updateWebhook,
+} from './webhooks';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -229,6 +239,8 @@ interface World {
   failedJobs: { retry: string; discard: string };
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
+  /** A webhook to view and change, one that's off (to turn on), and one to remove. */
+  webhooks: { kept: string; off: string; removable: string };
 }
 
 /**
@@ -544,6 +556,40 @@ function listOperations(): Operation[] {
     ['move request type', (w) => moveRequestType(ctx, w.actor, { type: 'bug', direction: 'up' })],
     ['archive request type', (w) => archiveRequestType(ctx, w.actor, { type: 'new_feature' })],
     ['restore request type', (w) => restoreRequestType(ctx, w.actor, { type: 'new_feature' })],
+    ['list webhooks', (w) => listWebhooks(ctx, w.actor)],
+    ['view webhook', (w) => getWebhook(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'add webhook',
+      (w) =>
+        addWebhook(ctx, w.actor, {
+          name: 'Procurement',
+          url: 'https://hooks.adiutor.test/in',
+          format: 'json',
+          events: ['raised', 'reply'],
+          allTypes: true,
+          types: [],
+        }),
+    ],
+    [
+      'change webhook',
+      (w) =>
+        updateWebhook(ctx, w.actor, {
+          webhook: w.webhooks.kept,
+          name: 'Purchasing',
+          url: '',
+          format: 'chat',
+          events: ['raised'],
+          allTypes: false,
+          types: ['bug'],
+        }),
+    ],
+    ['renew webhook secret', (w) => renewWebhookSecret(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'turn webhook off',
+      (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.kept, on: false }),
+    ],
+    ['turn webhook on', (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.off, on: true })],
+    ['remove webhook', (w) => removeWebhook(ctx, w.actor, { webhook: w.webhooks.removable })],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -994,6 +1040,15 @@ const EXPECTED: Record<string, string> = {
   'move request type': 'FFFFFFA',
   'archive request type': 'FFFFFFA',
   'restore request type': 'FFFFFFA',
+  // Webhooks send request texts out of Adiutor: only staff Admins, who manage the types, set them up.
+  'list webhooks': 'FFFFFFA',
+  'view webhook': 'FFFFFFA',
+  'add webhook': 'FFFFFFA',
+  'change webhook': 'FFFFFFA',
+  'renew webhook secret': 'FFFFFFA',
+  'turn webhook off': 'FFFFFFA',
+  'turn webhook on': 'FFFFFFA',
+  'remove webhook': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
@@ -1251,6 +1306,11 @@ async function createWorld(role: MatrixRole): Promise<World> {
       other: String(
         (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
       ),
+    },
+    webhooks: {
+      kept: await storeWebhook(db, { name: 'Kept' }),
+      off: await storeWebhook(db, { name: 'Off', off: { at: new Date(), reason: 'manual' } }),
+      removable: await storeWebhook(db, { name: 'Removable' }),
     },
   };
 }

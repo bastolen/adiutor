@@ -29,6 +29,8 @@ detail, one topic each.
 - [Security measures](security-measures.md): the audit log, rate limits, the client IP, tokens,
   the name checks, webhooks' addresses, the lock order of concurrent changes, security headers and
   the Content Security Policy.
+- [Webhooks](webhooks.md): who sets them up, what a webhook has, why its changes are security
+  changes, its address and secret, and verifying a delivery.
 - [Email](email.md): the templates, previewing them, Mailpit, and how emails leave the app.
 - [Background jobs](jobs.md): the tick, the recurring and queued jobs, their history, the Jobs page,
   the commands and adding a job.

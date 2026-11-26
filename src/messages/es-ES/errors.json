@@ -101,6 +101,10 @@
     "requestTypes": {
       "unavailable": "Este tipo ya no se puede elegir. Elige otro.",
       "lastActive": "Deja al menos un tipo sin archivar, o no se podrá abrir ninguna solicitud."
+    },
+    "webhooks": {
+      "confirmationRequired": "Confirma que eres tú con tu segundo paso antes de cambiar adónde envían los webhooks.",
+      "unreadable": "La dirección o el secreto de este webhook ya no se pueden leer. Escribe de nuevo su dirección y después renueva su secreto."
     }
   }
 }

@@ -18,8 +18,10 @@ password and provider changes, wrong current passwords typed in a signed-in sess
 account, turning two-step verification on or off, or new backup codes), revoked sessions,
 account creation (by an Admin, by accepting an invitation, or at setup), deactivation, reactivation
 and deletion,
-MFA resets, role changes, removed members, invitations and invite links, company changes, and staff
-signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
+MFA resets, role changes, removed members, invitations and invite links, company changes, changes
+to webhooks (added, changed, a secret renewed, turned off or on, removed; with the webhook's name
+and host, never its address or secret, see [Webhooks](webhooks.md#changes-are-security-changes)),
+and staff signing in as a user (`impersonation_started`, with the optional reason the staff member gave, and
 `impersonation_ended`, with why it ended: going back, its time being up, no longer being allowed, or
 the staff member's session ending; and users turning sign-ins by staff off or on,
 `staff_sign_in_turned_off` and `staff_sign_in_turned_on`; see `src/server/auth/impersonation.ts` and
@@ -66,6 +68,7 @@ code is the source if they ever differ.
 | Requests raised (`requestsPerUser`)                             | 60    | 1 hour      | user                  |
 | Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
+| Changes to webhooks (`webhookChangesPerUser`)                   | 30    | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
 | App errors stored (`appErrorsPerIp`)                            | 20    | 1 hour      | IP address            |
 
@@ -485,7 +488,11 @@ deadlocking:
    is read there, never locked (it would come first, step 1): a change refuses when that read
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.
-8. Sessions and audit events, last.
+8. A `webhook` row, `FOR NO KEY UPDATE`, then its `webhook_delivery` rows: a change to the webhook
+   (`src/server/webhooks/manage.ts`; turning it off cancels its pending deliveries). Nothing above
+   locks a webhook: a request change only reads which webhooks hear of it, and a new delivery's
+   foreign key takes `FOR KEY SHARE`, which doesn't wait for `FOR NO KEY UPDATE`.
+9. Sessions and audit events, last.
 
 The other rows of `setting` (the staff's settings and setup's) are locked by settings changes
 (`writeSettings`, `FOR UPDATE` in key order, with the rows a check compares them with) and by setup,

@@ -96,6 +96,12 @@ export const RATE_LIMITS = {
   requestRepliesPerUser: { limit: 200, windowSeconds: 60 * 60 },
   /** Changes one user makes to requests: their status, and their title, type and priority. */
   requestChangesPerUser: { limit: 300, windowSeconds: 60 * 60 },
+  /**
+   * Changes one staff Admin makes to webhooks: adding, changing, renewing a
+   * secret, turning on or off and removing. Each change can look an address
+   * up, and points request texts somewhere new.
+   */
+  webhookChangesPerUser: { limit: 30, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**
