@@ -29,8 +29,8 @@ import EditedMark from './edited-mark';
  * @param props.id - A name no other text on the page has, for the versions' own IDs.
  * @param props.source - Where the text is from, for the versions' notes on copied code.
  * @param props.names - The names of the two sides.
- * @param props.staffOnly - Whether the text is an internal note, whose versions link to the
- *   staff's pages as it does.
+ * @param props.staffOnly - Whether only the staff read the text (an internal note, or an internal
+ *   request's), whose versions link to the staff's pages as it does.
  * @returns The note, or nothing.
  */
 export default function EditedNote({

@@ -13,7 +13,8 @@
  *
  * A description or reply is stored without links to the staff's pages
  * (`withoutStaffPageLinks`), as when it was written: the company reads it.
- * An internal note keeps them.
+ * An internal note keeps them, and so does every text of an internal request,
+ * which only the staff read (decision 0048).
  */
 import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -90,14 +91,15 @@ function mentionName(mention: TextMention, names: SideNames): string {
  *
  * @param stored - The text as it's stored.
  * @param mentions - The text's own mentions.
- * @param companyId - The request's company, which the keys are for.
+ * @param companyId - The request's company, which the keys are for; `null` for an internal
+ *   request.
  * @param names - The names of the two sides.
  * @returns The text to edit.
  */
 export function editableText(
   stored: string,
   mentions: readonly TextMention[],
-  companyId: string,
+  companyId: string | null,
   names: SideNames,
 ): string {
   const byId = new Map(mentions.map((mention) => [mention.id, mention]));
@@ -141,7 +143,7 @@ interface EditedText {
  * @param edit.written - The new text, as the editor sent it.
  * @param edit.edits - How many times the text had been edited when the editor started.
  * @param edit.allowed - Whether the rules allow the edit on the request as it's locked.
- * @param edit.companyId - The request's company.
+ * @param edit.companyId - The request's company; `null` for an internal request.
  * @param edit.side - The side the editor acts as.
  * @param edit.names - The names of the two sides.
  * @param edit.staffOnly - Whether only the staff read the text (an internal note): then only the
@@ -158,7 +160,7 @@ async function applyEdit(
     written: string;
     edits: number;
     allowed: boolean;
-    companyId: string;
+    companyId: string | null;
     side: RequestSide;
     names: SideNames;
     staffOnly: boolean;
@@ -281,10 +283,10 @@ export async function editRequestDescription(
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const typed = requestDescriptionSchema.parse(input.text);
   await assertChangeLimit(ctx, actor);
-  // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
-  // as reading the text costs time.
-  const written = withoutStaffPageLinks(typed, appUrl);
   const { permissions, company } = access;
+  // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
+  // as reading the text costs time. Only the staff read an internal request, which keeps them.
+  const written = company === null ? typed : withoutStaffPageLinks(typed, appUrl);
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) =>
     applyEdit(tx, actor, {
@@ -299,7 +301,8 @@ export async function editRequestDescription(
       allowed: mayEditDescription(permissions, locked.status),
       companyId: locked.companyId,
       side: requestSide(permissions),
-      names: { company: company.name, staff },
+      // An internal request has nobody on the company's side to name.
+      names: { company: company?.name ?? staff, staff },
       staffOnly: false,
     }),
   );
@@ -338,11 +341,11 @@ export async function editReply(
   }
   const written = requestReplySchema.parse(input.text);
   await assertChangeLimit(ctx, actor);
+  const { permissions, company } = access;
   // The company reads a reply: a link to one of the staff's pages is kept as its text. Read before
   // the request is locked, as reading the text costs time; whether it's a note is known once the
-  // entry is read, in the lock.
-  const forCompany = withoutStaffPageLinks(written, appUrl);
-  const { permissions, company } = access;
+  // entry is read, in the lock. Only the staff read an internal request, which keeps them.
+  const forCompany = company === null ? written : withoutStaffPageLinks(written, appUrl);
   const staff = await getStaffName(ctx.db);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
     const [reply] = await tx
@@ -381,7 +384,7 @@ export async function editReply(
       ),
       companyId: locked.companyId,
       side: requestSide(permissions),
-      names: { company: company.name, staff },
+      names: { company: company?.name ?? staff, staff },
       staffOnly: reply.kind === 'note',
     });
   });

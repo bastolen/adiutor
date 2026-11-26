@@ -13,7 +13,7 @@ import { getStaffPermissionsInCompanies } from '@/server/authz';
 import { parseRequestFilters } from './request-filters';
 import RequestViewToggle, { companyViewPaths } from './request-view-toggle';
 
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 
 /**
  * Reads the filters of a page for someone at a company.

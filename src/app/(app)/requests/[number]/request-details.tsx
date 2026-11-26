@@ -16,6 +16,7 @@ import TextLink from '@/components/ui/text-link';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import type { RequestDetail } from '@/server/requests';
 
+import InternalLabel from '../../_requests/internal-label';
 import RaisedForNote from '../../_requests/raised-for-note';
 import {
   PriorityBadge,
@@ -23,7 +24,11 @@ import {
   StatusBadge,
   TypeBadge,
 } from '../../_requests/request-badges';
-import PersonLine, { PeopleAvatars, PersonAvatar } from '../../_requests/request-person';
+import PersonLine, {
+  PeopleAvatars,
+  PersonAvatar,
+  requestSideNames,
+} from '../../_requests/request-person';
 
 /** The most subscribers shown as an avatar; a block after them says how many more there are. */
 const MAX_SUBSCRIBER_AVATARS = 4;
@@ -92,7 +97,7 @@ export default async function RequestDetails({
     getLocale(),
     getTimeZone(),
   ]);
-  const names = { company: detail.company.name, staff: detail.staffName };
+  const names = requestSideNames(detail);
   // The staff are shown every subscriber; the company its own people, so "nobody" is about them.
   const seesEverySubscriber = detail.permissions.has('requests:view-internal');
   const subscriberAvatars = detail.subscribers.slice(0, MAX_SUBSCRIBER_AVATARS);
@@ -159,7 +164,7 @@ export default async function RequestDetails({
               <span className="text-muted-foreground">
                 {seesEverySubscriber
                   ? t('noSubscribers')
-                  : t('noSubscribersCompany', { company: detail.company.name })}
+                  : t('noSubscribersCompany', { company: names.company })}
               </span>
             )}
             {subscriberControls && <div className="flex flex-wrap gap-2">{subscriberControls}</div>}
@@ -174,9 +179,13 @@ export default async function RequestDetails({
           </Detail>
         )}
         <Detail term={t('company')}>
-          <TextLink standalone href={`/companies/${detail.company.slug}`}>
-            {detail.company.name}
-          </TextLink>
+          {detail.company ? (
+            <TextLink standalone href={`/companies/${detail.company.slug}`}>
+              {detail.company.name}
+            </TextLink>
+          ) : (
+            <InternalLabel />
+          )}
         </Detail>
         <Detail term={t('raisedBy')}>
           <PersonLine person={detail.raisedBy} names={names} />

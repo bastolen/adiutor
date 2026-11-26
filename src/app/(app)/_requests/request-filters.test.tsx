@@ -7,12 +7,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Permission } from '@/lib/authz/permissions';
+import { INTERNAL_CHOICE } from '@/lib/requests';
 import type { Actor } from '@/server/actor';
 import { getStaffPermissionsInCompanies } from '@/server/authz';
 
 import { parseRequestFilters, viewParams } from './request-filters';
 
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 
 /** What a staff member who works on requests may do. */
 const STAFF_WORK = new Set<Permission>([
@@ -98,6 +99,38 @@ describe('parseRequestFilters', () => {
         assignable,
       }).showsCompany,
     ).toBe(false);
+  });
+
+  it('keeps the internal requests as a company choice for the staff, who then always have a choice', () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
+    const filters = parse({ company: INTERNAL_CHOICE });
+    expect(filters.company).toBe(INTERNAL_CHOICE);
+    expect(filters.seesInternal).toBe(true);
+    expect(filters.pageParams.company).toBe(INTERNAL_CHOICE);
+    expect(
+      parseRequestFilters({
+        searchParams: {},
+        actor,
+        companies: [{ slug: 'adiutor-tests' }],
+        types,
+        assignable,
+      }).showsCompany,
+    ).toBe(true);
+  });
+
+  it('drops the internal requests for someone at a company, who keeps no choice with one company', () => {
+    const filters = parse({ company: INTERNAL_CHOICE });
+    expect(filters.company).toBeUndefined();
+    expect(filters.seesInternal).toBe(false);
+    expect(
+      parseRequestFilters({
+        searchParams: { company: INTERNAL_CHOICE },
+        actor,
+        companies: [{ slug: 'adiutor-tests' }],
+        types,
+        assignable,
+      }),
+    ).toMatchObject({ company: undefined, seesInternal: false, showsCompany: false });
   });
 
   it('ignores the company parameter on a company page, which has no Company filter', () => {

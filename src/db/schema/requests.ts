@@ -1,8 +1,9 @@
 /**
- * @file Drizzle schema for requests: what a company raises with the staff,
- * the people on it (assigned or subscribed), the entries of its history
- * (replies and changes), the earlier versions of its edited texts and the
- * people its texts mention. Requests are numbered from the
+ * @file Drizzle schema for requests: what a company raises with the staff
+ * (or, without a company, the staff's own internal requests), the people on
+ * it (assigned or subscribed), the entries of its history (replies and
+ * changes), the earlier versions of its edited texts and the people its
+ * texts mention. Requests are numbered from the
  * `requests.last_number` setting (`src/server/settings/`). The values of the
  * status, type, priority, side, kind and format columns live in
  * `src/lib/requests`.
@@ -86,7 +87,11 @@ export const requestType = pgTable(
   ],
 );
 
-/** A request a company raised with the staff, or the staff raised for it. */
+/**
+ * A request a company raised with the staff, or the staff raised for it; or,
+ * without a company, an internal request: the staff's own, which only the
+ * staff read (decision 0048).
+ */
 export const request = pgTable(
   'request',
   {
@@ -97,9 +102,12 @@ export const request = pgTable(
      * taken from the `requests.last_number` setting when the request is raised.
      */
     number: integer('number').notNull(),
-    companyId: uuid('company_id')
-      .notNull()
-      .references(() => company.id, { onDelete: 'cascade' }),
+    /**
+     * The company it belongs to, or `null` for an internal request (decision
+     * 0048), which only the staff read: a membership never counts for one
+     * (`getInternalRequestPermissions`). It never changes.
+     */
+    companyId: uuid('company_id').references(() => company.id, { onDelete: 'cascade' }),
     /** One line saying what it's about. The staff can change it. */
     title: text('title').notNull(),
     /**
@@ -137,7 +145,8 @@ export const request = pgTable(
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
     /**
      * Which side raised it: someone at the company (also when a staff member
-     * raised it for them, `createdOnBehalf`), or the staff for the company.
+     * raised it for them, `createdOnBehalf`), or the staff (for the company,
+     * or an internal request, which only the staff raise).
      */
     createdBySide: text('created_by_side', { enum: REQUEST_SIDES }).notNull(),
     /**
@@ -169,7 +178,10 @@ export const request = pgTable(
   (table) => [
     /** Every request has its own number. */
     uniqueIndex('request_number_idx').on(table.number),
-    /** A company's requests by their last activity; also serves the company foreign key. */
+    /**
+     * A company's requests by their last activity, and the internal requests
+     * (`company_id is null`); also serves the company foreign key.
+     */
     index('request_company_activity_idx').on(table.companyId, table.lastActivityAt, table.id),
     /** Every company's requests by their last activity, for the staff. */
     index('request_activity_idx').on(table.lastActivityAt, table.id),
@@ -194,6 +206,14 @@ export const request = pgTable(
     check(
       'request_created_on_behalf_fits',
       sql`(${table.createdOnBehalfBy} is null or ${table.createdOnBehalf}) and (not ${table.createdOnBehalf} or ${table.createdBySide} = 'company')`,
+    ),
+    /**
+     * An internal request (without a company) is raised by the staff, so
+     * it's never raised for someone at a company either.
+     */
+    check(
+      'request_internal_by_staff',
+      sql`${table.companyId} is not null or ${table.createdBySide} = 'staff'`,
     ),
   ],
 );

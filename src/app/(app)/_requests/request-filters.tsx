@@ -17,6 +17,7 @@ import TextLink from '@/components/ui/text-link';
 import { companyChoiceLabels } from '@/lib/company-choices';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
+  INTERNAL_CHOICE,
   isRequestPriority,
   isRequestStatus,
   isRequestStatusFilter,
@@ -34,7 +35,7 @@ import type { TableLinks } from '@/lib/tables/page-url';
 import { parseTableState, type TableDefinition, type TableState } from '@/lib/tables/table-state';
 import { REQUESTS_TABLE, STAFF_REQUESTS_TABLE, type StaffRequestSort } from '@/lib/tables/tables';
 import type { Actor } from '@/server/actor';
-import { getStaffPermissionsInCompanies } from '@/server/authz';
+import { getInternalRequestPermissions, getStaffPermissionsInCompanies } from '@/server/authz';
 import type { AssignableStaffMember, RequestCompany } from '@/server/requests';
 
 import { StatusBadge } from './request-badges';
@@ -89,11 +90,20 @@ export interface RequestFilters {
   /** `me`, `none` or a staff member's ID, filtered by; the staff only. */
   assignee: string | undefined;
   /**
-   * The URL name of the company chosen in the Company filter; never set on a
-   * company's own page, and only for a company the viewer sees.
+   * The URL name of the company chosen in the Company filter, or `INTERNAL_CHOICE` for the
+   * internal requests; never set on a company's own page, and only for a company the viewer
+   * sees (or the internal requests, for the staff).
    */
   company: string | undefined;
-  /** Whether the Company filter is offered, and the rows name their company: not on a company's page, with several to choose from. */
+  /**
+   * Whether the viewer reads internal requests (decision 0048), which the Company filter
+   * offers as "Internal": the staff.
+   */
+  seesInternal: boolean;
+  /**
+   * Whether the Company filter is offered, and the rows name their company: not on a company's
+   * page, with several to choose from ("Internal" counts as one).
+   */
   showsCompany: boolean;
   /** The table that holds the requests: the staff's can also be sorted by priority. */
   definition: TableDefinition;
@@ -128,7 +138,8 @@ function viewerAudience(internal: boolean, contributes: boolean): RequestAudienc
  * Reads a page's query parameters as the filters of a view of requests, and
  * drops what the viewer may not use: a priority and an assignee for anyone
  * but the staff, `me` for those who can't be assigned, a type no type has, a
- * company they don't see, and the company parameter on a company's own page.
+ * company they don't see (and the internal requests, for anyone but the
+ * staff), and the company parameter on a company's own page.
  * An invalid status falls back to the requests that are still worked on, and
  * the table's state is read as `parseTableState` does.
  *
@@ -180,9 +191,14 @@ export function parseRequestFilters({
       assignable.some(({ id }) => id === assigneeParam))
       ? assigneeParam
       : undefined;
+  // The staff read internal requests, which the Company filter offers as a choice of its own.
+  const seesInternal = getInternalRequestPermissions(actor).has('requests:view');
   // A company to filter by only counts when it's one the viewer sees.
   const companyParam = company ? undefined : searchParam(searchParams.company);
-  const chosenCompany = companies.find(({ slug }) => slug === companyParam)?.slug;
+  const chosenCompany =
+    seesInternal && companyParam === INTERNAL_CHOICE
+      ? INTERNAL_CHOICE
+      : companies.find(({ slug }) => slug === companyParam)?.slug;
   return {
     internal,
     canBeAssigned,
@@ -194,7 +210,8 @@ export function parseRequestFilters({
     priority,
     assignee,
     company: chosenCompany,
-    showsCompany: !company && companies.length > 1,
+    seesInternal,
+    showsCompany: !company && companies.length + (seesInternal ? 1 : 0) > 1,
     definition,
     requested,
     narrowed: Boolean(search || only || chosenCompany || type || priority || assignee),
@@ -348,14 +365,15 @@ export function RequestFilterBar({
             <FilterMenu
               label={t('companyFilter')}
               menuLabel={t('companyMenu')}
-              options={filterOptions(
-                'company',
-                t('allCompanies'),
-                filters.company,
-                companyChoiceLabels(companies, ({ name, slug }) =>
+              options={filterOptions('company', t('allCompanies'), filters.company, [
+                // The staff's own requests, which have no company, come first.
+                ...(filters.seesInternal
+                  ? [{ value: INTERNAL_CHOICE, label: tRequests('internal.label') }]
+                  : []),
+                ...companyChoiceLabels(companies, ({ name, slug }) =>
                   tCommon('companyWithUrlName', { name, urlName: slug }),
                 ).map(({ slug, label }) => ({ value: slug, label })),
-              )}
+              ])}
             />
           )}
           <FilterMenu

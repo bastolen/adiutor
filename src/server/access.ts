@@ -11,6 +11,7 @@ import { grantNeedsConfirmation, type RoleGrant } from '@/lib/authz/guards';
 import { needsRecentConfirmation } from '@/lib/authz/mfa';
 import {
   getGlobalPermissions,
+  getInternalRequestPermissions,
   getPermissions,
   getStaffPermissionsInCompanies,
   managePermission,
@@ -27,7 +28,12 @@ import getStaffName from './people/staff-name';
  * The pure permission rules live in `src/lib/authz/permissions.ts`; they're
  * re-exported so services and pages keep importing them from here.
  */
-export { getGlobalPermissions, getStaffPermissionsInCompanies, managePermission };
+export {
+  getGlobalPermissions,
+  getInternalRequestPermissions,
+  getStaffPermissionsInCompanies,
+  managePermission,
+};
 
 /** A company row. */
 export type Company = typeof company.$inferSelect;
@@ -270,6 +276,13 @@ interface StillManagesOptions {
    * `docs/security-measures.md`).
    */
   alsoLock?: readonly string[];
+  /**
+   * With no company (`companyId` `null`): check the actor's rights in an
+   * internal request (decision 0048), which their staff role alone gives
+   * (`getInternalRequestPermissions`), rather than the staff's rights outside
+   * companies. Nothing else is locked or read: no membership counts there.
+   */
+  internalRequest?: boolean;
 }
 
 /**
@@ -286,7 +299,8 @@ interface StillManagesOptions {
  * 1. the actor's `user` row (with `alsoLock`'s, in ID order, in one statement)
  *    `FOR SHARE`;
  * 2. for a company, unless `asStaff`, the actor's `membership` row there
- *    `FOR SHARE` (a new statement).
+ *    `FOR SHARE` (a new statement). An internal request has no company, so
+ *    only the user rows count for it (`internalRequest`).
  *
  * Every change to those rights writes or locks one of those rows more
  * strongly (`setStaffRole` and `soleAdminOf` lock users `FOR UPDATE`,
@@ -311,11 +325,14 @@ interface StillManagesOptions {
  * @param actor - The acting user, as the request loaded them. Only their ID is read (their
  *   rights come from the locked rows), so it also takes whoever else a change's rights depend
  *   on: the creator of an invite link whose claim is undone (`claimInviteLink`).
- * @param companyId - The company acted on (an ID already checked), or `null` for staff.
+ * @param companyId - The company acted on (an ID already checked), or `null` for staff (or, with
+ *   `options.internalRequest`, an internal request).
  * @param permission - The permission the change needs.
  * @param options - Options.
  * @param options.asStaff - Check staff rights only (see {@link StillManagesOptions}).
  * @param options.alsoLock - Other users to lock with the actor (see {@link StillManagesOptions}).
+ * @param options.internalRequest - Check rights in an internal request (see
+ *   {@link StillManagesOptions}).
  * @returns The locked user rows, and when the company was deactivated, as read just now.
  * @throws {ServiceError} `forbidden` when the actor is gone, deactivated or without the permission
  *   by now; `not_found` when the company is gone.
@@ -325,7 +342,7 @@ export async function assertStillManages(
   actor: Pick<Actor, 'id'>,
   companyId: string | null,
   permission: Permission,
-  { asStaff = false, alsoLock = [] }: StillManagesOptions = {},
+  { asStaff = false, alsoLock = [], internalRequest = false }: StillManagesOptions = {},
 ): Promise<StillManaged> {
   // One statement, in ID order: the actor and anyone the change is about.
   const rows = await tx
@@ -348,7 +365,9 @@ export async function assertStillManages(
   let permissions: Set<Permission>;
   let companyDeactivatedAt: Date | null = null;
   if (companyId === null) {
-    permissions = getGlobalPermissions(self);
+    permissions = internalRequest
+      ? getInternalRequestPermissions(self)
+      : getGlobalPermissions(self);
   } else {
     // A new statement, after the user rows: memberships come after users in the lock order.
     const [own] = asStaff

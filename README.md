@@ -45,6 +45,9 @@ solution the company approves. Your staff see every company's requests; each com
   and both sides work each one through in one conversation, with replies written in Markdown,
   mentions, and internal notes and priorities only the staff see. See
   [Requests](docs/requests.md).
+- **Internal requests.** Your staff keep their own work next to the companies': an internal
+  request has no company, and no company ever sees it. See
+  [Internal requests](docs/requests.md#internal-requests).
 - **Board and list.** All requests on a board with a lane per status, or as a list, with the same
   search and filters, across companies or on a company's page. See
   [The board](docs/requests.md#the-board).

@@ -53,6 +53,16 @@ describe('mentionChoicesAction', () => {
     });
   });
 
+  it('asks for the staff for an internal request that isn’t raised yet', async () => {
+    vi.mocked(listMentionable).mockResolvedValue([]);
+
+    await mentionChoicesAction({ company: '_internal' });
+
+    expect(listMentionable).toHaveBeenCalledWith({ db: 'the database' }, writer, {
+      internal: true,
+    });
+  });
+
   it('passes on nothing but the request or the company it was asked about', async () => {
     vi.mocked(listMentionable).mockResolvedValue([]);
 

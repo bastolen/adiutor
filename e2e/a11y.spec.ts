@@ -129,15 +129,21 @@ const APP_PATHS = [
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
   `/requests?company=${PAGING_COMPANY_SLUG}&sort=raised&page=2`,
+  // The staff's own requests, without a company: "Internal" where the company would be.
+  '/requests?status=all&company=_internal',
   // The board: a lane per status, the open ones fuller than they show, and empty ones.
   '/requests/board',
   '/requests/board?q=no-such-request',
   '/requests/new',
+  // The form with an internal request chosen: its hint, and no "Raise it for".
+  '/requests/new?company=_internal',
   // A request with a conversation: replies from both sides, a link, and changes.
   `/requests/${SEEDED_REQUESTS.waiting.number}`,
   // A request written in Markdown: headings, lists, a table, a quotation, an image as a link,
   // a footnote, and highlighted code, whose colours have to be readable in both modes.
   `/requests/${SEEDED_REQUESTS.formatted.number}`,
+  // An internal request: "Internal" in its header and Details, and no solution to send.
+  `/requests/${SEEDED_REQUESTS.internal.number}`,
   '/companies/does-not-exist',
   '/does-not-exist',
 ];

@@ -14,6 +14,7 @@ export {
   ASSIGNMENT_CHANGES,
   CLOSED_REQUEST_STATUSES,
   DEFAULT_REQUEST_STATUS_FILTER,
+  INTERNAL_CHOICE,
   isAssignmentChange,
   isClosedStatus,
   isRequestPriority,
@@ -69,7 +70,7 @@ export {
   statusChoices,
   subscriberScope,
 } from './rules';
-export type { RequestAudience, SolutionAnswer, SubscriberScope } from './rules';
+export type { RequestAudience, RequestPlace, SolutionAnswer, SubscriberScope } from './rules';
 export {
   ACTIVITY_GROUPS,
   ACTIVITY_ORDERS,

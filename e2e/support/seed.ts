@@ -425,6 +425,21 @@ export default async function seedTestDatabase(): Promise<void> {
           { by: byStaff, at: hoursAgo(450), change: 'status', from: 'in_progress', to: 'done' },
         ],
       },
+      {
+        // The staff's own (decision 0048): no company sees it.
+        companyId: null,
+        title: SEEDED_REQUESTS.internal.title,
+        description: 'It runs out next week. Ask the host for the new one.',
+        type: 'support',
+        priority: 'high',
+        status: 'done',
+        raisedBy: byStaff,
+        at: hoursAgo(550),
+        entries: [
+          { by: byStaff, at: hoursAgo(540), reply: 'Installed, and the old one revoked.' },
+          { by: byStaff, at: hoursAgo(540), change: 'status', from: 'open', to: 'done' },
+        ],
+      },
       ...Array.from({ length: PAGED_REQUEST_COUNT }, (_, index) => ({
         companyId: pagingCompany.id,
         title: pagedRequestTitle(index + 1),

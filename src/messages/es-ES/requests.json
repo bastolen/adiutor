@@ -2,7 +2,7 @@
   "requests": {
     "list": {
       "title": "Solicitudes",
-      "description": "{audience, select, staff {Las solicitudes de todas las empresas, con lo que aún necesita algo primero.} other {Lo que tu empresa ha pedido a {staff} y cómo va cada solicitud.}}",
+      "description": "{audience, select, staff {Las solicitudes de todas las empresas y las del personal, con lo que aún necesita algo primero.} other {Lo que tu empresa ha pedido a {staff} y cómo va cada solicitud.}}",
       "new": "Nueva solicitud",
       "rows": "solicitudes",
       "searchLabel": "Buscar solicitudes",
@@ -79,10 +79,11 @@
     },
     "new": {
       "title": "Nueva solicitud",
-      "description": "{audience, select, staff {Crea una solicitud para una empresa, o para alguien de ella que te lo pidió, por ejemplo por teléfono.} other {Cuéntale a {staff} lo que necesitas. Te responderán en la página de la solicitud.}}",
+      "description": "{audience, select, staff {Crea una solicitud para una empresa, para alguien de ella que te lo pidió, por ejemplo por teléfono, o una interna que solo ve el personal.} other {Cuéntale a {staff} lo que necesitas. Te responderán en la página de la solicitud.}}",
       "back": "Solicitudes",
       "company": "Empresa",
-      "companyPlaceholder": "Elige una empresa",
+      "companyPlaceholder": "{internal, select, yes {Elige una empresa, o Interna} other {Elige una empresa}}",
+      "internalHint": "Solo el personal ve una solicitud interna.",
       "titleLabel": "Título",
       "titleHint": "Una línea que diga de qué se trata.",
       "typeLabel": "Tipo",
@@ -214,7 +215,7 @@
       "reopen": "Reabrir",
       "editDetails": "Editar datos",
       "editTitle": "Editar los datos de esta solicitud",
-      "editDescription": "Cada cambio aparece en el historial de la solicitud. La empresa no ve la prioridad.",
+      "editDescription": "{place, select, internal {Cada cambio aparece en el historial de la solicitud.} other {Cada cambio aparece en el historial de la solicitud. La empresa no ve la prioridad.}}",
       "titleLabel": "Título",
       "typeLabel": "Tipo",
       "priorityLabel": "Prioridad",
@@ -223,7 +224,7 @@
       "assignToMe": "Asignármela",
       "changeAssignees": "Cambiar asignación",
       "assigneesTitle": "Cambiar a quién está asignada",
-      "assigneesDescription": "Todos los que participan en la solicitud ven a quién está asignada, también la empresa, y cada cambio aparece en su historial.",
+      "assigneesDescription": "{place, select, internal {Todos los que participan en la solicitud ven a quién está asignada, y cada cambio aparece en su historial.} other {Todos los que participan en la solicitud ven a quién está asignada, también la empresa, y cada cambio aparece en su historial.}}",
       "assigneesLabel": "Personal que trabaja en solicitudes",
       "personYou": "{name} (tú)",
       "unnamedStaff": "Un miembro del personal sin nombre",
@@ -232,7 +233,7 @@
       "unsubscribe": "Cancelar suscripción",
       "changeSubscribers": "Cambiar suscriptores",
       "subscribersTitle": "Cambiar quién tiene suscripción",
-      "subscribersDescription": "{scope, select, everyone {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. La empresa ve quién de los suyos tiene suscripción, no qué miembros del personal.} other {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. Todas las personas de tu empresa ven quién tiene suscripción.}}",
+      "subscribersDescription": "{scope, select, internal {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. Solo se puede suscribir al personal.} everyone {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. La empresa ve quién de los suyos tiene suscripción, no qué miembros del personal.} other {Los suscriptores siguen esta solicitud y recibirán los correos sobre ella cuando se envíen. Todas las personas de tu empresa ven quién tiene suscripción.}}",
       "subscribersCompany": "Personas de {company}",
       "subscribersStaff": "Personal",
       "saveSubscribers": "Guardar suscriptores"
@@ -259,6 +260,9 @@
       "versionLine": "{name} lo cambió el {time}.",
       "editNote": "Editar nota",
       "noteLabel": "Nota"
+    },
+    "internal": {
+      "label": "Interna"
     },
     "raisedFor": {
       "forName": "La creó {staff} para {name}",

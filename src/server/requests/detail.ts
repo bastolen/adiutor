@@ -1,6 +1,6 @@
 /**
  * @file One request as its readers see it: its details, who it's assigned
- * to, the company it's in, what the reader may do with it, and its
+ * to, the company it's in (none for an internal request), what the reader may do with it, and its
  * conversation, filtered and ordered the way the reader reads it (their
  * saved activity view).
  */
@@ -249,8 +249,12 @@ export interface RequestDetail {
   firstResponseAt: Date | null;
   /** When it was raised, replied to or changed last (a change of priority doesn't count). */
   lastActivityAt: Date;
-  /** Its company. A deactivated company's requests can only be read. */
-  company: { id: string; name: string; slug: string; deactivated: boolean };
+  /**
+   * Its company. A deactivated company's requests can only be read. `null` for an internal
+   * request (decision 0048), which only the staff read: its texts keep their links to the
+   * staff's pages, as a note does.
+   */
+  company: { id: string; name: string; slug: string; deactivated: boolean } | null;
   /** What the reader may do in that company. */
   permissions: Set<Permission>;
   /** How to address the reader: as the staff, as someone who takes part, or as a follower. */
@@ -632,18 +636,20 @@ interface ShownTexts {
  * without an account or a name to show can't be mentioned, so has none.
  *
  * @param reader - Who reads them.
- * @param company - The request's company.
+ * @param company - The request's company; `null` for an internal request.
  * @param rows - The texts' mentions and versions ({@link loadTextRows}).
  * @returns The texts' mentions and versions, by text.
  */
 function shownTexts(
   reader: PageReader,
-  company: Company,
+  company: Company | null,
   rows: Awaited<ReturnType<typeof loadTextRows>>,
 ): ShownTexts {
-  const writes = mayContribute(reader.permissions, {
-    deactivated: company.deactivatedAt !== null,
-  });
+  const writes = mayContribute(
+    reader.permissions,
+    company && { deactivated: company.deactivatedAt !== null },
+  );
+  const companyId = company?.id ?? null;
   const texts: ShownTexts = { mentions: new Map(), storedMentions: new Map(), versions: new Map() };
   rows.mentioned.forEach(({ entryId, ...mention }) => {
     const { id, side, person } = mention;
@@ -651,7 +657,7 @@ function shownTexts(
     const asShown = requestPerson(person ?? { id: null, name: null }, side, reader.actor);
     ofText[id] = {
       ...asShown,
-      key: writes && person?.id && asShown.name !== null ? mentionKey(company.id, person.id) : null,
+      key: writes && person?.id && asShown.name !== null ? mentionKey(companyId, person.id) : null,
     };
     texts.mentions.set(entryId, ofText);
     texts.storedMentions.set(entryId, [...(texts.storedMentions.get(entryId) ?? []), mention]);
@@ -677,8 +683,8 @@ interface PageContext {
   reader: PageReader;
   /** The request. */
   found: RequestRow;
-  /** Its company. */
-  company: Company;
+  /** Its company; `null` for an internal request. */
+  company: Company | null;
   /** The name the staff are shown with. */
   staffName: string;
   /** Its texts' mentions and versions ({@link shownTexts}). */
@@ -694,7 +700,8 @@ interface PageContext {
  * it was edited (and, for the readers who may know, whether that edit was
  * made while signed in as its editor), what its editor starts from (for a
  * reader who may edit it, without links to the staff's pages unless they
- * may open them or it's an internal note), and its versions (staff).
+ * may open them, or it's an internal note or an internal request's text),
+ * and its versions (staff).
  *
  * @param page - What the page is built from.
  * @param stored - The text.
@@ -723,10 +730,11 @@ function requestText(
   // The newest version is the last edit's.
   const lastEdit = versions[0];
   // Nothing of a deactivated company's request changes, so nothing of it is edited.
-  const editable = company.deactivatedAt === null;
+  const editable = company === null || company.deactivatedAt === null;
   // Only a reader who may open the staff's pages gets a text to edit with links to them (and a
-  // note keeps them for whoever edits it).
-  const keepsStaffLinks = reader.globalPermissions.has('users:view') || stored.staffOnly;
+  // note, or an internal request's text, which only the staff read, keeps them for whoever edits it).
+  const keepsStaffLinks =
+    reader.globalPermissions.has('users:view') || stored.staffOnly || company === null;
   return {
     text: stored.text,
     format: stored.format,
@@ -741,8 +749,9 @@ function requestText(
           markdown: editableText(
             keepsStaffLinks ? stored.text : withoutStaffPageLinksToEdit(stored.text, appUrl),
             texts.storedMentions.get(stored.entryId) ?? [],
-            company.id,
-            { company: company.name, staff: page.staffName },
+            company?.id ?? null,
+            // An internal request has nobody on the company's side to name.
+            { company: company?.name ?? page.staffName, staff: page.staffName },
           ),
           edits: versions.length,
         },
@@ -958,7 +967,7 @@ export async function getRequest(
     createdAt: found.createdAt,
     firstResponseAt,
     lastActivityAt: found.lastActivityAt,
-    company: {
+    company: company && {
       id: company.id,
       name: company.name,
       slug: company.slug,

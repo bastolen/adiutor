@@ -1,15 +1,17 @@
 /**
- * @file Who sees which requests. Staff see every company's requests; a
- * company's members see their company's, while it's active. A request
- * someone may not see is reported as not found, like its company, so they
- * learn nothing about it.
+ * @file Who sees which requests. Staff see every company's requests, and
+ * the internal requests, which have no company and only the staff read
+ * (decision 0048); a company's members see their company's, while it's
+ * active. A request someone may not see is reported as not found, like its
+ * company, so they learn nothing about it.
  */
-import { and, eq, inArray, isNull, type SQL, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, type SQL, sql } from 'drizzle-orm';
 
 import type { Database } from '@/db';
 import { company, request } from '@/db/schema';
 import {
   getGlobalPermissions,
+  getInternalRequestPermissions,
   getPermissions,
   getStaffPermissionsInCompanies,
   type Permission,
@@ -41,7 +43,7 @@ export const READING_STAFF_ROLES = PLATFORM_ROLES.filter((platformRole) =>
 
 /** Which requests someone sees across companies, and how much of them. */
 export interface RequestScope {
-  /** Whether they see every company's requests: the staff. */
+  /** Whether they see every company's requests, and the internal ones: the staff. */
   everyCompany: boolean;
   /** The companies whose requests they see as a member, while those are active. */
   memberOf: string[];
@@ -72,11 +74,11 @@ export function requestScope(actor: Actor): RequestScope {
 }
 
 /**
- * The condition that keeps a query on `request` joined with `company` to the
- * requests a scope sees.
+ * The condition that keeps a query on `request`, left-joined with `company`
+ * (an internal request has none), to the requests a scope sees.
  *
  * @param scope - The actor's scope.
- * @returns The condition; `undefined` for the staff, who see everything.
+ * @returns The condition; `undefined` for the staff, who see everything, internal requests too.
  */
 export function visibleRequests(scope: RequestScope): SQL | undefined {
   if (scope.everyCompany) {
@@ -85,24 +87,33 @@ export function visibleRequests(scope: RequestScope): SQL | undefined {
   if (scope.memberOf.length === 0) {
     return sql`false`;
   }
-  // Members lose access while their company is deactivated.
-  return and(inArray(request.companyId, scope.memberOf), isNull(company.deactivatedAt));
+  // Members lose access while their company is deactivated. An internal request has no company,
+  // so no membership reaches it: `inArray` never matches a null, and the first term says so.
+  return and(
+    isNotNull(request.companyId),
+    inArray(request.companyId, scope.memberOf),
+    isNull(company.deactivatedAt),
+  );
 }
 
 /** A request with its company and what the actor may do there. */
 export interface RequestAccess {
   /** The request. */
   request: RequestRow;
-  /** Its company. */
-  company: Company;
-  /** The actor's permissions in that company. */
+  /** Its company, or `null` for an internal request (decision 0048). */
+  company: Company | null;
+  /**
+   * The actor's permissions in that company; for an internal request, those of their staff role
+   * alone (`getInternalRequestPermissions`).
+   */
   permissions: Set<Permission>;
 }
 
 /**
  * Loads a request and the actor's permissions in its company. A request the
  * actor may not see is reported as not found, exactly like one that doesn't
- * exist.
+ * exist. An internal request has no company: only the actor's staff role
+ * counts for it (`getInternalRequestPermissions`), never a membership.
  *
  * The request can be named by its number (as in its address,
  * `/requests/142`) or by its ID.
@@ -110,7 +121,7 @@ export interface RequestAccess {
  * @param db - Database client.
  * @param actor - The acting user.
  * @param ref - The request's number or ID (unvalidated input is fine).
- * @returns The request, its company and the permissions.
+ * @returns The request, its company (`null` for an internal request) and the permissions.
  * @throws {ServiceError} `not_found` if it doesn't exist or isn't visible.
  */
 export async function getRequestAccess(
@@ -130,6 +141,13 @@ export async function getRequestAccess(
   if (!found) {
     throw notFoundError();
   }
+  if (found.companyId === null) {
+    const permissions = getInternalRequestPermissions(actor);
+    if (!permissions.has('requests:view')) {
+      throw notFoundError();
+    }
+    return { request: found, company: null, permissions };
+  }
   const access = await getCompanyAccess(db, actor, found.companyId);
   if (!access.permissions.has('requests:view')) {
     throw notFoundError();
@@ -137,23 +155,27 @@ export async function getRequestAccess(
   return { request: found, ...access };
 }
 
+/** A request's company as a row selected with it says, or `null` for an internal request. */
+export type RequestCompanyState = { id: string; deactivatedAt: Date | null } | null;
+
 /**
  * The actor's permissions in a company whose requests they read, from their
  * staff role and their role there, as the company's row says (a company
  * that's deactivated keeps the staff's rights and takes its members').
- * The one place a list, the board and a request's page work them out from
- * a row they selected, so they never disagree with {@link getCompanyAccess}.
+ * For an internal request, which has no company, their staff role alone
+ * (`getInternalRequestPermissions`). The one place a list, the board and a
+ * request's page work them out from a row they selected, so they never
+ * disagree with {@link getRequestAccess}.
  *
  * @param actor - The reader.
- * @param inCompany - The company.
- * @param inCompany.id - Its ID.
- * @param inCompany.deactivatedAt - When it was deactivated, or `null` while it's active.
+ * @param inCompany - The company, with its ID and when it was deactivated (`null` while it's
+ *   active); `null` for an internal request.
  * @returns The permissions.
  */
-export function permissionsIn(
-  actor: Actor,
-  inCompany: { id: string; deactivatedAt: Date | null },
-): Set<Permission> {
+export function permissionsIn(actor: Actor, inCompany: RequestCompanyState): Set<Permission> {
+  if (inCompany === null) {
+    return getInternalRequestPermissions(actor);
+  }
   return getPermissions({
     platformRole: actor.platformRole,
     companyRole: actor.memberships[inCompany.id] ?? null,
@@ -168,21 +190,18 @@ export function permissionsIn(
  * {@link getCompanyAccess} uses, for a request's page and for every row of
  * a list alike: someone who is a Client in one company and a Watcher in
  * another reads "waiting for your reply" in the first and "waiting for your
- * company" in the second, on both.
+ * company" in the second, on both. Only the staff read an internal request,
+ * as the staff.
  *
  * @param actor - The reader.
- * @param inCompany - The company the request is in.
- * @param inCompany.id - Its ID.
- * @param inCompany.deactivatedAt - When it was deactivated, or `null` while it's active.
+ * @param inCompany - The company the request is in, with its ID and when it was deactivated
+ *   (`null` while it's active); `null` for an internal request.
  * @returns The audience.
  */
-export function requestAudienceIn(
-  actor: Actor,
-  inCompany: { id: string; deactivatedAt: Date | null },
-): RequestAudience {
+export function requestAudienceIn(actor: Actor, inCompany: RequestCompanyState): RequestAudience {
   return requestAudience(
     permissionsIn(actor, inCompany),
-    actor.memberships[inCompany.id] !== undefined,
+    inCompany !== null && actor.memberships[inCompany.id] !== undefined,
   );
 }
 

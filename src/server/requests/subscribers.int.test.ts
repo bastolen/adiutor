@@ -611,13 +611,17 @@ describe('losing access to a request', () => {
     await addMember(db, company.id, leaver.id, 'client');
     const here = await storeRequest(company.id);
     const there = await storeRequest(other.id);
+    // An internal request has no company: being in one keeps nobody on it (decision 0048).
+    const internal = await storeRequest(null);
     await storeSubscribers(here.id, [leaver.id]);
     await storeSubscribers(there.id, [leaver.id]);
+    await storeSubscribers(internal.id, [leaver.id]);
 
     await removeFromStaff(ctx, admin, leaver.id);
 
     expect(await subscribersOf(here.id)).toEqual([leaver.id]);
     expect(await subscribersOf(there.id)).toEqual([]);
+    expect(await subscribersOf(internal.id)).toEqual([]);
   });
 
   it('keeps the subscriptions of a staff member whose new role still reads requests', async () => {

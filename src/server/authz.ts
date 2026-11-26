@@ -42,6 +42,7 @@ export {
   type Company,
   currentPermissionsOf,
   getGlobalPermissions,
+  getInternalRequestPermissions,
   getStaffPermissionsInCompanies,
 } from './access';
 

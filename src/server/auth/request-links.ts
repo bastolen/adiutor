@@ -25,7 +25,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db as appDb, type DatabaseOrTransaction } from '@/db';
 import { company, membership, request, requestSignInLink, user } from '@/db/schema';
-import { getPermissions } from '@/lib/authz/permissions';
+import { getInternalRequestPermissions, getPermissions } from '@/lib/authz/permissions';
 import { signInPath } from '@/lib/redirect';
 import ipAddressOptions from '@/lib/request/ip-address-options';
 import isOwnPagePost from '@/lib/request/own-page-post';
@@ -123,6 +123,7 @@ export async function getRequestLinkView(
       userId: requestSignInLink.userId,
       ended: sql<boolean>`${requestSignInLink.expiresAt} <= now()`,
       number: request.number,
+      companyId: request.companyId,
       companyDeactivatedAt: company.deactivatedAt,
       name: user.name,
       email: user.email,
@@ -132,7 +133,8 @@ export async function getRequestLinkView(
     })
     .from(requestSignInLink)
     .innerJoin(request, eq(request.id, requestSignInLink.requestId))
-    .innerJoin(company, eq(company.id, request.companyId))
+    // An internal request has no company (decision 0048), and so no membership counts there.
+    .leftJoin(company, eq(company.id, request.companyId))
     .innerJoin(user, eq(user.id, requestSignInLink.userId))
     .leftJoin(
       membership,
@@ -146,13 +148,19 @@ export async function getRequestLinkView(
   if (found.ended) {
     return { state: 'ended', number: found.number };
   }
-  // Whether they can read the request now, by the rules its page uses (`getRequestAccess`).
-  const permissions = getPermissions({
-    platformRole: found.platformRole ?? null,
-    companyRole: found.companyRole ?? null,
-    company: { deactivated: found.companyDeactivatedAt !== null },
-  });
-  const mayRead = permissions.has('company:view') && permissions.has('requests:view');
+  // Whether they can read the request now, by the rules its page uses (`getRequestAccess`): for
+  // an internal request, their staff role alone.
+  const platformRole = found.platformRole ?? null;
+  const internal = found.companyId === null;
+  const permissions = internal
+    ? getInternalRequestPermissions({ platformRole })
+    : getPermissions({
+        platformRole,
+        companyRole: found.companyRole ?? null,
+        company: { deactivated: found.companyDeactivatedAt !== null },
+      });
+  // An internal request has no company to see.
+  const mayRead = permissions.has('requests:view') && (internal || permissions.has('company:view'));
   if (found.deactivatedAt || !mayRead) {
     return { state: 'unavailable', number: found.number };
   }

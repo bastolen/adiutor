@@ -55,7 +55,8 @@ const subscriberKeysSchema = z
 export interface SubscribablePerson {
   /**
    * What stands for them in the dialog (`mentionKey`): only valid in the
-   * request's company, and it says nothing about who they are. Never a user
+   * request's company (or in the internal requests), and it says nothing
+   * about who they are. Never a user
    * ID, which a company's Admin doesn't get.
    */
   key: string;
@@ -83,7 +84,7 @@ export interface SubscribablePerson {
  * @param locked - The request, as it's locked.
  * @param locked.id - Its ID.
  * @param locked.number - Its number.
- * @param locked.companyId - Its company.
+ * @param locked.companyId - Its company; `null` for an internal request.
  * @param change - Who was subscribed and unsubscribed (user IDs).
  * @param change.subscribed - Who was subscribed.
  * @param change.unsubscribed - Who was unsubscribed.
@@ -92,7 +93,7 @@ async function recordWorkWhileSignedInAs(
   ctx: ServiceContext,
   tx: DatabaseTransaction,
   actor: Actor,
-  locked: { id: string; number: number; companyId: string },
+  locked: { id: string; number: number; companyId: string | null },
   { subscribed = [], unsubscribed = [] }: { subscribed?: string[]; unsubscribed?: string[] },
 ): Promise<void> {
   if (!actor.signedInAs) {
@@ -252,7 +253,7 @@ export async function changeSubscribers(
   await assertChangeLimit(ctx, actor);
 
   // Who the keys stand for, among the people whose subscription is the actor's to change.
-  const companyId = access.company.id;
+  const companyId = access.company?.id ?? null;
   const offered = new Map(
     (await subscribable(ctx.db, companyId))
       .filter((person) => inScope(scope, person))
@@ -349,8 +350,9 @@ export async function listSubscribable(
   if (scope === 'self') {
     throw forbiddenError();
   }
+  const companyId = company?.id ?? null;
   const [people, onRequest] = await Promise.all([
-    subscribable(ctx.db, company.id),
+    subscribable(ctx.db, companyId),
     ctx.db
       .select({ userId: requestParticipant.userId, role: requestParticipant.role })
       .from(requestParticipant)
@@ -374,7 +376,7 @@ export async function listSubscribable(
         ? []
         : [
             {
-              key: mentionKey(company.id, id),
+              key: mentionKey(companyId, id),
               name: shown,
               staff: scope === 'everyone' && staff,
               subscribed: subscribed.has(id),

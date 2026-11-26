@@ -29,6 +29,7 @@ import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/re
 import PersonLine, {
   PersonAvatar,
   personName,
+  requestSideNames,
   type SideNames,
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
@@ -186,7 +187,7 @@ export default function Thread({
 }) {
   const t = useTranslations('requests.detail');
   const tNote = useTranslations('requests.note');
-  const names: SideNames = { company: detail.company.name, staff: detail.staffName };
+  const names = requestSideNames(detail);
 
   if (detail.entries.length === 0 && detail.activity.groups !== null) {
     return (
@@ -218,6 +219,9 @@ export default function Thread({
           // An internal note reads like a reply, on the amber surface and with a badge that says
           // only the staff see it.
           const note = entry.kind === 'note';
+          // Only the staff read a note, or any text of an internal request (which has no company):
+          // its links to the staff's pages stay links.
+          const staffOnly = note || detail.company === null;
           const source = {
             url: address,
             writer: personName(entry.author, names),
@@ -233,7 +237,7 @@ export default function Thread({
               )}
               source={source}
               names={names}
-              staffOnly={note}
+              staffOnly={staffOnly}
             />
           );
           return (
@@ -259,7 +263,7 @@ export default function Thread({
                       id={entry.id}
                       source={source}
                       names={names}
-                      staffOnly={note}
+                      staffOnly={staffOnly}
                     />
                   )}
                 </>
@@ -270,6 +274,7 @@ export default function Thread({
                   request={detail.number}
                   entry={entry.id}
                   note={note}
+                  staffOnly={staffOnly}
                   edit={entry.body.edit}
                 >
                   {text}

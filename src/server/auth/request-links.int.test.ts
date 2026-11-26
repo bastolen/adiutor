@@ -717,4 +717,15 @@ describe('looking a request link up for its page', () => {
     expect(await getRequestLinkView(ctx, token)).toEqual({ state: 'ended', number: 1 });
     expect(await getRequestLinkView(ctx, 'not-a-link')).toEqual({ state: 'unknown' });
   });
+  it('signs the staff in to an internal request, while their staff role still reads it', async () => {
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const { id: requestId } = await storeRequest(db, null);
+    const token = await createRequestLink(db, { userId: support.id, requestId });
+
+    expect(await getRequestLinkView(ctx, token)).toMatchObject({ state: 'usable', number: 1 });
+
+    // Someone off the staff can't read it, whatever company they're in.
+    await db.update(user).set({ platformRole: null }).where(eq(user.id, support.id));
+    expect(await getRequestLinkView(ctx, token)).toEqual({ state: 'unavailable', number: 1 });
+  });
 });

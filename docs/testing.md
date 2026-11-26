@@ -122,10 +122,12 @@ configurations in VS Code, which turn the time limit off (see
     company, "Adiutor Tests Paging", with more members, invite links and requests than fit on a
     page, used by the pagination tests (`e2e/tables.spec.ts`) and the accessibility and keyboard
     checks of paginated tables (`e2e/a11y.spec.ts`, `e2e/keyboard.spec.ts`); no test changes its
-    data. The same goes for the six seeded requests the pages are read with (`SEEDED_REQUESTS`
+    data. The same goes for the seven seeded requests the pages are read with (`SEEDED_REQUESTS`
     in `e2e/support/fixtures.ts`): a test that changes a request raises its own. One of them is
     written in Markdown with every kind of formatting (`tests/database/formatted-request.ts`),
-    and the first one's description is still plain text, as every text was before Markdown. Two
+    and the first one's description is still plain text, as every text was before Markdown. One
+    is an internal request, without a company (done and assigned to nobody, so it adds to no count
+    of what's active or assigned). Two
     are assigned to the seeded Support member (one also to the seeded Admin), with the lines that
     say so in their history. Both seeds store their requests with
     `tests/database/store-requests.ts`.

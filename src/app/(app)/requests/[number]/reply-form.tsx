@@ -39,15 +39,19 @@ type ReplyButton = 'send' | 'sendAndWait' | 'sendAsSolution';
  * @param props.request - The request's number.
  * @param props.canWait - Whether to offer "Send and wait for the company".
  * @param props.canPropose - Whether to offer "Send as solution".
+ * @param props.staffOnly - Whether only the staff read the reply (an internal request's): its
+ *   editor keeps links to the staff's pages.
  */
 export default function ReplyForm({
   request,
   canWait,
   canPropose = false,
+  staffOnly = false,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
+  staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.reply');
   const [result, formAction, pending, onSubmit] = useTransientActionState(replyAction, null);
@@ -106,6 +110,7 @@ export default function ReplyForm({
         maxLength={REQUEST_TEXT_MAX_LENGTH}
         required
         mentions={loadMentions}
+        staffOnly={staffOnly}
       />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" loading={send.loading} disabled={send.disabled}>

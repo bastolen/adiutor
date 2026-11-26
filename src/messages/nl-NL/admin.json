@@ -414,7 +414,7 @@
           "allTypesHint": "Elk type, ook de typen die later worden toegevoegd.",
           "chosenTypes": "Gekozen typen",
           "eventsLegend": "Versturen",
-          "staffOnly": "Interne notities en prioriteiten zijn alleen voor de medewerkers: stuur ze alleen naar een plek die alleen de medewerkers lezen."
+          "staffOnly": "Elke webhook krijgt de interne verzoeken, en de webhooks die ze kiezen krijgen interne notities en prioriteiten. Alle drie zijn alleen voor de medewerkers: stuur ze alleen naar een plek die alleen de medewerkers lezen."
         },
         "add": {
           "button": "Webhook toevoegen",

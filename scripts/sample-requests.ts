@@ -2,8 +2,10 @@
  * @file Sample requests for local development, so the request pages have
  * something to show: every status and type, a reopened request, requests
  * raised by the company and by the staff, a conversation with replies from
- * both sides, requests assigned to one or two staff members, and one request
- * written in Markdown with every kind of formatting. Used by `scripts/seed-dev.ts`.
+ * both sides, requests assigned to one or two staff members, one request
+ * written in Markdown with every kind of formatting, and two internal requests
+ * (the staff's own, without a company: decision 0048). Used by
+ * `scripts/seed-dev.ts`.
  */
 import {
   FORMATTED_CLIENT_REPLY,
@@ -249,6 +251,35 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
         { by: avery, at: ago(3), reply: FORMATTED_CLIENT_REPLY, mentions: [sam] },
       ],
       assignees: [world.support, world.manager],
+    },
+    {
+      // The staff's own: no company sees it.
+      companyId: null,
+      title: 'Renew the certificate of the mail server',
+      description:
+        'It runs out next week. Morgan, can you order the new one? Then I’ll install it.',
+      type: 'support',
+      priority: 'high',
+      status: 'in_progress',
+      raisedBy: sam,
+      at: ago(2),
+      entries: [
+        { by: sam, at: ago(2), change: 'status', from: 'open', to: 'in_progress' },
+        { by: sam, at: ago(2), assign: 'assigned', subject: world.support },
+        { by: morgan, at: ago(1, 4), reply: 'Ordered. It should arrive tomorrow.' },
+      ],
+      assignees: [world.support],
+    },
+    {
+      companyId: null,
+      title: 'Write the hand-over for the holidays',
+      description: 'Who covers which companies in the last two weeks of the year.',
+      type: 'support',
+      priority: 'normal',
+      status: 'done',
+      raisedBy: morgan,
+      at: ago(9),
+      entries: [{ by: morgan, at: ago(8), change: 'status', from: 'open', to: 'done' }],
     },
   ];
 }
