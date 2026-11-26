@@ -682,6 +682,11 @@ function listOperations(): Operation[] {
     ['show requests as a board', (w) => listBoard(ctx, w.actor)],
     ['show requests as a board (own)', (w) => listBoard(ctx, w.actor, { company: w.own.id })],
     ['show requests as a board (other)', (w) => listBoard(ctx, w.actor, { company: w.other.id })],
+    ['list requests (internal)', (w) => listRequests(ctx, w.actor, { company: INTERNAL_CHOICE })],
+    [
+      'show requests as a board (internal)',
+      (w) => listBoard(ctx, w.actor, { company: INTERNAL_CHOICE }),
+    ],
     ['list companies to raise a request for', (w) => listRequestCompanies(ctx, w.actor)],
     ['look up a request (own)', (w) => findRequest(ctx, w.actor, w.requests.own)],
     ['look up a request (other)', (w) => findRequest(ctx, w.actor, w.requests.other)],
@@ -1009,9 +1014,11 @@ const READS: ReadonlySet<string> = new Set([
   'list requests',
   'list requests (own)',
   'list requests (other)',
+  'list requests (internal)',
   'show requests as a board',
   'show requests as a board (own)',
   'show requests as a board (other)',
+  'show requests as a board (internal)',
   'list companies to raise a request for',
   'list who a request can be raised for (own)',
   'list who a request can be raised for (other)',
@@ -1324,6 +1331,8 @@ const EXPECTED: Record<string, string> = {
   'list who can be subscribed to a request (other)': 'NNNAFAA',
   // Internal requests (decision 0048) are the staff's, by their staff role alone: nobody at a
   // company finds one, as with a company they aren't in; Finance reads them and works on none.
+  'list requests (internal)': 'NNNAAAA',
+  'show requests as a board (internal)': 'NNNAAAA',
   'look up a request (internal)': 'NNNAAAA',
   'view request (internal)': 'NNNAAAA',
   'raise request (internal)': 'NNNAFAA',

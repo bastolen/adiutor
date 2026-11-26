@@ -515,7 +515,10 @@ test('the staff raise a request for someone at a company, who reads it as theirs
   ).toBeVisible();
 });
 
-test('the staff raise an internal request, and no company finds it', async ({ context, page }) => {
+test('the staff raise an internal request, find it under Internal, and no company finds it', async ({
+  context,
+  page,
+}) => {
   const title = `Internal ${randomUUID().slice(0, 8)}`;
   await context.addCookies(supportCookies());
   // Started for a company, then made internal: the description's editor follows.
@@ -553,11 +556,17 @@ test('the staff raise an internal request, and no company finds it', async ({ co
   // Nobody could approve a solution, so none is offered.
   await expect(page.getByRole('button', { name: 'Send as solution' })).toHaveCount(0);
 
-  // Someone at a company doesn't find it at its address.
+  await page.goto(`/requests?status=all&company=_internal&q=${encodeURIComponent(title)}`);
+  await expect(requestRows(page)).toHaveCount(1);
+  await expect(requestRows(page).first()).toContainText(title);
+
+  // Someone at a company finds it nowhere: not at its address, and not as a filter.
   await context.clearCookies();
   await context.addCookies(clientCookies());
   await page.goto(address);
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  await page.goto(`/requests?status=all&company=_internal&q=${encodeURIComponent(title)}`);
+  await expect(main(page).getByText(title)).toHaveCount(0);
 });
 
 test('a company without requests invites its first one, under All too', async ({

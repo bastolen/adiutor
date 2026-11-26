@@ -129,6 +129,8 @@ const APP_PATHS = [
   '/requests?status=all&q=no-such-request',
   // More requests than fit on a page: pagination, another sort, the last page.
   `/requests?company=${PAGING_COMPANY_SLUG}&sort=raised&page=2`,
+  // The staff's own requests, without a company: "Internal" where the company would be.
+  '/requests?status=all&company=_internal',
   // The board: a lane per status, the open ones fuller than they show, and empty ones.
   '/requests/board',
   '/requests/board?q=no-such-request',

@@ -124,6 +124,21 @@ describe('the lists and the board', () => {
     expect(forClient.items.map(({ id }) => id)).toEqual([own.id]);
   });
 
+  it('filters the staff’s lists to the internal requests, and refuses that filter to anyone else', async () => {
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin');
+    await storeRequest(company.id);
+    const internal = await storeRequest(null);
+
+    const page = await listRequests(ctx, await staffActor(db, 'finance'), {
+      company: INTERNAL_CHOICE,
+    });
+    expect(page.items.map(({ id }) => id)).toEqual([internal.id]);
+    await expect(listRequests(ctx, admin, { company: INTERNAL_CHOICE })).rejects.toMatchObject({
+      code: 'not_found',
+    });
+  });
+
   it('keeps internal requests on the board, movable by the staff who work on requests', async () => {
     const internal = await storeRequest(null, { status: 'in_progress' });
 

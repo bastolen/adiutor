@@ -768,9 +768,11 @@ Adiutor itself ([decision 0048](decisions/0048-internal-requests-have-no-company
   description link to the staff's pages from then on (the editor follows the choice, and what's
   written already stays as it is). `?company=_internal` opens the form with it chosen, and so
   does an Adiutor without companies yet.
-- **Finding them:** on the staff's lists and board, a request without a company shows "Internal"
-  with a lock where its company would be (`InternalLabel`): in the request's header and its
-  Details, and in the list and on a card wherever those name companies. The Active and Waiting lists keep them (they have no
+- **Finding them:** on the staff's lists and board, the Company filter offers "Internal"
+  (`?company=_internal`, the internal requests only), and a request without a company shows
+  "Internal" with a lock where its company would be (`InternalLabel`): in the request's header and
+  its Details, and in the list and on a card wherever those name companies (once there's a
+  choice: Internal and at least one company). The Active and Waiting lists keep them (they have no
   company to be deactivated), and the dashboard's Assigned to you counts them.
 - **In the code:** every query that joins a request with its company is a left join, and every
   reader of a request's company handles none (`RequestAccess.company`, `RequestDetail.company`
@@ -889,7 +891,8 @@ says so with a "Show everything" button.
 
 - **`/requests`**, for everyone signed in: every request they may see. The status links (Active,
   Waiting, Closed, All) open on Active; next to them a search on title and number, and menus for
-  the company (when there's more than one), the type and, for the staff, the priority
+  the company (when there's more than one; for the staff, "Internal" counts as one, see
+  [Internal requests](#internal-requests)), the type and, for the staff, the priority
   (`FilterMenu`, a sibling of `SortMenu`). It sorts by last activity or the day it was raised,
   and for the staff by priority, and pages like every table (see
   [Design and accessibility](design.md#tables)). The staff also filter by

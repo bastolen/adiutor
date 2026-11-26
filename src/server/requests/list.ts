@@ -11,6 +11,7 @@ import { company, request, requestParticipant, requestType, user } from '@/db/sc
 import { firstRow } from '@/lib/defined';
 import {
   DEFAULT_REQUEST_STATUS_FILTER,
+  INTERNAL_CHOICE,
   isRequestPriority,
   isRequestStatus,
   isRequestStatusFilter,
@@ -107,7 +108,10 @@ export interface ListRequestsOptions extends Partial<TableState<StaffRequestSort
   status?: string;
   /** One status only (`REQUEST_STATUSES`), instead of `status`'s group; anything else is ignored. */
   only?: string;
-  /** One company's requests only: its ID or URL name. */
+  /**
+   * One company's requests only: its ID or URL name; or the internal requests only
+   * (`INTERNAL_CHOICE`), for the staff.
+   */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
   type?: string;
@@ -292,7 +296,10 @@ export interface RequestListFilters {
    * requests across companies.
    */
   statuses: readonly RequestStatus[] | null;
-  /** One company's requests only: its ID or URL name. */
+  /**
+   * One company's requests only: its ID or URL name; or the internal requests only
+   * (`INTERNAL_CHOICE`).
+   */
   company?: string;
   /** One type only, by its key; a key no type has, or anything else, shows every type. */
   type?: string;
@@ -319,7 +326,8 @@ export interface RequestListFilters {
  * @param actor - The acting user.
  * @param filters - What narrows the list down.
  * @returns The condition; `undefined` when nothing narrows the list.
- * @throws {ServiceError} `not_found` when asked for a company the actor may not see.
+ * @throws {ServiceError} `not_found` when asked for a company the actor may not see, or for
+ *   the internal requests by someone who isn't on the staff.
  */
 export async function requestListCondition(
   ctx: ServiceContext,
@@ -329,7 +337,13 @@ export async function requestListCondition(
   const scope = requestScope(actor);
   const { search = '', statuses, company: companyRef, type, priority, assignee } = filters;
   const conditions: (SQL | undefined)[] = [visibleRequests(scope)];
-  if (companyRef) {
+  if (companyRef === INTERNAL_CHOICE) {
+    // Only the staff read internal requests: for anyone else they're like a company they can't see.
+    if (!scope.everyCompany) {
+      throw notFoundError();
+    }
+    conditions.push(isNull(request.companyId));
+  } else if (companyRef) {
     const access = await getCompanyAccess(ctx.db, actor, companyRef);
     if (!access.permissions.has('requests:view')) {
       throw notFoundError();
@@ -427,7 +441,7 @@ export async function loadRequestListItems(
 /**
  * Lists the requests the actor sees, one page at a time: every company's and
  * the internal ones for the staff, their active companies' for everyone
- * else, or one company's.
+ * else, or one company's (or only the internal ones).
  * By default the requests that are still worked on, the one with the latest
  * activity first.
  *
@@ -443,7 +457,8 @@ export async function loadRequestListItems(
  * @param actor - The acting user.
  * @param options - Filters, search, sort and page.
  * @returns The page of requests.
- * @throws {ServiceError} `not_found` when asked for a company the actor may not see.
+ * @throws {ServiceError} `not_found` when asked for a company the actor may not see, or for
+ *   the internal requests by someone who isn't on the staff.
  */
 export async function listRequests(
   ctx: ServiceContext,
