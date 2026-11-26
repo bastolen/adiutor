@@ -1,7 +1,8 @@
 /**
  * @file Tests for what the database itself guarantees about requests: one
  * number each, entries that are a reply or a change, and a history that
- * outlives the accounts in it. The request counter is a setting, tested with
+ * outlives the accounts in it, also the staff member's who raised a request
+ * for someone. The request counter is a setting, tested with
  * the settings (`src/server/settings/`).
  */
 import { eq } from 'drizzle-orm';
@@ -83,6 +84,37 @@ describe('the request table', () => {
     expect(kept).toMatchObject({ createdBy: null, createdBySide: 'company' });
     const entries = await db.select().from(requestEntry);
     expect(entries).toMatchObject([{ authorId: null, authorSide: 'company', body: 'Any news?' }]);
+  });
+});
+
+describe('a request raised for someone', () => {
+  it('still says a staff member raised it for them once the staff member’s account is gone', async () => {
+    const { request: created } = await storeRequest(1);
+    const staffId = await createUser(db, 'support@adiutor.test');
+    await db
+      .update(request)
+      .set({ createdOnBehalf: true, createdOnBehalfBy: staffId })
+      .where(eq(request.id, created.id));
+
+    await db.delete(user).where(eq(user.id, staffId));
+
+    const [kept] = await db.select().from(request).where(eq(request.id, created.id));
+    expect(kept).toMatchObject({ createdOnBehalf: true, createdOnBehalfBy: null });
+  });
+
+  it('names a staff member only for a request raised for someone at the company', async () => {
+    const { request: created } = await storeRequest(1);
+    const staffId = await createUser(db, 'support@adiutor.test');
+
+    await expect(
+      db.update(request).set({ createdOnBehalfBy: staffId }).where(eq(request.id, created.id)),
+    ).rejects.toThrow();
+    await expect(
+      db
+        .update(request)
+        .set({ createdOnBehalf: true, createdBySide: 'staff' })
+        .where(eq(request.id, created.id)),
+    ).rejects.toThrow();
   });
 });
 

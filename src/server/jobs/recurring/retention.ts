@@ -1,15 +1,15 @@
 /**
  * @file The daily job that deletes what Adiutor keeps only for a while:
  * audit events after a year, sign-in errors and other recorded errors after
- * 7 days, and the history of job runs and the queued jobs that are done
- * (or given up, or discarded) after 30 days. It deletes in chunks until its
+ * 7 days, and the history of job runs, the queued jobs that are done
+ * (or given up, or discarded) and the deliveries to webhooks after 30 days. It deletes in chunks until its
  * deadline, so a large backlog is cleared over several runs.
  */
 import { and, lt, ne, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 import type { Database } from '@/db';
-import { appError, auditEvent, jobRun, queuedJob, signInError } from '@/db/schema';
+import { appError, auditEvent, jobRun, queuedJob, signInError, webhookDelivery } from '@/db/schema';
 
 import { APP_ERROR_RETENTION_DAYS } from '../../app-errors';
 import { SIGN_IN_ERROR_RETENTION_DAYS } from '../../auth/sign-in-errors';
@@ -122,6 +122,15 @@ export default defineRecurringJob({
         lt(queuedJob.finishedAt, daysAgo(JOB_HISTORY_RETENTION_DAYS)),
       ),
     );
-    return { summary: { auditEvents, signInErrors, appErrors, jobRuns, queuedJobs } };
+    // A delivery is over within two days (its last attempt comes a day and a half after the first),
+    // so whatever its status, one 30 days old is history.
+    const webhookDeliveries = await clean(
+      webhookDelivery,
+      webhookDelivery.id,
+      lt(webhookDelivery.createdAt, daysAgo(JOB_HISTORY_RETENTION_DAYS)),
+    );
+    return {
+      summary: { auditEvents, signInErrors, appErrors, jobRuns, queuedJobs, webhookDeliveries },
+    };
   },
 });

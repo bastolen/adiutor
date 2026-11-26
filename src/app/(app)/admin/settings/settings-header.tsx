@@ -11,8 +11,9 @@ import SegmentTabNav from '@/components/ui/segment-tab-nav';
  * The "Settings" heading, with a tab for each of its pages: General (the
  * name shown to users, the languages and the time zone), Staff (the staff,
  * their invitations and invite links), Requests (request numbers and
- * types) and Appearance (the brand colours). Every tab is for staff Admins, who are the only ones to see the
- * settings, so none is left out. Its text comes from `admin.settings`.
+ * types), Webhooks (where what happens to requests is sent) and Appearance
+ * (the brand colours). Every tab is for staff Admins, who are the only ones
+ * to see the settings, so none is left out. Its text comes from `admin.settings`.
  */
 export default function SettingsHeader() {
   const t = useTranslations('admin.settings');
@@ -24,6 +25,7 @@ export default function SettingsHeader() {
           { href: '/admin/settings', label: t('tabs.general'), segment: null },
           { href: '/admin/settings/staff', label: t('tabs.staff'), segment: 'staff' },
           { href: '/admin/settings/requests', label: t('tabs.requests'), segment: 'requests' },
+          { href: '/admin/settings/webhooks', label: t('tabs.webhooks'), segment: 'webhooks' },
           {
             href: '/admin/settings/appearance',
             label: t('tabs.appearance'),

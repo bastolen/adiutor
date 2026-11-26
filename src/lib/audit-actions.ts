@@ -52,6 +52,12 @@ export const AUDIT_ACTIONS = [
   'request_type_changed',
   'request_type_archived',
   'request_type_restored',
+  'webhook_added',
+  'webhook_changed',
+  'webhook_secret_renewed',
+  'webhook_turned_off',
+  'webhook_turned_on',
+  'webhook_removed',
   'job_started',
   'job_paused',
   'job_resumed',
@@ -149,6 +155,12 @@ export const AUDIT_GROUPS: Record<AuditGroup, { actions: readonly AuditAction[] 
       'request_type_changed',
       'request_type_archived',
       'request_type_restored',
+      'webhook_added',
+      'webhook_changed',
+      'webhook_secret_renewed',
+      'webhook_turned_off',
+      'webhook_turned_on',
+      'webhook_removed',
     ],
   },
   jobs: {
@@ -189,7 +201,10 @@ type AuditEventDescription =
   | 'impersonationNoLongerAllowed'
   | 'impersonationSessionEnded'
   | 'inviteLinkClaimUndone'
-  | 'memberJoinedKept';
+  | 'memberJoinedKept'
+  | 'webhookTurnedOffFailing'
+  | 'webhookTurnedOffGone'
+  | 'webhookTurnedOffUnreadable';
 
 /**
  * The more precise descriptions of `password_check_failed`, by what the
@@ -216,6 +231,17 @@ const IMPERSONATION_END_DESCRIPTIONS = new Map<unknown, AuditEventDescription>([
 ]);
 
 /**
+ * The more precise descriptions of `webhook_turned_off` when Adiutor turned
+ * the webhook off itself, by why (`WEBHOOK_OFF_REASONS` in
+ * `src/lib/webhooks.ts`); a staff Admin turning it off (`manual`) keeps the label.
+ */
+const WEBHOOK_OFF_DESCRIPTIONS = new Map<unknown, AuditEventDescription>([
+  ['failing', 'webhookTurnedOffFailing'],
+  ['gone', 'webhookTurnedOffGone'],
+  ['unreadable', 'webhookTurnedOffUnreadable'],
+]);
+
+/**
  * How an event is described: a key in the `audit` namespace, its label
  * (`actions.<action>`) or a more precise description (`events.<name>`).
  */
@@ -228,7 +254,7 @@ export type AuditEventMessageKey = `actions.${AuditAction}` | `events.${AuditEve
  * what a wrong current password was typed for, why a sign-in as a user
  * ended, an invite link that became usable again because its email couldn't
  * be sent, an invitation used by someone who was in already and kept their
- * role). The caller translates the
+ * role, a webhook Adiutor turned off itself). The caller translates the
  * key in the reader's language, `getTranslations('audit')`.
  *
  * @param action - What happened.
@@ -265,6 +291,12 @@ export function describeAuditEvent(
   // Recorded by `claimInviteLink` when the email of a claim couldn't be sent and it was undone.
   if (action === 'invite_link_claimed' && details.undone === true) {
     return 'events.inviteLinkClaimUndone';
+  }
+  // Adiutor turned a webhook off itself, with why.
+  const offDescription =
+    action === 'webhook_turned_off' ? WEBHOOK_OFF_DESCRIPTIONS.get(details.reason) : null;
+  if (offDescription) {
+    return `events.${offDescription}`;
   }
   // Someone who was in already used an invitation or invite link: nothing was given (`join`).
   if (action === 'member_joined' && details.kept === true) {

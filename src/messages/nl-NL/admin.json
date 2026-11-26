@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Instellingen",
-      "description": "Hoe gebruikers jullie zien, wie er medewerker is, en hoe verzoeken worden genummerd en ingedeeld.",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, en waar webhooks naartoe sturen.",
       "sections": "Onderdelen van de instellingen",
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
         "requests": "Verzoeken",
+        "webhooks": "Webhooks",
         "appearance": "Weergave"
       },
       "general": {
@@ -370,6 +371,151 @@
           "restoreLabel": "{name} terugzetten",
           "restored": "{name} teruggezet."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Stuur wat er met verzoeken gebeurt naar je eigen systemen als ondertekende JSON, of naar een chatkanaal als bericht. Elke webhook kiest welke verzoektypen en gebeurtenissen hij krijgt.",
+          "listLabel": "Webhooks",
+          "empty": "Nog geen webhooks. Voeg er een toe om wat er met verzoeken gebeurt naar een systeem van je of een chatkanaal te sturen."
+        },
+        "status": {
+          "on": "Aan",
+          "manual": "Uit",
+          "failing": "Uit: bleef mislukken",
+          "gone": "Uit: ontvanger weg",
+          "unreadable": "Uit: niet te lezen"
+        },
+        "format": {
+          "json": "Ondertekende JSON",
+          "chat": "Chatbericht"
+        },
+        "allTypes": "Alle verzoektypen",
+        "events": {
+          "raised": "Ingediende verzoeken",
+          "reply": "Reacties",
+          "note": "Interne notities",
+          "status": "Statuswijzigingen",
+          "assignee": "Toegewezen medewerkers",
+          "details": "Titel, type en prioriteit"
+        },
+        "summary": "Naar {host} · {types}",
+        "fields": {
+          "nameLabel": "Naam",
+          "nameHint": "Hoe de medewerkers hem noemen, bijvoorbeeld Inkoop of Chat van de medewerkers.",
+          "urlLabel": "Adres",
+          "urlHint": "Waar het naartoe gaat: een https://-adres. Er kan een token in staan, dus Adiutor houdt het geheim en laat alleen de host zien.",
+          "urlKeepHint": "Laat het leeg om het opgeslagen adres te houden, dat Adiutor nooit meer laat zien.",
+          "formatLabel": "Vorm",
+          "formatJsonHint": "Ondertekend zoals Standard Webhooks het beschrijft, met alle details, voor een systeem van je.",
+          "formatChatHint": "Een kort bericht dat Slack, Google Chat, Mattermost en Discord laten zien zoals het is, in de standaardtaal van Adiutor.",
+          "typesLegend": "Verzoektypen",
+          "allTypesHint": "Elk type, ook de typen die later worden toegevoegd.",
+          "chosenTypes": "Gekozen typen",
+          "eventsLegend": "Versturen",
+          "staffOnly": "Interne notities en prioriteiten zijn alleen voor de medewerkers: stuur ze alleen naar een plek die alleen de medewerkers lezen."
+        },
+        "add": {
+          "button": "Webhook toevoegen",
+          "title": "Een webhook toevoegen",
+          "description": "Vanaf nu wordt wat je hier kiest naar dit adres gestuurd.",
+          "confirm": "Webhook toevoegen",
+          "added": "Webhook toegevoegd."
+        },
+        "secret": {
+          "title": "Kopieer het ondertekeningsgeheim",
+          "description": "Adiutor laat het niet meer zien. De ontvanger controleert er de handtekening van elke levering mee.",
+          "label": "Ondertekeningsgeheim",
+          "copy": "Geheim kopiëren",
+          "done": "Klaar"
+        },
+        "confirmFirst": "Bevestig met je tweede stap dat jij het bent, voordat je een webhook toevoegt of wijzigt.",
+        "page": {
+          "title": "Webhook",
+          "back": "Alle webhooks",
+          "details": "Details",
+          "detailsDescription": "Waar hij naartoe stuurt, en wat.",
+          "host": "Stuurt naar",
+          "format": "Vorm",
+          "types": "Verzoektypen",
+          "events": "Verstuurt",
+          "added": "Toegevoegd",
+          "secretRenewed": "Geheim vernieuwd",
+          "failingSince": "Mislukt sinds",
+          "never": "Nooit",
+          "offNote": "{reason, select, failing {Adiutor heeft hem uitgezet omdat elke levering 3 dagen lang mislukte. Zet hem weer aan zodra de ontvanger werkt.} gone {Adiutor heeft hem uitgezet omdat de ontvanger antwoordde dat hij voorgoed weg is (410 Gone).} unreadable {Adiutor heeft hem uitgezet omdat het adres of geheim niet meer te lezen is. Vul het adres opnieuw in en vernieuw het geheim, en zet hem daarna aan.} other {Hij staat uit: er wordt niets naartoe gestuurd, en wat er intussen gebeurt wordt later niet verstuurd.}}"
+        },
+        "edit": {
+          "button": "Bewerken",
+          "title": "{name} bewerken",
+          "description": "Wijzigingen gelden voor wat er vanaf nu gebeurt.",
+          "confirm": "Opslaan",
+          "saved": "Webhook opgeslagen.",
+          "unchanged": "Er is niets gewijzigd."
+        },
+        "test": {
+          "button": "Test versturen",
+          "delivered": "Test geleverd: de ontvanger antwoordde {status, number}.",
+          "failed": "De test is niet geleverd. {reason}"
+        },
+        "onOff": {
+          "turnOff": "Uitzetten",
+          "turnOn": "Aanzetten",
+          "turnedOff": "Webhook uitgezet.",
+          "turnedOn": "Webhook aangezet."
+        },
+        "renew": {
+          "button": "Geheim vernieuwen",
+          "title": "Het ondertekeningsgeheim vernieuwen?",
+          "description": "Het oude geheim werkt meteen niet meer. Leveringen die de ontvanger intussen weigert worden opnieuw geprobeerd, dus geef hem snel het nieuwe geheim.",
+          "confirm": "Geheim vernieuwen",
+          "renewed": "Ondertekeningsgeheim vernieuwd."
+        },
+        "remove": {
+          "button": "Verwijderen",
+          "title": "{name} verwijderen?",
+          "description": "Er wordt niets meer naartoe gestuurd, en de leveringen worden verwijderd. Dit kan niet ongedaan worden gemaakt.",
+          "confirm": "Webhook verwijderen",
+          "removed": "Webhook verwijderd."
+        },
+        "deliveries": {
+          "title": "Leveringen",
+          "description": "Wat er de afgelopen 30 dagen is verstuurd en hoe het ging, nooit wat er verstuurd is of wat de ontvanger antwoordde.",
+          "rows": "Leveringen",
+          "caption": "Leveringen",
+          "when": "Wanneer",
+          "what": "Wat",
+          "result": "Resultaat",
+          "attempts": "Pogingen",
+          "actions": "Acties",
+          "test": "Test",
+          "attemptCount": "{count, plural, one {# poging} other {# pogingen}}",
+          "nextAttempt": "Volgende poging: {time}",
+          "status": {
+            "pending": "Wordt verstuurd",
+            "delivered": "Geleverd",
+            "failed": "Mislukt",
+            "cancelled": "Geannuleerd"
+          },
+          "emptyTitle": "Nog geen leveringen",
+          "emptyDescription": "Leveringen verschijnen hier zodra er iets gebeurt dat hij verstuurt, of als je een test verstuurt.",
+          "resend": "Opnieuw versturen",
+          "resendLabel": "De levering van {time} opnieuw versturen",
+          "resent": "Hij wordt bij de volgende ronde opnieuw verstuurd."
+        },
+        "outcome": {
+          "timeout": "Geen antwoord binnen 10 seconden.",
+          "dns": "De hostnaam is niet te vinden.",
+          "refused_address": "Het adres ligt in het eigen netwerk van Adiutor.",
+          "connection": "De verbinding werd geweigerd of verbroken.",
+          "tls": "Het certificaat of de versleuteling is niet te vertrouwen.",
+          "redirect": "Hij antwoordde met een doorverwijzing ({status, number}), die Adiutor nooit volgt.",
+          "http": "Hij antwoordde {status, number}.",
+          "unreadable": "Het adres of geheim is niet meer te lezen.",
+          "answered": "Antwoordde {status, number}."
+        },
+        "removedToast": "Webhook verwijderd."
       },
       "appearance": {
         "title": "Weergave",

@@ -9,16 +9,23 @@ import { defined } from '@/lib/defined';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 
 import renderInLocale from '../../../../../tests/i18n/render';
-import raiseRequestAction from './actions';
+import raiseRequestAction, { raiseForChoicesAction } from './actions';
 import RaiseRequestForm from './raise-request-form';
 
-vi.mock('./actions', () => ({ default: vi.fn() }));
+vi.mock('./actions', () => ({ default: vi.fn(), raiseForChoicesAction: vi.fn() }));
 // The list of people at "@" is asked from the server, which isn't here.
 vi.mock('../../_requests/mention-actions', () => ({ mentionChoicesAction: vi.fn() }));
 
 afterEach(() => {
   vi.mocked(raiseRequestAction).mockReset();
+  vi.mocked(raiseForChoicesAction).mockReset();
 });
+
+/** The people of Adiutor Tests Alpha a request can be raised for. */
+const ALPHA_PEOPLE = [
+  { key: 'casey-key', name: 'Casey Client' },
+  { key: 'anna-key', name: 'Anna Admin' },
+];
 
 /** One company to raise a request in. */
 const ALPHA = [{ slug: 'adiutor-tests-alpha', name: 'Adiutor Tests Alpha' }];
@@ -203,6 +210,110 @@ describe('RaiseRequestForm', () => {
     await user.click(screen.getByRole('button', { name: 'Raise request' }));
     await waitFor(() => expect(raiseRequestAction).toHaveBeenCalledTimes(2));
     expect(sent()).toMatchObject({ priority: 'low' });
+  });
+
+  it('lets the staff raise it for someone at the company who asked, or for themselves', async () => {
+    const user = userEvent.setup();
+    render(
+      <RaiseRequestForm
+        types={TYPES}
+        companies={ALPHA}
+        choosesPriority
+        raisesFor
+        raiseForChoices={ALPHA_PEOPLE}
+      />,
+    );
+
+    const raiseFor = screen.getByRole('combobox', { name: 'Raise it for' });
+    expect(raiseFor).toHaveTextContent('Yourself');
+    expect(raiseFor).toHaveAccessibleDescription(
+      'Someone at the company who asked you, for example by phone. They show as who raised it, follow it and get an email.',
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), 'The printer is broken');
+    await pick(user, 'Type', 'Bug');
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), 'They called.');
+    await user.click(screen.getByRole('button', { name: 'Raise request' }));
+
+    await waitFor(() => expect(raiseRequestAction).toHaveBeenCalledTimes(1));
+    // Nobody chosen: the staff member raises it.
+    expect(sent()).toMatchObject({ raised_for: '' });
+
+    await pick(user, 'Raise it for', 'Casey Client');
+    await user.click(screen.getByRole('button', { name: 'Raise request' }));
+    await waitFor(() => expect(raiseRequestAction).toHaveBeenCalledTimes(2));
+    expect(sent()).toMatchObject({ raised_for: 'casey-key' });
+    // Nothing is asked of the server for the company chosen already.
+    expect(raiseForChoicesAction).not.toHaveBeenCalled();
+  });
+
+  it('asks who it can be raised for when the staff choose another company, from themselves again', async () => {
+    /** Answers the form's question for the people of the company it chose. */
+    let answer: (people: typeof ALPHA_PEOPLE) => void = () => {};
+    vi.mocked(raiseForChoicesAction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    render(
+      <RaiseRequestForm
+        types={TYPES}
+        companies={BOTH}
+        company="adiutor-tests-beta"
+        choosesPriority
+        raisesFor
+        raiseForChoices={[{ key: 'bea-key', name: 'Bea Beta' }]}
+      />,
+    );
+    await pick(user, 'Raise it for', 'Bea Beta');
+
+    await pick(user, 'Company', 'Adiutor Tests Alpha');
+
+    expect(raiseForChoicesAction).toHaveBeenCalledExactlyOnceWith('adiutor-tests-alpha');
+    const raiseFor = screen.getByRole('combobox', { name: 'Raise it for' });
+    expect(raiseFor).toHaveTextContent('Yourself');
+    expect(raiseFor).toHaveAttribute('aria-busy', 'true');
+    answer(ALPHA_PEOPLE);
+    await waitFor(() => expect(raiseFor).not.toHaveAttribute('aria-busy'));
+    await user.click(raiseFor);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Yourself',
+      'Casey Client',
+      'Anna Admin',
+    ]);
+  });
+
+  it('keeps the people of the company chosen last, whichever answer comes first', async () => {
+    const answers = new Map<string, (people: typeof ALPHA_PEOPLE) => void>();
+    vi.mocked(raiseForChoicesAction).mockImplementation(
+      (company) =>
+        new Promise((resolve) => {
+          answers.set(String(company), resolve);
+        }),
+    );
+    const user = userEvent.setup();
+    render(<RaiseRequestForm types={TYPES} companies={BOTH} choosesPriority raisesFor />);
+
+    await pick(user, 'Company', 'Adiutor Tests Alpha');
+    await pick(user, 'Company', 'Adiutor Tests Beta');
+    answers.get('adiutor-tests-beta')?.([{ key: 'bea-key', name: 'Bea Beta' }]);
+    // Alpha's answer comes late, for a company that's no longer chosen.
+    answers.get('adiutor-tests-alpha')?.(ALPHA_PEOPLE);
+
+    const raiseFor = screen.getByRole('combobox', { name: 'Raise it for' });
+    await waitFor(() => expect(raiseFor).not.toHaveAttribute('aria-busy'));
+    await user.click(raiseFor);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Yourself',
+      'Bea Beta',
+    ]);
+  });
+
+  it('lets nobody else raise it for someone', () => {
+    render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Raise it for' })).not.toBeInTheDocument();
   });
 
   it('shows why a request was refused, and keeps what was typed', async () => {

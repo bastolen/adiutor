@@ -364,6 +364,7 @@ const FOLDER_MODULES = [
   'server/queue',
   'server/requests',
   'server/settings',
+  'server/webhooks',
 ];
 
 /**

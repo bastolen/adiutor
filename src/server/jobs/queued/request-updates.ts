@@ -1,9 +1,11 @@
 /**
- * @file Sends the queued emails about requests (`requestUpdateJob`): one
+ * @file Sends the queued news about requests (`requestUpdateJob`): one
  * email for everything queued for one person about one request, in their
- * language. What the email may show is read when it's sent
- * (`readRequestUpdate`), so someone who is no longer on the request or can
- * no longer read it gets nothing, and their jobs are skipped. Its links sign
+ * language, or one delivery for everything queued for one webhook about one
+ * request (`deliverWebhookNews` in `src/server/webhooks`, decision 0046).
+ * What the email may show is read when it's sent (`readRequestUpdate`), so
+ * someone who is no longer on the request or can no longer read it gets
+ * nothing, and their jobs are skipped. Its links sign
  * the reader in and open the request (`createRequestLink`, decision 0036) at
  * the first news it tells of (`RequestUpdate.anchor`, which the browser keeps
  * through the link's redirect, and the link names the entry, which it passes
@@ -20,9 +22,10 @@ import { requestLinkPath } from '@/lib/sign-in/request-link';
 
 import { createRequestLink } from '../../auth/request-links';
 import { loadEmailBrand } from '../../branding';
-import { REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
+import { isWebhookNews, REQUEST_UPDATES_GROUP, requestUpdateJob } from '../../queue';
 import recipientLocale from '../../recipient-locale';
 import { createAnswerLink, readRequestUpdate } from '../../requests';
+import { deliverWebhookNews } from '../../webhooks';
 import { batchedJobRunner, defineJobBatch } from '../define';
 
 /** The kind of the queued news about requests, for the runner: its batch runs its jobs. */
@@ -39,10 +42,22 @@ export const requestUpdatesBatch = defineJobBatch({
    * @returns The jobs that were skipped: all of them when the person gets no email.
    */
   run: async (ctx, jobs) => {
-    const news = jobs.flatMap((job) => {
+    const payloads = jobs.flatMap((job) => {
       const payload = requestUpdateJob.read(job);
-      return payload ? [{ jobId: job.id, ...payload }] : [];
+      return payload ? [{ jobId: job.id, payload }] : [];
     });
+    // A webhook's news goes out as one delivery (decision 0046); a person's as one email.
+    const forWebhook = payloads.flatMap(({ jobId, payload }) =>
+      isWebhookNews(payload) ? [{ jobId, ...payload }] : [],
+    );
+    if (forWebhook.length > 0) {
+      const { skipped } = await deliverWebhookNews(ctx, forWebhook);
+      const others = payloads.filter(({ payload }) => !isWebhookNews(payload));
+      return { skipped: [...skipped, ...others.map(({ jobId }) => jobId)] };
+    }
+    const news = payloads.flatMap(({ jobId, payload }) =>
+      isWebhookNews(payload) ? [] : [{ jobId, ...payload }],
+    );
     const [first] = news;
     const update = first
       ? await readRequestUpdate(

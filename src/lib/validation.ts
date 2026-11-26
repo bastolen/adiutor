@@ -30,6 +30,8 @@ import {
   REQUEST_TYPE_DESCRIPTION_MAX_LENGTH,
   REQUEST_TYPE_NAME_MAX_LENGTH,
   SLUG_MAX_LENGTH,
+  WEBHOOK_NAME_MAX_LENGTH,
+  WEBHOOK_URL_MAX_LENGTH,
 } from './input-rules';
 import {
   ACTIVITY_GROUPS,
@@ -40,6 +42,12 @@ import {
   REQUEST_STATUSES,
   REQUEST_TYPE_KEY_PATTERN,
 } from './requests';
+import {
+  WEBHOOK_EVENTS,
+  WEBHOOK_FORMATS,
+  type WebhookUrlProblem,
+  webhookUrlProblem,
+} from './webhooks';
 
 /**
  * A message of the `validation` catalogue, by its full key (e.g.
@@ -280,7 +288,8 @@ type NameField =
   | 'impersonationReason'
   | 'requestTitle'
   | 'requestTypeName'
-  | 'requestTypeDescription';
+  | 'requestTypeDescription'
+  | 'webhookName';
 
 /**
  * Adds the shared character rules to a string schema: no control characters
@@ -604,3 +613,86 @@ export const requestPrefixSchema = z
   .regex(REQUEST_PREFIX_PATTERN, {
     error: 'validation.requestPrefix' satisfies ValidationMessageKey,
   });
+
+/** A webhook's name, as the staff call it: a name, since the email that it was turned off quotes it. */
+export const webhookNameSchema = withNameSafety(
+  lengthLimited({
+    min: 1,
+    max: WEBHOOK_NAME_MAX_LENGTH,
+    tooShort: 'validation.webhookName.empty',
+    tooLong: 'validation.webhookName.tooLong',
+  }),
+  'webhookName',
+);
+
+/** The message for each thing that can be wrong with a webhook's address (`webhookUrlProblem`). */
+const WEBHOOK_URL_MESSAGES: Record<WebhookUrlProblem, ValidationMessageKey> = {
+  too_long: 'validation.webhookUrl.tooLong',
+  invalid: 'validation.webhookUrl.invalid',
+  scheme: 'validation.webhookUrl.scheme',
+  credentials: 'validation.webhookUrl.credentials',
+  insecure: 'validation.webhookUrl.insecure',
+};
+
+/**
+ * A webhook's address, by the rules the browser shares
+ * (`webhookUrlProblem`): its length is checked first, so the other rules
+ * never parse a megabyte. Whether it points inside Adiutor's network is the
+ * server's own check (`pointsInside`).
+ *
+ * @param production - Whether Adiutor runs in production, where only `https://` (or this computer) will do.
+ * @returns The schema.
+ */
+export function webhookUrlSchema(production: boolean) {
+  return z
+    .string()
+    .trim()
+    .min(1, { error: 'validation.webhookUrl.empty' satisfies ValidationMessageKey, abort: true })
+    .max(WEBHOOK_URL_MAX_LENGTH, {
+      error: 'validation.webhookUrl.tooLong' satisfies ValidationMessageKey,
+      abort: true,
+    })
+    .superRefine((value, ctx) => {
+      const problem = webhookUrlProblem(value, { production });
+      if (problem !== null) {
+        ctx.addIssue({ code: 'custom', message: WEBHOOK_URL_MESSAGES[problem] });
+      }
+    });
+}
+
+/** How a webhook is sent (`WEBHOOK_FORMATS`). */
+export const webhookFormatSchema = z.enum(WEBHOOK_FORMATS, {
+  error: 'validation.webhookFormat' satisfies ValidationMessageKey,
+});
+
+/** What a webhook is told about: at least one of `WEBHOOK_EVENTS`, each once. */
+export const webhookEventsSchema = z
+  .array(
+    z.enum(WEBHOOK_EVENTS, {
+      error: 'validation.webhookEvents.unknown' satisfies ValidationMessageKey,
+    }),
+  )
+  .max(WEBHOOK_EVENTS.length * 2, {
+    error: 'validation.webhookEvents.unknown' satisfies ValidationMessageKey,
+  })
+  .transform((events) => WEBHOOK_EVENTS.filter((event) => events.includes(event)))
+  .refine((events) => events.length > 0, {
+    error: 'validation.webhookEvents.empty' satisfies ValidationMessageKey,
+  });
+
+/**
+ * The request types a webhook covers when it doesn't cover them all: keys in
+ * form, each once (whether they exist is the service's check). A handful at
+ * most in practice; the bound keeps a forged form small.
+ */
+export const webhookTypesSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .regex(REQUEST_TYPE_KEY_PATTERN, {
+        error: 'validation.webhookTypes.unknown' satisfies ValidationMessageKey,
+      }),
+  )
+  .max(200, { error: 'validation.webhookTypes.unknown' satisfies ValidationMessageKey })
+  .transform((keys) => [...new Set(keys)]);

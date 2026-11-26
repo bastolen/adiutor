@@ -45,6 +45,21 @@ describe('describeAuditEvent', () => {
     expect(t(describeAuditEvent('sign_in', { method: 'password' }))).toBe('Signed in');
   });
 
+  it('says why Adiutor turned a webhook off itself, and keeps the label for a staff Admin', () => {
+    expect(t(describeAuditEvent('webhook_turned_off', { reason: 'failing' }))).toBe(
+      'Webhook turned off after its deliveries failed for days',
+    );
+    expect(t(describeAuditEvent('webhook_turned_off', { reason: 'gone' }))).toBe(
+      'Webhook turned off because its receiver is gone',
+    );
+    expect(t(describeAuditEvent('webhook_turned_off', { reason: 'unreadable' }))).toBe(
+      'Webhook turned off because its address or secret can’t be read',
+    );
+    expect(t(describeAuditEvent('webhook_turned_off', { reason: 'manual' }))).toBe(
+      'Turned a webhook off',
+    );
+  });
+
   it('tells a wrong code at sign-in from one on the step-up page', () => {
     expect(t(describeAuditEvent('mfa_failed', { method: 'authenticator', atSignIn: true }))).toBe(
       'Wrong two-step verification code entered at sign-in',

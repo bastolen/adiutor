@@ -212,6 +212,29 @@ describe('who is told they were put on a request', () => {
     expect(await queuedFor({ admin, watcher, support })).toEqual(['watcher:mentioned']);
   });
 
+  it('tells someone a request was raised for, once, also when its description mentions them', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const watcher = await memberActor(db, company.id, 'watcher', 'wim@adiutor.test');
+    const support = await staffActor(db, 'support');
+    const toCasey = writtenMentionMarker('casey', mentionKey(company.id, client.id));
+    const toWim = writtenMentionMarker('wim', mentionKey(company.id, watcher.id));
+
+    await raiseRequest(ctx, support, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: `${toCasey} called about it; ${toWim} saw it first.`,
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    // Not the staff member who raised it, who follows it too.
+    expect(await queuedFor({ client, watcher, support })).toEqual([
+      'client:raised',
+      'watcher:mentioned',
+    ]);
+  });
+
   it('tells someone an edit mentions newly, not someone the text mentioned already', async () => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
@@ -645,6 +668,45 @@ describe('what one person’s email may show', () => {
     });
     // Never the ID of whoever did it.
     expect(JSON.stringify(update?.items)).not.toContain(admin.id);
+  });
+
+  it('tells someone a request was raised for who raised it, with its description', async () => {
+    await createStaffSettings(db, 'Adiutor Tests');
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const raised = await raiseRequest(ctx, support, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'It prints blank pages, they said on the phone.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+    /**
+     * Reads the Client's email as it would be sent now.
+     *
+     * @returns What it may show.
+     */
+    const read = async () =>
+      readRequestUpdate(ctx, { requestId: raised.id, userId: client.id }, await newsFor(client.id));
+
+    expect(await read()).toMatchObject({
+      role: 'subscriber',
+      items: [
+        {
+          event: 'raised',
+          by: 'sam',
+          text: { text: 'It prints blank pages, they said on the phone.', format: 'markdown' },
+        },
+      ],
+      // The email opens the request at its description.
+      anchor: 'request-description',
+    });
+    expect(JSON.stringify((await read())?.items)).not.toContain(support.id);
+
+    // The request still says a staff member raised it once their account is gone.
+    await db.delete(user).where(eq(user.id, support.id));
+    expect((await read())?.items).toMatchObject([{ event: 'raised', by: 'Adiutor Tests' }]);
   });
 
   it('gives nothing to someone who turned emails about requests off, assigned or not', async () => {

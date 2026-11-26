@@ -25,6 +25,9 @@ import { requestLinkPagePath } from '../src/lib/sign-in/request-link';
 import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import expectAccessible from './support/axe';
 import {
+  backdateMfaConfirmation,
+  removeWebhooks,
+  storeWebhookToLookAt,
   findCompanyId,
   findUserId,
   storeAuditEvent,
@@ -97,6 +100,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
+  '/admin/settings/webhooks',
   '/admin/settings/appearance',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
@@ -928,6 +932,34 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
+      });
+
+      test('the dialog that adds a webhook', async ({ page }) => {
+        // Only opened and closed: nothing is added. Opening it needs a recent second step.
+        await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
+        await page.goto('/admin/settings/webhooks');
+        await page
+          .getByRole('region', { name: 'Webhooks' })
+          .getByRole('button', { name: 'Add webhook' })
+          .click();
+        const dialog = page.getByRole('dialog', { name: 'Add a webhook' });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole('radio', { name: 'Chosen types' }).check();
+        await expectAccessible(page, '[role="dialog"]');
+        await page.keyboard.press('Escape');
+        await expect(dialog).toHaveCount(0);
+      });
+
+      test('a webhook’s page, turned off, with its deliveries', async ({ page }) => {
+        const name = 'E2E Looked at';
+        try {
+          await page.goto(`/admin/settings/webhooks/${await storeWebhookToLookAt(name)}`);
+          await expect(page.getByRole('region', { name })).toContainText('Off: kept failing');
+          await expect(page.getByRole('table', { name: /^Deliveries/ })).toBeVisible();
+          await expectAccessible(page);
+        } finally {
+          await removeWebhooks([name]);
+        }
       });
 
       test('the time zone select, open, searched and with nothing found', async ({ page }) => {

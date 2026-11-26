@@ -36,13 +36,13 @@ A tick runs every recurring job that's due, one after another, then the queued j
 
 ## The jobs
 
-| Job                          | Schedule (UTC)  | What it does                                                                                                                                  |
-| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                           |
-| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                     |
-| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                      |
-| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                              |
-| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs and finished queued jobs after 30 days |
+| Job                          | Schedule (UTC)  | What it does                                                                                                                                                          |
+| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                                                   |
+| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                                             |
+| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                                              |
+| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                                                      |
+| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days |
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.
@@ -56,12 +56,14 @@ a crash) leaves its claim behind: the link they have keeps working, and after 15
 (`REMINDER_LEASE_MINUTES`) the next run takes the invitation again. That costs a second reminder,
 and the first one's link, if it arrived, never works.
 
-| Kind of queued job  | What it does                                                                                                                                                                                                                                  |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `security-notice`   | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                                                                                             |
-| `added-to-company`  | Emails a user that staff added them to a company; skipped when the membership is gone by then                                                                                                                                                 |
-| `staff-admin-added` | Emails one staff Admin that someone became a staff Admin (one job per Admin, so a refusal for one never resends the others); skipped for an Admin who stepped down                                                                            |
-| `request-update`    | Emails someone on a request what happened to it: one job per person and piece of news, batched into one email per person and request (see [Emails](requests.md#emails)); skipped for someone who is no longer on the request or can't read it |
+| Kind of queued job   | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `security-notice`    | Emails a user about a security change on their account (see [Security emails](authentication.md#security-emails))                                                                                                                                                                                                                                                                                                                                                                          |
+| `added-to-company`   | Emails a user that staff added them to a company; skipped when the membership is gone by then                                                                                                                                                                                                                                                                                                                                                                                              |
+| `staff-admin-added`  | Emails one staff Admin that someone became a staff Admin (one job per Admin, so a refusal for one never resends the others); skipped for an Admin who stepped down                                                                                                                                                                                                                                                                                                                         |
+| `webhook-delivery`   | Makes a later attempt of a delivery to a webhook when it's due: one job per attempt, queued by the attempt before it or by a staff Admin's Send again, and a first attempt queued with every delivery as a safety net (see [Retries and turning off](webhooks.md#retries-and-turning-off)); skipped when the attempt is already recorded, or the webhook is off                                                                                                                            |
+| `webhook-turned-off` | Emails one staff Admin that Adiutor turned a webhook off (one job per Admin); skipped for someone who no longer manages webhooks, or a webhook that's on again or gone                                                                                                                                                                                                                                                                                                                     |
+| `request-update`     | Emails someone on a request what happened to it: one job per person and piece of news, batched into one email per person and request (see [Emails](requests.md#emails)); skipped for someone who is no longer on the request or can't read it. A job can be for a webhook instead: one tick's news for a webhook about a request is one delivery, whose first attempt the job makes (see [Webhooks](webhooks.md#how-news-reaches-a-webhook)); skipped for news the webhook no longer wants |
 
 ## The endpoint
 
@@ -127,7 +129,8 @@ from the Jobs page) and 4 minutes from the command line, and the recurring jobs 
 first half of that, so the queue always has time. On Vercel the platform stops the endpoint's
 function after 60 seconds. The 25 follow from that (`REQUEST_RUN_SECONDS` in `tick.ts`): work
 started just before the deadline must still end and be recorded. The longest such piece is one
-email, which fails after 15 seconds (`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`); when that
+email, which fails after 15 seconds (`SEND_TIMEOUT_MS` in `src/lib/email-limits.ts`; an attempt to
+deliver to a webhook gives up after 10, `WEBHOOK_TIMEOUT_MS`); when that
 job fails for good, the staff Admins' alert follows (below), up to another 15; then 5 seconds to
 answer: 60 − 15 − 15 − 5 = 25. A lease lasts 15 minutes.
 

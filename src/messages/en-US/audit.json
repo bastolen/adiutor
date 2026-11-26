@@ -49,6 +49,12 @@
       "request_type_changed": "Changed a request type",
       "request_type_archived": "Archived a request type",
       "request_type_restored": "Restored a request type",
+      "webhook_added": "Added a webhook",
+      "webhook_changed": "Changed a webhook",
+      "webhook_secret_renewed": "Renewed a webhook’s signing secret",
+      "webhook_turned_off": "Turned a webhook off",
+      "webhook_turned_on": "Turned a webhook on",
+      "webhook_removed": "Removed a webhook",
       "job_started": "Ran a background job now",
       "job_paused": "Paused a background job",
       "job_resumed": "Resumed a background job",
@@ -68,7 +74,10 @@
       "impersonationNoLongerAllowed": "Sign-in as a user ended because it was no longer allowed",
       "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session",
       "inviteLinkClaimUndone": "Invite link made usable again because its email couldn’t be sent",
-      "memberJoinedKept": "Used an invitation and kept the role they had"
+      "memberJoinedKept": "Used an invitation and kept the role they had",
+      "webhookTurnedOffFailing": "Webhook turned off after its deliveries failed for days",
+      "webhookTurnedOffGone": "Webhook turned off because its receiver is gone",
+      "webhookTurnedOffUnreadable": "Webhook turned off because its address or secret can’t be read"
     },
     "groups": {
       "sign-ins": "Sign-ins",

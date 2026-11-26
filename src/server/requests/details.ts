@@ -15,6 +15,7 @@ import { ServiceError } from '../errors';
 import { signedInAsWork } from '../signed-in-as';
 import type { RequestRow } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
+import { tellWebhooks } from './tell-webhooks';
 import { typeToGive } from './types';
 
 /** The details the staff can change, in the order their changes show in the history. */
@@ -149,22 +150,36 @@ export default async function updateRequestDetails(
     if (changes.length === 0) {
       return { changed: 0 };
     }
-    await tx.insert(requestEntry).values(
-      changes.map((change) => ({
-        ...change,
-        requestId: locked.id,
-        authorId: actor.id,
-        authorSide: 'staff' as const,
-        ...signedInAsWork(actor),
-        createdAt: CHANGE_MOMENT,
-      })),
-    );
+    const entries = await tx
+      .insert(requestEntry)
+      .values(
+        changes.map((change) => ({
+          ...change,
+          requestId: locked.id,
+          authorId: actor.id,
+          authorSide: 'staff' as const,
+          ...signedInAsWork(actor),
+          createdAt: CHANGE_MOMENT,
+        })),
+      )
+      .returning({ id: requestEntry.id });
     // The company sees the title and the type change, never the priority.
     const seenByCompany = changes.some(({ kind }) => kind !== 'priority');
     await tx
       .update(request)
       .set({ ...values, ...(seenByCompany ? { lastActivityAt: CHANGE_MOMENT } : {}) })
       .where(eq(request.id, locked.id));
+    // Webhooks are the staff's, so they hear of a priority too; a new type reaches the webhooks
+    // of the type it had and of the type it got.
+    await tellWebhooks(
+      tx,
+      {
+        requestId: locked.id,
+        typeKey: values.type ?? locked.type,
+        ...(values.type !== undefined && { previousTypeKey: locked.type }),
+      },
+      entries.map(({ id }) => ({ event: 'details' as const, entryId: id })),
+    );
     return { changed: changes.length };
   });
 }

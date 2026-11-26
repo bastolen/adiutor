@@ -28,6 +28,7 @@ import { securityNoticeEmail } from './security-notice';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';
+import { webhookTurnedOffEmail } from './webhook-turned-off';
 
 /** The app URL used in every test email. */
 const appUrl = 'https://adiutor.test';
@@ -387,6 +388,31 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('tells someone a request was raised for, with its description in full', async () => {
+    const url = `${appUrl}/requests/142#request-description`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'raised',
+          by: 'Sam Support',
+          text: { text: 'It prints **blank** pages.', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('Sam Support raised this request for you:');
+    expect(email.html).toContain('<strong>blank</strong>');
+    expect(email.html).toContain('Sam Support raised this request for you.');
+    expectBasics(email, url);
+  });
+
   it('shows the staff an internal note in full, marked as one', async () => {
     const url = `${appUrl}/requests/142`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
@@ -574,6 +600,39 @@ describe('background jobs', () => {
       url,
     });
     expect(several.text).toContain('4 security-notice jobs were given up after their last attempt');
+  });
+});
+
+describe('webhooks', () => {
+  const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+
+  it('tells a staff Admin which webhook Adiutor turned off and why, never its address', async () => {
+    const failing = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'failing',
+      url,
+    });
+    expect(failing.subject).toBe('Adiutor turned off the webhook “Procurement”');
+    expect(failing.text).toContain('Every delivery to it has failed for 3 days');
+    expect(failing.text).toContain('turn it on in Settings');
+    expectBasics(failing, url);
+
+    const gone = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'gone',
+      url,
+    });
+    expect(gone.text).toContain('gone for good (410 Gone)');
+
+    const unreadable = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'unreadable',
+      url,
+    });
+    expect(unreadable.text).toContain('Enter its address again and renew its secret');
   });
 });
 
@@ -1025,6 +1084,11 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           where: 'description',
           text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
         },
+        {
+          event: 'raised',
+          by: 'Sam Support',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
       ],
     });
     return { email, url };
@@ -1096,6 +1160,23 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
       newAdminEmail: 'sam@adiutor.test',
       how: 'invitation',
       byName: 'Jane Admin',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "a webhook was turned off" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'a webhook turned off': async (locale) => {
+    const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+    const email = await webhookTurnedOffEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      name: 'Procurement',
+      reason: 'failing',
       url,
     });
     return { email, url };

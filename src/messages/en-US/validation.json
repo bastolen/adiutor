@@ -90,6 +90,32 @@
     "requestPrefix": "Use one to five letters or digits for the prefix, starting with a letter, e.g. AD.",
     "locale": "Choose one of the languages.",
     "timeZone": "Choose one of the time zones.",
+    "webhookName": {
+      "empty": "Enter a name for the webhook.",
+      "tooLong": "Use at most {maximum, number} characters for the webhook’s name.",
+      "controlCharacters": "Remove line breaks and control characters from the webhook’s name.",
+      "hiddenCharacters": "Remove invisible characters and text direction marks from the webhook’s name.",
+      "noVisibleCharacter": "Use at least one letter, digit or symbol in the webhook’s name.",
+      "webAddress": "Remove web addresses from the webhook’s name."
+    },
+    "webhookUrl": {
+      "empty": "Enter the address to send to.",
+      "tooLong": "Use an address of at most {maximum, number} characters.",
+      "invalid": "Enter a web address, such as https://hooks.adiutor.dev/in.",
+      "scheme": "Use an address that starts with https://.",
+      "credentials": "Remove the user name and password from the address: the signature tells the receiver it’s Adiutor.",
+      "insecure": "Use an https:// address: plain http:// only works for this computer.",
+      "internal": "This address is inside Adiutor’s own network, which webhooks never reach."
+    },
+    "webhookFormat": "Choose how the webhook is sent.",
+    "webhookEvents": {
+      "empty": "Choose at least one thing to send.",
+      "unknown": "Choose from the events listed."
+    },
+    "webhookTypes": {
+      "empty": "Choose at least one request type, or all of them.",
+      "unknown": "Choose from the request types listed."
+    },
     "brandColour": {
       "invalid": "Enter a colour as six hex digits, e.g. #0e5655.",
       "accent": "Enter the accent as six hex digits, e.g. #0e5655.",

@@ -49,6 +49,12 @@
       "request_type_changed": "Cambió un tipo de solicitud",
       "request_type_archived": "Archivó un tipo de solicitud",
       "request_type_restored": "Restauró un tipo de solicitud",
+      "webhook_added": "Añadió un webhook",
+      "webhook_changed": "Cambió un webhook",
+      "webhook_secret_renewed": "Renovó el secreto de firma de un webhook",
+      "webhook_turned_off": "Desactivó un webhook",
+      "webhook_turned_on": "Activó un webhook",
+      "webhook_removed": "Eliminó un webhook",
       "job_started": "Tarea en segundo plano ejecutada ahora",
       "job_paused": "Tarea en segundo plano pausada",
       "job_resumed": "Tarea en segundo plano reanudada",
@@ -68,7 +74,10 @@
       "impersonationNoLongerAllowed": "La sesión como un usuario terminó porque ya no estaba permitida",
       "impersonationSessionEnded": "La sesión como un usuario terminó con la propia sesión del miembro del personal",
       "inviteLinkClaimUndone": "Enlace de invitación disponible de nuevo porque no se pudo enviar el correo",
-      "memberJoinedKept": "Invitación usada conservando el rol que ya tenía"
+      "memberJoinedKept": "Invitación usada conservando el rol que ya tenía",
+      "webhookTurnedOffFailing": "Webhook desactivado después de que sus envíos fallaran durante días",
+      "webhookTurnedOffGone": "Webhook desactivado porque su receptor ya no existe",
+      "webhookTurnedOffUnreadable": "Webhook desactivado porque su dirección o su secreto no se pueden leer"
     },
     "groups": {
       "sign-ins": "Inicios de sesión",

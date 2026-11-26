@@ -96,6 +96,8 @@ export default defineConfig({
       // the server reads addresses with the defaults even if .env names other headers or proxies.
       CLIENT_IP_HEADERS: '',
       TRUSTED_PROXIES: '',
+      // Webhooks never reach loopback unless it's allowed: the specs' receivers listen on it.
+      WEBHOOK_ALLOWED_NETWORKS: '127.0.0.1/32',
     },
   },
 });
