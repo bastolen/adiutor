@@ -729,8 +729,10 @@ them ([decision 0047](decisions/0047-staff-raise-a-request-for-someone.md)).
   (`mentionKey`), and `raiseRequest` takes that key (`raisedFor`), never a user ID. A key that
   stands for nobody it can be raised for is refused (`errors.requests.notRaisableFor`). The
   raising transaction locks the person's account row with the actor's (`assertStillMayChange`'s
-  `alsoLock`) and checks them again (`assertStillRaisableFor`), so someone who became a Watcher,
-  left the company or was deactivated meanwhile has nothing raised for them.
+  `alsoLock`, which also checks again that the actor still works on requests) and then their
+  membership, and checks them again (`assertStillRaisableFor`; see
+  [Lock order](security-measures.md#lock-order)), so someone who became a Watcher, left the
+  company or was deactivated meanwhile has nothing raised for them.
 - **The record:** the person is who raised it (`created_by`), on the company's side
   (`created_by_side`), so it counts as the company's request. A flag and the staff member
   (`created_on_behalf`, `created_on_behalf_by`) say who raised it for them; the flag outlives the

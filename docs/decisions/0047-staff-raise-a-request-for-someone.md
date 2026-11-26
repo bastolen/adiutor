@@ -28,7 +28,7 @@ it:
   pick an active Admin or Client of the company, by name. A Watcher can't raise a request, and
   someone whose own request would be the staff's isn't the company's. The form names people by
   their key (`mentionKey`), never a user ID, and the service checks them again in the raising
-  transaction, with their account's row locked.
+  transaction, with their account and their membership locked.
 - **Both follow it, and the person is told.** The person and the staff member are subscribed. The
   person gets an email that the request was raised for them, with its description: this extends
   [decision 0031](0031-emails-about-requests.md), where a new request emails nobody but the people

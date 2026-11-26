@@ -6,7 +6,7 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { DatabaseOrTransaction } from '@/db';
+import type { DatabaseOrTransaction, DatabaseTransaction } from '@/db';
 import { membership, user } from '@/db/schema';
 import { getPermissions } from '@/lib/authz/permissions';
 import { visibleName } from '@/lib/display-name';
@@ -138,7 +138,11 @@ export async function personToRaiseFor(
  * Checks again, in the raising transaction, that a request can still be
  * raised for someone: they may have lost their role, their membership or
  * their account while it was under way. Their user row is locked by then
- * (`assertStillMayChange`'s `alsoLock`).
+ * (`assertStillMayChange`'s `alsoLock`), which a change of their account
+ * waits for; this locks their membership too (`FOR SHARE`, after the user
+ * rows, as the lock order has it), which a change of their role or their
+ * removal from the company waits for. A change that came first is read as
+ * it is once it's done.
  *
  * @param tx - The raising transaction.
  * @param companyId - The company the request is raised in.
@@ -147,10 +151,15 @@ export async function personToRaiseFor(
  *   (`errors.requests.notRaisableFor`).
  */
 export async function assertStillRaisableFor(
-  tx: DatabaseOrTransaction,
+  tx: DatabaseTransaction,
   companyId: string,
   personId: string,
 ): Promise<void> {
+  await tx
+    .select({ id: membership.id })
+    .from(membership)
+    .where(and(eq(membership.companyId, companyId), eq(membership.userId, personId)))
+    .for('share');
   if ((await raisableFor(tx, companyId, [personId])).length === 0) {
     throw notRaisableForError();
   }

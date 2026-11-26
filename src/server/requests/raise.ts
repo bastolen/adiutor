@@ -66,8 +66,9 @@ async function nextRequestNumber(
  * email. Someone else can't name anyone.
  *
  * The transaction first checks the actor's right and the company again as
- * they are by then (`assertStillMayChange`), so someone who lost the right
- * while the request was under way raises nothing. A staff member signed in
+ * they are by then (`assertStillMayChange`; for a request raised for
+ * someone, that the actor still works on requests), so someone who lost the
+ * right while the request was under way raises nothing. A staff member signed in
  * as the actor may raise it for them, and is recorded (decision 0028). The
  * description is stored without links to the staff's pages
  * (`withoutStaffPageLinks`): the company reads it.
@@ -134,11 +135,12 @@ export default async function raiseRequest(
   const work = signedInAsWork(actor);
 
   return ctx.db.transaction(async (tx) => {
+    // Raising it for someone takes working on requests, by then too.
     await assertStillMayChange(
       tx,
       actor,
       company.id,
-      'requests:contribute',
+      raisedFor ? 'requests:manage' : 'requests:contribute',
       raisedFor ? [raisedFor] : [],
     );
     if (raisedFor) {

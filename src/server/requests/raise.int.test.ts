@@ -6,6 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
+import type { DatabaseTransaction } from '@/db';
 import { membership, request, requestParticipant, setting, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { appUrl } from '@/lib/env';
@@ -569,6 +570,75 @@ describe('raiseRequest: for someone at the company', () => {
     });
     expect(await db.$count(request)).toBe(0);
     expect(await counterRow()).toEqual([]);
+  });
+
+  it.each([
+    [
+      'made a Watcher',
+      (tx: DatabaseTransaction, userId: string) =>
+        tx.update(membership).set({ role: 'watcher' }).where(eq(membership.userId, userId)),
+    ],
+    [
+      'removed from the company',
+      (tx: DatabaseTransaction, userId: string) =>
+        tx.delete(membership).where(eq(membership.userId, userId)),
+    ],
+  ])('waits for a change of the person’s membership at the same moment: %s', async (_c, change) => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+
+    // The company's Admin changes the Client's membership, which locks it, as the request is
+    // raised; the request waits for that change and finds it done.
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) =>
+        tx
+          .select({ id: membership.id })
+          .from(membership)
+          .where(eq(membership.userId, client.id))
+          .for('update'),
+      () =>
+        raiseRequest(ctx, support, {
+          ...INPUT,
+          companyId: company.id,
+          raisedFor: mentionKey(company.id, client.id),
+        }),
+      async (tx) => {
+        await change(tx, client.id);
+      },
+    );
+
+    expect(second).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.requests.notRaisableFor' },
+    });
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('refuses a staff member who stopped working on requests meanwhile, also as a Client there', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    // As a Client they could still raise a request of their own, but not one for someone else.
+    await addMember(db, company.id, support.id, 'client');
+    const client = await memberActor(db, company.id, 'client');
+
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) => tx.select({ id: user.id }).from(user).where(eq(user.id, support.id)).for('update'),
+      async () =>
+        raiseRequest(ctx, await actorFor(db, support.id), {
+          ...INPUT,
+          companyId: company.id,
+          raisedFor: mentionKey(company.id, client.id),
+        }),
+      async (tx) => {
+        await tx.update(user).set({ platformRole: 'finance' }).where(eq(user.id, support.id));
+      },
+    );
+
+    expect(second).toMatchObject({ status: 'rejected', reason: { code: 'forbidden' } });
+    expect(await db.$count(request)).toBe(0);
   });
 
   it('counts against the staff member’s limit, not the person’s', async () => {

@@ -425,8 +425,10 @@ deadlocking:
    member and the user `FOR SHARE` (`startImpersonation` in `src/server/auth/impersonation.ts`, so
    a role change or deactivation of either takes turns with signing in as the user, which then
    decides again with the locked rows).
-3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), the
-   company's `FOR UPDATE` (`changeMembership`).
+3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), then
+   the membership of the person a request is raised for `FOR SHARE` (`assertStillRaisableFor`, so
+   a change of their role or their removal takes turns with raising it), the company's
+   `FOR UPDATE` (`changeMembership`).
 4. `invite_link` rows: the link a claim uses (or frees again when its email couldn't be sent, before
    it revokes the claim's invitation under the per-address lock), the links whose creator loses
    their rights (`revokeInvitesWithoutManager`), and the link a resend re-points to the new
