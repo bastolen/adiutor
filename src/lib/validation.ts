@@ -193,19 +193,14 @@ function chosenBrandColourSchema(error: ValidationMessageKey) {
 
 /**
  * The brand colours from the Appearance tab of Settings: the accent, the
- * accent for dark mode (only with an accent) and the tint, each empty for
- * the theme's own.
+ * accent for dark mode (with or without an accent) and the tint, each empty
+ * for the theme's own.
  */
-export const brandColoursSchema = z
-  .object({
-    accent: chosenBrandColourSchema('validation.brandColour.accent'),
-    accentDark: chosenBrandColourSchema('validation.brandColour.accentDark'),
-    tint: chosenBrandColourSchema('validation.brandColour.tint'),
-  })
-  .refine((colours) => colours.accentDark === null || colours.accent !== null, {
-    error: 'validation.brandColour.darkNeedsAccent' satisfies ValidationMessageKey,
-    path: ['accentDark'],
-  });
+export const brandColoursSchema = z.object({
+  accent: chosenBrandColourSchema('validation.brandColour.accent'),
+  accentDark: chosenBrandColourSchema('validation.brandColour.accentDark'),
+  tint: chosenBrandColourSchema('validation.brandColour.tint'),
+});
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });

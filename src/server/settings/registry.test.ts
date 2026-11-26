@@ -1,7 +1,7 @@
 /**
  * @file Tests for the settings' definitions: the fallback of every setting,
- * the values each refuses, how a moment is stored and read, and the checks
- * that keep the default language offered and a dark accent with an accent.
+ * the values each refuses, how a moment is stored and read, and the check
+ * that keeps the default language offered.
  */
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
@@ -113,11 +113,5 @@ describe('the checks between settings', () => {
     ).toBe(false);
     // Before setup there's no default, so any languages may be offered.
     expect(holds({ 'staff.offered_locales': ['es-ES'] })).toBe(true);
-  });
-
-  it('keep a dark accent only with an accent', () => {
-    expect(holds({ 'brand.accent': '#c2185b' })).toBe(true);
-    expect(holds({ 'brand.accent': '#c2185b', 'brand.accent_dark': '#ff80ab' })).toBe(true);
-    expect(holds({ 'brand.accent_dark': '#ff80ab' })).toBe(false);
   });
 });

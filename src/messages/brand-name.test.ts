@@ -23,8 +23,6 @@ const MESSAGES_DIR = import.meta.dirname;
  */
 const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'admin.settings.appearance.colours.useAdiutor': 'the software’s own colours',
-  'admin.settings.appearance.colours.accent.description': 'the software’s own accent',
-  'admin.settings.appearance.colours.tint.description': 'the software’s own tint',
   'admin.settings.general.name.example': 'an example of a name for the staff',
   'admin.settings.general.name.description':
     'what the name replaces, Adiutor, and the credit it adds',

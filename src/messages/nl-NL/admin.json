@@ -526,17 +526,17 @@
           "description": "De kleuren van elke pagina en e-mail, voor gebruikers en medewerkers. Tekst blijft altijd leesbaar: een kleur die daarvoor te licht of te donker is, wordt aangepast, en het voorbeeld laat zien wat er gebruikt wordt.",
           "accent": {
             "label": "Accentkleur",
-            "description": "Knoppen, links en focusranden. Laat leeg voor het groenblauw en groen van Adiutor.",
+            "description": "Knoppen, links en focusranden, ook in het donkere thema als dat geen eigen accentkleur heeft.",
             "pick": "Kies de accentkleur"
           },
           "accentDark": {
             "label": "Accentkleur in het donkere thema",
-            "description": "Alleen als het donkere thema een andere accentkleur moet hebben. Laat leeg om die uit de accentkleur af te leiden.",
+            "description": "Volgt de accentkleur, tot je een andere kiest voor het donkere thema. Maak het veld leeg om de accentkleur weer te volgen.",
             "pick": "Kies de accentkleur voor het donkere thema"
           },
           "tint": {
             "label": "Tint",
-            "description": "De kleurtoon van elk grijs, ook van de achtergronden in het donkere thema; een grijze kleur geeft gewoon grijs. Laat leeg voor het marineblauw van Adiutor.",
+            "description": "De kleurtoon van elk grijs, ook van de achtergronden in het donkere thema; een grijze kleur geeft gewoon grijs.",
             "pick": "Kies de tint"
           },
           "useAdiutor": "Kleuren van Adiutor gebruiken",

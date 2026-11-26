@@ -104,15 +104,6 @@ describe('writeSettings', () => {
     });
   });
 
-  it('runs the checks on a setting written as null as on its fallback', async () => {
-    await saveSettings(db, { 'brand.accent': '#c2185b', 'brand.accent_dark': '#ff80ab' });
-
-    await expect(saveSettings(db, { 'brand.accent': null })).rejects.toThrow(
-      'a dark accent needs an accent',
-    );
-    expect(await storedRow('brand.accent')).toBeDefined();
-  });
-
   it('notes when a setting was last written', async () => {
     await saveSettings(db, { 'requests.prefix': 'AT' });
     await db.update(setting).set({ updatedAt: new Date('2026-01-01T00:00:00Z') });

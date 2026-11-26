@@ -22,6 +22,7 @@ export {
 export { contrast, type HexColour, luminance } from './contrast';
 export { paletteCss, paletteVariables } from './css';
 export { ADIUTOR_NAME, forTitleTemplate, isOwnName, poweredByShown, signInAppName } from './name';
+export { ADIUTOR_COLOURS, followedDarkAccent, storedBrandColours } from './own-colours';
 export {
   ACCENT_TOKENS,
   type BrandColours,
