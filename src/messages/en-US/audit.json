@@ -73,7 +73,10 @@
       "impersonationNoLongerAllowed": "Sign-in as a user ended because it was no longer allowed",
       "impersonationSessionEnded": "Sign-in as a user ended with the staff member’s own session",
       "inviteLinkClaimUndone": "Invite link made usable again because its email couldn’t be sent",
-      "memberJoinedKept": "Used an invitation and kept the role they had"
+      "memberJoinedKept": "Used an invitation and kept the role they had",
+      "webhookTurnedOffFailing": "Webhook turned off after its deliveries failed for days",
+      "webhookTurnedOffGone": "Webhook turned off because its receiver is gone",
+      "webhookTurnedOffUnreadable": "Webhook turned off because its address or secret can’t be read"
     },
     "groups": {
       "sign-ins": "Sign-ins",

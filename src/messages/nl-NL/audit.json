@@ -73,7 +73,10 @@
       "impersonationNoLongerAllowed": "Inloggen als een gebruiker is gestopt omdat het niet meer was toegestaan",
       "impersonationSessionEnded": "Inloggen als een gebruiker is gestopt met de eigen sessie van de medewerker",
       "inviteLinkClaimUndone": "Uitnodigingslink weer bruikbaar gemaakt omdat de e-mail niet kon worden verstuurd",
-      "memberJoinedKept": "Uitnodiging gebruikt en de eigen rol gehouden"
+      "memberJoinedKept": "Uitnodiging gebruikt en de eigen rol gehouden",
+      "webhookTurnedOffFailing": "Webhook uitgezet nadat de leveringen dagenlang mislukten",
+      "webhookTurnedOffGone": "Webhook uitgezet omdat de ontvanger niet meer bestaat",
+      "webhookTurnedOffUnreadable": "Webhook uitgezet omdat het adres of geheim niet te lezen is"
     },
     "groups": {
       "sign-ins": "Inloggen",

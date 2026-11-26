@@ -15,4 +15,5 @@ export { addedToCompanyJob, staffAdminAddedJob } from './people-emails';
 export { isWebhookNews, REQUEST_UPDATES_GROUP, requestUpdateJob } from './request-updates';
 export type { RequestUpdateEvent, WebhookNewsPayload } from './request-updates';
 export { securityNoticeJob } from './security-notice';
+export { webhookDeliveryJob, webhookTurnedOffJob } from './webhooks';
 export type { SecurityNoticePayload } from './security-notice';

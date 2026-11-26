@@ -16,6 +16,10 @@ One file per email in `src/emails/`:
   the new Admin and who made it happen, without a device
   or IP address (`notifyStaffAdminAdded` in `src/server/people/staff-admin-notice.ts` queues one
   `staff-admin-added` job per Admin; see [Background jobs](jobs.md#queued-jobs))
+- `webhook-turned-off.tsx` for the staff Admins when Adiutor turned a webhook off (its deliveries
+  failed for days, its receiver is gone, or its address or secret can't be read), naming the
+  webhook and why, never its address, with a link to it (one `webhook-turned-off` job per Admin;
+  see [Retries and turning off](webhooks.md#retries-and-turning-off))
 - `job-failing.tsx` for the staff Admins when a background job keeps failing, with the error's
   reference and a link to it under Logs → Errors, at most once a day per job (`alertStaffAdmins` in
   `src/server/jobs/alerts.ts`, see [Background jobs](jobs.md#failures))

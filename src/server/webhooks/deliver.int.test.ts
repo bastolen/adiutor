@@ -4,18 +4,23 @@
  * environment allows): one signed delivery per webhook and request in a tick,
  * with the events in order; the chat format; news a webhook no longer wants,
  * or that's gone, skipped; how each kind of answer is recorded, never as a
- * failed job; and an attempt that runs twice sending at most once.
+ * failed job; the later attempts when they're due, up to the sixth; turning
+ * a webhook off after three days of failures, a `410 Gone` or an address
+ * that can't be read, with the staff Admins' email; and an attempt that
+ * runs twice sending at most once.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { webhook, webhookDelivery } from '@/db/schema';
+import { queuedJob, user, webhook, webhookDelivery } from '@/db/schema';
 
 import { startWebhookReceiver, type WebhookReceiver } from '../../../tests/http/webhook-receiver';
 import {
+  auditEvents,
   createCompany,
   createStaffSettings,
   memberActor,
+  readWebhook,
   sendQueuedEmails,
   setupTestContext,
   staffActor,
@@ -25,6 +30,7 @@ import {
   TEST_WEBHOOK_SECRET,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import { queueJobs, webhookTurnedOffJob } from '../queue';
 import { replyToRequest } from '../requests';
 import { attemptDelivery } from './deliver';
 import { signWebhook } from './signing';
@@ -63,6 +69,39 @@ async function runNews() {
  */
 async function deliveries() {
   return db.select().from(webhookDelivery).orderBy(webhookDelivery.id);
+}
+
+/**
+ * The later attempts waiting in the queue.
+ *
+ * @returns Each one's payload.
+ */
+async function laterAttempts() {
+  const jobs = await db
+    .select({ payload: queuedJob.payload })
+    .from(queuedJob)
+    .where(and(eq(queuedJob.kind, 'webhook-delivery'), eq(queuedJob.status, 'queued')));
+  return jobs.map(({ payload }) => payload);
+}
+
+/** Makes every waiting job due now and runs the queue, as the tick when they're due would. */
+async function runDueAttempts(): Promise<void> {
+  await db.update(queuedJob).set({ runAt: new Date() }).where(eq(queuedJob.status, 'queued'));
+  await sendQueuedEmails(ctx);
+}
+
+/**
+ * Since when a webhook has been failing.
+ *
+ * @param webhookId - The webhook.
+ * @returns The moment, or `null`.
+ */
+async function failingSince(webhookId: string) {
+  const [row] = await db
+    .select({ failingSince: webhook.failingSince })
+    .from(webhook)
+    .where(eq(webhook.id, webhookId));
+  return row?.failingSince ?? null;
 }
 
 /**
@@ -160,24 +199,126 @@ describe('delivering news to a webhook', () => {
     expect(await deliveries()).toEqual([]);
   });
 
-  it('records a receiver that fails, without failing the job', async () => {
+  it('records a receiver that fails and queues the next attempt, without failing the job', async () => {
     receiver.answerWith({ status: 500, body: 'Something broke on our side.' });
-    await storeWebhook(db, { url: receiver.url });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
     await replyThatMovesTheStatus();
+    const before = Date.now();
 
     expect(await runNews()).toEqual(['succeeded']);
 
+    const [delivery] = await deliveries();
+    expect(delivery).toMatchObject({
+      status: 'pending',
+      attempts: 1,
+      lastStatus: 500,
+      lastError: 'http',
+    });
+    const waited = (delivery?.nextAttemptAt?.getTime() ?? 0) - before;
+    expect(waited).toBeGreaterThan(4 * 60_000);
+    expect(waited).toBeLessThan(6 * 60_000);
+    expect(await laterAttempts()).toEqual([{ deliveryId: delivery?.id, attempt: 2 }]);
+    expect(await failingSince(webhookId)).toEqual(expect.any(Date));
+  });
+
+  it('makes the next attempt when it’s due, and ends the run of failures once it’s taken', async () => {
+    receiver.answerWith({ status: 503 });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+    receiver.answerWith({ status: 202 });
+
+    await runDueAttempts();
+
+    expect(receiver.received).toHaveLength(2);
+    // Every attempt is the same delivery: the same ID, for the receiver to drop one it has.
+    expect(new Set(receiver.received.map(({ headers }) => headers['webhook-id'])).size).toBe(1);
     expect(await deliveries()).toEqual([
-      expect.objectContaining({
-        status: 'failed',
-        attempts: 1,
-        lastStatus: 500,
-        lastError: 'http',
-      }),
+      expect.objectContaining({ status: 'delivered', attempts: 2, lastStatus: 202 }),
+    ]);
+    expect(await failingSince(webhookId)).toBeNull();
+  });
+
+  it('gives a delivery up after its sixth attempt fails', async () => {
+    receiver.answerWith({ status: 500 });
+    await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+
+    for (let attempt = 2; attempt <= 6; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop -- one attempt after the other, as the ticks make them
+      await runDueAttempts();
+    }
+
+    expect(receiver.received).toHaveLength(6);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'failed', attempts: 6, nextAttemptAt: null }),
+    ]);
+    expect(await laterAttempts()).toEqual([]);
+  });
+
+  it('turns a webhook off once it has failed for three days, and tells the staff Admins', async () => {
+    receiver.answerWith({ status: 500 });
+    const admin = await staffActor(db, 'platform_admin', 'ann.admin@adiutor.test');
+    const gone = await staffActor(db, 'platform_admin', 'gone.admin@adiutor.test');
+    await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, gone.id));
+    await staffActor(db, 'manager', 'max.manager@adiutor.test');
+    const webhookId = await storeWebhook(db, {
+      url: receiver.url,
+      failingSince: new Date(Date.now() - 3 * 24 * 60 * 60_000 - 60_000),
+    });
+    const { id: otherRequest } = await storeRequest(db, company.id);
+    const [waiting] = await db
+      .insert(webhookDelivery)
+      .values({ webhookId, requestId: otherRequest, attempts: 2 })
+      .returning({ id: webhookDelivery.id });
+    await replyThatMovesTheStatus();
+
+    await runNews();
+
+    expect(await readWebhook(db, webhookId)).toMatchObject({
+      turnedOffReason: 'failing',
+      turnedOffBy: null,
+      turnedOffAt: expect.any(Date),
+    });
+    const rows = await deliveries();
+    expect(rows.find(({ id }) => id === waiting?.id)?.status).toBe('cancelled');
+    expect(rows.find(({ id }) => id !== waiting?.id)?.status).toBe('failed');
+    expect(
+      await auditEvents(db, { action: 'webhook_turned_off', fields: ['actorUserId', 'details'] }),
+    ).toEqual([
+      {
+        actorUserId: null,
+        details: {
+          staff: true,
+          webhook: 'Adiutor Tests hook',
+          host: new URL(receiver.url).host,
+          reason: 'failing',
+        },
+      },
+    ]);
+
+    await sendQueuedEmails(ctx);
+    expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
+      { to: admin.email, subject: 'Adiutor turned off the webhook “Adiutor Tests hook”' },
     ]);
   });
 
-  it('records an address or secret that can’t be read, without sending', async () => {
+  it('turns a webhook off at once when its receiver is gone (410)', async () => {
+    receiver.answerWith({ status: 410 });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+
+    await runNews();
+
+    expect(await readWebhook(db, webhookId)).toMatchObject({ turnedOffReason: 'gone' });
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'failed', attempts: 1, lastStatus: 410 }),
+    ]);
+    expect(await laterAttempts()).toEqual([]);
+  });
+
+  it('turns a webhook off when its address or secret can’t be read, without sending', async () => {
     const webhookId = await storeWebhook(db, { url: receiver.url });
     await db
       .update(webhook)
@@ -190,6 +331,41 @@ describe('delivering news to a webhook', () => {
     expect(receiver.received).toHaveLength(0);
     expect(await deliveries()).toEqual([
       expect.objectContaining({ status: 'failed', attempts: 1, lastError: 'unreadable' }),
+    ]);
+    const [row] = await db.select().from(webhook).where(eq(webhook.id, webhookId));
+    expect(row?.turnedOffReason).toBe('unreadable');
+  });
+
+  it('sends no email about a webhook that was turned on again, or to someone no longer a staff Admin', async () => {
+    const admin = await staffActor(db, 'platform_admin', 'ann.admin@adiutor.test');
+    const manager = await staffActor(db, 'manager', 'max.manager@adiutor.test');
+    const onAgain = await storeWebhook(db, { url: receiver.url });
+    const stillOff = await storeWebhook(db, { off: { at: new Date(), reason: 'gone' } });
+    await queueJobs(db, webhookTurnedOffJob, [
+      { recipientId: admin.id, webhookId: onAgain, reason: 'gone' },
+      { recipientId: manager.id, webhookId: stillOff, reason: 'gone' },
+    ]);
+
+    await sendQueuedEmails(ctx);
+
+    expect(sent).toEqual([]);
+  });
+
+  it('cancels a later attempt of a webhook that was turned off meanwhile', async () => {
+    receiver.answerWith({ status: 500 });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+    await db
+      .update(webhook)
+      .set({ turnedOffAt: new Date(), turnedOffReason: 'manual' })
+      .where(eq(webhook.id, webhookId));
+
+    await runDueAttempts();
+
+    expect(receiver.received).toHaveLength(1);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'cancelled', attempts: 1 }),
     ]);
   });
 

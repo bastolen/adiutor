@@ -28,6 +28,8 @@ export const QUEUED_JOB_NAMES = [
   'added-to-company',
   'staff-admin-added',
   'request-update',
+  'webhook-delivery',
+  'webhook-turned-off',
 ] as const;
 
 /** A recurring job or a kind of queued job. */

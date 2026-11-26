@@ -268,6 +268,15 @@
       "answerNote": "Goedkeuren rondt het verzoek af. Afwijzen stuurt het terug naar de medewerkers, en daarna kun je laten weten wat er nog niet goed is. Deze knoppen werken alleen voor jou, en maar één keer.",
       "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren.",
       "signInNote": "{days, plural, one {Met de links in deze e-mail log je # dag lang in bij Adiutor, dus stuur hem niet door.} other {Met de links in deze e-mail log je # dagen lang in bij Adiutor, dus stuur hem niet door.}}"
+    },
+    "webhookTurnedOff": {
+      "subject": "Adiutor heeft de webhook ‘{name}’ uitgezet",
+      "reason": "Je krijgt dit omdat je beheerder bent onder de medewerkers van Adiutor, die webhooks instellen.",
+      "heading": "De webhook ‘{name}’ staat uit",
+      "why": "{reason, select, gone {De ontvanger antwoordde dat hij voorgoed weg is (410 Gone), dus Adiutor heeft de webhook uitgezet.} unreadable {Het adres of het ondertekeningsgeheim is niet meer te lezen met de huidige auth-geheimen van Adiutor, dus Adiutor heeft de webhook uitgezet.} other {Elke levering is {days, plural, one {# dag} other {# dagen}} lang mislukt, dus Adiutor heeft de webhook uitgezet.}}",
+      "advice": "Zolang hij uitstaat wordt er niets naartoe gestuurd, en wat er intussen gebeurt wordt later niet verstuurd. Zet hem aan in de instellingen zodra de ontvanger weer werkt; de laatste leveringen laten daar zien wat er misging.",
+      "adviceUnreadable": "Zolang hij uitstaat wordt er niets naartoe gestuurd. Vul in de instellingen het adres opnieuw in en vernieuw het geheim, en zet hem daarna aan.",
+      "button": "Webhook openen"
     }
   }
 }

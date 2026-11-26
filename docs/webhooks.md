@@ -55,6 +55,38 @@ A webhook is a recipient of the news about requests, like a person on a request
   then go out in a second delivery, as an email can arrive twice. A receiver drops what it already
   has by an event's `id`.
 
+## Retries and turning off
+
+A receiver that doesn't take a delivery (anything but a `2xx` answer, no answer within 10 seconds,
+a redirect, an address that can't be reached) is tried again, the same delivery with the same
+`webhook-id`, 5 minutes, 30 minutes, 2 hours, 8 hours and a day after the attempt before
+(`WEBHOOK_RETRY_MINUTES` in `src/lib/webhooks.ts`): six attempts over about a day and a half. Each
+later attempt is a `webhook-delivery` job of its own, queued for when it's due, and every attempt
+reads the news afresh, so a text edited meanwhile goes out as it is by then. After the sixth, the
+delivery is given up (`failed`).
+
+These are the delivery's own attempts, not the queue's: the queue retries a job only when it throws,
+on one schedule for every kind, recording an error in the app each time and alerting the staff
+Admins once it gives up, and a receiver that's down is no fault of Adiutor's. A delivery's job throws
+only for Adiutor's own faults (the database), and the queue then tries it again as it would any
+job. On the Jobs page a refused delivery counts as done; the webhook's deliveries show what
+happened.
+
+A webhook turns itself off (`src/server/webhooks/deliver.ts`):
+
+- **after three days of nothing but failures** (`WEBHOOK_FAILING_DAYS`): every attempt since the
+  last one a receiver took has failed (`webhook.failing_since`), so a receiver that's been gone for
+  days doesn't keep a queue of attempts going;
+- **at once when its receiver answers `410 Gone`**, as the Standard Webhooks specification
+  describes for a receiver that's gone for good;
+- **when its address or secret can't be read any more** (an old auth secret was dropped).
+
+Turning off cancels what was still to be delivered to it, records `webhook_turned_off` in the audit
+log with why (by nobody: Adiutor did it), and emails every active staff Admin
+(`webhook-turned-off`, in their language, naming the webhook and why, never its address). A staff
+Admin turns it on again once its receiver works; it then starts with a clean slate, and what
+happened while it was off isn't sent.
+
 ## What's sent
 
 What a webhook is told is read when it's sent (`readWebhookNews` in

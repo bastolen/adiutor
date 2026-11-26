@@ -9,7 +9,9 @@
       "security-notice": "Tells people about changes to the security of their account.",
       "added-to-company": "Tells people that staff added them to a company.",
       "staff-admin-added": "Tells the staff Admins that someone became a staff Admin.",
-      "request-update": "Tells the people on a request what happened to it."
+      "request-update": "Tells the people on a request, and the webhooks that want it, what happened to it.",
+      "webhook-delivery": "Tries a delivery to a webhook again, when an earlier attempt failed.",
+      "webhook-turned-off": "Tells the staff Admins that Adiutor turned a webhook off because it kept failing."
     },
     "summary": {
       "done": "{count, number} done",

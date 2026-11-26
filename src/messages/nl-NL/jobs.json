@@ -9,7 +9,9 @@
       "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
       "added-to-company": "Laat mensen weten dat medewerkers ze aan een bedrijf hebben toegevoegd.",
       "staff-admin-added": "Laat de beheerders van de medewerkers weten dat iemand beheerder is geworden.",
-      "request-update": "Laat de mensen bij een verzoek weten wat ermee is gebeurd."
+      "request-update": "Laat de mensen bij een verzoek, en de webhooks die het willen, weten wat ermee gebeurd is.",
+      "webhook-delivery": "Probeert een levering aan een webhook opnieuw, als een eerdere poging mislukte.",
+      "webhook-turned-off": "Laat de beheerders onder de medewerkers weten dat Adiutor een webhook heeft uitgezet omdat die bleef mislukken."
     },
     "summary": {
       "done": "{count, number} klaar",

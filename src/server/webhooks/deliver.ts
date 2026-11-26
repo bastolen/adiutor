@@ -11,20 +11,36 @@
  * delivery is still pending with exactly the attempts before it recorded,
  * and records only if that still holds, so an attempt that runs twice (a job
  * taken again) sends at most once more and never records twice. A receiver
- * that's down is no fault of Adiutor's: the attempt records it and ends;
- * only Adiutor's own faults (the database) throw.
+ * that's down is no fault of Adiutor's: the attempt records it, queues the
+ * next one for when it's due (5 minutes to a day later, six attempts in all)
+ * and ends; only Adiutor's own faults (the database) throw. Three days of
+ * nothing but failures, a `410 Gone` or an address that can't be read any
+ * more turn the webhook off, and the staff Admins are emailed.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
-import { webhook, webhookDelivery, webhookRequestType } from '@/db/schema';
-import { webhookCovers, type WebhookEvent } from '@/lib/webhooks';
+import type { DatabaseTransaction } from '@/db';
+import { user, webhook, webhookDelivery, webhookRequestType } from '@/db/schema';
+import { getGlobalPermissions } from '@/lib/authz/permissions';
+import { PLATFORM_ROLES } from '@/lib/authz/roles';
+import {
+  WEBHOOK_FAILING_DAYS,
+  WEBHOOK_RETRY_MINUTES,
+  webhookCovers,
+  type WebhookEvent,
+} from '@/lib/webhooks';
 
+import { recordEvent } from '../audit';
 import type { ServiceContext } from '../context';
+import { queueJob, queueJobs, webhookDeliveryJob, webhookTurnedOffJob } from '../queue';
 import { defaultLanguage } from '../recipient-locale';
 import { readWebhookNews, type WebhookNews } from '../requests';
 import { openSecret } from '../sealed-secrets';
 import { chatBody, jsonBody } from './formats';
 import { sendWebhook, type WebhookSendResult } from './send';
+
+/** A day, in milliseconds. */
+const DAY_MS = 24 * 60 * 60_000;
 
 /** A webhook's piece of news, as the `request-update` batch hands it over. */
 export interface QueuedWebhookJob {
@@ -62,10 +78,69 @@ async function cancel(ctx: ServiceContext, deliveryId: string, attempt: number):
     );
 }
 
+/** The staff roles that manage webhooks (`staff:manage`), who are told when one is turned off. */
+const MANAGING_ROLES = PLATFORM_ROLES.filter((platformRole) =>
+  getGlobalPermissions({ platformRole }).has('staff:manage'),
+);
+
+/**
+ * Turns a webhook off because it can't be delivered to, if it's still on:
+ * what was still to be delivered to it is cancelled, the audit log records
+ * it (by nobody: Adiutor did it), and every active staff Admin gets an email.
+ *
+ * @param ctx - Service context.
+ * @param tx - The transaction that holds the webhook's row.
+ * @param found - The webhook, as locked.
+ * @param found.id - Its ID.
+ * @param found.name - Its name.
+ * @param found.urlHost - Its address's host.
+ * @param reason - Why.
+ */
+async function turnOff(
+  ctx: ServiceContext,
+  tx: DatabaseTransaction,
+  found: { id: string; name: string; urlHost: string },
+  reason: 'failing' | 'gone' | 'unreadable',
+): Promise<void> {
+  await tx
+    .update(webhook)
+    .set({ turnedOffAt: new Date(), turnedOffReason: reason, turnedOffBy: null })
+    .where(eq(webhook.id, found.id));
+  await tx
+    .update(webhookDelivery)
+    .set({ status: 'cancelled', nextAttemptAt: null })
+    .where(and(eq(webhookDelivery.webhookId, found.id), eq(webhookDelivery.status, 'pending')));
+  await recordEvent(
+    ctx,
+    {
+      action: 'webhook_turned_off',
+      actorUserId: null,
+      details: { staff: true, webhook: found.name, host: found.urlHost, reason },
+    },
+    tx,
+  );
+  const admins = await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(and(inArray(user.platformRole, MANAGING_ROLES), isNull(user.deactivatedAt)));
+  await queueJobs(
+    tx,
+    webhookTurnedOffJob,
+    admins.map(({ id }) => ({ recipientId: id, webhookId: found.id, reason })),
+  );
+}
+
 /**
  * Records an attempt's result, if the delivery is still at the attempt
- * before it: a receiver that took it (`2xx`) makes it delivered and ends the
- * webhook's run of failures; anything else makes it failed.
+ * before it, under the webhook's row:
+ *
+ * - **taken** (`2xx`): delivered, and the webhook's run of failures ends;
+ * - **gone** (`410`) or **unreadable** (its address or secret can't be
+ *   opened): failed, and the webhook is turned off;
+ * - **otherwise:** the webhook's run of failures goes on (or starts). Once
+ *   it's {@link WEBHOOK_FAILING_DAYS} days old, the delivery fails and the
+ *   webhook is turned off; before that, the next attempt is queued for when
+ *   it's due (`WEBHOOK_RETRY_MINUTES`), until the last one fails.
  *
  * @param ctx - Service context.
  * @param target - The delivery, its webhook and the attempt.
@@ -81,12 +156,41 @@ async function record(
 ): Promise<void> {
   await ctx.db.transaction(async (tx) => {
     // The webhook's row first, then its delivery's: the order its changes take too.
-    await tx
-      .select({ id: webhook.id })
+    const [found] = await tx
+      .select({
+        id: webhook.id,
+        name: webhook.name,
+        urlHost: webhook.urlHost,
+        turnedOffAt: webhook.turnedOffAt,
+        failingSince: webhook.failingSince,
+      })
       .from(webhook)
       .where(eq(webhook.id, target.webhookId))
       .for('no key update');
+    if (!found) {
+      return;
+    }
     const now = new Date();
+    const failingSince = found.failingSince ?? now;
+    let next: { status: 'delivered' | 'failed' | 'pending'; nextAttemptAt: Date | null } = {
+      status: 'failed',
+      nextAttemptAt: null,
+    };
+    let offReason: 'failing' | 'gone' | 'unreadable' | null = null;
+    if (result.delivered) {
+      next = { status: 'delivered', nextAttemptAt: null };
+    } else if (result.status === 410) {
+      offReason = 'gone';
+    } else if (result.error === 'unreadable') {
+      offReason = 'unreadable';
+    } else if (now.getTime() - failingSince.getTime() >= WEBHOOK_FAILING_DAYS * DAY_MS) {
+      offReason = 'failing';
+    } else {
+      const wait = WEBHOOK_RETRY_MINUTES[target.attempt - 1];
+      if (wait !== undefined) {
+        next = { status: 'pending', nextAttemptAt: new Date(now.getTime() + wait * 60_000) };
+      }
+    }
     const recorded = await tx
       .update(webhookDelivery)
       .set({
@@ -95,8 +199,7 @@ async function record(
         lastStatus: result.status,
         lastError: result.delivered ? null : result.error,
         lastDurationMs: result.durationMs,
-        nextAttemptAt: null,
-        status: result.delivered ? 'delivered' : 'failed',
+        ...next,
         ...(result.delivered && { deliveredAt: now }),
       })
       .where(
@@ -107,8 +210,23 @@ async function record(
         ),
       )
       .returning({ id: webhookDelivery.id });
-    if (recorded.length > 0 && result.delivered) {
-      await tx.update(webhook).set({ failingSince: null }).where(eq(webhook.id, target.webhookId));
+    if (recorded.length === 0) {
+      return;
+    }
+    await tx
+      .update(webhook)
+      .set({ failingSince: result.delivered ? null : failingSince })
+      .where(eq(webhook.id, found.id));
+    if (next.status === 'pending' && next.nextAttemptAt) {
+      await queueJob(
+        tx,
+        webhookDeliveryJob,
+        { deliveryId: target.deliveryId, attempt: target.attempt + 1 },
+        { runAt: next.nextAttemptAt },
+      );
+    }
+    if (offReason !== null && found.turnedOffAt === null) {
+      await turnOff(ctx, tx, found, offReason);
     }
   });
 }

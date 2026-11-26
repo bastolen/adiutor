@@ -9,7 +9,9 @@
       "security-notice": "Avisa a las personas de los cambios en la seguridad de su cuenta.",
       "added-to-company": "Avisa a las personas de que el personal las ha añadido a una empresa.",
       "staff-admin-added": "Avisa a los administradores del personal de que alguien se ha convertido en administrador del personal.",
-      "request-update": "Avisa a las personas de una solicitud de lo que ha pasado con ella."
+      "request-update": "Avisa a las personas de una solicitud, y a los webhooks que lo quieren, de lo que ha pasado con ella.",
+      "webhook-delivery": "Vuelve a intentar un envío a un webhook cuando un intento anterior falló.",
+      "webhook-turned-off": "Avisa a los administradores del personal de que Adiutor desactivó un webhook porque seguía fallando."
     },
     "summary": {
       "done": "{count, plural, one {# hecha} other {# hechas}}",

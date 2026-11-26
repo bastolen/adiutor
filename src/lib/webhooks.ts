@@ -99,6 +99,19 @@ export const WEBHOOK_DELIVERY_STATUSES = ['pending', 'delivered', 'failed', 'can
 export type WebhookDeliveryStatus = (typeof WEBHOOK_DELIVERY_STATUSES)[number];
 
 /**
+ * How long a delivery waits after each failed attempt before the next, in
+ * minutes: 5 minutes, half an hour, 2 hours, 8 hours and a day, so a
+ * receiver that's down for a day and a half still gets it.
+ */
+export const WEBHOOK_RETRY_MINUTES = [5, 30, 120, 480, 1440] as const;
+
+/** How many attempts a delivery gets: the first, and one after each wait. */
+export const WEBHOOK_MAX_ATTEMPTS = WEBHOOK_RETRY_MINUTES.length + 1;
+
+/** How many days of nothing but failed attempts turn a webhook off. */
+export const WEBHOOK_FAILING_DAYS = 3;
+
+/**
  * What can be wrong with a webhook's address:
  * - `too_long`: longer than {@link WEBHOOK_URL_MAX_LENGTH};
  * - `invalid`: not a web address;
