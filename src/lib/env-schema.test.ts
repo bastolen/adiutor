@@ -16,7 +16,8 @@ describe('parseEnv', () => {
   it('accepts the required variables and fills in defaults', () => {
     const env = parseEnv(validEnv);
     expect(env.DATABASE_URL).toBe(validEnv.DATABASE_URL);
-    expect(env.EMAIL_FROM).toBe('Adiutor <no-reply@adiutor.dev>');
+    // Unset, so the sender saved in Settings (or Adiutor's default) is used.
+    expect(env.EMAIL_FROM).toBeUndefined();
     expect(env.NODE_ENV).toBeUndefined();
     expect(env.CLIENT_IP_HEADERS).toEqual(['x-forwarded-for']);
     expect(env.TRUSTED_PROXIES).toEqual([]);
@@ -26,7 +27,7 @@ describe('parseEnv', () => {
     const env = parseEnv({ ...validEnv, GITHUB_CLIENT_ID: '', SMTP_URL: '', EMAIL_FROM: '' });
     expect(env.GITHUB_CLIENT_ID).toBeUndefined();
     expect(env.SMTP_URL).toBeUndefined();
-    expect(env.EMAIL_FROM).toBe('Adiutor <no-reply@adiutor.dev>');
+    expect(env.EMAIL_FROM).toBeUndefined();
   });
 
   it('rejects a missing database URL', () => {

@@ -191,24 +191,38 @@ template preview, and a test keeps the two identical.
 In `src/lib/email.ts`, in order:
 
 - `EMAIL_OUTBOX_DIR` set: written there as JSON (the end-to-end tests read them)
-- `SMTP_URL` set: sent over SMTP (Mailpit in development, your provider in production, with
-  `EMAIL_FROM` as the sender). A whole send takes at most 15 seconds (`SEND_TIMEOUT_MS` in
-  `src/lib/email-limits.ts`, counted from the call, so waiting for a free connection counts): after
-  that it fails like any other send,
-  so a mail server that hangs fails one email (which a queued job tries again) instead of holding a
-  request or the background jobs' tick until the platform stops it; the tick's own deadline is
-  worked out from it (see [the limits](jobs.md#failures)). The mail server may still accept an
-  email after its send was given up, so a job that tries again can send it twice. Each step also has
-  a limit (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the greeting, 20 of silence, instead of
-  nodemailer's minutes), which closes the connection of a send that was given up; settings in
-  `SMTP_URL` still win
-- neither, with `NODE_ENV` set to `development` or `test`: the plain text is printed to the
-  server console
-- neither, anywhere else (production, or a script without `NODE_ENV`): sending fails, so links
+- `SMTP_URL` set: sent through the mail server the server's environment names (Mailpit in
+  development, your provider in production), which the Email tab of Settings then only shows
+- otherwise the mail server saved on the Email tab of Settings (`email.smtp`, its password
+  encrypted with the auth secret and decrypted here; see
+  [Sending email](deploying.md#sending-email)). It's read on each send, and its transport is kept
+  while the setting stays the same, so a save takes effect at once, also in the background jobs.
+  Only this case loads the settings (through `import()`), so `SMTP_URL` alone works as before
+
+Over SMTP the sender is `EMAIL_FROM` when it's set, else the one saved with the mail server, else
+`Adiutor <no-reply@adiutor.dev>` (`DEFAULT_EMAIL_FROM` in `src/lib/smtp.ts`). A whole send takes
+at most 15 seconds (`SEND_TIMEOUT_MS` in
+`src/lib/email-limits.ts`, counted from the call, so waiting for a free connection counts): after
+that it fails like any other send,
+so a mail server that hangs fails one email (which a queued job tries again) instead of holding a
+request or the background jobs' tick until the platform stops it; the tick's own deadline is
+worked out from it (see [the limits](jobs.md#failures)). The mail server may still accept an
+email after its send was given up, so a job that tries again can send it twice. Each step also has
+a limit (`SMTP_TIMEOUTS`: 10 seconds to connect, 10 for the greeting, 20 of silence, instead of
+nodemailer's minutes), which closes the connection of a send that was given up; settings in
+`SMTP_URL` still win. Without any mail server:
+
+- with `NODE_ENV` set to `development` or `test`: the plain text is printed to the server console
+- anywhere else (production, or a script without `NODE_ENV`): sending fails, so links
   never end up in logs. A production server in that state says so in its log when it starts
   (`src/server/email-check.ts`, run by `register` in `src/instrumentation.ts`), so it isn't found
   out only when someone's sign-in link doesn't arrive
 - `EMAIL_OUTBOX_DIR` is refused in production unless `E2E_TESTS=1` (the end-to-end tests)
+
+`sendThrough` sends one email through a given mail server rather than the one in use, on a
+connection of its own that it closes afterwards, with the same time limits: the Email tab tries a
+mail server with it before saving, and tells every staff Admin of a change through the server
+it replaced (see [Sending email](deploying.md#sending-email)). With an outbox, it writes there too.
 
 A failed send is logged with `sendFailureOf` (also in `src/lib/email.ts`): only nodemailer's error code
 and the SMTP reply code, never the error itself, because a mail server's refusal can quote the

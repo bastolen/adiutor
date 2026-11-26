@@ -140,6 +140,14 @@
         "whole": "Indica un número entero de megabytes, al menos 1.",
         "tooBig": "Elige como máximo {maximum, number} megabytes."
       }
+    },
+    "smtp": {
+      "host": "Indica el nombre de host o la dirección del servidor de correo.",
+      "port": "Indica un puerto del 1 al 65535.",
+      "security": "Elige cómo se protege la conexión.",
+      "username": "Ese nombre de usuario es demasiado largo.",
+      "password": "Esa contraseña es demasiado larga.",
+      "fromName": "Ese nombre es demasiado largo."
     }
   }
 }

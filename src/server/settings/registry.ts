@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { type Locale, LOCALES } from '@/lib/i18n/locales';
 import { DEFAULT_TIME_ZONE } from '@/lib/i18n/time-zones';
 import { DEFAULT_REQUEST_PREFIX } from '@/lib/requests';
+import type { SmtpConfig } from '@/lib/smtp';
 import { DEFAULT_MAX_FILE_MB, MAX_FILE_MB, type StorageConfig } from '@/lib/storage';
 import {
   brandColourSchema,
@@ -16,6 +17,7 @@ import {
   maxFileMbSchema,
   requestPrefixSchema,
   staffNameSchema,
+  storedSmtpSchema,
   storedStorageSchema,
   timeZoneSchema,
 } from '@/lib/validation';
@@ -125,6 +127,13 @@ export const SETTINGS = {
    * stay downloadable.
    */
   'attachments.enabled': defineSetting(z.boolean(), false),
+  /**
+   * The mail server emails go out through, and their sender, chosen on the
+   * Email tab of Settings, with its password encrypted (`sealSecret`). The
+   * server's environment wins over it: `SMTP_URL` for the server, and
+   * `EMAIL_FROM` for the sender. `null` until a staff Admin saves one.
+   */
+  'email.smtp': defineSetting(storedSmtpSchema, null as SmtpConfig | null),
 } as const;
 
 /** The key of a setting, e.g. `staff.name`. */

@@ -152,19 +152,21 @@ const envSchema = z
     GOOGLE_CLIENT_ID: optionalString,
     GOOGLE_CLIENT_SECRET: optionalString,
     /**
-     * SMTP connection URL for sending email, e.g.
+     * SMTP connection URL for sending email, which wins over the mail server
+     * saved on the Email tab of Settings, e.g.
      * `smtps://user:password@smtp.adiutor.dev:465`, or
      * `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` for STARTTLS.
      * In production it must use TLS, except to a server on this computer
-     * ({@link isProductionSmtpUrl}). Without it, emails are printed to the
-     * server console (development only).
+     * ({@link isProductionSmtpUrl}). Without it or a saved mail server, emails
+     * are printed to the server console (development only).
      */
     SMTP_URL: z.preprocess(emptyToUndefined, z.url().optional()),
-    /** Sender address for outgoing email. */
-    EMAIL_FROM: z.preprocess(
-      emptyToUndefined,
-      z.string().min(1).default('Adiutor <no-reply@adiutor.dev>'),
-    ),
+    /**
+     * Sender of outgoing email, e.g. `Adiutor <no-reply@adiutor.dev>`. When
+     * set, it wins over the sender saved on the Email tab of Settings; unset,
+     * that one is used, else `DEFAULT_EMAIL_FROM` (`src/lib/smtp.ts`).
+     */
+    EMAIL_FROM: optionalString,
     /**
      * Folder to write outgoing emails to as JSON files instead of sending them.
      * For automated tests only; takes precedence over SMTP. Refused in
