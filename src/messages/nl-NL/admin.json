@@ -522,6 +522,8 @@
       "appearance": {
         "title": "Weergave",
         "chooseFirst": "Kies eerst een afbeelding.",
+        "choose": "Afbeelding kiezen",
+        "noneChosen": "Geen afbeelding gekozen",
         "logo": {
           "title": "Logo",
           "description": "Elke pagina en e-mail toont het in plaats van dat van Adiutor, in de lichte en de donkere modus. Een logo met een transparante achtergrond past bij beide modi.",

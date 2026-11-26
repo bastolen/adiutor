@@ -71,11 +71,27 @@ describe('LogoForm', () => {
     expect(screen.getByRole('button', { name: 'Remove logo' })).toBeInTheDocument();
   });
 
+  it('opens the file chooser with a button named after the field, and names the chosen file', async () => {
+    const user = userEvent.setup();
+    render(<LogoForm logo={null} colours={NO_BRAND_COLOURS} />);
+    const choose = screen.getByRole('button', { name: 'Choose image Logo image' });
+    const input = screen.getByLabelText('Logo image', { selector: 'input' });
+    const opened = vi.fn();
+    input.addEventListener('click', opened);
+
+    await user.click(choose);
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('No image chosen')).toBeInTheDocument();
+
+    await user.upload(input, file());
+    expect(screen.getByText('logo.png')).toBeInTheDocument();
+  });
+
   it('previews a chosen file before it’s uploaded', async () => {
     const user = userEvent.setup();
     render(<LogoForm logo={LOGO} colours={NO_BRAND_COLOURS} />);
 
-    await user.upload(screen.getByLabelText('Logo image'), file());
+    await user.upload(screen.getByLabelText('Logo image', { selector: 'input' }), file());
 
     expect(previewed('light')).toBe('blob:chosen');
     expect(screen.getByText('The chosen image, not uploaded yet.')).toBeInTheDocument();
@@ -90,7 +106,7 @@ describe('LogoForm', () => {
     const user = userEvent.setup({ applyAccept: false });
     render(<LogoForm logo={null} colours={NO_BRAND_COLOURS} />);
     if (chosen) {
-      await user.upload(screen.getByLabelText('Logo image'), chosen);
+      await user.upload(screen.getByLabelText('Logo image', { selector: 'input' }), chosen);
     }
 
     await user.click(screen.getByRole('button', { name: 'Upload logo' }));
@@ -103,7 +119,7 @@ describe('LogoForm', () => {
     vi.mocked(uploadBrandImageAction).mockResolvedValue({ ok: true, message: 'Logo uploaded.' });
     const user = userEvent.setup();
     render(<LogoForm logo={null} colours={NO_BRAND_COLOURS} />);
-    await user.upload(screen.getByLabelText('Logo image'), file());
+    await user.upload(screen.getByLabelText('Logo image', { selector: 'input' }), file());
     await user.click(screen.getByRole('button', { name: 'Upload logo' }));
 
     await waitFor(() => expect(uploadBrandImageAction).toHaveBeenCalledTimes(1));

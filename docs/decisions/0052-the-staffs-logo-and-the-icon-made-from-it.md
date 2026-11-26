@@ -21,7 +21,8 @@ carry scripts and is refused everywhere.
   1 MB uploaded, smaller once drawn.
 - **Only a PNG Adiutor drew:** an upload must be a PNG or JPEG by its first bytes, of a size and
   shape that fits (`imageFacts`, `brandImageProblem`), read from its header before anything decodes
-  it. It's then drawn again with Next's `ImageResponse` into a PNG that fits its box (1024×256 for
+  it. A JPEG's header is read strictly, so every decoder reads the same size: only the segments all
+  of them skip, one frame header, and no other before its end. It's then drawn again with Next's `ImageResponse` into a PNG that fits its box (1024×256 for
   the logo, 512×512 for an icon), and only that is stored and served: whatever else the file held
   (a JPEG's location, a PNG's text) stays behind, an image that doesn't decode draws empty and is
   refused (`isBlankPng`), and mail clients always get a PNG.
@@ -29,14 +30,18 @@ carry scripts and is refused everywhere.
   light and the dark palette, and suggests a transparent background.
 - **The icon is made from the brand:** an own icon if one was uploaded, else the logo when it's
   about square (`isAboutSquare`), else the staff name's initials in white on the light accent;
-  Adiutor's while neither was uploaded (`brandIconSource`). A name whose initials aren't Latin
-  letters, which the built-in font can't draw, gets the logo fitted into the square instead.
+  Adiutor's while neither was uploaded (`brandIconSource`). A name whose initials the built-in font
+  can't draw (another script, or a rare Latin letter) gets the logo fitted into the square instead:
+  for a missing letter, `ImageResponse` would fetch a font from Google Fonts, which the server
+  must never do.
 - **Served to anyone from `/branding`:** `/branding/logo` and `/branding/icon` (32 pixels, or 180
-  for the Apple touch icon) are public paths with the fixed file policy, `nosniff` and no session.
+  for the Apple touch icon) are public paths with a fixed image policy that runs nothing,
+  `nosniff` and no session.
   Their address carries a version (the logo's row ID, or a hash of what the icon is drawn from), so
   it may be kept for a year; any other address for five minutes, so an old email still shows what's
   current. `/favicon.ico` is rewritten to an `.ico` of the 32-pixel icon, or redirects to Adiutor's
-  own. Each version of the icon is drawn once per process, whatever a request asks for.
+  own. Each version of the icon is drawn once per process and size, however often it's asked for,
+  and an image's bytes are kept per ID once read, so a request reads little more than an ID.
 
 ## Consequences
 

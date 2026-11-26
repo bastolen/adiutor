@@ -228,7 +228,8 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
   try {
     await signIn(page, PLATFORM_ADMIN);
     await page.goto('/admin/settings/appearance');
-    const logoField = page.getByLabel('Logo image', { exact: true });
+    // The file input itself: the "Choose image" button opens it.
+    const logoField = page.getByLabel('Logo image', { exact: true }).and(page.locator('input'));
     const upload = page.getByRole('button', { name: 'Upload logo' });
     await expect(page.getByTestId('logo-light').locator('img')).toHaveAttribute(
       'src',
@@ -268,7 +269,8 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
       'content-type': 'image/png',
       'cache-control': 'public, max-age=31536000, immutable',
       'x-content-type-options': 'nosniff',
-      'content-security-policy': "default-src 'none'; sandbox",
+      'content-security-policy':
+        "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
     });
     const iconHref = await page.locator('link[rel="icon"]').getAttribute('href');
     expect(iconHref).toMatch(/^\/branding\/icon\?v=/);
@@ -293,7 +295,7 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
     expect(email.html).toContain(`src="${E2E_BASE_URL}${logoSrc}"`);
 
     // An own icon replaces the one made from the logo, and goes again.
-    await page.getByLabel('Own icon', { exact: true }).setInputFiles({
+    await page.getByLabel('Own icon', { exact: true }).and(page.locator('input')).setInputFiles({
       name: 'icon.png',
       mimeType: 'image/png',
       buffer: touchIcon,

@@ -522,6 +522,8 @@
       "appearance": {
         "title": "Appearance",
         "chooseFirst": "Choose an image first.",
+        "choose": "Choose image",
+        "noneChosen": "No image chosen",
         "logo": {
           "title": "Logo",
           "description": "Every page and email shows it instead of Adiutor’s, in light and dark mode alike. A logo with a transparent background suits both modes.",

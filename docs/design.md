@@ -766,10 +766,11 @@ the `brand_image` table (`src/server/branding/brand-images.ts`) and served.
 - **The browser tab icon** is made from the brand (`brandIconSource`,
   `src/server/branding/brand-icon.tsx`): the own icon, else a logo that's about square, else the
   staff name's initials in white on the light accent (bolder with a stroke, as the built-in font
-  has one weight); Adiutor's while neither was uploaded. It's drawn at 32 pixels and as a 180-pixel Apple touch icon on an opaque
+  has one weight, and only letters that font has, or the logo instead); Adiutor's while neither
+  was uploaded. It's drawn at 32 pixels and as a 180-pixel Apple touch icon on an opaque
   background, once per version per process.
 - **Addresses:** `/branding/logo?v=<id>` and `/branding/icon?v=<hash>` (`?size=180` for the touch
-  icon), public and under the fixed file policy; the version changes with every upload (and, for
+  icon), public and under a fixed image policy that runs nothing; the version changes with every upload (and, for
   initials, with the staff's name and accent), so an address may be kept for a year.
   `/favicon.ico` is rewritten to `/branding/favicon`, the 32-pixel icon as an `.ico`.
 

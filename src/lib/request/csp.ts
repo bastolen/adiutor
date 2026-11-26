@@ -13,30 +13,42 @@
 
 /**
  * The policy of a file served from `/attachments/` (an attached file, always
- * a download) or `/branding/` (an image Adiutor drew): nothing in it may load
- * or run, and it's sandboxed, should a browser ever show one as a page.
- * Fixed: a file has no scripts to give a nonce to.
+ * a download): nothing in it may load or run, and it's sandboxed, should a
+ * browser ever show one instead of saving it. Fixed: a file has no scripts
+ * to give a nonce to.
  */
 export const FILE_POLICY = "default-src 'none'; sandbox";
 
-/** Where attached files are served from: one of the {@link FILE_PATHS}. */
+/**
+ * The policy of an image a browser may show on its own, opened in a tab:
+ * Adiutor's own logos and icons (`next.config.ts`) and the brand's images
+ * from `/branding/` (decision 0052). Nothing in it may run (an SVG's
+ * scripts included) or load from elsewhere; only the image itself and the
+ * styles of the browser's own image viewer.
+ */
+export const IMAGE_FILE_POLICY =
+  "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+
+/** Where attached files are served from. */
 export const ATTACHMENTS_PATH = '/attachments/';
 
-/**
- * The paths that serve files, which get {@link FILE_POLICY}: attached files,
- * and the brand's images (the uploaded logo and the icon made from the
- * brand, decision 0052).
- */
-export const FILE_PATHS: readonly string[] = [ATTACHMENTS_PATH, '/branding/'];
+/** Where the brand's images are served from (the uploaded logo and the icon made from the brand). */
+export const BRANDING_FILES_PATH = '/branding/';
 
 /**
- * Whether a path serves a file, and so gets {@link FILE_POLICY}.
+ * The fixed policy of a path that serves a file rather than a page:
+ * {@link FILE_POLICY} for attached files, {@link IMAGE_FILE_POLICY} for the
+ * brand's images. The proxy sets it, as Next.js puts the proxy's headers
+ * over a route's own.
  *
  * @param pathname - The request's path.
- * @returns Whether it's below one of the {@link FILE_PATHS}.
+ * @returns The policy, or `null` for a page, which gets one with a nonce.
  */
-export function servesFile(pathname: string): boolean {
-  return FILE_PATHS.some((prefix) => pathname.startsWith(prefix));
+export function filePolicyFor(pathname: string): string | null {
+  if (pathname.startsWith(ATTACHMENTS_PATH)) {
+    return FILE_POLICY;
+  }
+  return pathname.startsWith(BRANDING_FILES_PATH) ? IMAGE_FILE_POLICY : null;
 }
 
 /** Request header the proxy passes the nonce in, for the root layout. */

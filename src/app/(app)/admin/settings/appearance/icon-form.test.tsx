@@ -79,7 +79,7 @@ describe('IconForm', () => {
     expect(uploadBrandImageAction).not.toHaveBeenCalled();
 
     await user.upload(
-      screen.getByLabelText('Own icon'),
+      screen.getByLabelText('Own icon', { selector: 'input' }),
       new File([new Uint8Array(64)], 'icon.png', { type: 'image/png' }),
     );
     expect(shownIcons(container)).toEqual(['blob:chosen', 'blob:chosen']);

@@ -6,13 +6,7 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
-/**
- * The Content Security Policy for the static files the proxy skips (logos and
- * icons, see the matcher in `src/proxy.ts`): no scripts at all, even in an
- * SVG opened directly.
- */
-const STATIC_FILE_POLICY =
-  "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+import { IMAGE_FILE_POLICY } from './src/lib/request/csp';
 
 /**
  * Security headers sent with every response. The Content Security Policy for
@@ -60,10 +54,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // The files the proxy doesn't handle: nothing in them may run.
+      // The logos and icons the proxy doesn't handle: nothing in them may run, even in an SVG
+      // opened directly.
       ...['/brand/:path*', '/favicon.ico'].map((source) => ({
         source,
-        headers: [{ key: 'Content-Security-Policy', value: STATIC_FILE_POLICY }],
+        headers: [{ key: 'Content-Security-Policy', value: IMAGE_FILE_POLICY }],
       })),
     ];
   },

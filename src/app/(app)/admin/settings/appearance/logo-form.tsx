@@ -141,6 +141,7 @@ export default function LogoForm({
               minimum: BRAND_LOGO_MIN_HEIGHT,
               widest: LOGO_RATIO.widest,
             })}
+            chosenName={chosen?.file.name}
             disabled={changesOff}
             onChoose={(file) => {
               setRefusal('');

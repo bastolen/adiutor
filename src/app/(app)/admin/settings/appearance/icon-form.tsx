@@ -36,7 +36,8 @@ const ADIUTOR_ICON = '/brand/icon.svg';
 
 /**
  * The icon at a browser tab's size and as on a phone's home screen (the
- * touch icon at half its size), each with what it is. Only to look at.
+ * touch icon at half its size), each with what it is. The pictures are only
+ * to look at (`inert`); their captions stay for screen readers.
  *
  * @param props - Preview props.
  * @param props.tab - The tab icon's address.
@@ -45,9 +46,12 @@ const ADIUTOR_ICON = '/brand/icon.svg';
 function IconPreview({ tab, touch }: { tab: string; touch: string }) {
   const t = useTranslations('admin.settings.appearance.icon');
   return (
-    <div inert className="flex flex-wrap items-end gap-6">
+    <div className="flex flex-wrap items-end gap-6">
       <figure className="flex flex-col items-start gap-2">
-        <div className="flex size-14 items-center justify-center rounded-lg border border-border bg-muted">
+        <div
+          inert
+          className="flex size-14 items-center justify-center rounded-lg border border-border bg-muted"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element -- Adiutor's own icon, a blob: preview or one Adiutor drew at its versioned address; nothing for the image optimizer. */}
           <img src={tab} alt="" width={32} height={32} className="size-8 object-contain" />
         </div>
@@ -56,6 +60,7 @@ function IconPreview({ tab, touch }: { tab: string; touch: string }) {
       <figure className="flex flex-col items-start gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element -- As above. */}
         <img
+          inert
           src={touch}
           alt=""
           width={90}
@@ -127,6 +132,7 @@ export default function IconForm({ icon, ownIcon }: { icon: ShownIcon | null; ow
               maximum: BRAND_IMAGE_MAX_MB,
               minimum: BRAND_ICON_MIN_SIDE,
             })}
+            chosenName={chosen?.file.name}
             disabled={changesOff}
             onChoose={(file) => {
               setRefusal('');

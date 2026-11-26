@@ -155,11 +155,12 @@ test('the brand’s images answer anyone with a file that runs nothing, or "not 
   request,
 }) => {
   // Nothing is uploaded in the shared database; the logo spec uploads and removes its own.
+  const strict = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
   for (const path of ['/branding/logo', '/branding/icon']) {
     // eslint-disable-next-line no-await-in-loop -- Two addresses, one after the other.
     const response = await request.get(path, { maxRedirects: 0 });
     expect(response.status(), path).toBe(404);
-    expect(response.headers()['content-security-policy'], path).toBe("default-src 'none'; sandbox");
+    expect(response.headers()['content-security-policy'], path).toBe(strict);
   }
 });
 

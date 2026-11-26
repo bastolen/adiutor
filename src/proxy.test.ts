@@ -76,7 +76,7 @@ describe('proxy', () => {
     expect(signedOut('/invite/abc').headers.get('location')).toBeNull();
   });
 
-  it('gives a file a fixed policy that runs nothing, and a page its own with a nonce', () => {
+  it('gives a file a fixed policy that runs nothing (an image one its viewer’s styles), and a page its own with a nonce', () => {
     /**
      * Runs the proxy for a signed-in request.
      *
@@ -93,7 +93,9 @@ describe('proxy', () => {
     expect(policyFor('/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a')).toBe(
       "default-src 'none'; sandbox",
     );
-    expect(policyFor('/branding/logo')).toBe("default-src 'none'; sandbox");
+    expect(policyFor('/branding/logo')).toBe(
+      "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+    );
     expect(policyFor('/requests/1')).toMatch(/script-src 'self' 'nonce-/);
   });
 });

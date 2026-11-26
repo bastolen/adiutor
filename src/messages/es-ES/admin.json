@@ -522,6 +522,8 @@
       "appearance": {
         "title": "Apariencia",
         "chooseFirst": "Elige primero una imagen.",
+        "choose": "Elegir imagen",
+        "noneChosen": "Ninguna imagen elegida",
         "logo": {
           "title": "Logotipo",
           "description": "Todas las páginas y correos lo muestran en lugar del de Adiutor, en modo claro y oscuro. Un logotipo con fondo transparente encaja en ambos modos.",

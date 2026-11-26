@@ -4,7 +4,7 @@
  * kind of file. An address with the current version may be kept for a year
  * (a new upload gets a new address); any other is kept for five minutes, so
  * an old link still shows what's current. The proxy gives these routes a
- * fixed policy in which nothing loads or runs (`FILE_POLICY`).
+ * fixed policy in which nothing runs (`IMAGE_FILE_POLICY`).
  */
 
 /** How long an address with the current version may be kept: a year, unchanged. */

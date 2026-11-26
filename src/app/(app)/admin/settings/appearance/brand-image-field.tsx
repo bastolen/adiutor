@@ -8,12 +8,12 @@
  */
 'use client';
 
+import { ImageUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
-import { focusRing } from '@/components/ui/styles';
+import Button from '@/components/ui/button';
 import { IMAGE_CONTENT_TYPES } from '@/lib/branding';
-import cn from '@/lib/cn';
 import { BRAND_IMAGE_ACCEPT, BRAND_IMAGE_MAX_MB } from '@/lib/input-rules';
 
 /** The image chosen in a field, and an address for its preview. */
@@ -97,6 +97,8 @@ interface BrandImageFieldProps {
   label: string;
   /** Help text under the field: what an image may be. */
   description: string;
+  /** The name of the file chosen, if any, shown next to the button. */
+  chosenName?: string;
   /** Whether the field is turned off (signed in as a user). */
   disabled?: boolean;
   /** Called with the file chosen, or `null` when the choice is emptied. */
@@ -104,45 +106,62 @@ interface BrandImageFieldProps {
 }
 
 /**
- * A labelled file field for one PNG or JPEG, submitted as `file`. The
- * browser's own control, so choosing a file works with the keyboard and
- * screen readers as everywhere else; its button looks like a secondary one.
+ * A labelled field for one PNG or JPEG, submitted as `file`: a "Choose
+ * image" button that opens the browser's file chooser (its own file input
+ * is hidden, as its button would speak the browser's language rather than
+ * Adiutor's), and the chosen file's name. The button's name holds the
+ * field's label too, so the logo's and the icon's are told apart.
  *
  * @param props - Field props.
  * @param props.label - Visible label text.
  * @param props.description - Help text under the field.
+ * @param props.chosenName - The chosen file's name, if any.
  * @param props.disabled - Whether the field is turned off.
  * @param props.onChoose - Called with the file chosen, or `null`.
  */
 export function BrandImageField({
   label,
   description,
+  chosenName = undefined,
   disabled = false,
   onChoose,
 }: BrandImageFieldProps) {
+  const t = useTranslations('admin.settings.appearance');
   const id = useId();
-  const descriptionId = `${id}-description`;
+  const chooser = useRef<HTMLInputElement>(null);
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
+      <label id={`${id}-label`} htmlFor={id} className="text-sm font-medium text-foreground">
         {label}
       </label>
-      <input
-        id={id}
-        type="file"
-        name="file"
-        accept={BRAND_IMAGE_ACCEPT}
-        disabled={disabled}
-        aria-describedby={descriptionId}
-        onChange={(event) => onChoose(event.target.files?.[0] ?? null)}
-        className={cn(
-          'block w-full max-w-md cursor-pointer rounded-lg text-sm wrap-anywhere text-muted-foreground',
-          'file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground file:shadow-xs',
-          'hover:file:bg-muted disabled:cursor-not-allowed disabled:file:cursor-not-allowed disabled:file:opacity-55',
-          focusRing,
-        )}
-      />
-      <p id={descriptionId} className="text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Button
+          id={`${id}-choose`}
+          variant="secondary"
+          size="sm"
+          disabled={disabled}
+          aria-labelledby={`${id}-choose ${id}-label`}
+          aria-describedby={`${id}-description`}
+          onClick={() => chooser.current?.click()}
+        >
+          <ImageUp aria-hidden="true" />
+          {t('choose')}
+        </Button>
+        <span className="text-sm wrap-anywhere text-muted-foreground">
+          {chosenName ?? t('noneChosen')}
+        </span>
+        <input
+          ref={chooser}
+          id={id}
+          type="file"
+          name="file"
+          accept={BRAND_IMAGE_ACCEPT}
+          disabled={disabled}
+          hidden
+          onChange={(event) => onChoose(event.target.files?.[0] ?? null)}
+        />
+      </div>
+      <p id={`${id}-description`} className="text-xs text-muted-foreground">
         {description}
       </p>
     </div>

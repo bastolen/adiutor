@@ -481,16 +481,23 @@ or not, so only what Adiutor made itself is ever served:
   `brand_icon_removed`) and rate-limited (`brandImagesPerUser`: drawing takes the server's time).
 - **What's taken:** at most 1 MB (checked in the browser first, and again by the service), then a
   PNG or JPEG by its first bytes, whose header says it's at most 4096 pixels wide and high, before
-  anything decodes it: a file can't claim one size and make the server decode a far larger one.
-  SVG, which can hold scripts, is never taken. Server actions take bodies of up to 2 MB for it
+  anything decodes it. A file mustn't claim one size and decode at a far larger one (a 2 KB JPEG
+  can hide a 12000-pixel frame behind bytes some decoders read differently), so a JPEG's header
+  is read strictly (`jpegSize`): before its image data only the segments every decoder skips by
+  their length and one baseline, extended or progressive frame header, and no other frame header
+  before its end; anything else is refused. SVG, which can hold scripts, is never taken. Server actions take bodies of up to 2 MB for it
   (`serverActions.bodySizeLimit`); the proxy already reads up to 10 MB.
 - **What's kept and served:** the image drawn again as a PNG with `ImageResponse`, never the
   uploaded file, so a JPEG's location or a PNG's text never leaves the server, and an image that
-  doesn't decode (drawn empty, `isBlankPng`) is refused.
+  doesn't decode (drawn empty, `isBlankPng`, or one the drawing can't read) is refused.
 - **How it's served:** `/branding/logo` and `/branding/icon` are public paths (`PUBLIC_PATHS`)
-  under the fixed file policy (`FILE_POLICY`, set by the proxy for `FILE_PATHS`), with `nosniff`.
-  A request never draws: each version of the icon is drawn once per process and kept, so asking
-  with any `?v=` or `?size=` costs a read of the database at most.
+  under a fixed policy that runs nothing (`IMAGE_FILE_POLICY`, set by the proxy through
+  `filePolicyFor`; only the browser's own image viewer may style itself), with `nosniff`.
+  A request reads an image's ID; its bytes are kept per ID once read, and each version of the icon
+  is drawn once per process and size, with requests that come meanwhile waiting for that drawing,
+  so asking again with any `?v=` costs a small read of the database, never another drawing. Initials are drawn only from letters
+  the built-in font has: for any other, `ImageResponse` would fetch a font from Google Fonts, so
+  the server never contacts it (a test fails if drawing initials fetches anything).
 
 ## Where email goes
 
@@ -700,7 +707,8 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
 the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
-(`next.config.ts`), as do the files it serves (attachments and the brand's images, `FILE_POLICY`);
+(`IMAGE_FILE_POLICY`, from `next.config.ts`), as do the files it serves (`filePolicyFor`:
+attachments get `FILE_POLICY`, the brand's images `IMAGE_FILE_POLICY`);
 the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
 HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and the brand colours'
