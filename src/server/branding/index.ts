@@ -22,10 +22,5 @@ export { type BrandColoursInput, getBrandColours, setBrandColours } from './colo
 export { default as loadBrandColours } from './colours';
 export { default as loadEmailBrand } from './email-brand';
 export { default as pageBrandCss } from './page-colours';
-export {
-  type PageBrandImages,
-  pageIcons,
-  type PageLogo,
-  default as requestBrandImages,
-} from './page-images';
+export { type PageBrandImages, pageIcons, default as requestBrandImages } from './page-images';
 export { default as requestStaffName } from './page-name';

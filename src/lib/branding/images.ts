@@ -30,6 +30,15 @@ export interface ImageSize {
   height: number;
 }
 
+/**
+ * An uploaded logo as pages and emails show it: its address, with its
+ * version (`brandLogoPath`), and its size.
+ */
+export interface BrandLogo extends ImageSize {
+  /** Its path, e.g. `/branding/logo?v=…`. */
+  src: string;
+}
+
 /** What an image's first bytes say it is. */
 export interface ImageFacts extends ImageSize {
   /** Its kind. */

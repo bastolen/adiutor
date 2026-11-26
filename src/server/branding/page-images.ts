@@ -8,27 +8,17 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 
 import { db } from '@/db';
-import { brandIconPath, brandLogoPath, derivePalette } from '@/lib/branding';
+import { brandIconPath, type BrandLogo, brandLogoPath, derivePalette } from '@/lib/branding';
 
 import { planBrandIcon } from './brand-icon';
 import { loadBrandImages } from './brand-images';
 import loadBrandColours from './colours';
 import requestStaffName from './page-name';
 
-/** The uploaded logo, as a page shows it. */
-export interface PageLogo {
-  /** Its address, with its version. */
-  src: string;
-  /** Its width in pixels. */
-  width: number;
-  /** Its height in pixels. */
-  height: number;
-}
-
 /** The brand's images as a page needs them. */
 export interface PageBrandImages {
   /** The uploaded logo, or `null` for Adiutor's. */
-  logo: PageLogo | null;
+  logo: BrandLogo | null;
   /** The browser tab icon's version, or `null` for Adiutor's icon. */
   iconVersion: string | null;
 }

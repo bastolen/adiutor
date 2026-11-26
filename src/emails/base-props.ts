@@ -3,17 +3,21 @@
  * template only declares what is its own.
  */
 import type { EmailColours } from '@/components/email/theme';
+import type { BrandLogo } from '@/lib/branding';
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
 
 /**
- * How the operator's brand shows in an email (decisions 0049 and 0050). An
- * object, so what more of the brand an email shows has a place to go.
+ * How the operator's brand shows in an email (decisions 0049, 0050 and
+ * 0052). An object, so what more of the brand an email shows has a place to
+ * go.
  */
 export interface EmailBrand {
   /** The colours the email is drawn with (`emailColoursOf`). */
   colours: EmailColours;
   /** The staff's name, which the email's text shows instead of "Adiutor". */
   name: string;
+  /** The logo a staff Admin uploaded, linked from the app; Adiutor's without it. */
+  logo?: BrandLogo;
 }
 
 /**

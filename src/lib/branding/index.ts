@@ -36,6 +36,7 @@ export {
   ABOUT_SQUARE_RATIO,
   BRAND_IMAGE_KINDS,
   type BrandImageKind,
+  type BrandLogo,
   type BrandImageProblem,
   brandImageProblem,
   fitInto,

@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { getLocale, getMessages, getTimeZone, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import { BrandLogoProvider } from '@/components/brand/brand-logo';
 import { StaffNameProvider } from '@/components/brand/staff-name';
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
 import { forTitleTemplate } from '@/lib/branding';
@@ -61,8 +62,9 @@ export const instant = false;
  * `common` messages reach every client component through the provider;
  * pages pass their own namespaces with `ClientMessages`. The languages
  * Adiutor offers come along too (`OfferedLanguagesProvider`), for the
- * language choices, and the staff's name (`StaffNameProvider`), which every
- * text shows instead of "Adiutor" (decision 0050).
+ * language choices, the staff's name (`StaffNameProvider`), which every
+ * text shows instead of "Adiutor" (decision 0050), and the logo a staff Admin
+ * uploaded (`BrandLogoProvider`, decision 0052).
  *
  * The inline theme script sets `data-theme` on `<html>` before the page
  * paints, so `suppressHydrationWarning` tells React that this attribute is
@@ -81,15 +83,17 @@ export const instant = false;
  * nothing meanwhile).
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages, timeZone, languages, brandCss, staffName] = await Promise.all([
-    headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
-    getLocale(),
-    getMessages(),
-    getTimeZone(),
-    requestLanguageSettings(),
-    pageBrandCss(),
-    requestStaffName(),
-  ]);
+  const [nonce, locale, messages, timeZone, languages, brandCss, staffName, brandImages] =
+    await Promise.all([
+      headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
+      getLocale(),
+      getMessages(),
+      getTimeZone(),
+      requestLanguageSettings(),
+      pageBrandCss(),
+      requestStaffName(),
+      requestBrandImages(),
+    ]);
   return (
     <html
       lang={locale}
@@ -112,7 +116,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
           timeZone={timeZone}
         >
           <OfferedLanguagesProvider offered={languages.offered}>
-            <StaffNameProvider name={staffName}>{children}</StaffNameProvider>
+            <StaffNameProvider name={staffName}>
+              <BrandLogoProvider logo={brandImages.logo}>{children}</BrandLogoProvider>
+            </StaffNameProvider>
           </OfferedLanguagesProvider>
         </IntlClientProvider>
         <Suspense fallback={null}>

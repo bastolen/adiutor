@@ -1860,6 +1860,24 @@ describe('the staff’s name', () => {
     },
   );
 
+  it.each(emails)(
+    '%s: %s links the logo a staff Admin uploaded, at its size, instead of Adiutor’s',
+    async (_locale, _name, build) => {
+      const email = await build({
+        ...acme,
+        logo: { src: '/branding/logo?v=logo-1', width: 560, height: 160 },
+      });
+
+      const logo = /<img[^>]*\/branding\/logo[^>]*>/.exec(email.html)?.[0] ?? '';
+      expect(logo).toContain(`src="${appUrl}/branding/logo?v=logo-1"`);
+      expect(logo).toContain('width="112"');
+      expect(logo).toContain('height="32"');
+      expect(email.html).toContain('alt="Acme Support"');
+      expect(email.html).not.toContain('/brand/logo.png');
+      expect(email.text).not.toContain('/branding/logo');
+    },
+  );
+
   it('names nobody in a sender’s place when their account is gone, so the staff’s name shows once', async () => {
     const [reminder, added] = await Promise.all([
       invitationReminderEmail('jane@adiutor.test', {
