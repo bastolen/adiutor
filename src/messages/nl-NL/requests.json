@@ -302,7 +302,13 @@
       "typeNotAllowed": "{name} kun je niet toevoegen. Voeg afbeeldingen, pdf’s, tekst, Office- of OpenDocument-bestanden, archieven of schermopnames toe.",
       "empty": "{name} is leeg.",
       "tooMany": "Voeg hoogstens {maximum, number} bestanden aan één tekst toe.",
-      "failed": "{name} kon niet worden geüpload. Probeer het opnieuw."
+      "failed": "{name} kon niet worden geüpload. Probeer het opnieuw.",
+      "removeShort": "Verwijderen",
+      "removeTitle": "{name} verwijderen?",
+      "removeDescription": "Het wordt voor iedereen verwijderd en kan niet worden teruggehaald. Op zijn plek in de tekst staat wie het heeft verwijderd.",
+      "removeConfirm": "Bestand verwijderen",
+      "removedDone": "{name} verwijderd.",
+      "removedBy": "Verwijderd door {name}"
     }
   }
 }

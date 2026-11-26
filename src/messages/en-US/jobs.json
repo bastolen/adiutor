@@ -29,7 +29,8 @@
       "signInErrors": "{count, plural, one {# sign-in error deleted} other {# sign-in errors deleted}}",
       "jobRuns": "{count, plural, one {# run deleted} other {# runs deleted}}",
       "queuedJobs": "{count, plural, one {# queued job deleted} other {# queued jobs deleted}}",
-      "unsentFiles": "{count, plural, one {# unsent file purged} other {# unsent files purged}}"
+      "unsentFiles": "{count, plural, one {# unsent file purged} other {# unsent files purged}}",
+      "removedFiles": "{count, plural, one {# removed file deleted} other {# removed files deleted}}"
     }
   }
 }

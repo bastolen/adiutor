@@ -75,6 +75,7 @@ export {
   type AttachmentToServe,
   DAILY_UPLOAD_BYTES,
   loadAttachment,
+  removeAttachment,
   type UploadedAttachment,
   uploadAttachment,
 } from './attachments';

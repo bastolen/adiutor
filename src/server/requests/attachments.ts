@@ -6,7 +6,9 @@
  * marked uploaded, so no file is ever in storage without a row the cleanup
  * job can find. The upload is unsent until the text it's sent with claims it
  * (`claimAttachments`). Downloading one goes through the same checks as
- * reading its text (`loadAttachment`).
+ * reading its text (`loadAttachment`). The staff who work on requests remove
+ * one (`removeAttachment`): its row stays, as the mark of who removed it, and
+ * its file is deleted.
  */
 import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
@@ -23,13 +25,14 @@ import { idSchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
-import { forbiddenError, ServiceError } from '../errors';
+import { forbiddenError, notFoundError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { readSettings } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
-import { attachmentKey, attachmentLimitMb, type FileStorage } from '../storage';
+import { attachmentKey, attachmentLimitMb, type FileStorage, StorageError } from '../storage';
 import { getRequestAccess } from './access';
 import matchesAttachmentKind from './attachment-checks';
+import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { listRequestCompanies } from './list';
 
 /**
@@ -267,4 +270,90 @@ export async function loadAttachment(
     return null;
   }
   return { name: row.name, contentType: row.contentType, body: file.body };
+}
+
+/**
+ * Deletes a removed file's bytes, and notes that they're gone. A storage
+ * that fails leaves them for the `attachment-files` job, which tries again.
+ *
+ * @param ctx - Service context.
+ * @param id - The removed file.
+ */
+async function deleteRemovedFile(ctx: ServiceContext, id: string): Promise<void> {
+  try {
+    const storage = ctx.storage ? await ctx.storage() : null;
+    if (!storage) {
+      return;
+    }
+    await storage.delete(attachmentKey(id));
+    await ctx.db
+      .update(requestAttachment)
+      .set({ fileDeletedAt: sql`now()` })
+      .where(eq(requestAttachment.id, id));
+  } catch (error) {
+    // The kind only, as the storage's own reply may say more than it should.
+    // eslint-disable-next-line no-console -- The job tries again; the log says why it had to.
+    console.error(
+      "A removed attachment's file could not be deleted yet:",
+      error instanceof StorageError ? error.failure : 'failed',
+    );
+  }
+}
+
+/**
+ * Removes a file attached to a request's text: only the staff who work on
+ * requests (`mayRemoveAttachment`), at any time, on any text they can read,
+ * a note's too. Its row stays as the mark that says who removed it and when
+ * (with the staff member signed in as them, if one was: request work,
+ * decision 0028), and its file is deleted once that's saved. Nobody is told,
+ * and the request's last activity doesn't move: it tidies what's there.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `requests:manage` in the request's company.
+ * @param input - Form input.
+ * @param input.request - The request's number or ID.
+ * @param input.attachment - The file's ID.
+ * @returns The removed file's name.
+ * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
+ *   `not_found` when the actor may not see the request or the file isn't one of its own that
+ *   isn't removed yet, `forbidden` without `requests:manage`, `invalid` when the company is
+ *   deactivated, `rate_limited` past `RATE_LIMITS.requestChangesPerUser`.
+ */
+export async function removeAttachment(
+  ctx: ServiceContext,
+  actor: Actor,
+  input: { request: string; attachment: string },
+): Promise<{ name: string }> {
+  const access = await requestToChange(ctx, actor, input.request, 'requests:manage');
+  const id = idSchema.safeParse(input.attachment);
+  if (!id.success) {
+    throw notFoundError();
+  }
+  await assertChangeLimit(ctx, actor);
+  const work = signedInAsWork(actor);
+  const removed = await changeRequest(ctx, actor, access, 'requests:manage', async (tx, locked) => {
+    const [row] = await tx
+      .update(requestAttachment)
+      .set({
+        removedAt: CHANGE_MOMENT,
+        removedBy: actor.id,
+        removedSignedInAs: work.signedInAs,
+        removedSignedInAsStaffId: work.signedInAsStaffId,
+      })
+      .where(
+        and(
+          eq(requestAttachment.id, id.data),
+          eq(requestAttachment.requestId, locked.id),
+          isNull(requestAttachment.removedAt),
+        ),
+      )
+      .returning({ id: requestAttachment.id, name: requestAttachment.name });
+    if (!row) {
+      throw notFoundError();
+    }
+    return row;
+  });
+  // Once the removal is saved, so a file is never gone while its tile still links to it.
+  await deleteRemovedFile(ctx, removed.id);
+  return { name: removed.name };
 }

@@ -56,6 +56,7 @@ export {
   mayChangeStatus,
   mayContribute,
   mayProposeSolution,
+  mayRemoveAttachment,
   mayReplyWithStatus,
   maySetStatus,
   mayWaitWithReply,

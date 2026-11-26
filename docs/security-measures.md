@@ -424,6 +424,10 @@ A file attached to a request is uploaded on its own first, then sent with its te
   only the files its reader may see, the same way, so a company never learns that a note has a
   file. An unsent or removed file, or one the reader may not read, is "not found", by its address
   too.
+- **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
+  have attached (a password in a screenshot), and its bytes are deleted from the storage once
+  that's saved, or by the `attachment-files` job if the storage fails then. The row stays as the
+  mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
   quotes or backslashes), its type from the allow-list with `nosniff`,

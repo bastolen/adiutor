@@ -302,7 +302,13 @@
       "typeNotAllowed": "{name} no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
       "empty": "{name} está vacío.",
       "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
-      "failed": "No se ha podido subir {name}. Vuelve a intentarlo."
+      "failed": "No se ha podido subir {name}. Vuelve a intentarlo.",
+      "removeShort": "Quitar",
+      "removeTitle": "¿Quitar {name}?",
+      "removeDescription": "Se elimina para todos y no se puede recuperar. En su lugar en el texto se indica quién lo quitó.",
+      "removeConfirm": "Quitar archivo",
+      "removedDone": "Se ha quitado {name}.",
+      "removedBy": "Quitado por {name}"
     }
   }
 }

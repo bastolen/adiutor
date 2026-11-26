@@ -29,7 +29,8 @@
       "signInErrors": "{count, plural, one {# inlogfout verwijderd} other {# inlogfouten verwijderd}}",
       "jobRuns": "{count, plural, one {# uitvoering verwijderd} other {# uitvoeringen verwijderd}}",
       "queuedJobs": "{count, plural, one {# taak uit de wachtrij verwijderd} other {# taken uit de wachtrij verwijderd}}",
-      "unsentFiles": "{count, plural, one {# niet-verstuurd bestand verwijderd} other {# niet-verstuurde bestanden verwijderd}}"
+      "unsentFiles": "{count, plural, one {# niet-verstuurd bestand verwijderd} other {# niet-verstuurde bestanden verwijderd}}",
+      "removedFiles": "{count, plural, one {# verwijderd bestand gewist} other {# verwijderde bestanden gewist}}"
     }
   }
 }

@@ -171,6 +171,7 @@ import {
   updateRequestDetails,
   updateRequestType,
   loadAttachment,
+  removeAttachment,
   uploadAttachment,
 } from './requests';
 import {
@@ -256,8 +257,11 @@ interface World {
   failedJobs: { retry: string; discard: string };
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
-  /** A file attached to each request's description, and one to an internal note on the own one. */
-  attachments: { own: string; other: string; ownNote: string };
+  /**
+   * A file attached to each request's description, one to an internal note on the own one, and
+   * one on the own one to remove.
+   */
+  attachments: { own: string; other: string; ownNote: string; removable: string };
 }
 
 /**
@@ -577,6 +581,14 @@ function listOperations(): Operation[] {
     ],
     // After the upload, which it would refuse.
     ['turn attaching files off', (w) => saveAttachmentsEnabled(ctx, w.actor, false, {})],
+    [
+      'remove an attachment',
+      (w) =>
+        removeAttachment(ctx, w.actor, {
+          request: w.requests.own,
+          attachment: w.attachments.removable,
+        }),
+    ],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -903,6 +915,7 @@ const READS: ReadonlySet<string> = new Set([
  */
 const OWN_WORK: ReadonlySet<string> = new Set([
   'dismiss own MFA recommendation',
+  'remove an attachment',
   'upload a file to attach',
   'raise request (own)',
   'raise request (other)',
@@ -1055,6 +1068,8 @@ const EXPECTED: Record<string, string> = {
   'turn attaching files off': 'FFFFFFA',
   // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
   'upload a file to attach': 'FAAAFAA',
+  // A file on a request, removed by the staff who work on requests only.
+  'remove an attachment': 'FFFAFAA',
   // A file is read by whoever reads its text: a description's by everyone who sees the request,
   // a note's by the staff.
   "download a description's file (own)": 'AAAAAAA',
@@ -1334,6 +1349,7 @@ async function createWorld(role: MatrixRole): Promise<World> {
       own: await storeAttachment(db, storage, { requestId: ownRequest.id }),
       other: await storeAttachment(db, storage, { requestId: otherRequest.id }),
       ownNote: await storeAttachment(db, storage, { requestId: ownRequest.id, entryId: note.id }),
+      removable: await storeAttachment(db, storage, { requestId: ownRequest.id }),
     },
   };
 }

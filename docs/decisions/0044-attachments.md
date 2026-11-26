@@ -39,6 +39,9 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
 - **Only the uploader sends an upload:** a text takes only its writer's own unsent uploads (with the
   same staff member signed in as them, if one was), and a file that isn't theirs refuses the whole
   text without naming it.
+- **Only the staff who work on requests remove a file,** at any time, and removing deletes it: a
+  file attached by mistake (a password in a screenshot) must be gone from the storage, not hidden.
+  Its row stays as the mark of who removed it, so the text doesn't silently change.
 - **Files can be added to a text later, in an edit:** an edit that only adds files keeps no version
   and doesn't mark the text edited, since versions keep what a text said, and the files show with
   it.

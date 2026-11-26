@@ -1,9 +1,11 @@
 /**
  * @file Integration tests for the job that purges unsent attachments: after
  * 25 hours, once the uploader's account is gone, and unfinished uploads
- * after an hour; a sent file, or one uploaded lately, stays; nothing happens
- * without a storage.
+ * after an hour; a sent file, or one uploaded lately, stays; the files of
+ * removed attachments that are still in storage are deleted; nothing
+ * happens without a storage.
  */
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { requestAttachment } from '@/db/schema';
@@ -92,7 +94,7 @@ describe('attachment-files', () => {
       createdAt: minutesAgo(30 * 24 * 60),
     });
 
-    expect(await run()).toEqual({ summary: { unsentFiles: 2 } });
+    expect(await run()).toEqual({ summary: { unsentFiles: 2, removedFiles: 0 } });
 
     expect((await left()).sort()).toEqual([recent, uploading, sent].sort());
     expect(await storage.get(attachmentKey(old))).toBeNull();
@@ -106,14 +108,39 @@ describe('attachment-files', () => {
     const orphan = await storeAttachment(db, storage, { uploadedBy: null });
     await storeAttachment(db, storage, { uploadedBy: gone });
 
-    expect(await run()).toEqual({ summary: { unsentFiles: 1 } });
+    expect(await run()).toEqual({ summary: { unsentFiles: 1, removedFiles: 0 } });
     expect(await left()).not.toContain(orphan);
+  });
+
+  it('deletes the files of removed attachments still in storage, and notes they’re gone', async () => {
+    const removed = await storeAttachment(db, storage, { uploadedBy: uploader, requestId });
+    const deletedAlready = await storeAttachment(db, storage, { uploadedBy: uploader, requestId });
+    await db
+      .update(requestAttachment)
+      .set({ removedAt: minutesAgo(5) })
+      .where(eq(requestAttachment.id, removed));
+    await db
+      .update(requestAttachment)
+      .set({ removedAt: minutesAgo(5), fileDeletedAt: minutesAgo(5) })
+      .where(eq(requestAttachment.id, deletedAlready));
+
+    expect(await run()).toEqual({ summary: { unsentFiles: 0, removedFiles: 1 } });
+
+    expect(await storage.get(attachmentKey(removed))).toBeNull();
+    const [row] = await db
+      .select({ fileDeletedAt: requestAttachment.fileDeletedAt })
+      .from(requestAttachment)
+      .where(eq(requestAttachment.id, removed));
+    expect(row?.fileDeletedAt).toBeInstanceOf(Date);
+    // Its row stays: it's the mark that says who removed it.
+    expect(await left()).toContain(removed);
+    expect(await run()).toEqual({ summary: { unsentFiles: 0, removedFiles: 0 } });
   });
 
   it('does nothing while no storage is chosen', async () => {
     await storeAttachment(db, storage, { uploadedBy: uploader, createdAt: minutesAgo(26 * 60) });
     expect(await run({ ...ctx, storage: noStorage })).toEqual({
-      summary: { unsentFiles: 0 },
+      summary: { unsentFiles: 0, removedFiles: 0 },
     });
     expect(await left()).toHaveLength(1);
   });

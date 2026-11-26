@@ -26,7 +26,10 @@ import {
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
-import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
+import AttachmentList, {
+  attachedCount,
+  type AttachmentRemoval,
+} from '../../_requests/attachment-list';
 import type { Attaching } from '../../_requests/attachment-picker';
 import PersonLine, {
   PersonAvatar,
@@ -177,6 +180,7 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
  * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
  * @param props.attaching - What attaching needs, while people can attach files: an edited text
  *   can then get files too.
+ * @param props.removal - What removing a file needs, for a reader who may.
  * @returns The list of entries, or a line saying there are none.
  */
 export default function Thread({
@@ -184,11 +188,13 @@ export default function Thread({
   address,
   earlierHref,
   attaching = null,
+  removal = null,
 }: {
   detail: RequestDetail;
   address: string;
   earlierHref: string | null;
   attaching?: Attaching | null;
+  removal?: AttachmentRemoval | null;
 }) {
   const t = useTranslations('requests.detail');
   const tNote = useTranslations('requests.note');
@@ -285,7 +291,11 @@ export default function Thread({
               ) : (
                 text
               )}
-              <AttachmentList attachments={entry.body?.attachments} />
+              <AttachmentList
+                attachments={entry.body?.attachments}
+                names={names}
+                removal={removal}
+              />
             </Entry>
           );
         }

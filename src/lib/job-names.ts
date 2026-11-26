@@ -84,6 +84,8 @@ const JOB_SUMMARY_KEYS = [
   'queuedJobs',
   /** Attached files that were never sent (or never finished uploading) and were purged. */
   'unsentFiles',
+  /** Removed attachments whose files were deleted, because that failed when they were removed. */
+  'removedFiles',
 ] as const;
 
 /** One count a run can report. */

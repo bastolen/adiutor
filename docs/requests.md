@@ -747,6 +747,13 @@ in [Attachments](deploying.md#attachments).
 - **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
   kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
   Someone signed out is sent to sign in and back; a file they may not read is "not found".
+- **Removing** (`removeAttachment`, `mayRemoveAttachment` in `rules.ts`): only the staff who work
+  on requests, on any of a request's texts, whatever its status, and whether attaching is on or
+  not; a Remove button on each file's tile asks first (`RowAction`), and focus then goes to the
+  card's heading. The row stays, so the file's place says "Removed by Sam" (with the staff member
+  signed in as the remover, for the readers told about that work), and its file is deleted once
+  the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
+  told, the request's last activity doesn't move, and a removed file is "not found" from then on.
 
 ## Signed in as a user
 
@@ -997,8 +1004,8 @@ no Move menu.
   subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `attachmentsOn`, `uploadAttachment` and
-  `loadAttachment` (attached files, which the services that store a text claim with
+- `src/server/requests/` (a folder module): `attachmentsOn`, `uploadAttachment`,
+  `loadAttachment` and `removeAttachment` (attached files, which the services that store a text claim with
   `claimAttachments`), `listRequestCompanies`, `listRequests` (built from
   `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
   sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into

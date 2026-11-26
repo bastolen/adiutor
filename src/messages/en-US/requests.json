@@ -302,7 +302,13 @@
       "typeNotAllowed": "{name} can’t be attached. Attach images, PDFs, text, Office or OpenDocument files, archives or screen recordings.",
       "empty": "{name} is empty.",
       "tooMany": "Attach at most {maximum, number} files to one text.",
-      "failed": "{name} couldn’t be uploaded. Try again."
+      "failed": "{name} couldn’t be uploaded. Try again.",
+      "removeShort": "Remove",
+      "removeTitle": "Remove {name}?",
+      "removeDescription": "It’s deleted for everyone and can’t be brought back. Its place in the text says who removed it.",
+      "removeConfirm": "Remove file",
+      "removedDone": "{name} removed.",
+      "removedBy": "Removed by {name}"
     }
   }
 }

@@ -3,11 +3,13 @@
  * (decision 0044): it purges the files uploaded but never sent with a text
  * (after 25 hours, an hour past the day a text may still claim them, or as
  * soon as the uploader's account is gone) and uploads that never finished
- * (after an hour). Each file is deleted before its row, so a run that stops
- * halfway leaves nothing a later run can't find. It does nothing while no
- * storage is chosen; turning attachments off in Settings doesn't stop it.
+ * (after an hour), and deletes the files of removed attachments that
+ * couldn't be deleted when they were removed. Each file is deleted before
+ * its row is (or is marked deleted), so a run that stops halfway leaves
+ * nothing a later run can't find. It does nothing while no storage is
+ * chosen; turning attachments off in Settings doesn't stop it.
  */
-import { and, asc, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { requestAttachment } from '@/db/schema';
 
@@ -33,24 +35,31 @@ const PURGEABLE = and(
   ),
 );
 
+/** The rows of removed files whose bytes are still in storage. */
+const REMOVED_KEPT = and(
+  isNotNull(requestAttachment.removedAt),
+  isNull(requestAttachment.fileDeletedAt),
+);
+
 export default defineRecurringJob({
   name: 'attachment-files',
   schedule: '25 * * * *',
   /**
-   * Purges the unsent and unfinished uploads, until there are none left or
-   * the deadline comes, on one storage connection.
+   * Purges the unsent and unfinished uploads, then deletes removed files
+   * still in storage, until there are none left or the deadline comes, on
+   * one storage connection.
    *
    * @param ctx - Service context: the database and the storage.
    * @param options - The run's options.
    * @param options.deadline - When to stop starting new work.
-   * @returns How many uploads were purged.
+   * @returns How many uploads were purged, and how many removed files deleted.
    */
   run: async (ctx, { deadline }) => {
     const storage = ctx.storage ? await ctx.storage() : null;
     if (!storage) {
-      return { summary: { unsentFiles: 0 } };
+      return { summary: { unsentFiles: 0, removedFiles: 0 } };
     }
-    const purged = await storage.session(async (shared) => {
+    const { purged, removedFiles } = await storage.session(async (shared) => {
       let count = 0;
       let full = true;
       while (full && Date.now() < deadline.getTime()) {
@@ -78,8 +87,33 @@ export default defineRecurringJob({
           count += deleted.length;
         }
       }
-      return count;
+      let removedCount = 0;
+      full = true;
+      while (full && Date.now() < deadline.getTime()) {
+        // eslint-disable-next-line no-await-in-loop -- a chunk at a time, until the deadline
+        const rows = await ctx.db
+          .select({ id: requestAttachment.id })
+          .from(requestAttachment)
+          .where(REMOVED_KEPT)
+          .orderBy(asc(requestAttachment.removedAt))
+          .limit(CHUNK_ROWS);
+        full = rows.length === CHUNK_ROWS;
+        for (const row of rows) {
+          if (Date.now() >= deadline.getTime()) {
+            break;
+          }
+          // eslint-disable-next-line no-await-in-loop -- one connection, one file at a time
+          await shared.delete(attachmentKey(row.id));
+          // eslint-disable-next-line no-await-in-loop -- one row at a time, after its file
+          await ctx.db
+            .update(requestAttachment)
+            .set({ fileDeletedAt: sql`now()` })
+            .where(eq(requestAttachment.id, row.id));
+          removedCount += 1;
+        }
+      }
+      return { purged: count, removedFiles: removedCount };
     });
-    return { summary: { unsentFiles: purged } };
+    return { summary: { unsentFiles: purged, removedFiles } };
   },
 });

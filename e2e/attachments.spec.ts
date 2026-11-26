@@ -302,3 +302,32 @@ test('a company adds a file to its reply while editing it, which doesn’t mark 
   ).toBeVisible();
   await expect(conversation.getByText('Edited', { exact: true })).toHaveCount(0);
 });
+
+test('the staff remove a file, whose place says who removed it, and focus stays in its card', async ({
+  page,
+  context,
+}) => {
+  const { number } = await requestWithFiles('A file the staff remove');
+  await context.addCookies(adminCookies());
+  await page.goto(`/requests/${number}`);
+  const description = page.getByRole('region', { name: 'Description' });
+  const link = description.getByRole('link', { name: /^Download error\.png/ });
+  const href = (await link.getAttribute('href')) ?? '';
+
+  await description.getByRole('button', { name: 'Remove error.png' }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Remove error.png?' });
+  await dialog.getByRole('button', { name: 'Remove file' }).click();
+
+  await expect(toasts(page)).toContainText('error.png removed.');
+  await expect(description.getByText(`Removed by ${PLATFORM_ADMIN.name}`)).toBeVisible();
+  await expect(link).toHaveCount(0);
+  await expect(description.getByRole('heading', { name: 'Description' })).toBeFocused();
+  expect((await page.request.get(href)).status()).toBe(404);
+
+  // The company sees the same place, and can't remove anything.
+  await context.clearCookies();
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+  await expect(description.getByText(`Removed by ${PLATFORM_ADMIN.name}`)).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(0);
+});

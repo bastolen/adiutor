@@ -1,8 +1,8 @@
 /**
  * @file Server actions for a request's page: replying, adding an internal
  * note, changing the status, changing the details, changing who it's
- * assigned to, editing a text, subscribing to it, and saving how the reader
- * reads its activity. The services check who may do what; these read the
+ * assigned to, editing a text, removing an attachment, subscribing to it,
+ * and saving how the reader reads its activity. The services check who may do what; these read the
  * form, refresh the page and word the confirmation in the request's language
  * (`requests.reply`, `requests.note`, `requests.saved`).
  */
@@ -24,6 +24,7 @@ import {
   changeSubscribers,
   editReply,
   editRequestDescription,
+  removeAttachment,
   replyToRequest,
   setActivityView,
   subscribe,
@@ -250,6 +251,30 @@ export async function editTextAction(
       ok: true,
       message: t('text', { changed: changed ? 'yes' : 'no', files: attached }),
     };
+  });
+}
+
+/**
+ * Removes a file attached to one of a request's texts (the staff who work on
+ * requests).
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Fields `request` (its number) and `attachment` (the file's ID).
+ * @returns A confirmation that names the file, or why it failed.
+ */
+export async function removeAttachmentAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const { name } = await removeAttachment(appContext, actor, {
+      request: field(formData, 'request'),
+      attachment: field(formData, 'attachment'),
+    });
+    refresh();
+    const t = await getTranslations('requests.attachments');
+    return { ok: true, message: t('removedDone', { name }) };
   });
 }
 

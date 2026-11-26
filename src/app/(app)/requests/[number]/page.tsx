@@ -48,6 +48,7 @@ import {
   mayChangeStatus,
   mayContribute,
   mayProposeSolution,
+  mayRemoveAttachment,
   mayWaitWithReply,
   mayWriteNote,
   offeredActivityGroups,
@@ -78,7 +79,12 @@ import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
-import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
+import {
+  changeAssigneesAction,
+  changeStatusAction,
+  changeSubscriptionAction,
+  removeAttachmentAction,
+} from './actions';
 import { ActivityControls, ActivityError, ActivityViewProvider } from './activity-view';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import ChangeSubscribers from './change-subscribers';
@@ -216,6 +222,11 @@ async function RequestContent({
   // Files go with what the reader writes, while people can attach files.
   const on = contributes ? await attachmentsOn(appContext) : null;
   const attaching = on && { maxFileMb: on.maxFileMb };
+  // The staff who work on requests remove files, whatever the switch says.
+  const removal =
+    contributes && mayRemoveAttachment(detail.permissions)
+      ? { request: detail.number, action: removeAttachmentAction }
+      : null;
 
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
@@ -232,6 +243,7 @@ async function RequestContent({
       address={address}
       earlierHref={earlierHref}
       attaching={attaching}
+      removal={removal}
     />
   );
   const writing = contributes && (
@@ -344,7 +356,11 @@ async function RequestContent({
               ) : (
                 descriptionText
               )}
-              <AttachmentList attachments={detail.description.attachments} />
+              <AttachmentList
+                attachments={detail.description.attachments}
+                names={names}
+                removal={removal}
+              />
             </div>
           </Card>
         </div>

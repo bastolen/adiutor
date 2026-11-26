@@ -29,7 +29,8 @@
       "signInErrors": "{count, plural, one {# error de inicio de sesión eliminado} other {# errores de inicio de sesión eliminados}}",
       "jobRuns": "{count, plural, one {# ejecución eliminada} other {# ejecuciones eliminadas}}",
       "queuedJobs": "{count, plural, one {# tarea en cola eliminada} other {# tareas en cola eliminadas}}",
-      "unsentFiles": "{count, plural, one {# archivo no enviado eliminado} other {# archivos no enviados eliminados}}"
+      "unsentFiles": "{count, plural, one {# archivo no enviado eliminado} other {# archivos no enviados eliminados}}",
+      "removedFiles": "{count, plural, one {# archivo quitado eliminado} other {# archivos quitados eliminados}}"
     }
   }
 }
