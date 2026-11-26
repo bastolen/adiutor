@@ -3,9 +3,13 @@
  * GitHub or Google accounts, or their initials. Pure, so the services, the
  * account page and Better Auth's configuration share one rule.
  *
- * Someone who hasn't chosen shows the picture of the account they connected
- * first that has one, and their initials when none has. A choice of a
- * provider shows that provider's account; once it's disconnected, or while
+ * Each provider is offered by one account (`choiceAccounts`): its first
+ * confirmed account that has a picture, else its first confirmed one,
+ * offered without a picture yet. The picture someone shows is always one of
+ * these, so a provider's option names, previews and saves the account whose
+ * picture shows. Someone who hasn't chosen shows the picture of the account
+ * they connected first that has one, and their initials when none has. A
+ * choice of a provider shows its account; once it's disconnected, or while
  * it has no picture yet, the default applies again. Only confirmed accounts
  * count: one linked at sign-in that the user hasn't confirmed never shows,
  * as it doesn't count for MFA either.
@@ -45,7 +49,35 @@ export interface PictureAccount {
 }
 
 /**
- * The account whose picture someone shows.
+ * The accounts whose pictures someone can choose, one per provider of their
+ * confirmed accounts: of that provider's confirmed accounts, the first
+ * connected that has a picture, else the first connected (without a picture
+ * yet). It's the one rule for which account stands for a provider: the
+ * picture someone shows (`pictureAccount`) and the account page's options
+ * both follow it.
+ *
+ * @param accounts - Their connected accounts, the first connected first.
+ * @returns One account per provider, in the order those accounts were connected.
+ */
+export function choiceAccounts<T extends PictureAccount>(
+  accounts: readonly T[],
+): { providerId: OAuthProvider; account: T }[] {
+  const confirmed = accounts.filter((found) => found.confirmed);
+  return confirmed.flatMap((candidate) => {
+    const { providerId } = candidate;
+    if (!isOAuthProvider(providerId)) {
+      return [];
+    }
+    const ofProvider = confirmed.filter((found) => found.providerId === providerId);
+    const standsFor = ofProvider.find(({ image }) => image !== null) ?? ofProvider[0];
+    return standsFor === candidate ? [{ providerId, account: candidate }] : [];
+  });
+}
+
+/**
+ * The account whose picture someone shows: of the accounts they can choose
+ * (`choiceAccounts`) that have a picture, the chosen provider's, else the
+ * first connected.
  *
  * @param source - What they chose (`user.avatarSource`), or `null` when they haven't.
  * @param accounts - Their connected accounts, the first connected first.
@@ -58,25 +90,7 @@ export function pictureAccount<T extends PictureAccount>(
   if (source === 'initials') {
     return null;
   }
-  const usable = accounts.filter(({ image, confirmed }) => image !== null && confirmed);
-  const chosen = source ? usable.find(({ providerId }) => providerId === source) : undefined;
-  return chosen ?? usable[0] ?? null;
-}
-
-/**
- * The providers someone could choose the picture of: those of their
- * confirmed accounts, in the order they connected them, each once.
- *
- * @param accounts - Their connected accounts, the first connected first.
- * @returns The providers.
- */
-export function pictureProviders(accounts: readonly PictureAccount[]): OAuthProvider[] {
-  return [
-    ...new Set(
-      accounts
-        .filter(({ confirmed }) => confirmed)
-        .map(({ providerId }) => providerId)
-        .filter(isOAuthProvider),
-    ),
-  ];
+  const withPicture = choiceAccounts(accounts).filter(({ account }) => account.image !== null);
+  const chosen = withPicture.find(({ providerId }) => providerId === source);
+  return (chosen ?? withPicture[0])?.account ?? null;
 }
