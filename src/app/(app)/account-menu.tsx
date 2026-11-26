@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 
 import signOutAndLeave from '@/components/auth/sign-out';
+import { useForcedTheme } from '@/components/theme/forced-theme';
 import ThemeMenuRow from '@/components/theme/theme-menu-row';
 import useThemePreference from '@/components/theme/use-theme-preference';
 import Alert from '@/components/ui/alert';
@@ -89,7 +90,8 @@ interface AccountMenuProps {
  * The theme hook runs here rather than in the menu, whose content only exists
  * while it's open: this way the theme keeps following the system on every app
  * page. The sidebar's copy is always mounted, even while hidden on small
- * screens.
+ * screens. While a staff Admin keeps every page in one mode, the theme row
+ * isn't there (decision 0053).
  */
 export default function AccountMenu({
   name,
@@ -102,6 +104,8 @@ export default function AccountMenu({
   const tCommon = useTranslations('common');
   const { goBack } = useBackToOwnAccount();
   const { preference, setPreference } = useThemePreference();
+  // A staff Admin keeps every page in one mode: there's nothing to choose.
+  const forced = useForcedTheme();
   const shownName = displayName({ name, email });
   const nameId = useId();
   // Gone when the user leaves the page and comes back, like every status message.
@@ -169,8 +173,12 @@ export default function AccountMenu({
             </Link>
           </MenuItem>
           <MenuSeparator />
-          <ThemeMenuRow preference={preference} onChange={setPreference} />
-          <MenuSeparator />
+          {forced ? null : (
+            <>
+              <ThemeMenuRow preference={preference} onChange={setPreference} />
+              <MenuSeparator />
+            </>
+          )}
           {signedInAs ? (
             <MenuItem onSelect={goBack}>
               <Undo2 aria-hidden="true" />

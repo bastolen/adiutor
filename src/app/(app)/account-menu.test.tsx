@@ -13,8 +13,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ForcedThemeProvider } from '@/components/theme/forced-theme';
 import { Toaster } from '@/components/ui/toast';
-import { THEME_STORAGE_KEY } from '@/lib/theme';
+import { THEME_FORCED_ATTRIBUTE, THEME_STORAGE_KEY } from '@/lib/theme';
 
 import AccountMenu from './account-menu';
 
@@ -150,6 +151,51 @@ describe('AccountMenu', () => {
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('has no theme row while a staff Admin keeps every page in one mode, which nothing changes', async () => {
+    document.documentElement.dataset.theme = 'light';
+    document.documentElement.setAttribute(THEME_FORCED_ATTRIBUTE, '');
+    const user = userEvent.setup();
+    try {
+      render(
+        <ForcedThemeProvider theme="light">
+          <AccountMenu name="Ada Tester" email="ada@adiutor.test" />
+        </ForcedThemeProvider>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Account menu/ }));
+
+      expect(screen.queryByRole('group', { name: 'Theme' })).not.toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Account settings' })).toBeInTheDocument();
+      // The system is dark (the stub), but the kept mode stays.
+      expect(document.documentElement.dataset.theme).toBe('light');
+    } finally {
+      document.documentElement.removeAttribute(THEME_FORCED_ATTRIBUTE);
+    }
+  });
+
+  it('applies the stored theme again once both modes come back', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.setAttribute(THEME_FORCED_ATTRIBUTE, '');
+    const { rerender } = render(
+      <ForcedThemeProvider theme="dark">
+        <AccountMenu name="Ada Tester" email="ada@adiutor.test" />
+      </ForcedThemeProvider>,
+    );
+    expect(document.documentElement.dataset.theme).toBe('dark');
+
+    // The root layout renders `<html>` without the kept mode after a refresh.
+    document.documentElement.removeAttribute(THEME_FORCED_ATTRIBUTE);
+    delete document.documentElement.dataset.theme;
+    rerender(
+      <ForcedThemeProvider theme={null}>
+        <AccountMenu name="Ada Tester" email="ada@adiutor.test" />
+      </ForcedThemeProvider>,
+    );
+
+    expect(document.documentElement.dataset.theme).toBe('light');
   });
 
   it('signs out and loads the sign-in page afresh', async () => {

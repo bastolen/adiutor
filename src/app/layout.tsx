@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import { BrandLogoProvider } from '@/components/brand/brand-logo';
 import { StaffNameProvider } from '@/components/brand/staff-name';
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
+import { ForcedThemeProvider } from '@/components/theme/forced-theme';
 import { forTitleTemplate } from '@/lib/branding';
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
@@ -16,7 +17,13 @@ import { pickMessages } from '@/lib/i18n/messages';
 import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
-import { pageBrandCss, pageIcons, requestBrandImages, requestStaffName } from '@/server/branding';
+import {
+  pageBrandCss,
+  pageIcons,
+  requestBrandImages,
+  requestForcedTheme,
+  requestStaffName,
+} from '@/server/branding';
 
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 
@@ -69,7 +76,12 @@ export const instant = false;
  * The inline theme script sets `data-theme` on `<html>` before the page
  * paints, so `suppressHydrationWarning` tells React that this attribute is
  * expected to differ from the server-rendered HTML. It carries the request's
- * nonce, or the Content Security Policy would block it.
+ * nonce, or the Content Security Policy would block it. While a staff Admin
+ * keeps every page in one mode (decision 0053), the layout renders
+ * `data-theme` itself with the `data-theme-forced` marker
+ * (`THEME_FORCED_ATTRIBUTE`), so the mode holds before any script and
+ * without JavaScript; the script and the theme choices then leave it alone
+ * (`ForcedThemeProvider`).
  *
  * When a staff Admin chose brand colours, a `<style>` sets the palette worked
  * out from them over the theme's (decision 0049), for every page including
@@ -83,22 +95,35 @@ export const instant = false;
  * nothing meanwhile).
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages, timeZone, languages, brandCss, staffName, brandImages] =
-    await Promise.all([
-      headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
-      getLocale(),
-      getMessages(),
-      getTimeZone(),
-      requestLanguageSettings(),
-      pageBrandCss(),
-      requestStaffName(),
-      requestBrandImages(),
-    ]);
+  const [
+    nonce,
+    locale,
+    messages,
+    timeZone,
+    languages,
+    brandCss,
+    staffName,
+    brandImages,
+    forcedTheme,
+  ] = await Promise.all([
+    headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
+    getLocale(),
+    getMessages(),
+    getTimeZone(),
+    requestLanguageSettings(),
+    pageBrandCss(),
+    requestStaffName(),
+    requestBrandImages(),
+    requestForcedTheme(),
+  ]);
   return (
     <html
       lang={locale}
       className={fontVariables}
       data-scroll-behavior="smooth"
+      // A staff Admin keeps every page in one mode: rendered here, so it holds without JavaScript.
+      data-theme={forcedTheme ?? undefined}
+      data-theme-forced={forcedTheme ? '' : undefined}
       suppressHydrationWarning
     >
       <head>
@@ -117,7 +142,9 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         >
           <OfferedLanguagesProvider offered={languages.offered}>
             <StaffNameProvider name={staffName}>
-              <BrandLogoProvider logo={brandImages.logo}>{children}</BrandLogoProvider>
+              <BrandLogoProvider logo={brandImages.logo}>
+                <ForcedThemeProvider theme={forcedTheme}>{children}</ForcedThemeProvider>
+              </BrandLogoProvider>
             </StaffNameProvider>
           </OfferedLanguagesProvider>
         </IntlClientProvider>
