@@ -63,6 +63,14 @@ when your account has one. Then turn on People can attach files on the same tab.
 whole server and locks the Storage card. The S3 and SFTP servers that `pnpm services:up` starts
 work too: `.env.example` has the values to try them with.
 
+To see files without uploading any, `pnpm db:seed:attachments` attaches sample files to the
+seeded requests (`scripts/sample-attachments/`): screenshots, which show as thumbnails, invoices
+as PDFs, a log and a status report, on descriptions, replies and an internal note. It stores them
+in the storage chosen now (Settings, or `.env`) and changes no settings, so People can attach files
+stays as it is. It's safe to run again: files already there are left alone, and files missing from
+the storage are stored again, as long as the storage is still set up (a deleted folder needs setting
+up again in Settings, or a new seed). It refuses the same databases as the seed (below).
+
 ## Starting over
 
 The database files live in `docker/database/` (git-ignored). To start over with an empty database
@@ -170,5 +178,6 @@ Things that can look like a problem but aren't:
 | `pnpm auth:schema`         | Regenerate Better Auth's tables after changing its config                                                   |
 | `pnpm setup:platform`      | First-run setup from the command line (can also recover; see [First run](companies-and-roles.md#first-run)) |
 | `pnpm db:seed --yes`       | Replace all local data with test accounts and companies (`--admin-mail` adds your own staff Admin)          |
+| `pnpm db:seed:attachments` | Attach the sample files to the seeded requests, in the storage chosen now (safe to run again)               |
 | `pnpm jobs:run [job]`      | One tick, or one job now; more `jobs:` commands in [Background jobs](jobs.md#from-the-command-line)         |
 | `pnpm sessions:revoke-all` | End sessions after a leak (see [After a suspected leak](deploying.md#after-a-suspected-leak))               |
