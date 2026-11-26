@@ -25,8 +25,10 @@ import {
   ACTIVITY_CLIENT,
   CLIENT_WATCHER,
   COMPANY_NAME,
+  COMPANY_OWNER,
   COMPANY_SLUG,
   FINANCE_STAFF,
+  OWNED_COMPANY_NAME,
   PAGING_COMPANY_SLUG,
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
@@ -76,6 +78,24 @@ test.beforeAll(async ({ browser }) => {
 async function ownRequestPath(title: string): Promise<string> {
   const number = await storeOwnRequest({ title });
   return `/requests/${number}`;
+}
+
+/**
+ * Chooses an option of the focused select by typing its name, the way both
+ * a short select (which jumps to what's typed) and a long one (which
+ * searches it) take it: Enter opens it, the name is typed once its list is
+ * there, and Enter picks the option once the keyboard is on it.
+ *
+ * @param page - The browser page, with the select focused.
+ * @param name - The start of the option's name.
+ */
+async function chooseByTyping(page: Page, name: string): Promise<void> {
+  const option = page.getByRole('option', { name: new RegExp(`^${name}`) });
+  await page.keyboard.press('Enter');
+  await expect(option).toBeVisible();
+  await page.keyboard.type(name);
+  await expect(option).toHaveAttribute('data-highlighted', '');
+  await page.keyboard.press('Enter');
 }
 
 /**
@@ -462,6 +482,38 @@ test.describe('signed in', () => {
     await expect(panel).toHaveCount(0);
     await expect(field).toBeFocused();
     await expect(field).toHaveText(/^New York/);
+  });
+
+  test('who a new request is for follows its company, chosen with the keyboard alone', async ({
+    page,
+  }) => {
+    // Nothing is raised: the form is filled in, never submitted.
+    await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
+    await whenHydrated(page);
+    const company = page.getByRole('combobox', { name: 'Company' });
+    const raiseFor = page.getByRole('combobox', { name: 'Raise it for' });
+
+    // The company's people come with it; it has more than a short select lists, so it's searched.
+    const people = await searchSelect(raiseFor, 'E2E Req');
+    await expect(people.getByRole('option')).toHaveText([REQUESTS_CLIENT.name]);
+    await page.keyboard.press('Enter');
+    await expect(raiseFor).toBeFocused();
+    await expect(raiseFor).toHaveText(REQUESTS_CLIENT.name);
+
+    // Another company puts it back to the staff member, with focus on the company, and then
+    // offers that company's people.
+    await page.keyboard.press('Shift+Tab');
+    await expect(company).toBeFocused();
+    await chooseByTyping(page, OWNED_COMPANY_NAME);
+    await expect(company).toBeFocused();
+    await expect(company).toHaveText(new RegExp(`^${OWNED_COMPANY_NAME}`));
+    await expect(raiseFor).toHaveText('Yourself');
+    await expect(raiseFor).not.toHaveAttribute('aria-busy');
+    await page.keyboard.press('Tab');
+    await expect(raiseFor).toBeFocused();
+    await chooseByTyping(page, COMPANY_OWNER.name);
+    await expect(raiseFor).toBeFocused();
+    await expect(raiseFor).toHaveText(COMPANY_OWNER.name);
   });
 
   test('the confirm dialog traps focus, cancels with Escape and confirms', async ({ page }) => {

@@ -1,5 +1,5 @@
 {
-  "id": "d6ff762e-8408-4a5c-b14a-3364b0c8b424",
+  "id": "8c7ac261-c8f2-4ab0-98b7-1d42fcea8858",
   "prevId": "915eff3f-5123-4a1b-b699-1ea8658a0bcf",
   "version": "7",
   "dialect": "postgresql",
@@ -1912,6 +1912,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "created_on_behalf": {
+          "name": "created_on_behalf",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_on_behalf_by": {
+          "name": "created_on_behalf_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2021,6 +2034,21 @@
           "method": "btree",
           "with": {}
         },
+        "request_created_on_behalf_by_idx": {
+          "name": "request_created_on_behalf_by_idx",
+          "columns": [
+            {
+              "expression": "created_on_behalf_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "request_type_idx": {
           "name": "request_type_idx",
           "columns": [
@@ -2089,6 +2117,19 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "request_created_on_behalf_by_user_id_fk": {
+          "name": "request_created_on_behalf_by_user_id_fk",
+          "tableFrom": "request",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_on_behalf_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2114,6 +2155,10 @@
         "request_created_signed_in_as_fits": {
           "name": "request_created_signed_in_as_fits",
           "value": "\"request\".\"created_signed_in_as_staff_id\" is null or \"request\".\"created_signed_in_as\""
+        },
+        "request_created_on_behalf_fits": {
+          "name": "request_created_on_behalf_fits",
+          "value": "(\"request\".\"created_on_behalf_by\" is null or \"request\".\"created_on_behalf\") and (not \"request\".\"created_on_behalf\" or \"request\".\"created_by_side\" = 'company')"
         }
       },
       "isRLSEnabled": false
@@ -4015,484 +4060,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.webhook": {
-      "name": "webhook",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "url_sealed": {
-          "name": "url_sealed",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "url_host": {
-          "name": "url_host",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "format": {
-          "name": "format",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "events": {
-          "name": "events",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "all_types": {
-          "name": "all_types",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "secret_sealed": {
-          "name": "secret_sealed",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "secret_renewed_at": {
-          "name": "secret_renewed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "turned_off_at": {
-          "name": "turned_off_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "turned_off_reason": {
-          "name": "turned_off_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "turned_off_by": {
-          "name": "turned_off_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failing_since": {
-          "name": "failing_since",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "webhook_turned_off_by_idx": {
-          "name": "webhook_turned_off_by_idx",
-          "columns": [
-            {
-              "expression": "turned_off_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "webhook_created_by_idx": {
-          "name": "webhook_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "webhook_turned_off_by_user_id_fk": {
-          "name": "webhook_turned_off_by_user_id_fk",
-          "tableFrom": "webhook",
-          "tableTo": "user",
-          "columnsFrom": [
-            "turned_off_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "webhook_created_by_user_id_fk": {
-          "name": "webhook_created_by_user_id_fk",
-          "tableFrom": "webhook",
-          "tableTo": "user",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "webhook_format_valid": {
-          "name": "webhook_format_valid",
-          "value": "\"webhook\".\"format\" in ('json', 'chat')"
-        },
-        "webhook_turned_off_reason_valid": {
-          "name": "webhook_turned_off_reason_valid",
-          "value": "\"webhook\".\"turned_off_reason\" in ('manual', 'failing', 'gone', 'unreadable')"
-        },
-        "webhook_events_valid": {
-          "name": "webhook_events_valid",
-          "value": "\"webhook\".\"events\" <@ array['raised', 'reply', 'note', 'status', 'assignee', 'details']::text[] and cardinality(\"webhook\".\"events\") > 0"
-        },
-        "webhook_turned_off_has_reason": {
-          "name": "webhook_turned_off_has_reason",
-          "value": "(\"webhook\".\"turned_off_at\" is null) = (\"webhook\".\"turned_off_reason\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.webhook_delivery": {
-      "name": "webhook_delivery",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "webhook_id": {
-          "name": "webhook_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "test": {
-          "name": "test",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "news": {
-          "name": "news",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "next_attempt_at": {
-          "name": "next_attempt_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_attempt_at": {
-          "name": "last_attempt_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_status": {
-          "name": "last_status",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_error": {
-          "name": "last_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_duration_ms": {
-          "name": "last_duration_ms",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "delivered_at": {
-          "name": "delivered_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "webhook_delivery_webhook_idx": {
-          "name": "webhook_delivery_webhook_idx",
-          "columns": [
-            {
-              "expression": "webhook_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "webhook_delivery_request_idx": {
-          "name": "webhook_delivery_request_idx",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "webhook_delivery_created_at_idx": {
-          "name": "webhook_delivery_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "webhook_delivery_webhook_id_webhook_id_fk": {
-          "name": "webhook_delivery_webhook_id_webhook_id_fk",
-          "tableFrom": "webhook_delivery",
-          "tableTo": "webhook",
-          "columnsFrom": [
-            "webhook_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "webhook_delivery_request_id_request_id_fk": {
-          "name": "webhook_delivery_request_id_request_id_fk",
-          "tableFrom": "webhook_delivery",
-          "tableTo": "request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "webhook_delivery_status_valid": {
-          "name": "webhook_delivery_status_valid",
-          "value": "\"webhook_delivery\".\"status\" in ('pending', 'delivered', 'failed', 'cancelled')"
-        },
-        "webhook_delivery_last_error_valid": {
-          "name": "webhook_delivery_last_error_valid",
-          "value": "\"webhook_delivery\".\"last_error\" in ('timeout', 'dns', 'refused_address', 'connection', 'tls', 'redirect', 'http', 'unreadable')"
-        },
-        "webhook_delivery_test_has_no_request": {
-          "name": "webhook_delivery_test_has_no_request",
-          "value": "\"webhook_delivery\".\"test\" = (\"webhook_delivery\".\"request_id\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.webhook_request_type": {
-      "name": "webhook_request_type",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "webhook_id": {
-          "name": "webhook_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "request_type_key": {
-          "name": "request_type_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "webhook_request_type_webhook_type_idx": {
-          "name": "webhook_request_type_webhook_type_idx",
-          "columns": [
-            {
-              "expression": "webhook_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "request_type_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "webhook_request_type_type_idx": {
-          "name": "webhook_request_type_type_idx",
-          "columns": [
-            {
-              "expression": "request_type_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "webhook_request_type_webhook_id_webhook_id_fk": {
-          "name": "webhook_request_type_webhook_id_webhook_id_fk",
-          "tableFrom": "webhook_request_type",
-          "tableTo": "webhook",
-          "columnsFrom": [
-            "webhook_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "webhook_request_type_request_type_key_request_type_key_fk": {
-          "name": "webhook_request_type_request_type_key_request_type_key_fk",
-          "tableFrom": "webhook_request_type",
-          "tableTo": "request_type",
-          "columnsFrom": [
-            "request_type_key"
-          ],
-          "columnsTo": [
-            "key"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

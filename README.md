@@ -41,9 +41,10 @@ solution the company approves. Your staff see every company's requests; each com
   <img src="docs/images/readme-board-light.png" width="880" alt="The requests board in Adiutor, across companies: search, filters and sort above lanes for Open, To do, In progress and Waiting, each card showing a request's number, type, title, company, priority, who it's assigned to and a Move button." />
 </picture>
 
-- **Requests.** Companies raise requests, and both sides work each one through in one
-  conversation, with replies written in Markdown, mentions, and internal notes and priorities only
-  the staff see. See [Requests](docs/requests.md).
+- **Requests.** Companies raise requests, or the staff raise one for someone who asked by phone,
+  and both sides work each one through in one conversation, with replies written in Markdown,
+  mentions, and internal notes and priorities only the staff see. See
+  [Requests](docs/requests.md).
 - **Board and list.** All requests on a board with a lane per status, or as a list, with the same
   search and filters, across companies or on a company's page. See
   [The board](docs/requests.md#the-board).

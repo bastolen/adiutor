@@ -17,8 +17,9 @@ import { defineQueuedKind } from './define';
  * What an email about a request can tell someone: someone else replied
  * (`reply`), wrote an internal note (`note`, only ever for the staff) or
  * changed its status (`status`), or put them on the request: assigned it to
- * them (`assigned`), mentioned them in one of its texts (`mentioned`) or
- * subscribed them to it (`subscribed`).
+ * them (`assigned`), mentioned them in one of its texts (`mentioned`),
+ * subscribed them to it (`subscribed`) or raised it for them (`raised`, for
+ * a request a staff member raised for someone at the company).
  */
 const REQUEST_UPDATE_EVENTS = [
   'reply',
@@ -27,6 +28,7 @@ const REQUEST_UPDATE_EVENTS = [
   'assigned',
   'mentioned',
   'subscribed',
+  'raised',
 ] as const;
 
 /** One kind of news about a request. */
@@ -46,12 +48,14 @@ const personNews = z.object({
   /**
    * The entry of the request's history it's about: the reply, the note,
    * the status change, the assignment, or the reply or note that mentions
-   * them. `null` for a mention in the description, and for being subscribed.
+   * them. `null` for a mention in the description, for being subscribed,
+   * and for a request raised for them.
    */
   entryId: z.uuid().nullable(),
   /**
    * Who did it, where no entry says so: who wrote the mention into the
-   * description, or subscribed them. `null` otherwise.
+   * description, subscribed them, or raised the request for them. `null`
+   * otherwise.
    */
   byUserId: z.uuid().nullable(),
 });

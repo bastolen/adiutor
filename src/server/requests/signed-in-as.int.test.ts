@@ -32,6 +32,7 @@ import { changeAssignees } from './assignees';
 import { getRequest } from './detail';
 import updateRequestDetails from './details';
 import { editReply, editRequestDescription } from './edits';
+import mentionKey from './mention-key';
 import addNote from './notes';
 import raiseRequest from './raise';
 import replyToRequest from './reply';
@@ -106,6 +107,35 @@ describe('request work while a staff member is signed in as a user', () => {
     expect(stored).toMatchObject({
       createdBy: client.id,
       createdBySide: 'company',
+      createdSignedInAs: true,
+      createdSignedInAsStaffId: admin.id,
+    });
+  });
+
+  it('raises a request for someone at a company while signed in as a staff member', async () => {
+    const company = await createCompany(db);
+    const admin = await staffActor(db, 'platform_admin');
+    const manager = await staffActor(db, 'manager');
+    const client = await memberActor(db, company.id, 'client');
+    const asManager = await signInAs(admin, manager);
+
+    const raised = await raiseRequest(ctx, asManager, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'They called about it.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    const stored = firstRow(
+      await db.select().from(request).where(eq(request.id, raised.id)),
+      'the request',
+    );
+    // The manager raised it for the Client; the Admin did that while signed in as the manager.
+    expect(stored).toMatchObject({
+      createdBy: client.id,
+      createdOnBehalf: true,
+      createdOnBehalfBy: manager.id,
       createdSignedInAs: true,
       createdSignedInAsStaffId: admin.id,
     });
@@ -323,6 +353,26 @@ describe('who is told about work done while signed in as someone', () => {
     const theirs = await getRequest(ctx, colleague, raised.id);
     expect(theirs).not.toHaveProperty('raisedSignedInAs');
     expect(theirs.description).not.toHaveProperty('editedSignedInAs');
+  });
+
+  it('marks raising a request for someone as the staff member’s work, not the person’s', async () => {
+    const company = await createCompany(db);
+    const admin = await staffActor(db, 'platform_admin');
+    await db.update(user).set({ name: 'Ann Staff' }).where(eq(user.id, admin.id));
+    const manager = await staffActor(db, 'manager');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await raiseRequest(ctx, await signInAs(admin, manager), {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'They called about it.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    expect((await getRequest(ctx, manager, raised.id)).raisedSignedInAs).toEqual({
+      staffName: 'Ann Staff',
+    });
+    expect(await getRequest(ctx, client, raised.id)).not.toHaveProperty('raisedSignedInAs');
   });
 });
 

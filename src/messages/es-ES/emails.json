@@ -251,7 +251,7 @@
     },
     "requestUpdate": {
       "subject": "{reference}: {title}",
-      "preview": "{event, select, reply {{name} ha respondido.} status {{name} ha cambiado el estado.} assigned {{name} te ha asignado esta solicitud.} mentioned {{name} te ha mencionado.} note {{name} ha escrito una nota interna.} other {{name} te ha suscrito a esta solicitud.}}",
+      "preview": "{event, select, reply {{name} ha respondido.} status {{name} ha cambiado el estado.} assigned {{name} te ha asignado esta solicitud.} mentioned {{name} te ha mencionado.} note {{name} ha escrito una nota interna.} raised {{name} ha creado esta solicitud para ti.} other {{name} te ha suscrito a esta solicitud.}}",
       "reason": "{role, select, assignee {Recibes esto porque esta solicitud está asignada a ti. Puedes desactivar los correos sobre solicitudes en <account>tu cuenta</account>.} other {Recibes esto porque tienes una suscripción a esta solicitud. Para dejar de recibirlo, abre la solicitud y elige Cancelar suscripción, o desactiva los correos sobre solicitudes en <account>tu cuenta</account>.}}",
       "where": "<link>{reference}</link> · {company}",
       "reply": "<strong>{name}</strong> ha respondido:",
@@ -261,6 +261,7 @@
       "assigned": "<strong>{name}</strong> te ha asignado esta solicitud.",
       "mentioned": "{where, select, description {<strong>{name}</strong> te ha mencionado en la descripción:} note {<strong>{name}</strong> te ha mencionado en una nota interna:} other {<strong>{name}</strong> te ha mencionado en una respuesta:}}",
       "subscribed": "<strong>{name}</strong> te ha suscrito a esta solicitud.",
+      "raised": "<strong>{name}</strong> ha creado esta solicitud para ti:",
       "button": "Abrir solicitud",
       "answerQuestion": "¿Esto resuelve tu solicitud?",
       "approve": "Aprobar",

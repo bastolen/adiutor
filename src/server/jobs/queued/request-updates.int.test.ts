@@ -36,7 +36,9 @@ import {
   changeAssignees,
   changeSubscribers,
   listMentionable,
+  listRaisableFor,
   listSubscribable,
+  raiseRequest,
   replyToRequest,
   unsubscribe,
 } from '../../requests';
@@ -334,5 +336,27 @@ describe('the emails about requests', () => {
     expect(textTo('anna@adiutor.test')).toContain('Is it this one, @anna?');
     expect(textTo('anna@adiutor.test')).not.toContain('sam replied:');
     expect(sent).toHaveLength(3);
+  });
+
+  it('tell someone a staff member raised a request for, with its description, and nobody else', async () => {
+    await createStaffSettings(db);
+    const company = await createCompany(db);
+    await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'sam@adiutor.test');
+    const [casey] = await listRaisableFor(ctx, support, company.id);
+    await raiseRequest(ctx, support, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'It prints blank pages, they said on the phone.',
+      type: 'bug',
+      raisedFor: casey?.key ?? '',
+    });
+    await sendQueuedEmails(ctx);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.to).toBe('casey@adiutor.test');
+    expect(sent[0]?.text).toContain('sam raised this request for you:');
+    expect(sent[0]?.text).toContain('It prints blank pages, they said on the phone.');
+    expect(sent[0]?.text).toContain('#request-description');
   });
 });

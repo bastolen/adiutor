@@ -1,7 +1,8 @@
 /**
  * @file Tests for the action that raises a request: it refreshes before it
  * redirects to the new request, so the pages Next kept alive (this form, the
- * list) are dropped; a refused request does neither.
+ * list) are dropped; a refused request does neither. And for the action that
+ * lists who the staff can raise one for.
  */
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -9,10 +10,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
-import { raiseRequest } from '@/server/requests';
+import { listRaisableFor, raiseRequest } from '@/server/requests';
 
 import form from '../../../../../tests/ui/form';
-import raiseRequestAction from './actions';
+import raiseRequestAction, { raiseForChoicesAction } from './actions';
 
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -22,7 +23,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 vi.mock('@/server/authz', () => ({ getActor: vi.fn() }));
-vi.mock('@/server/requests', () => ({ raiseRequest: vi.fn() }));
+vi.mock('@/server/requests', () => ({ listRaisableFor: vi.fn(), raiseRequest: vi.fn() }));
 
 /** The Client raising the request. */
 const client = { id: 'client-1' } as Awaited<ReturnType<typeof getActor>>;
@@ -34,6 +35,7 @@ const FIELDS = {
   type: 'bug',
   description: 'It prints blank pages.',
   priority: '',
+  raised_for: 'casey-key',
 };
 
 beforeEach(() => {
@@ -55,6 +57,7 @@ describe('raiseRequestAction', () => {
       type: 'bug',
       description: 'It prints blank pages.',
       priority: '',
+      raisedFor: 'casey-key',
     });
     expect(redirect).toHaveBeenCalledExactlyOnceWith('/requests/142?raised=1');
     // A redirect alone would leave the form, still filled in, and the list as they were.
@@ -71,5 +74,28 @@ describe('raiseRequestAction', () => {
 
     expect(refresh).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('raiseForChoicesAction', () => {
+  beforeEach(() => {
+    vi.mocked(listRaisableFor).mockReset();
+  });
+
+  it('lists who the viewer can raise a request in the company for', async () => {
+    const people = [{ key: 'casey-key', name: 'Casey Client' }];
+    vi.mocked(listRaisableFor).mockResolvedValue(people);
+
+    expect(await raiseForChoicesAction('adiutor-tests')).toEqual(people);
+    expect(listRaisableFor).toHaveBeenCalledWith({ name: 'app context' }, client, 'adiutor-tests');
+  });
+
+  it('lists nobody for anything but a company’s URL name, or a company the viewer may not use', async () => {
+    expect(await raiseForChoicesAction({ company: 'adiutor-tests' })).toEqual([]);
+    expect(await raiseForChoicesAction('')).toEqual([]);
+    expect(listRaisableFor).not.toHaveBeenCalled();
+
+    vi.mocked(listRaisableFor).mockRejectedValue(new ServiceError('forbidden', 'errors.forbidden'));
+    expect(await raiseForChoicesAction('adiutor-tests')).toEqual([]);
   });
 });
