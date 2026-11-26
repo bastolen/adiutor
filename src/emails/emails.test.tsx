@@ -1420,6 +1420,7 @@ describe('brand colours', () => {
     colours: emailColoursOf(
       derivePalette({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' }),
     ),
+    name: 'Adiutor',
   };
 
   it('draws the page, the button and the links in the brand’s colours', async () => {
@@ -1480,7 +1481,7 @@ describe('brand colours', () => {
     });
     const withDefaults = await magicLinkEmail('jane@adiutor.test', {
       ...english,
-      brand: { colours: DEFAULT_EMAIL_COLOURS },
+      brand: { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor' },
       url: `${appUrl}/auth/email-link?token=abc`,
     });
 

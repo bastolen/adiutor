@@ -87,10 +87,12 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   into server code (the jobs and the instrumentation), where React has none, and ESLint refuses
   them in `src/emails` and `src/components/email`
 
-Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`, which
-later holds more of the brand than colours): `loadEmailBrand(db)` in
-`src/server/branding/email-brand.ts` reads the saved colours when the email is built and falls back
-to the defaults when they can't be read, so a mail still goes out. A job that sends several emails
+Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`: the
+colours, and `name`, the staff's name, which the email's text shows instead of "Adiutor", decision
+0050): `loadEmailBrand(db)` in `src/server/branding/email-brand.ts` reads the saved colours and the
+staff's name when the email is built and falls back to Adiutor's own when they can't be read, so a
+mail still goes out. A template reads the name with `emailName(brand)` (`theme.ts`), Adiutor's own
+without a brand. A job that sends several emails
 in a run loads it once. The Better Auth callbacks in `src/lib/auth.ts` import it next to their
 template, inside the callback. An invitation's `renderEmail(brand)` takes it, so it's rendered after
 the transaction commits. The template preview has no `brand`, so it shows the defaults.

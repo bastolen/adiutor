@@ -16,11 +16,18 @@ import loadEmailBrand from './email-brand';
 const { db } = setupTestContext();
 
 describe('loadEmailBrand', () => {
-  it('gives the theme’s own colours before any are chosen', async () => {
+  it('gives the theme’s own colours, and Adiutor’s name, before any are chosen', async () => {
     const brand = await loadEmailBrand(db);
 
+    expect(brand.name).toBe('Adiutor');
     expect(brand.colours).toEqual(DEFAULT_EMAIL_COLOURS);
     expect(brand.colours).toEqual(emailColoursOf(derivePalette(NO_BRAND_COLOURS)));
+  });
+
+  it('gives the staff’s name once they have one', async () => {
+    await saveSettings(db, { 'staff.name': 'Adiutor Tests Support' });
+
+    expect((await loadEmailBrand(db)).name).toBe('Adiutor Tests Support');
   });
 
   it('gives the light palette of the chosen accent', async () => {
@@ -34,7 +41,7 @@ describe('loadEmailBrand', () => {
     expect(brand.colours.primary).not.toBe(DEFAULT_EMAIL_COLOURS.primary);
   });
 
-  it('gives the theme’s own colours when the colours can’t be read, so the email still goes out', async () => {
+  it('gives Adiutor’s colours and name when the brand can’t be read, so the email still goes out', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const failing = {
       /**
@@ -47,9 +54,12 @@ describe('loadEmailBrand', () => {
       },
     } as unknown as Database;
 
-    expect((await loadEmailBrand(failing)).colours).toEqual(DEFAULT_EMAIL_COLOURS);
+    expect(await loadEmailBrand(failing)).toEqual({
+      colours: DEFAULT_EMAIL_COLOURS,
+      name: 'Adiutor',
+    });
     expect(warn).toHaveBeenCalledWith(
-      'The brand colours could not be read; an email uses the theme’s colours.',
+      'The brand could not be read; an email uses Adiutor’s colours and name.',
     );
     warn.mockRestore();
   });
