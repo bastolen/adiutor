@@ -1,63 +1,64 @@
 {
   "emails": {
     "layout": {
-      "logoAlt": "Adiutor",
-      "sentBy": "Sent by <link>Adiutor</link>"
+      "logoAlt": "{staff}",
+      "sentBy": "Sent by <link>{staff}</link>",
+      "poweredBy": "Powered by Adiutor"
     },
     "linkFallback": "Button not working? Copy this link into your browser: <link>{url}</link>",
     "magicLink": {
-      "subject": "Your Adiutor sign-in link",
-      "preview": "Your link to sign in to Adiutor",
-      "reason": "You're receiving this because someone asked to sign in to Adiutor with this email address. If that wasn't you, you can ignore this email: nobody can sign in without this link.",
-      "heading": "Sign in to Adiutor",
+      "subject": "Your sign-in link for {staff}",
+      "preview": "Your link to sign in to {staff}",
+      "reason": "You're receiving this because someone asked to sign in to {staff} with this email address. If that wasn't you, you can ignore this email: nobody can sign in without this link.",
+      "heading": "Sign in to {staff}",
       "body": "{minutes, plural, one {Use the button below to sign in. The link works once and expires in # minute.} other {Use the button below to sign in. The link works once and expires in # minutes.}}",
       "button": "Sign in"
     },
     "resetPassword": {
-      "subject": "Reset your Adiutor password",
-      "preview": "Choose a new password for Adiutor",
+      "subject": "Reset your password for {staff}",
+      "preview": "Choose a new password for {staff}",
       "reason": "You're receiving this because someone asked to reset the password for this email address. If that wasn't you, you can ignore this email: your password stays the same.",
       "heading": "Reset your password",
-      "body": "We received a request to reset the password of your Adiutor account. Choose a new one with the button below. The link expires in 1 hour.",
+      "body": "We received a request to reset the password of your account on {staff}. Choose a new one with the button below. The link expires in 1 hour.",
       "button": "Choose a new password"
     },
     "verifyEmail": {
-      "subject": "Verify your Adiutor email address",
+      "subject": "Verify your email address for {staff}",
       "preview": "Confirm this is your email address",
-      "reason": "You're receiving this because someone asked to verify this email address for an Adiutor account. If that wasn't you, you can ignore this email.",
+      "reason": "You're receiving this because someone asked to verify this email address for an account on {staff}. If that wasn't you, you can ignore this email.",
       "heading": "Verify your email address",
       "body": "Confirm that this email address belongs to you. Once it's verified, accounts with the same address at a provider you can sign in with (such as GitHub) can connect to your account automatically. The link expires in 1 hour.",
       "button": "Verify email address"
     },
     "twoFactorCode": {
-      "subject": "Your Adiutor sign-in code",
-      "preview": "Your Adiutor code is {code}",
-      "reason": "You're receiving this because someone signed in to Adiutor with your password, or turned on email codes for your account. If that wasn't you, change your password right away.",
+      "subject": "Your sign-in code for {staff}",
+      "preview": "Your code for {staff} is {code}",
+      "reason": "You're receiving this because someone signed in to {staff} with your password, or turned on email codes for your account. If that wasn't you, change your password right away.",
       "heading": "Your sign-in code",
-      "intro": "Enter this code in Adiutor to continue:",
+      "intro": "Enter this code to continue signing in:",
       "note": "{minutes, plural, one {The code expires in # minute. Never share it with anyone.} other {The code expires in # minutes. Never share it with anyone.}}"
     },
     "invitation": {
-      "subject": "{inviter} invited you to join {company} on Adiutor",
-      "preview": "Join {company} on Adiutor as {role}",
+      "subject": "{target, select, staff {{inviter} invited you to join {staff}} other {{inviter} invited you to join {company} on {staff}}}",
+      "preview": "{target, select, staff {Join {staff} as {role}} other {Join {company} on {staff} as {role}}}",
       "reason": "You're receiving this because {inviter} invited this email address to {company}. If you weren't expecting it, you can ignore this email.",
       "heading": "Join {company}",
-      "body": "{inviter} invited you to join {company} on Adiutor as {role}.",
+      "body": "{target, select, staff {{inviter} invited you to join {staff} as {role}.} other {{inviter} invited you to join {company} on {staff} as {role}.}}",
       "button": "Accept invitation",
       "note": "{days, plural, one {The link works once and expires in # day. You can sign in with an existing account or create one.} other {The link works once and expires in # days. You can sign in with an existing account or create one.}}"
     },
     "invitationReminder": {
-      "subject": "Reminder: join {company} on Adiutor",
+      "subject": "{target, select, staff {Reminder: join {staff}} other {Reminder: join {company} on {staff}}}",
       "preview": "Your invitation to {company} expires soon",
-      "reason": "You're receiving this because {inviter} invited this email address to {company} and the invitation hasn't been accepted yet. If you weren't expecting it, you can ignore this email.",
+      "reason": "{by, select, none {You're receiving this because this email address was invited to {company} and the invitation hasn't been accepted yet. If you weren't expecting it, you can ignore this email.} other {You're receiving this because {inviter} invited this email address to {company} and the invitation hasn't been accepted yet. If you weren't expecting it, you can ignore this email.}}",
       "heading": "Your invitation expires soon",
-      "body": "{inviter} invited you to join {company} on Adiutor as {role}. The invitation is still open until {expires}.",
+      "body": "{by, select, none {{target, select, staff {You're invited to join {staff} as {role}. The invitation is still open until {expires}.} other {You're invited to join {company} on {staff} as {role}. The invitation is still open until {expires}.}}} other {{target, select, staff {{inviter} invited you to join {staff} as {role}. The invitation is still open until {expires}.} other {{inviter} invited you to join {company} on {staff} as {role}. The invitation is still open until {expires}.}}}}",
       "button": "Accept invitation",
       "note": "This link replaces the one in the earlier email, which no longer works. It works once."
     },
     "inviteLinkConfirmation": {
       "subject": "Confirm your email to join {company}",
-      "preview": "One more step to join {company} on Adiutor",
+      "preview": "{target, select, staff {One more step to join {staff}} other {One more step to join {company} on {staff}}}",
       "reason": "You're receiving this because someone used an invite link for {company} with this email address. If that wasn't you, you can ignore this email.",
       "heading": "Confirm your email address",
       "body": "You opened an invite link for {company}. Confirm this is your email address to join as {role}.",
@@ -65,71 +66,71 @@
       "note": "{days, plural, one {The link works once and expires in # day.} other {The link works once and expires in # days.}}"
     },
     "alreadyMember": {
-      "subject": "You're already a member of {company} on Adiutor",
+      "subject": "{target, select, staff {You're already a member of {staff}} other {You're already a member of {company} on {staff}}}",
       "preview": "No action needed",
       "reason": "You're receiving this because someone tried to invite this email address to {company}.",
       "heading": "You're already a member",
-      "body": "Someone tried to invite you to {company} on Adiutor, but you're already a member. No action is needed.",
+      "body": "{target, select, staff {Someone tried to invite you to {staff}, but you're already a member. No action is needed.} other {Someone tried to invite you to {company} on {staff}, but you're already a member. No action is needed.}}",
       "button": "Open {company}"
     },
     "alreadyInvited": {
-      "subject": "You already have an invitation to {company} on Adiutor",
+      "subject": "{target, select, staff {You already have an invitation to {staff}} other {You already have an invitation to {company} on {staff}}}",
       "preview": "Use your earlier invitation to {company}",
       "reason": "You're receiving this because someone used an invite link for {company} with this email address. If that wasn't you, you can ignore this email.",
       "heading": "You already have an invitation",
-      "body": "You opened an invite link for {company} on Adiutor, but this email address already has an open invitation there. Use the invitation email you received earlier to join.",
+      "body": "{target, select, staff {You opened an invite link for {staff}, but this email address already has an open invitation there. Use the invitation email you received earlier to join.} other {You opened an invite link for {company} on {staff}, but this email address already has an open invitation there. Use the invitation email you received earlier to join.}}",
       "expired": "If that invitation has expired, ask whoever invited you to send you a new one.",
-      "button": "Go to Adiutor"
+      "button": "Go to {staff}"
     },
     "addedToCompany": {
-      "subject": "You were added to {company} on Adiutor",
-      "preview": "You now have access to {company} on Adiutor",
-      "reason": "You're receiving this because {adder} added your account to {company}.",
+      "subject": "You were added to {company} on {staff}",
+      "preview": "You now have access to {company} on {staff}",
+      "reason": "{by, select, none {You're receiving this because your account was added to {company}.} other {You're receiving this because {adder} added your account to {company}.}}",
       "heading": "You were added to {company}",
-      "body": "{adder} added you to {company} on Adiutor as {role}.",
+      "body": "{by, select, none {You were added to {company} on {staff} as {role}.} other {{adder} added you to {company} on {staff} as {role}.}}",
       "button": "Open {company}"
     },
     "accountCreated": {
-      "subject": "Your Adiutor account is ready",
-      "reason": "You're receiving this because {creator} of {staff} created an Adiutor account for this email address. If you weren't expecting it, you can ignore this email.",
-      "heading": "Your Adiutor account is ready",
-      "body": "{creator} of {staff} created an Adiutor account for you. Choose a password to sign in.",
+      "subject": "Your account on {staff} is ready",
+      "reason": "You're receiving this because {creator} of {staff} created an account for this email address. If you weren't expecting it, you can ignore this email.",
+      "heading": "Your account on {staff} is ready",
+      "body": "{creator} of {staff} created an account for you. Choose a password to sign in.",
       "button": "Choose your password",
       "note": "{days, plural, one {The link works once and expires in # day. You can also sign in with a link sent to this address at {signInUrl}.} other {The link works once and expires in # days. You can also sign in with a link sent to this address at {signInUrl}.}}"
     },
     "staffAdminAdded": {
-      "subject": "{name} is now a staff Admin on Adiutor",
-      "reason": "You're receiving this because you're a staff Admin on Adiutor: staff Admins are told whenever someone becomes one.",
+      "subject": "{name} is now a staff Admin on {staff}",
+      "reason": "You're receiving this because you're a staff Admin on {staff}: staff Admins are told whenever someone becomes one.",
       "heading": "{name} is now a staff Admin",
       "nameWithEmail": "{name} ({email})",
-      "madeBy": "{by} made {who} a staff Admin on Adiutor.",
-      "made": "{who} was made a staff Admin on Adiutor.",
-      "acceptedFrom": "{who} accepted {by}’s invitation and is now a staff Admin on Adiutor.",
-      "accepted": "{who} accepted an invitation to the staff and is now a staff Admin on Adiutor.",
-      "reactivatedBy": "{by} reactivated the account of {who}, which is a staff Admin on Adiutor again.",
-      "reactivated": "The account of {who} was reactivated and is a staff Admin on Adiutor again.",
-      "advice": "Staff Admins can manage everything on Adiutor, the staff included. If you don't recognise this, remove their staff access in the staff settings and check the audit log.",
+      "madeBy": "{by} made {who} a staff Admin on {staff}.",
+      "made": "{who} was made a staff Admin on {staff}.",
+      "acceptedFrom": "{who} accepted {by}’s invitation and is now a staff Admin on {staff}.",
+      "accepted": "{who} accepted an invitation to the staff and is now a staff Admin on {staff}.",
+      "reactivatedBy": "{by} reactivated the account of {who}, which is a staff Admin on {staff} again.",
+      "reactivated": "The account of {who} was reactivated and is a staff Admin on {staff} again.",
+      "advice": "Staff Admins can manage everything on {staff}, the staff included. If you don't recognise this, remove their staff access in the staff settings and check the audit log.",
       "button": "Open the staff settings"
     },
     "smtpChanged": {
-      "subject": "Adiutor sends email through another mail server",
-      "reason": "You're receiving this because you're a staff Admin on Adiutor: staff Admins are told whenever the mail server changes.",
+      "subject": "{staff} sends email through another mail server",
+      "reason": "You're receiving this because you're a staff Admin on {staff}: staff Admins are told whenever the mail server changes.",
       "heading": "The mail server changed",
-      "changedBy": "{by} changed the mail server Adiutor sends email through to {server}.",
-      "changed": "The mail server Adiutor sends email through was changed to {server}.",
-      "advice": "Whoever controls the mail server can read the sign-in links and codes Adiutor sends. If you don't recognise this, check the Email settings and the audit log.",
+      "changedBy": "{by} changed the mail server {staff} sends email through to {server}.",
+      "changed": "The mail server {staff} sends email through was changed to {server}.",
+      "advice": "Whoever controls the mail server can read the sign-in links and codes {staff} sends. If you don't recognise this, check the Email settings and the audit log.",
       "button": "Open the Email settings"
     },
     "smtpTest": {
-      "subject": "Adiutor can send email through this mail server",
-      "reason": "You're receiving this because you're saving a mail server on the Email tab of Adiutor's Settings.",
+      "subject": "{staff} can send email through this mail server",
+      "reason": "You're receiving this because you're saving a mail server on the Email tab of Settings.",
       "heading": "This mail server works",
-      "body": "Adiutor sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
+      "body": "{staff} sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
       "button": "Open the Email settings"
     },
     "jobFailing": {
-      "subject": "Background job {job} keeps failing on Adiutor",
-      "reason": "You're receiving this because you're a staff Admin on Adiutor: staff Admins are told when a background job keeps failing, at most once a day per job.",
+      "subject": "Background job {job} keeps failing on {staff}",
+      "reason": "You're receiving this because you're a staff Admin on {staff}: staff Admins are told when a background job keeps failing, at most once a day per job.",
       "heading": "{job} keeps failing",
       "recurring": "{count, plural, one {The background job {job} failed its last run.} other {The background job {job} failed its last # runs in a row.}} The other jobs keep running, but this one won't do its work until the problem is fixed.",
       "queued": "{count, plural, one {A {job} job was given up after its last attempt, so it won't run again on its own.} other {# {job} jobs were given up after their last attempt, so they won't run again on their own.}}",
@@ -147,122 +148,122 @@
       "newRole": "a new role",
       "yourCompany": "your company",
       "someStaffMember": "A staff member",
-      "reason": "{kind, select, password_sign_in_paused {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it at most once a day.} account_deleted {You're receiving this because your Adiutor account was deleted. We send it once, to the address the account had.} two_factor_locked {You're receiving this because of failed sign-in attempts on your Adiutor account. We send it once each time signing in with a code is paused.} impersonation_started {You're receiving this because a staff member signed in to Adiutor as you. We send it every time, so you always know.} other {You're receiving this because a security setting changed on your Adiutor account. We always send these, so you know about every change.}}",
+      "reason": "{kind, select, password_sign_in_paused {You're receiving this because of failed sign-in attempts on your account on {staff}. We send it at most once a day.} account_deleted {You're receiving this because your account on {staff} was deleted. We send it once, to the address the account had.} two_factor_locked {You're receiving this because of failed sign-in attempts on your account on {staff}. We send it once each time signing in with a code is paused.} impersonation_started {You're receiving this because a staff member signed in to {staff} as you. We send it every time, so you always know.} other {You're receiving this because a security setting changed on your account on {staff}. We always send these, so you know about every change.}}",
       "ifNotYou": "{kind, select, account_deactivated {If you didn't expect this, contact your administrator.} company_role_changed {If you didn't expect this, contact your administrator.} removed_from_company {If you didn't expect this, contact your administrator.} account_deleted {If you didn't expect this, contact your administrator.} signed_out_everywhere {If you didn't expect this, contact your administrator.} account_reactivated {If you didn't expect this, contact your administrator.} staff_role_granted {If you didn't expect this, contact your administrator.} staff_role_changed {If you didn't expect this, contact your administrator.} staff_role_removed {If you didn't expect this, contact your administrator.} mfa_reset {If you didn't ask for this, contact your administrator right away and change your password.} password_sign_in_paused {If this wasn't you, someone may be guessing your password. Make sure it's one you don't use anywhere else, or add a passkey.} two_factor_locked {If this wasn't you, someone may know your password. Change it right away, and make sure it's one you don't use anywhere else.} impersonation_started {If you didn't expect this, contact your administrator.} other {If this wasn't you, reset your password right away and contact your administrator.}}",
       "password_changed": {
-        "subject": "Your Adiutor password was changed",
+        "subject": "Your password for {staff} was changed",
         "heading": "Your password was changed",
-        "body": "The password of your Adiutor account was changed, and you were signed out on your other devices."
+        "body": "The password of your account on {staff} was changed, and you were signed out on your other devices."
       },
       "password_added": {
-        "subject": "A password was added to your Adiutor account",
+        "subject": "A password was added to your account on {staff}",
         "heading": "A password was added",
-        "body": "You can now also sign in to Adiutor with your email address and this password."
+        "body": "You can now also sign in to {staff} with your email address and this password."
       },
       "password_reset": {
-        "subject": "Your Adiutor password was reset",
+        "subject": "Your password for {staff} was reset",
         "heading": "Your password was reset",
-        "body": "The password of your Adiutor account was reset with a link sent to this address, and you were signed out everywhere."
+        "body": "The password of your account on {staff} was reset with a link sent to this address, and you were signed out everywhere."
       },
       "two_factor_enabled": {
-        "subject": "Two-step verification is on for your Adiutor account",
+        "subject": "Two-step verification is on for your account on {staff}",
         "heading": "Two-step verification is on",
-        "body": "Signing in to Adiutor with your password now also needs a code."
+        "body": "Signing in to {staff} with your password now also needs a code."
       },
       "two_factor_disabled": {
-        "subject": "Two-step verification was turned off on your Adiutor account",
+        "subject": "Two-step verification was turned off for your account on {staff}",
         "heading": "Two-step verification was turned off",
-        "body": "Signing in to Adiutor with your password no longer needs a code."
+        "body": "Signing in to {staff} with your password no longer needs a code."
       },
       "backup_codes_regenerated": {
-        "subject": "New backup codes for your Adiutor account",
+        "subject": "New backup codes for your account on {staff}",
         "heading": "You have new backup codes",
-        "body": "New backup codes were created for your Adiutor account. Your old backup codes no longer work."
+        "body": "New backup codes were created for your account on {staff}. Your old backup codes no longer work."
       },
       "passkey_added": {
-        "subject": "A passkey was added to your Adiutor account",
+        "subject": "A passkey was added to your account on {staff}",
         "heading": "A passkey was added",
-        "body": "A new passkey can now be used to sign in to your Adiutor account."
+        "body": "A new passkey can now be used to sign in to {staff}."
       },
       "passkey_removed": {
-        "subject": "A passkey was removed from your Adiutor account",
+        "subject": "A passkey was removed from your account on {staff}",
         "heading": "A passkey was removed",
-        "body": "One of your passkeys can no longer be used to sign in to Adiutor."
+        "body": "One of your passkeys can no longer be used to sign in to {staff}."
       },
       "provider_connected": {
-        "subject": "{provider} was connected to your Adiutor account",
+        "subject": "{provider} was connected to your account on {staff}",
         "heading": "{provider} was connected",
-        "body": "You can now sign in to Adiutor with your {provider} account."
+        "body": "You can now sign in to {staff} with your {provider} account."
       },
       "provider_disconnected": {
-        "subject": "{provider} was disconnected from your Adiutor account",
+        "subject": "{provider} was disconnected from your account on {staff}",
         "heading": "{provider} was disconnected",
-        "body": "Your {provider} account can no longer be used to sign in to Adiutor."
+        "body": "Your {provider} account can no longer be used to sign in to {staff}."
       },
       "mfa_reset": {
-        "subject": "Your Adiutor two-step verification was reset",
+        "subject": "Your two-step verification for {staff} was reset",
         "heading": "Your two-step verification was reset",
-        "body": "An administrator turned off two-step verification on your Adiutor account, usually because a phone was lost. Any GitHub or Google accounts connected to your Adiutor account were disconnected, and you were signed out everywhere. Set up two-step verification again on your Security page."
+        "body": "An administrator turned off two-step verification for your account on {staff}, usually because a phone was lost. Any GitHub or Google accounts connected to your account were disconnected, and you were signed out everywhere. Set up two-step verification again on your Security page."
       },
       "signed_out_everywhere": {
-        "subject": "You were signed out of Adiutor",
+        "subject": "You were signed out of {staff}",
         "heading": "You were signed out everywhere",
-        "body": "An administrator signed your Adiutor account out on every device. Sign in again to continue."
+        "body": "An administrator signed you out of {staff} on every device. Sign in again to continue."
       },
       "account_deactivated": {
-        "subject": "Your Adiutor account was deactivated",
+        "subject": "Your account on {staff} was deactivated",
         "heading": "Your account was deactivated",
-        "body": "Your Adiutor account was deactivated, and you can't sign in until an administrator reactivates it."
+        "body": "Your account on {staff} was deactivated, and you can't sign in until an administrator reactivates it."
       },
       "account_reactivated": {
-        "subject": "Your Adiutor account was reactivated",
+        "subject": "Your account on {staff} was reactivated",
         "heading": "Your account was reactivated",
-        "body": "An administrator reactivated your Adiutor account. You can sign in again."
+        "body": "An administrator reactivated your account on {staff}. You can sign in again."
       },
       "staff_role_granted": {
-        "subject": "You now have staff access to Adiutor",
+        "subject": "You now have staff access to {staff}",
         "heading": "You now have staff access",
-        "body": "An administrator made you staff on Adiutor, as {role}. You can now work with every company."
+        "body": "An administrator made you staff on {staff}, as {role}. You can now work with every company."
       },
       "staff_role_changed": {
-        "subject": "Your Adiutor staff role changed",
+        "subject": "Your staff role on {staff} changed",
         "heading": "Your staff role changed",
-        "body": "An administrator changed your staff role on Adiutor to {role}."
+        "body": "An administrator changed your staff role on {staff} to {role}."
       },
       "staff_role_removed": {
-        "subject": "Your Adiutor staff access was removed",
+        "subject": "Your staff access to {staff} was removed",
         "heading": "Your staff access was removed",
-        "body": "An administrator removed your staff access on Adiutor. Your account and any company memberships stay."
+        "body": "An administrator removed your staff access to {staff}. Your account and any company memberships stay."
       },
       "password_sign_in_paused": {
-        "subject": "Password sign-in to your Adiutor account is paused",
+        "subject": "Password sign-in to your account on {staff} is paused",
         "heading": "Password sign-in is paused",
-        "body": "A wrong password was entered for your Adiutor account too many times, so signing in with a password is paused for a while. No one signed in: the password wasn't accepted. You can still sign in with an email link or a passkey, and resetting your password lifts the pause."
+        "body": "A wrong password was entered for your account on {staff} too many times, so signing in with a password is paused for a while. No one signed in: the password wasn't accepted. You can still sign in with an email link or a passkey, and resetting your password lifts the pause."
       },
       "company_role_changed": {
-        "subject": "Your role in {company} on Adiutor changed",
+        "subject": "Your role in {company} on {staff} changed",
         "heading": "Your role in {company} changed",
-        "body": "Your role in {company} on Adiutor was changed to {role}."
+        "body": "Your role in {company} on {staff} was changed to {role}."
       },
       "removed_from_company": {
-        "subject": "You were removed from {company} on Adiutor",
+        "subject": "You were removed from {company} on {staff}",
         "heading": "You were removed from {company}",
-        "body": "You were removed from {company} on Adiutor, so you can no longer open it. Your account and your other companies stay."
+        "body": "You were removed from {company} on {staff}, so you can no longer open it. Your account and your other companies stay."
       },
       "account_deleted": {
-        "subject": "Your Adiutor account was deleted",
+        "subject": "Your account on {staff} was deleted",
         "heading": "Your account was deleted",
-        "body": "An administrator deleted your Adiutor account, with its sign-in methods and company memberships. You can't sign in with it any more."
+        "body": "An administrator deleted your account on {staff}, with its sign-in methods and company memberships. You can't sign in with it any more."
       },
       "two_factor_locked": {
-        "subject": "Signing in to your Adiutor account with a code is paused",
+        "subject": "Signing in to your account on {staff} with a code is paused",
         "heading": "Signing in with a code is paused",
-        "body": "A wrong code was entered for your Adiutor account's two-step verification too many times, so signing in with a code is paused for 15 minutes. No one signed in: the codes weren't accepted."
+        "body": "A wrong code was entered for the two-step verification of your account on {staff} too many times, so signing in with a code is paused for 15 minutes. No one signed in: the codes weren't accepted."
       },
       "impersonation_started": {
-        "subject": "{name} from {staff} signed in to Adiutor as you",
+        "subject": "{name} from {staff} signed in as you",
         "heading": "{name} signed in as you",
-        "body": "{minutes, plural, one {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.} other {{name} from {staff} signed in to Adiutor as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.}}"
+        "body": "{minutes, plural, one {{name} from {staff} signed in as you, to see what you see and check what isn't working. It ends after at most # minute. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.} other {{name} from {staff} signed in as you, to see what you see and check what isn't working. It ends after at most # minutes. Meanwhile, nobody can change your sign-in methods, your account or anyone's access. If you'd rather staff didn't sign in as you, you can turn it off on your Security page.}}"
       }
     },
     "requestUpdate": {
@@ -287,13 +288,13 @@
       "deny": "Deny",
       "answerNote": "Approving closes the request. Denying sends it back to the staff, and you can then tell them what’s still wrong. These buttons work only for you, and only once.",
       "noReply": "Replies to this email aren’t read. To answer, open the request.",
-      "signInNote": "{days, plural, one {The links in this email sign you in to Adiutor for # day, so don’t forward it.} other {The links in this email sign you in to Adiutor for # days, so don’t forward it.}}"
+      "signInNote": "{days, plural, one {The links in this email sign you in to {staff} for # day, so don’t forward it.} other {The links in this email sign you in to {staff} for # days, so don’t forward it.}}"
     },
     "webhookTurnedOff": {
-      "subject": "Adiutor turned off the webhook “{name}”",
-      "reason": "You’re receiving this because you’re a staff Admin on Adiutor, who set up webhooks.",
+      "subject": "The webhook “{name}” was turned off",
+      "reason": "You’re receiving this because you’re a staff Admin on {staff}, who set up webhooks.",
       "heading": "The webhook “{name}” is off",
-      "why": "{reason, select, gone {Its receiver answered that it’s gone for good (410 Gone), so Adiutor turned it off.} unreadable {Its address or signing secret can’t be read with Adiutor’s current auth secrets any more, so Adiutor turned it off.} other {Every delivery to it has failed for {days, plural, one {# day} other {# days}}, so Adiutor turned it off.}}",
+      "why": "{reason, select, gone {Its receiver answered that it’s gone for good (410 Gone), so it was turned off automatically.} unreadable {Its address or signing secret can’t be read with the current auth secrets any more, so it was turned off automatically.} other {Every delivery to it has failed for {days, plural, one {# day} other {# days}}, so it was turned off automatically.}}",
       "advice": "Nothing is sent to it while it’s off, and what happens meanwhile isn’t sent later. Once its receiver works again, turn it on in Settings, where its last deliveries show what went wrong.",
       "adviceUnreadable": "Nothing is sent to it while it’s off. Enter its address again and renew its secret in Settings, then turn it on.",
       "button": "Open the webhook"

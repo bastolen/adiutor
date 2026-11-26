@@ -21,6 +21,7 @@ import {
   PASSKEY_CLIENT,
   PLATFORM_ADMIN,
   PLATFORM_MANAGER,
+  STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
@@ -51,7 +52,13 @@ test('a Manager must set up MFA first, then signs in with an authenticator or a 
   await page.goto('/admin/companies');
   await expect(page).toHaveURL('/account/security?setup=required');
 
+  // Better Auth labels the new authenticator entry with the staff's name and Adiutor's.
+  const enabled = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/auth/two-factor/enable',
+  );
   const backupCode = await setUpAuthenticator(page, PLATFORM_MANAGER.password);
+  const { totpURI } = (await (await enabled).json()) as { totpURI: string };
+  expect(new URL(totpURI).searchParams.get('issuer')).toBe(`${STAFF_NAME} (Adiutor)`);
 
   await page.goto('/admin/companies');
   await expect(page.getByRole('heading', { name: 'Companies' })).toBeVisible();
@@ -98,7 +105,7 @@ test('a company user turns on email codes and can trust the device until signing
   let sent = await countEmails(MFA_CLIENT.email);
   await dialog.getByRole('button', { name: 'Send a code to check it works' }).click();
   const setupEmail = await waitForNewEmail(MFA_CLIENT.email, sent);
-  expect(setupEmail.subject).toBe('Your Adiutor sign-in code');
+  expect(setupEmail.subject).toBe(`Your sign-in code for ${STAFF_NAME}`);
   await dialog.getByRole('textbox', { name: 'Code', exact: true }).fill(codeIn(setupEmail));
   await dialog.getByRole('button', { name: 'Turn on' }).click();
   await expect(page.getByText('On', { exact: true })).toBeVisible();
@@ -174,7 +181,15 @@ test('a company user adds a passkey and is offered it when signing in', async ({
   await page.getByRole('button', { name: 'Add passkey' }).click();
   const dialog = page.getByRole('dialog', { name: 'Add a passkey' });
   await dialog.getByLabel('Name').fill('Test laptop');
+  // The passkey is labelled with the staff's name and Adiutor's.
+  const options = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/auth/passkey/generate-register-options',
+  );
   await dialog.getByRole('button', { name: 'Create passkey' }).click();
+  expect(((await (await options).json()) as { rp: { name: string } }).rp.name).toBe(
+    `${STAFF_NAME} (Adiutor)`,
+  );
   await expect(toasts(page)).toContainText('Test laptop was added.');
   await expect(page.getByRole('button', { name: 'Rename Test laptop' })).toBeVisible();
 

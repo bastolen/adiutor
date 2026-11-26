@@ -111,7 +111,7 @@ describe('saveSmtpSettings', () => {
     expect(tried).toHaveLength(1);
     const [test] = tried;
     expect(test?.email.to).toBe('jane@adiutor.test');
-    expect(test?.email.subject).toBe('Adiutor can send email through this mail server');
+    expect(test?.email.subject).toBe('Adiutor Tests can send email through this mail server');
     expect(test?.config).toEqual({
       host: 'smtp.adiutor.test',
       port: 587,
@@ -307,9 +307,9 @@ describe('telling the staff Admins', () => {
     ]);
     notices.forEach(({ config, email }) => {
       expect(config).toMatchObject({ host: 'smtp.adiutor.test', password: 'secret-password' });
-      expect(email.subject).toBe('Adiutor sends email through another mail server');
+      expect(email.subject).toBe('Adiutor Tests sends email through another mail server');
       expect(email.text).toContain(
-        `${admin.name} changed the mail server Adiutor sends email through to smtp2.adiutor.test:587.`,
+        `${admin.name} changed the mail server Adiutor Tests sends email through to smtp2.adiutor.test:587.`,
       );
     });
     // Nothing more was queued: they went out through the previous mail server.
@@ -332,9 +332,13 @@ describe('telling the staff Admins', () => {
       [
         'smtp2.adiutor.test',
         'jane@adiutor.test',
-        'Adiutor can send email through this mail server',
+        'Adiutor Tests can send email through this mail server',
       ],
-      ['smtp.adiutor.test', 'jane@adiutor.test', 'Adiutor sends email through another mail server'],
+      [
+        'smtp.adiutor.test',
+        'jane@adiutor.test',
+        'Adiutor Tests sends email through another mail server',
+      ],
     ]);
   });
 
@@ -381,8 +385,8 @@ describe('telling the staff Admins', () => {
     );
 
     expect(tried.map(({ email }) => email.subject)).toEqual([
-      'Adiutor can send email through this mail server',
-      'Adiutor sends email through another mail server',
+      'Adiutor Tests can send email through this mail server',
+      'Adiutor Tests sends email through another mail server',
     ]);
     tried.forEach(({ email }) => {
       expect(email.html).toContain(`background-color:${primary}`);

@@ -222,11 +222,11 @@
       },
       "signInAs": {
         "title": "Sign in as user",
-        "description": "{minutes, plural, one {See Adiutor the way {name} does for up to # minute, to check what isn't working for them.} other {See Adiutor the way {name} does for up to # minutes, to check what isn't working for them.}}",
+        "description": "{minutes, plural, one {See what {name} sees for up to # minute, to check what isn't working for them.} other {See what {name} sees for up to # minutes, to check what isn't working for them.}}",
         "allowed": "Changes are turned off while you're signed in as {name}, and they get an email saying you did.",
         "label": "Sign in as user",
         "dialogTitle": "Sign in as {name}?",
-        "dialogDescription": "{minutes, plural, one {You'll see Adiutor as {name} does for up to # minute, then you're back in your own account. You can work on their requests, and they'll see it was you; nothing else can be changed. They get an email naming you.} other {You'll see Adiutor as {name} does for up to # minutes, then you're back in your own account. You can work on their requests, and they'll see it was you; nothing else can be changed. They get an email naming you.}}",
+        "dialogDescription": "{minutes, plural, one {You'll see what {name} sees for up to # minute, then you're back in your own account. You can work on their requests, and they'll see it was you; nothing else can be changed. They get an email naming you.} other {You'll see what {name} sees for up to # minutes, then you're back in your own account. You can work on their requests, and they'll see it was you; nothing else can be changed. They get an email naming you.}}",
         "confirmLabel": "Sign in as {name}",
         "reasonLabel": "Reason (optional)",
         "reasonHint": "For example, the request you're looking into. Only staff who see the audit log can read it.",
@@ -267,7 +267,7 @@
       "general": {
         "name": {
           "title": "Name shown to users",
-          "description": "Used in invitations and wherever users see who's helping them.",
+          "description": "Shown instead of Adiutor on every page, in page titles and in emails, and wherever users see who's helping them. New authenticator entries and passkeys get it too, with Adiutor’s after it. Any name but Adiutor adds a small “Powered by Adiutor”.",
           "label": "Name",
           "example": "For example “Adiutor Support”.",
           "save": "Save name",
@@ -275,7 +275,7 @@
         },
         "languages": {
           "title": "Languages",
-          "description": "Choose which languages Adiutor offers, and its default for everyone who hasn't chosen their own. Whoever chose a language you turn off gets the default until it's on again.",
+          "description": "Choose which languages {staff} offers, and the default for everyone who hasn't chosen their own. Whoever chose a language you turn off gets the default until it's on again.",
           "offeredLabel": "Offered languages",
           "alwaysOn": "Always on: it's the default language.",
           "defaultHint": "Only a language that's offered can be the default.",
@@ -284,7 +284,7 @@
         },
         "timeZone": {
           "title": "Default time zone",
-          "description": "Adiutor uses this zone on pages for people who aren’t signed in, for emails to people without a zone, and for everyone until their browser sets their own.",
+          "description": "This zone is used on pages for people who aren’t signed in, for emails to people without a zone, and for everyone until their browser sets their own.",
           "label": "Default time zone",
           "save": "Save default time zone",
           "saved": "Default time zone saved."
@@ -407,11 +407,11 @@
           "nameLabel": "Name",
           "nameHint": "What the staff call it, e.g. Procurement or Staff chat.",
           "urlLabel": "Address",
-          "urlHint": "Where to send it: an https:// address. It may hold a token, so Adiutor keeps it secret and shows only its host.",
-          "urlKeepHint": "Leave it empty to keep the saved address, which Adiutor never shows again.",
+          "urlHint": "Where to send it: an https:// address. It may hold a token, so it’s kept secret and only its host is shown.",
+          "urlKeepHint": "Leave it empty to keep the saved address, which is never shown again.",
           "formatLabel": "Format",
           "formatJsonHint": "Signed as Standard Webhooks describes, with every detail, for a system of yours.",
-          "formatChatHint": "A short message that Slack, Google Chat, Mattermost and Discord show as it is, in Adiutor’s default language.",
+          "formatChatHint": "A short message that Slack, Google Chat, Mattermost and Discord show as it is, in the default language.",
           "typesLegend": "Request types",
           "allTypesHint": "Every type, also the ones added later.",
           "chosenTypes": "Chosen types",
@@ -427,7 +427,7 @@
         },
         "secret": {
           "title": "Copy the signing secret",
-          "description": "Adiutor won’t show it again. The receiver checks each delivery’s signature with it.",
+          "description": "It won’t be shown again. The receiver checks each delivery’s signature with it.",
           "label": "Signing secret",
           "copy": "Copy secret",
           "done": "Done"
@@ -446,7 +446,7 @@
           "secretRenewed": "Secret renewed",
           "failingSince": "Failing since",
           "never": "Never",
-          "offNote": "{reason, select, failing {Adiutor turned it off because every delivery failed for 3 days. Once its receiver works, turn it on again.} gone {Adiutor turned it off because its receiver answered that it’s gone for good (410 Gone).} unreadable {Adiutor turned it off because its address or secret can’t be read any more. Enter its address again and renew its secret, then turn it on.} other {It’s off: nothing is sent to it, and what happens meanwhile isn’t sent later.}}"
+          "offNote": "{reason, select, failing {It was turned off automatically because every delivery failed for 3 days. Once its receiver works, turn it on again.} gone {It was turned off automatically because its receiver answered that it’s gone for good (410 Gone).} unreadable {It was turned off automatically because its address or secret can’t be read any more. Enter its address again and renew its secret, then turn it on.} other {It’s off: nothing is sent to it, and what happens meanwhile isn’t sent later.}}"
         },
         "edit": {
           "button": "Edit",
@@ -509,10 +509,10 @@
         "outcome": {
           "timeout": "No answer within 10 seconds.",
           "dns": "Its host name can’t be found.",
-          "refused_address": "Its address is inside Adiutor’s own network.",
+          "refused_address": "Its address is inside this server’s own network.",
           "connection": "The connection was refused or broke off.",
           "tls": "Its certificate or encryption can’t be trusted.",
-          "redirect": "It answered with a redirect ({status, number}), which Adiutor never follows.",
+          "redirect": "It answered with a redirect ({status, number}), which webhooks never follow.",
           "http": "It answered {status, number}.",
           "unreadable": "Its address or secret can’t be read any more.",
           "answered": "Answered {status, number}."
@@ -563,7 +563,7 @@
         "title": "Attachments",
         "storage": {
           "title": "Where files are kept",
-          "description": "Files people attach to requests are kept here. Adiutor serves each one itself, to whoever may read it.",
+          "description": "Files people attach to requests are kept here. Each one is served from this server, to whoever may read it.",
           "none": "No storage is chosen yet, so nobody can attach files.",
           "driver": "Storage",
           "choose": "Choose a storage",
@@ -578,7 +578,7 @@
             "sftp": "Any server you reach over SSH, such as a storage box or a NAS."
           },
           "dir": "Folder",
-          "localDirHint": "An absolute path on this server, e.g. /data/attachments. It must exist, and Adiutor must be able to write to it.",
+          "localDirHint": "An absolute path on this server, e.g. /data/attachments. It must exist and be writable.",
           "endpoint": "Service address",
           "endpointHint": "E.g. https://your-account-id.r2.cloudflarestorage.com for Cloudflare R2.",
           "region": "Region",
@@ -600,7 +600,7 @@
             "key": "A private key is saved. Leave both empty to keep it while the server, port and user stay the same."
           },
           "hostKey": "Host key fingerprint",
-          "hostKeyHint": "As ssh-keygen -lf prints it, starting with SHA256:. Check it on the server itself: Adiutor connects to no other key.",
+          "hostKeyHint": "As ssh-keygen -lf prints it, starting with SHA256:. Check it on the server itself: no other key is accepted.",
           "sftpDirHint": "An absolute path on the server. It must exist.",
           "bucketAddress": "Bucket address",
           "inPath": "In the path",
@@ -609,19 +609,19 @@
           "signsInWithPassword": "A password",
           "signsInWithKey": "A private key",
           "save": "Test and save",
-          "saved": "Storage saved. Adiutor wrote, read back and deleted a test file there.",
+          "saved": "Storage saved. A test file was written, read back and deleted there.",
           "confirmFirst": "Choosing where files are kept needs you to confirm it’s you first.",
           "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
           "dirPlaceholder": "/data/attachments",
           "endpointPlaceholder": "https://",
           "hostKeyPlaceholder": "SHA256:",
-          "notSetUp": "This folder isn’t set up as Adiutor’s yet, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), set it up.",
-          "notSetUpSettings": "This folder isn’t set up as Adiutor’s, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), test and save it again to set it up.",
+          "notSetUp": "This folder isn’t set up for attached files yet, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), set it up.",
+          "notSetUpSettings": "This folder isn’t set up for attached files, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), test and save it again to set it up.",
           "setUp": "Set up this folder",
           "setUpTitle": "Set up this folder?",
-          "setUpDescription": "Do this only if it’s the right folder: on a server, the volume that keeps Adiutor’s files must be mounted there. Adiutor then keeps files here.",
+          "setUpDescription": "Do this only if it’s the right folder: on a server, the volume that keeps the attached files must be mounted there. Files are then kept here.",
           "setUpConfirm": "Set up folder",
-          "setUpDone": "Folder set up. Adiutor wrote, read back and deleted a test file there."
+          "setUpDone": "Folder set up. A test file was written, read back and deleted there."
         },
         "attaching": {
           "title": "Attaching files",
@@ -645,7 +645,7 @@
         "title": "Email",
         "server": {
           "title": "Mail server",
-          "description": "Adiutor sends sign-in links, password resets, invitations, security notices and the emails about requests through this server.",
+          "description": "Sign-in links, password resets, invitations, security notices and the emails about requests are sent through this server.",
           "none": "No mail server is set up yet.",
           "noneWarning": "No mail server is set up yet: until one is, nobody gets sign-in links, password resets or invitations.",
           "unreadable": "The server's environment chooses the mail server, but its address can't be read.",
@@ -840,7 +840,7 @@
       },
       "queued": {
         "title": "Queued jobs",
-        "description": "Work Adiutor hands off, such as emails that can wait a few minutes. Each job runs at the next tick and is tried again when it fails.",
+        "description": "Work handed off for later, such as emails that can wait a few minutes. Each job runs at the next tick and is tried again when it fails.",
         "caption": "Kinds of queued job",
         "kind": "Kind",
         "waiting": "Waiting",

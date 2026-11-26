@@ -103,9 +103,9 @@
       "tooLong": "Usa una dirección de como máximo {maximum, number} caracteres.",
       "invalid": "Escribe una dirección web, como https://hooks.adiutor.dev/in.",
       "scheme": "Usa una dirección que empiece por https://.",
-      "credentials": "Quita el nombre de usuario y la contraseña de la dirección: la firma le dice al receptor que es Adiutor.",
+      "credentials": "Quita el nombre de usuario y la contraseña de la dirección: la firma ya le dice al receptor quién lo envía.",
       "insecure": "Usa una dirección https://: http:// sin cifrar solo funciona para este ordenador.",
-      "internal": "Esta dirección está dentro de la propia red de Adiutor, a la que los webhooks nunca llegan."
+      "internal": "Esta dirección está dentro de la propia red de este servidor, a la que los webhooks nunca llegan."
     },
     "webhookFormat": "Elige cómo se envía el webhook.",
     "webhookEvents": {

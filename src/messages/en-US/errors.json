@@ -23,7 +23,7 @@
       "ended": "Your sign-in as this user has ended, so nothing was changed."
     },
     "setup": {
-      "alreadySetUp": "Adiutor is already set up. Sign in instead.",
+      "alreadySetUp": "Setup is already done. Sign in instead.",
       "accountDeactivated": "That account is deactivated, so it could not sign in. Use another address."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "This job is already paused.",
       "notPaused": "This job isn't paused.",
-      "notPausable": "This job keeps Adiutor secure, so it can't be paused.",
+      "notPausable": "This job is needed for security, so it can't be paused.",
       "running": "This job is running right now. Try again once it has finished.",
       "noFailedJobs": "There's nothing left to retry or discard here: someone may have done it already."
     },
@@ -123,14 +123,14 @@
         "insecure_endpoint": "Use an https:// address, or the files and the keys would travel unencrypted."
       },
       "storageCheck": {
-        "unreachable": "Adiutor couldn't reach the storage. Check its address and port.",
+        "unreachable": "The storage couldn't be reached. Check its address and port.",
         "refused": "The storage refused the keys or the password. Check them.",
         "host_key": "The server's host key doesn't match the fingerprint. Check it on the server itself before trying again.",
         "not_found": "The bucket or the folder doesn't exist. Create it first.",
-        "not_writable": "Adiutor can't write there. Check the folder's permissions and the free space.",
-        "not_set_up": "That folder isn't Adiutor's. Check its path.",
+        "not_writable": "Writing there isn't possible. Check the folder's permissions and the free space.",
+        "not_set_up": "That folder isn't set up for attached files. Check its path.",
         "timed_out": "The storage took too long to answer. Try again, or check its address.",
-        "failed": "Adiutor couldn't store, read back and delete a test file there. Check the settings."
+        "failed": "A test file couldn't be stored, read back and deleted there. Check the settings."
       },
       "off": "Attaching files is turned off.",
       "typeNotAllowed": "That kind of file can't be attached. Attach images, PDFs, text, Office or OpenDocument files, archives or screen recordings.",
@@ -161,9 +161,9 @@
         "tlsRequired": "Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted."
       },
       "check": {
-        "unreachable": "Adiutor couldn't reach the mail server. Check its name and port.",
+        "unreachable": "The mail server couldn't be reached. Check its name and port.",
         "timedOut": "The mail server took too long to answer. Try again, or check its name and port.",
-        "tls": "Adiutor couldn't secure the connection. Check the security and the port.",
+        "tls": "The connection couldn't be secured. Check the security and the port.",
         "loginRefused": "The mail server refused the username or the password. Check them.",
         "addressRefused": "The mail server refused the sender's address or yours. Check that it may send from the sender's address.",
         "refused": "The mail server refused the test email. Check its settings with your provider."

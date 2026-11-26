@@ -86,7 +86,7 @@ describe('the security-notice job', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
       to: 'jane@adiutor.test',
-      subject: 'Your Adiutor password was changed',
+      subject: 'Your password for Adiutor was changed',
     });
     expect(sent[0]?.text).toContain('Firefox on Windows, 203.0.113.7');
   });
@@ -165,7 +165,7 @@ describe('the security-notice job', () => {
 
     await sendQueuedEmails(ctx, [securityNoticeJob]);
 
-    expect(sent[0]?.subject).toBe('GitHub was connected to your Adiutor account');
+    expect(sent[0]?.subject).toBe('GitHub was connected to your account on Adiutor');
   });
 
   it('skips a notice whose user is gone', async () => {

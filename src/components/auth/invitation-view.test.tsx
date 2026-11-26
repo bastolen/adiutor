@@ -11,7 +11,7 @@ import type { PlatformRole } from '@/lib/authz/roles';
 import InvitationView from './invitation-view';
 
 /** What the link offers. */
-const PREVIEW = { companyName: 'Adiutor Tests', role: 'client' } as const;
+const PREVIEW = { companyName: 'Adiutor Tests', target: 'company', role: 'client' } as const;
 
 /**
  * A signed-in user for the view.
@@ -35,7 +35,7 @@ const FORM = <button type="button">Accept the invitation</button>;
 describe('InvitationView', () => {
   it('shows the heading and the form to a visitor and to a user who may use it', () => {
     const { rerender } = render(
-      <InvitationView preview={PREVIEW} actor={null} linkBased>
+      <InvitationView preview={PREVIEW} staffName="Adiutor" actor={null} linkBased>
         {FORM}
       </InvitationView>,
     );
@@ -43,7 +43,7 @@ describe('InvitationView', () => {
     expect(screen.getByRole('button', { name: 'Accept the invitation' })).toBeVisible();
 
     rerender(
-      <InvitationView preview={PREVIEW} actor={actorWith('manager')} linkBased>
+      <InvitationView preview={PREVIEW} staffName="Adiutor" actor={actorWith('manager')} linkBased>
         {FORM}
       </InvitationView>,
     );
@@ -52,7 +52,7 @@ describe('InvitationView', () => {
 
   it('explains to Finance and Support why an invite link is no use, instead of the form', () => {
     render(
-      <InvitationView preview={PREVIEW} actor={actorWith('finance')} linkBased>
+      <InvitationView preview={PREVIEW} staffName="Adiutor" actor={actorWith('finance')} linkBased>
         {FORM}
       </InvitationView>,
     );
@@ -63,7 +63,12 @@ describe('InvitationView', () => {
 
   it('lets Finance and Support accept an invitation that did not come from a link', () => {
     render(
-      <InvitationView preview={PREVIEW} actor={actorWith('support')} linkBased={false}>
+      <InvitationView
+        preview={PREVIEW}
+        staffName="Adiutor"
+        actor={actorWith('support')}
+        linkBased={false}
+      >
         {FORM}
       </InvitationView>,
     );
@@ -73,7 +78,12 @@ describe('InvitationView', () => {
 
   it('sends a role that requires MFA to set it up first, instead of the form', () => {
     render(
-      <InvitationView preview={PREVIEW} actor={actorWith('manager', true)} linkBased={false}>
+      <InvitationView
+        preview={PREVIEW}
+        staffName="Adiutor"
+        actor={actorWith('manager', true)}
+        linkBased={false}
+      >
         {FORM}
       </InvitationView>,
     );

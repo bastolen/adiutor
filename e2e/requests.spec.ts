@@ -127,7 +127,7 @@ const requestRows = (page: Page) => main(page).getByRole('table').locator('tbody
 test('the staff find every company’s requests, and narrow them down', async ({ context, page }) => {
   await context.addCookies(supportCookies());
   await page.goto('/requests');
-  await expect(page).toHaveTitle('Requests · Adiutor');
+  await expect(page).toHaveTitle(`Requests · ${STAFF_NAME}`);
   await expect(page.getByRole('heading', { level: 1, name: 'Requests' })).toBeVisible();
 
   // What still needs something, the latest activity on top; nothing closed. How many pages it has
@@ -270,7 +270,9 @@ test('a changed prefix shows on every number, and the old one still finds a requ
     // The request's address has no prefix, so it stays; its page and title show the new one.
     await found.getByRole('link').click();
     await expect(page).toHaveURL(`/requests/${SEEDED_REQUESTS.waiting.number}`);
-    await expect(page).toHaveTitle(`Request HELP-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
+    await expect(page).toHaveTitle(
+      `Request HELP-${SEEDED_REQUESTS.waiting.number} · ${STAFF_NAME}`,
+    );
     // Only the page shown counts: Next keeps the list alive, hidden, with the number in its row.
     await expect(
       main(page)
@@ -286,7 +288,7 @@ test('a changed prefix shows on every number, and the old one still finds a requ
     await setRequestPrefix('AD');
   }
   await page.reload();
-  await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`);
+  await expect(page).toHaveTitle(`Request AD-${SEEDED_REQUESTS.waiting.number} · ${STAFF_NAME}`);
 });
 
 test('the number as people see it, and the short links, open the request', async ({
@@ -353,7 +355,7 @@ test('someone at a company raises a request, which the staff then find', async (
   await page.goto('/requests');
   await main(page).getByRole('link', { name: 'New request' }).click();
   await expect(page).toHaveURL('/requests/new');
-  await expect(page).toHaveTitle('New request · Adiutor');
+  await expect(page).toHaveTitle(`New request · ${STAFF_NAME}`);
   // One company, so nothing to choose; and no priority to set.
   await expect(page.getByRole('combobox', { name: 'Company' })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Priority' })).toHaveCount(0);
@@ -619,7 +621,7 @@ test('nobody raises a request who may not: a Watcher and Finance get no form', a
   await expect(main(page).getByRole('link', { name: 'New request' })).toHaveCount(0);
   await page.goto('/requests/new');
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  await expect(page).toHaveTitle('Not found · Adiutor');
+  await expect(page).toHaveTitle(`Not found · ${STAFF_NAME}`);
   await signOut(page);
 
   await signIn(page, FINANCE_STAFF);
@@ -640,7 +642,7 @@ test('the staff and a company work a request through, and close and reopen it', 
   // The staff accept it, ask a question and wait for the answer.
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await expect(page).toHaveTitle(`Request AD-${number} · Adiutor`);
+  await expect(page).toHaveTitle(`Request AD-${number} · ${STAFF_NAME}`);
   await expect(
     page.getByRole('heading', { level: 1, name: 'The scanner on floor 3 is offline' }),
   ).toBeVisible();
@@ -2449,7 +2451,7 @@ test('the staff switch the requests to a board and move a card with its Move men
   await expect(page).toHaveURL(
     `/requests/board?q=${encodeURIComponent(title).replace(/%20/g, '+')}`,
   );
-  await expect(page).toHaveTitle('Request board · Adiutor');
+  await expect(page).toHaveTitle(`Request board · ${STAFF_NAME}`);
   await expect(page.getByRole('link', { name: 'Board', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
@@ -2638,7 +2640,7 @@ test('a company’s page shows its requests as a board too, that company’s onl
   await expect(page).toHaveURL(
     `/companies/${COMPANY_SLUG}/board?q=${encodeURIComponent(prefix).replace(/%20/g, '+')}`,
   );
-  await expect(page).toHaveTitle(`Request board · ${COMPANY_NAME} · Adiutor`);
+  await expect(page).toHaveTitle(`Request board · ${COMPANY_NAME} · ${STAFF_NAME}`);
   // Still the company's Requests, as a board.
   await expect(
     page

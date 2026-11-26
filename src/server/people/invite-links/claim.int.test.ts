@@ -100,6 +100,7 @@ describe('invite links', () => {
     const token = await newLinkToken();
     expect(await getInviteLinkPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
     });
 
@@ -110,6 +111,7 @@ describe('invite links', () => {
     expect(confirmation.subject).toBe('Confirm your email to join Adiutor Tests');
     expect(await getInvitationPreview(ctx, tokenFrom(confirmation))).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       fromInviteLink: true,
     });
@@ -172,6 +174,7 @@ describe('invite links', () => {
     expect(link).toMatchObject({ usedByEmail: email, invitationId: null });
     expect(await getInvitationPreview(ctx, tokenFrom(kept))).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'admin',
       fromInviteLink: false,
     });
@@ -251,6 +254,7 @@ describe('invite links', () => {
     ).toEqual([{ id: before.id }]);
     expect(await getInvitationPreview(ctx, adminToken)).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'admin',
       fromInviteLink: false,
     });

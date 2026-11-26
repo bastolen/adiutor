@@ -45,7 +45,7 @@ export async function getInviteLinkPreview(
   token: string,
 ): Promise<InvitationPreview | null> {
   const [found] = await ctx.db
-    .select({ companyName: company.name, role: inviteLink.role })
+    .select({ companyId: inviteLink.companyId, companyName: company.name, role: inviteLink.role })
     .from(inviteLink)
     .leftJoin(company, eq(company.id, inviteLink.companyId))
     .where(usableLink(token));
@@ -54,6 +54,7 @@ export async function getInviteLinkPreview(
   }
   return {
     companyName: found.companyName ?? (await getStaffName(ctx.db)),
+    target: found.companyId === null ? 'staff' : 'company',
     role: found.role,
   };
 }

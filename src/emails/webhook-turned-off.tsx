@@ -1,13 +1,15 @@
 /**
- * @file Email telling a staff Admin that Adiutor turned a webhook off: its
- * deliveries failed for days, its receiver said it's gone, or its address
- * or secret can't be read any more. Names the webhook and why, never its
- * address, and links to the webhook in Settings.
+ * @file Email telling a staff Admin that a webhook was turned off
+ * automatically: its deliveries failed for days, its receiver said it's
+ * gone, or its address or secret can't be read any more. Names the webhook
+ * and why, never its address, and links to the webhook in Settings. Its
+ * text says "turned off automatically" rather than naming who did it: the
+ * staff's name (decision 0050) would read as if someone on the staff had.
  */
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 import { WEBHOOK_FAILING_DAYS } from '@/lib/webhooks';
@@ -22,7 +24,7 @@ export interface WebhookTurnedOffEmailProps extends EmailBaseProps {
   /** The webhook's name. */
   name: string;
   /**
-   * Why Adiutor turned it off: its deliveries failed for days (`failing`),
+   * Why it was turned off: its deliveries failed for days (`failing`),
    * its receiver answered `410 Gone` (`gone`), or its address or secret
    * can't be read with the current auth secrets (`unreadable`).
    */
@@ -53,7 +55,7 @@ export default function WebhookTurnedOffEmail({
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff: emailName(brand) })}
     >
       <EmailHeading colours={colours}>{t('heading', { name })}</EmailHeading>
       <EmailParagraph colours={colours}>

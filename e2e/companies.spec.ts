@@ -18,6 +18,7 @@ import {
   COMPANY_SLUG,
   PLATFORM_ADMIN,
   PLATFORM_MANAGER,
+  STAFF_NAME,
 } from './support/fixtures';
 import {
   createAccountFromInvitation,
@@ -96,7 +97,7 @@ test('register a company, accept the invitation and join through a link', async 
   await expect(page.getByText('Client', { exact: true })).toBeVisible();
   // They land on the company's requests, which they can add to: from the header, and from
   // where the requests will be listed, as there are none yet.
-  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · ${STAFF_NAME}`);
   await expect(page.getByRole('main').getByText('No active requests')).toBeVisible();
   await expect(
     page.getByRole('main').getByRole('link', { name: 'New request' }).first(),
@@ -111,7 +112,7 @@ test("creating an account from an invitation loads the browser's other tabs afre
   // A second tab of the same browser is on the sign-in page.
   const other = await context.newPage();
   await other.goto('/auth');
-  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(other.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
 
   // The new account is signed in by a server action that redirects, which tells the other tab.
   await createFreshAccount(page, { name: 'Other Tabs Tester', password: 'other-tabs-password' });
@@ -225,7 +226,7 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
   // Both addresses open the company, and its pages' titles name it.
   await page.goto(`/companies/${slug}`);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-  await expect(page).toHaveTitle(`Requests · ${name} · Adiutor`);
+  await expect(page).toHaveTitle(`Requests · ${name} · ${STAFF_NAME}`);
   // Nothing was asked yet.
   await expect(page.getByRole('main').getByText('No active requests')).toBeVisible();
   await page.goto(`/companies/${companyId}`);
@@ -233,13 +234,13 @@ test('a company opens by its URL name or its ID, and moves with a new URL name',
 
   // A new name shows in the header and the title as soon as it's saved.
   await page.goto(`/companies/${slug}/settings`);
-  await expect(page).toHaveTitle(`Settings · ${name} · Adiutor`);
+  await expect(page).toHaveTitle(`Settings · ${name} · ${STAFF_NAME}`);
   const renamed = `${name} Renamed`;
   await page.getByLabel('Name', { exact: true }).fill(renamed);
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(toasts(page)).toContainText('Saved.');
   await expect(page.getByRole('heading', { level: 1, name: renamed })).toBeVisible();
-  await expect(page).toHaveTitle(`Settings · ${renamed} · Adiutor`);
+  await expect(page).toHaveTitle(`Settings · ${renamed} · ${STAFF_NAME}`);
 
   // Another company's URL name is refused, keeping the page and what was typed.
   await page.getByLabel('URL name').fill(COMPANY_SLUG);

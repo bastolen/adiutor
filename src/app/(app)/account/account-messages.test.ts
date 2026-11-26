@@ -38,7 +38,7 @@ describe('accountMessage', () => {
     expect(accountMessage(t, tAuth, { error: 'INVALID_TOKEN' })?.text).toContain('invalid');
     expect(
       accountMessage(t, tAuth, { error: 'account_already_linked_to_different_user' })?.text,
-    ).toContain('another Adiutor account');
+    ).toContain('already connected to another user');
     expect(accountMessage(t, tAuth, { error: 'unable_to_link_account' })?.text).toContain(
       "couldn't be connected",
     );

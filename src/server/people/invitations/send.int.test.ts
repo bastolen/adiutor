@@ -259,7 +259,7 @@ describe('the invitation’s language', () => {
       ['es@adiutor.test', 'es-ES'],
     ]);
     expect(defined(sent[0], 'the Dutch invitation').subject).toMatch(
-      / nodigt je uit voor Adiutor Tests op Adiutor$/,
+      / nodigt je uit voor Adiutor Tests op Adiutor Tests$/,
     );
     const stored = await db
       .select({ email: invitation.email, locale: invitation.locale })

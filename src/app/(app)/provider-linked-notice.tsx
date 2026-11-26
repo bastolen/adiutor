@@ -1,10 +1,11 @@
 /**
  * @file Says that a GitHub or Google account was just connected to the user's
- * Adiutor account because they signed in with it (Better Auth matched its
- * verified email), naming the account when its name is known. Shown on the
- * pages after that sign-in until dismissed, from a short-lived cookie set by
- * `afterAccountCreate` (read with `useNextPageCookie`). The app layout shows
- * it outside any `<Suspense>`, so its text is in `common.providerLinked`.
+ * account because they signed in with it (Better Auth matched its verified
+ * email), naming the account when its name is known, and the staff. Shown on
+ * the pages after that sign-in until dismissed, from a short-lived cookie set
+ * by `afterAccountCreate` (read with `useNextPageCookie`). The app layout
+ * shows it outside any `<Suspense>`, so its text is in `common.providerLinked`
+ * and the staff's name comes from the root layout (`useStaffName`).
  */
 'use client';
 
@@ -13,6 +14,7 @@ import type { ReactNode } from 'react';
 
 import { securityLink } from '@/components/auth/security-links';
 import { clearNextPageCookie, useNextPageCookie } from '@/components/auth/use-next-page-cookie';
+import { useStaffName } from '@/components/brand/staff-name';
 import Alert from '@/components/ui/alert';
 import {
   parseProviderLinkedCookie,
@@ -38,6 +40,7 @@ function nameTag(chunks: ReactNode) {
  */
 export default function ProviderLinkedNotice() {
   const t = useTranslations('common');
+  const staff = useStaffName();
   const linked = parseProviderLinkedCookie(useNextPageCookie(PROVIDER_LINKED_COOKIE));
   if (!linked) {
     return null;
@@ -62,10 +65,11 @@ export default function ProviderLinkedNotice() {
             ? t.rich('providerLinked.named', {
                 provider: label,
                 account: accountName,
+                staff,
                 name: nameTag,
                 link: securityLink,
               })
-            : t.rich('providerLinked.unnamed', { provider: label, link: securityLink })}
+            : t.rich('providerLinked.unnamed', { provider: label, staff, link: securityLink })}
         </p>
       </Alert>
     </section>

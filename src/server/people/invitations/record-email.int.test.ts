@@ -43,7 +43,7 @@ describe('an invitation’s email', () => {
 
     expect(invitationEmail).toHaveBeenCalledOnce();
     expect(email.to).toBe('new@adiutor.test');
-    expect(email.subject).toContain(`invited you to join ${testCompany.name} on Adiutor`);
+    expect(email.subject).toContain(`invited you to join ${testCompany.name} on Adiutor Tests`);
     expect(email.text).toContain('/invite/');
   });
 });

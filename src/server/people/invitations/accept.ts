@@ -68,6 +68,11 @@ async function findUsableInvitation(tx: DatabaseOrTransaction, token: string, lo
 export interface InvitationPreview {
   /** Name of the company, or of the staff. */
   companyName: string;
+  /**
+   * Whether it's to the staff (then `companyName` is the staff's name, which
+   * the page names only once) or to a company.
+   */
+  target: 'staff' | 'company';
   /** The role offered; the page names it in the reader's language (`roles.<role>.label`). */
   role: Role;
 }
@@ -125,7 +130,12 @@ export async function getInvitationPreview(
     found.companyName ?? getStaffName(ctx.db),
     isFromInviteLink(ctx.db, found.invitation.id),
   ]);
-  return { companyName, role: found.invitation.role, fromInviteLink };
+  return {
+    companyName,
+    target: found.invitation.companyId === null ? 'staff' : 'company',
+    role: found.invitation.role,
+    fromInviteLink,
+  };
 }
 
 /** What giving someone a role came to. */

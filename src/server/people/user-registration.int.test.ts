@@ -53,7 +53,7 @@ describe('registerUser', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
       to: 'new.person@adiutor.test',
-      subject: 'Your Adiutor account is ready',
+      subject: 'Your account on Adiutor Tests is ready',
     });
     const linkToken = /reset-password\?token=([\w-]+)&welcome=1/.exec(
       defined(sent[0], 'the password link email').text,
@@ -90,7 +90,7 @@ describe('registerUser', () => {
     expect(created.locale).toBe('nl-NL');
     const welcome = defined(sent[0], 'the welcome email');
     expect(emailLanguage(welcome)).toBe('nl-NL');
-    expect(welcome.subject).toBe('Je Adiutor-account staat klaar');
+    expect(welcome.subject).toBe('Je account bij Adiutor Tests staat klaar');
   });
 
   it('refuses a language that’s turned off, and creates nobody', async () => {

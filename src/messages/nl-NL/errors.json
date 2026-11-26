@@ -23,7 +23,7 @@
       "ended": "Je bent niet meer als deze gebruiker ingelogd, dus er is niets gewijzigd."
     },
     "setup": {
-      "alreadySetUp": "Adiutor is al ingesteld. Log gewoon in.",
+      "alreadySetUp": "Alles is al ingesteld. Log gewoon in.",
       "accountDeactivated": "Dat account is gedeactiveerd, dus het kon niet inloggen. Gebruik een ander adres."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "Deze taak is al gepauzeerd.",
       "notPaused": "Deze taak is niet gepauzeerd.",
-      "notPausable": "Deze taak houdt Adiutor veilig en kan daarom niet worden gepauzeerd.",
+      "notPausable": "Deze taak is nodig voor de beveiliging en kan daarom niet worden gepauzeerd.",
       "running": "Deze taak wordt nu uitgevoerd. Probeer het opnieuw als hij klaar is.",
       "noFailedJobs": "Hier valt niets meer opnieuw te proberen of weg te gooien: misschien heeft iemand het al gedaan."
     },
@@ -123,14 +123,14 @@
         "insecure_endpoint": "Gebruik een https://-adres, anders gaan de bestanden en de sleutels onversleuteld over het netwerk."
       },
       "storageCheck": {
-        "unreachable": "Adiutor kon de opslag niet bereiken. Controleer het adres en de poort.",
+        "unreachable": "De opslag kon niet worden bereikt. Controleer het adres en de poort.",
         "refused": "De opslag weigerde de sleutels of het wachtwoord. Controleer ze.",
         "host_key": "De hostsleutel van de server past niet bij de vingerafdruk. Controleer hem op de server zelf voordat je het opnieuw probeert.",
         "not_found": "De bucket of de map bestaat niet. Maak die eerst aan.",
-        "not_writable": "Adiutor kan daar niet schrijven. Controleer de rechten van de map en de vrije ruimte.",
-        "not_set_up": "Die map is niet van Adiutor. Controleer het pad.",
+        "not_writable": "Daar kan niet worden geschreven. Controleer de rechten van de map en de vrije ruimte.",
+        "not_set_up": "Die map is niet ingesteld voor bijlagen. Controleer het pad.",
         "timed_out": "De opslag deed er te lang over om te antwoorden. Probeer het opnieuw, of controleer het adres.",
-        "failed": "Adiutor kon daar geen testbestand opslaan, teruglezen en verwijderen. Controleer de instellingen."
+        "failed": "Daar kon geen testbestand worden opgeslagen, teruggelezen en verwijderd. Controleer de instellingen."
       },
       "off": "Bestanden toevoegen staat uit.",
       "typeNotAllowed": "Dat soort bestand kun je niet toevoegen. Voeg afbeeldingen, pdf’s, tekst, Office- of OpenDocument-bestanden, archieven of schermopnames toe.",
@@ -161,9 +161,9 @@
         "tlsRequired": "Gebruik TLS of STARTTLS: zonder gaan de e-mails, en de inloglinks erin, onversleuteld over het netwerk."
       },
       "check": {
-        "unreachable": "Adiutor kon de mailserver niet bereiken. Controleer de naam en de poort.",
+        "unreachable": "De mailserver kon niet worden bereikt. Controleer de naam en de poort.",
         "timedOut": "De mailserver deed er te lang over om te antwoorden. Probeer het opnieuw, of controleer de naam en de poort.",
-        "tls": "Adiutor kon de verbinding niet beveiligen. Controleer de beveiliging en de poort.",
+        "tls": "De verbinding kon niet worden beveiligd. Controleer de beveiliging en de poort.",
         "loginRefused": "De mailserver weigerde de gebruikersnaam of het wachtwoord. Controleer ze.",
         "addressRefused": "De mailserver weigerde het adres van de afzender of dat van jou. Controleer of hij vanaf het adres van de afzender mag versturen.",
         "refused": "De mailserver weigerde de test-e-mail. Controleer de instellingen bij je provider."

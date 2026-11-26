@@ -5,7 +5,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
@@ -17,13 +17,17 @@ import renderEmail from './render';
  * Props for {@link AddedToCompanyEmail}.
  */
 export interface AddedToCompanyEmailProps extends EmailBaseProps {
-  /** Name (or email) of the staff member who added them. */
-  adderName: string;
+  /**
+   * Name (or email) of the staff member who added them, or `null` when their
+   * account is gone by the time it's sent: the email then says they were
+   * added without naming anyone, never naming the staff in their place.
+   */
+  adderName: string | null;
   /** Name of the company. */
   companyName: string;
   /** Their role there. */
   role: Role;
-  /** Link to the company in Adiutor. */
+  /** Link to the company. */
   url: string;
 }
 
@@ -44,8 +48,10 @@ export default function AddedToCompanyEmail({
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.addedToCompany');
   const values = {
-    adder: adderName,
+    // Who added them, or `none`: the messages then name nobody in their place.
+    ...(adderName === null ? { by: 'none' } : { by: 'person', adder: adderName }),
     company: companyName,
+    staff: emailName(brand),
     role: translator(locale, 'roles')(`${role}.label`),
   };
   return (
@@ -86,7 +92,10 @@ AddedToCompanyEmail.PreviewProps = {
 export function addedToCompanyEmail(to: string, props: AddedToCompanyEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.addedToCompany')('subject', { company: props.companyName }),
+    translator(props.locale, 'emails.addedToCompany')('subject', {
+      company: props.companyName,
+      staff: emailName(props.brand),
+    }),
     <AddedToCompanyEmail {...props} />,
   );
 }

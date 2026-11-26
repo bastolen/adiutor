@@ -1,8 +1,8 @@
 {
   "people": {
     "inviteResults": {
-      "status": "{status, select, sent_existing_user {Invitación enviada a {email}. Ya tiene una cuenta de Adiutor.} already_member {{email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Invitación enviada a {email}.}}",
-      "companyAdded": "{status, select, sent_existing_user {Empresa añadida. Invitación enviada a {email}. Ya tiene una cuenta de Adiutor.} already_member {Empresa añadida. {email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Empresa añadida. Invitación enviada a {email}.}}",
+      "status": "{status, select, sent_existing_user {Invitación enviada a {email}. Ya tiene una cuenta.} already_member {{email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Invitación enviada a {email}.}}",
+      "companyAdded": "{status, select, sent_existing_user {Empresa añadida. Invitación enviada a {email}. Ya tiene una cuenta.} already_member {Empresa añadida. {email} ya es miembro. Le hemos enviado un correo para avisarle.} other {Empresa añadida. Invitación enviada a {email}.}}",
       "sentAll": "{sent, plural, one {Se ha enviado # invitación.} other {Se han enviado # invitaciones.}}",
       "sentSome": "{sent, plural, one {De {total, number} invitaciones, se ha enviado #. Revisa las direcciones de abajo.} other {De {total, number} invitaciones, se han enviado #. Revisa las direcciones de abajo.}}"
     },

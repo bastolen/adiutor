@@ -1,13 +1,15 @@
 /**
  * @file Decorative example of a request, shown on the brand panel of the
  * public pages to show what Adiutor is for. Its text comes from the root
- * provider (`common.brandPanel.preview`), like the rest of the panel.
+ * provider (`common.brandPanel.preview`), like the rest of the panel, and
+ * the staff answer under their own name (`useStaffName`).
  */
 'use client';
 
 import { Check } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { useStaffName } from '@/components/brand/staff-name';
 import Avatar from '@/components/ui/avatar';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
@@ -54,11 +56,12 @@ export default function RequestPreview() {
   const locale = useLocale();
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   const you = t('brandPanel.preview.you');
+  const staff = useStaffName();
   const messages = [
     {
       id: 'question',
       author: you,
-      // A single initial for "You"; the staff's name gives two.
+      // A single initial for "You"; the staff's name gives its own (`initialsOf`): "AD", "AS".
       avatar: firstLetter(you, locale),
       when: weekday.format(DAYS.question),
       staff: false,
@@ -66,8 +69,8 @@ export default function RequestPreview() {
     },
     {
       id: 'answer',
-      author: t('brandPanel.preview.staff'),
-      avatar: t('brandPanel.preview.staff'),
+      author: staff,
+      avatar: staff,
       when: weekday.format(DAYS.answer),
       staff: true,
       text: t('brandPanel.preview.answer'),

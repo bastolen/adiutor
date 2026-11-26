@@ -2,7 +2,7 @@
   "dashboard": {
     "title": "Panel",
     "welcome": "Te damos la bienvenida, {name}",
-    "staffDescription": "Trabaja en las solicitudes, abre una empresa o consulta a todas las personas que usan Adiutor.",
+    "staffDescription": "Trabaja en las solicitudes, abre una empresa o consulta a todos los usuarios.",
     "companyDescription": "{canRaise, select, yes {Crea una solicitud o consulta cómo van las que están abiertas.} other {Consulta cómo van las solicitudes abiertas.}}",
     "mfaRecommendation": {
       "label": "Seguridad de la cuenta",

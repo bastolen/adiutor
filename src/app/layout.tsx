@@ -6,14 +6,16 @@ import { headers } from 'next/headers';
 import { getLocale, getMessages, getTimeZone, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
+import { StaffNameProvider } from '@/components/brand/staff-name';
 import { OfferedLanguagesProvider } from '@/components/language/offered-languages';
+import { forTitleTemplate } from '@/lib/branding';
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import { pickMessages } from '@/lib/i18n/messages';
 import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
-import { pageBrandCss } from '@/server/branding';
+import { pageBrandCss, requestStaffName } from '@/server/branding';
 
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 
@@ -21,12 +23,16 @@ import './globals.css';
 
 /**
  * Default page metadata, in the request's language. Pages set their own
- * title, which the template ends with the product name ("Users · Adiutor").
+ * title, which the template ends with the staff's name ("Users · Adiutor",
+ * or "Users · Adiutor Support" once setup named the staff so; decision 0050).
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('common');
+  const [t, staff] = await Promise.all([getTranslations('common'), requestStaffName()]);
   return {
-    title: { template: t('documentTitle', { page: '%s' }), default: 'Adiutor' },
+    title: {
+      template: t('documentTitle', { page: '%s', staff: forTitleTemplate(staff) }),
+      default: staff,
+    },
     description: t('app.description'),
   };
 }
@@ -48,7 +54,8 @@ export const instant = false;
  * `common` messages reach every client component through the provider;
  * pages pass their own namespaces with `ClientMessages`. The languages
  * Adiutor offers come along too (`OfferedLanguagesProvider`), for the
- * language choices.
+ * language choices, and the staff's name (`StaffNameProvider`), which every
+ * text shows instead of "Adiutor" (decision 0050).
  *
  * The inline theme script sets `data-theme` on `<html>` before the page
  * paints, so `suppressHydrationWarning` tells React that this attribute is
@@ -67,13 +74,14 @@ export const instant = false;
  * nothing meanwhile).
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const [nonce, locale, messages, timeZone, languages, brandCss] = await Promise.all([
+  const [nonce, locale, messages, timeZone, languages, brandCss, staffName] = await Promise.all([
     headers().then((list) => list.get(NONCE_HEADER) ?? undefined),
     getLocale(),
     getMessages(),
     getTimeZone(),
     requestLanguageSettings(),
     pageBrandCss(),
+    requestStaffName(),
   ]);
   return (
     <html
@@ -97,7 +105,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
           timeZone={timeZone}
         >
           <OfferedLanguagesProvider offered={languages.offered}>
-            {children}
+            <StaffNameProvider name={staffName}>{children}</StaffNameProvider>
           </OfferedLanguagesProvider>
         </IntlClientProvider>
         <Suspense fallback={null}>

@@ -180,10 +180,10 @@
       "unavailableHeading": "You can no longer answer here",
       "unavailableDescription": "Your access to {reference} changed since the email was sent.",
       "unknownHeading": "This link doesn’t work",
-      "unknownDescription": "Check that you opened the whole link from the email. You can also answer on the request’s page in Adiutor.",
+      "unknownDescription": "Check that you opened the whole link from the email. You can also answer on the request’s page.",
       "problemHeading": "This link can’t be used right now",
       "openRequest": "Open request",
-      "goToAdiutor": "Go to Adiutor"
+      "goHome": "Go to {staff}"
     },
     "reply": {
       "sendAsSolution": "Send as solution",

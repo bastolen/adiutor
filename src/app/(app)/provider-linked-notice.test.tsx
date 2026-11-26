@@ -1,12 +1,14 @@
 /**
  * @file Tests for the notice shown after a GitHub or Google account was
  * connected while signing in with it: it reads the short-lived cookie, names
- * the account, links to the Security page, and goes away when dismissed.
+ * the account and the staff, links to the Security page, and goes away when
+ * dismissed.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { StaffNameProvider } from '@/components/brand/staff-name';
 import { PROVIDER_LINKED_COOKIE } from '@/lib/sign-in/oauth-providers';
 
 import renderInLocale from '../../../tests/i18n/render';
@@ -63,7 +65,7 @@ describe('ProviderLinkedNotice', () => {
 
     const notice = screen.getByRole('region', { name: 'GitHub connected' });
     expect(notice).toHaveTextContent(
-      'Your GitHub account is now connected to your Adiutor account, because you signed in with it.',
+      'Your GitHub account is now connected to your account on Adiutor, because you signed in with it.',
     );
     expect(
       screen.getByRole('link', { name: 'Disconnect it on the Security page' }),
@@ -85,7 +87,7 @@ describe('ProviderLinkedNotice', () => {
     render(<ProviderLinkedNotice />);
 
     expect(screen.getByRole('region', { name: 'Google connected' })).toHaveTextContent(
-      'Your Google account jane@adiutor.test is now connected to your Adiutor account',
+      'Your Google account jane@adiutor.test is now connected to your account on Adiutor',
     );
     // Moves to the next line whole, broken only when longer than a line.
     expect(screen.getByText('jane@adiutor.test')).toHaveClass('wrap-anywhere');
@@ -128,20 +130,28 @@ describe('ProviderLinkedNotice', () => {
     [
       'nl-NL',
       'Google gekoppeld',
-      'Je Google-account jane@adiutor.test is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? Ontkoppel het op de pagina Beveiliging.',
+      'Je Google-account jane@adiutor.test is nu gekoppeld aan je account bij Adiutor Tests Support, omdat je ermee bent ingelogd. Was jij dit niet? Ontkoppel het op de pagina Beveiliging.',
       'Ontkoppel het op de pagina Beveiliging',
     ],
     [
       'es-ES',
       'Google conectado',
-      'Tu cuenta de Google jane@adiutor.test ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? Desconéctala en la página Seguridad.',
+      'Tu cuenta de Google jane@adiutor.test ya está conectada a tu cuenta en Adiutor Tests Support, porque has iniciado sesión con ella. ¿No has sido tú? Desconéctala en la página Seguridad.',
       'Desconéctala en la página Seguridad',
     ],
-  ] as const)('says it in %s, with the link inside the sentence', (locale, region, text, link) => {
-    setLinkedCookie(encodeURIComponent('google:jane@adiutor.test'));
-    renderInLocale(locale, <ProviderLinkedNotice />);
+  ] as const)(
+    'says it in %s, with the staff’s name and the link inside the sentence',
+    (locale, region, text, link) => {
+      setLinkedCookie(encodeURIComponent('google:jane@adiutor.test'));
+      renderInLocale(
+        locale,
+        <StaffNameProvider name="Adiutor Tests Support">
+          <ProviderLinkedNotice />
+        </StaffNameProvider>,
+      );
 
-    expect(screen.getByRole('region', { name: region })).toHaveTextContent(text);
-    expect(screen.getByRole('link', { name: link })).toHaveAttribute('href', '/account/security');
-  });
+      expect(screen.getByRole('region', { name: region })).toHaveTextContent(text);
+      expect(screen.getByRole('link', { name: link })).toHaveAttribute('href', '/account/security');
+    },
+  );
 });

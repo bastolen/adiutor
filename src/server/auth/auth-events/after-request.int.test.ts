@@ -309,7 +309,7 @@ describe('an authenticator code checked with a session', () => {
         details: { method: 'authenticator' },
       },
     ]);
-    expect(await subjects()).toEqual(['Two-step verification is on for your Adiutor account']);
+    expect(await subjects()).toEqual(['Two-step verification is on for your account on Adiutor']);
     expect(await sessionMfa(sessionId)).toEqual({ mfaVerified: true, mfaMethod: 'authenticator' });
     // Email codes no longer count, so neither does a browser trusted after one.
     expect(await devicesLeft([...trusted, othersDevice])).toEqual([othersDevice]);
@@ -586,7 +586,7 @@ describe('a first passkey', () => {
     );
 
     expect(await sessionMfa(sessionId)).toEqual({ mfaVerified: true, mfaMethod: 'passkey' });
-    expect(await subjects()).toEqual(['A passkey was added to your Adiutor account']);
+    expect(await subjects()).toEqual(['A passkey was added to your account on Adiutor']);
   });
 
   it("doesn't confirm the session of a Manager who already has an authenticator app", async () => {

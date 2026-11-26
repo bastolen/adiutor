@@ -286,6 +286,18 @@ web-address check also takes time in proportion to the text, whatever it holds: 
 read a long run of letters again from each letter in it, and a name with neither a dot nor `://`
 skips them.
 
+The staff's name reaches further than other names ([decision
+0050](decisions/0050-the-staffs-name-instead-of-adiutor.md)): it stands for the product in every
+text, so it's on the signed-out pages, in every page title and in the subject of every email the
+app sends, security notices and sign-in links included, and in the label of new authenticator
+entries and passkeys. The rules above keep it from adding a line break to a subject or a link to an
+email; React escapes it in pages, titles and attributes; the authenticator label leaves out colons
+(`signInAppName`), which would cut an `otpauth://` label in two; and a page title template takes it
+with each `%s` written as `% s` (`forTitleTemplate`), so Next.js doesn't put the page's title into
+it. Only staff Admins can change it (`renameStaff`, `staff:manage`, refused while signed in as
+someone, recorded as `staff_renamed`). A passkey stays bound to the host (`rpID`), whatever its
+label says.
+
 ## Text people write
 
 A request's description and replies are written by one side and read by the other, in Markdown

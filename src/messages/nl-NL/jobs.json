@@ -1,7 +1,7 @@
 {
   "jobs": {
     "descriptions": {
-      "leftover-provider-tokens": "Wist de tokens die een inlogprovider aan Adiutor gaf als inloggen ermee niet is afgerond.",
+      "leftover-provider-tokens": "Wist de tokens die een inlogprovider gaf als inloggen ermee niet is afgerond.",
       "finished-sign-ins-as-users": "Beëindigt inloggen als gebruiker wanneer de tijd om is, en legt dat vast in het auditlog.",
       "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, beëindigde links uit e-mails over verzoeken, en verlopen limieten op pogingen.",
       "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, twee dagen voordat ze verlopen.",
@@ -13,7 +13,7 @@
       "smtp-changed": "Laat de beheerders van de medewerkers weten dat de mailserver is gewijzigd.",
       "request-update": "Laat de mensen bij een verzoek, en de webhooks die het willen, weten wat ermee gebeurd is.",
       "webhook-delivery": "Probeert een levering aan een webhook opnieuw, als een eerdere poging mislukte.",
-      "webhook-turned-off": "Laat de beheerders onder de medewerkers weten dat Adiutor een webhook heeft uitgezet omdat die bleef mislukken."
+      "webhook-turned-off": "Laat de beheerders onder de medewerkers weten dat een webhook is uitgezet omdat die bleef mislukken."
     },
     "summary": {
       "done": "{count, number} klaar",

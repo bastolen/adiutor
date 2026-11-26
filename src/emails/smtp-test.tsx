@@ -6,7 +6,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -37,17 +37,18 @@ export default function SmtpTestEmail({
 }: SmtpTestEmailProps) {
   const t = translator(locale, 'emails.smtpTest');
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   return (
     <EmailLayout
-      preview={t('subject')}
+      preview={t('subject', { staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
-      <EmailParagraph colours={colours}>{t('body', { server })}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('body', { server, staff })}</EmailParagraph>
       <EmailButton colours={colours} href={url}>
         {t('button')}
       </EmailButton>
@@ -72,7 +73,7 @@ SmtpTestEmail.PreviewProps = {
 export function smtpTestEmail(to: string, props: SmtpTestEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.smtpTest')('subject'),
+    translator(props.locale, 'emails.smtpTest')('subject', { staff: emailName(props.brand) }),
     <SmtpTestEmail {...props} />,
   );
 }

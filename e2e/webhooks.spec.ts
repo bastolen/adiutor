@@ -1,7 +1,7 @@
 /**
  * @file End-to-end tests for webhooks on Settings › Webhooks: a staff Admin
  * adds one, sees its signing secret once and finds it listed with its host
- * (never its address); an address inside Adiutor's network is refused in the
+ * (never its address); an address inside the server's own network is refused in the
  * dialog; and a webhook to a receiver on 127.0.0.1 (which the test server
  * allows) gets a signed test and a signed delivery of a request's news,
  * which its page lists, before it's turned off and on and removed. The
@@ -78,7 +78,7 @@ test('a staff Admin adds a webhook, sees its secret once, and finds it listed by
   await expect(page.getByRole('main')).not.toContainText('whsec_');
 });
 
-test('an address inside Adiutor’s network is refused in the dialog, with what was typed', async ({
+test('an address inside the server’s own network is refused in the dialog, with what was typed', async ({
   page,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
@@ -94,7 +94,7 @@ test('an address inside Adiutor’s network is refused in the dialog, with what 
   await dialog.getByRole('button', { name: 'Add webhook' }).click();
 
   await expect(dialog.getByRole('alert')).toContainText(
-    'This address is inside Adiutor’s own network, which webhooks never reach.',
+    'This address is inside this server’s own network, which webhooks never reach.',
   );
   await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('E2E Internal');
   await page.keyboard.press('Escape');

@@ -88,8 +88,8 @@ describe('signInErrorText', () => {
   });
 
   it('explains that sign-up is disabled for unknown emails', () => {
-    expect(signInErrorText(en, 'signup_disabled')).toContain('no Adiutor account');
-    expect(signInErrorText(en, 'new_user_signup_disabled')).toContain('no Adiutor account');
+    expect(signInErrorText(en, 'signup_disabled')).toContain('no account for that email');
+    expect(signInErrorText(en, 'new_user_signup_disabled')).toContain('no account for that email');
   });
 
   it('explains invalid and expired links', () => {
@@ -152,8 +152,8 @@ describe('reverifyErrorText', () => {
     expect(reverifyErrorText(en, REVERIFY_WRONG_ACCOUNT.code, 'github')).toBe(GITHUB_WRONG_ACCOUNT);
   });
 
-  it('says the same for an address without an Adiutor account, or one Better Auth wouldn’t connect', () => {
-    // Otherwise the page would tell whether an address has an Adiutor account.
+  it('says the same for an address without an account, or one Better Auth wouldn’t connect', () => {
+    // Otherwise the page would tell whether an address has an account.
     expect(reverifyErrorText(en, 'signup_disabled', 'github')).toBe(GITHUB_WRONG_ACCOUNT);
     expect(reverifyErrorText(en, 'account_not_linked', 'github')).toBe(GITHUB_WRONG_ACCOUNT);
   });

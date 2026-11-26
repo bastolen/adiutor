@@ -48,7 +48,7 @@ export function useOfferedLanguageOptions(): SelectOption[] {
 
 /**
  * The options for choosing someone's language: Default first, described with
- * the language it stands for now ("Follows Adiutor's default language, now
+ * the language it stands for now ("Follows the default language, now
  * English (US)."), then the languages Adiutor offers. Reads `common.language`
  * from the root provider.
  *

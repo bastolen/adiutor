@@ -244,10 +244,13 @@ describe('chatBody', () => {
     expect(text).toMatch(/And \d+ more changes\.\nhttps:\/\/adiutor\.dev/);
   });
 
-  it('makes a test message', () => {
-    expect(textOf(testChatBody({ name: 'Staff chat', locale: 'en-US' }))).toBe(
+  it('makes a test message from the staff, by their name', () => {
+    expect(textOf(testChatBody({ name: 'Staff chat', staff: 'Adiutor', locale: 'en-US' }))).toBe(
       'This is a test message from Adiutor for the webhook “Staff chat”. It works.',
     );
+    expect(
+      textOf(testChatBody({ name: 'Staff chat', staff: '<Adiutor Tests>', locale: 'nl-NL' })),
+    ).toBe('Dit is een testbericht van ‹Adiutor Tests› voor de webhook ‘Staff chat’. Het werkt.');
   });
 });
 

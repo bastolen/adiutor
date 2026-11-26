@@ -24,6 +24,7 @@ import type { ServiceContext } from '../context';
 import { notFoundError, parseId, ServiceError } from '../errors';
 import { orderTerms, paginate } from '../pagination';
 import getRequestPrefix from '../people/request-prefix';
+import getStaffName from '../people/staff-name';
 import { queueJob, webhookDeliveryJob } from '../queue';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { defaultLanguage } from '../recipient-locale';
@@ -161,7 +162,7 @@ export async function listDeliveries(
  * Sends a test to a webhook while the Admin waits, also to one that's off
  * (to check it before turning it on), and records it with its result. The
  * test tells of no request: `webhook.test` with the webhook's name, or a chat
- * message saying it works.
+ * message from the staff (by their name) saying it works.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -194,10 +195,13 @@ export async function sendTestEvent(
     throw new Error('The database made no ID.');
   }
   const now = new Date();
-  const body =
-    found.format === 'chat'
-      ? testChatBody({ name: found.name, locale: await defaultLanguage(ctx) })
-      : testJsonBody({ name: found.name, now });
+  let body: string;
+  if (found.format === 'chat') {
+    const [staff, locale] = await Promise.all([getStaffName(ctx.db), defaultLanguage(ctx)]);
+    body = testChatBody({ name: found.name, staff, locale });
+  } else {
+    body = testJsonBody({ name: found.name, now });
+  }
   const result = await sendWebhook({ url, secret, id, body }, { now });
   await ctx.db.insert(webhookDelivery).values({
     id,

@@ -10,6 +10,7 @@ import {
   PLATFORM_ADMIN,
   REQUESTS_CLIENT,
   SEEDED_REQUESTS,
+  STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import { signIn } from './support/helpers';
@@ -110,7 +111,7 @@ test('company users get Requests in the menu and on the dashboard, and their com
   await expect(company.getByRole('listitem')).toHaveText(new RegExp(`${COMPANY_NAME}\\s*Client$`));
   await company.getByRole('link', { name: COMPANY_NAME }).click();
   await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
-  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · ${STAFF_NAME}`);
 
   // The staff pages stay out of reach.
   await page.goto('/admin/users');

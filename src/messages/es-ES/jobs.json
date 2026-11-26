@@ -1,7 +1,7 @@
 {
   "jobs": {
     "descriptions": {
-      "leftover-provider-tokens": "Borra los tokens que un proveedor de inicio de sesión dio a Adiutor cuando un inicio de sesión con él no terminó.",
+      "leftover-provider-tokens": "Borra los tokens que entregó un proveedor de inicio de sesión cuando un inicio de sesión con él no terminó.",
       "finished-sign-ins-as-users": "Termina los inicios de sesión como usuario cuyo tiempo se ha acabado, y lo registra en el registro de auditoría.",
       "expired-sign-in-data": "Elimina los enlaces, códigos y sesiones de inicio de sesión caducados, los enlaces de correos sobre solicitudes que terminaron y los límites de intentos vencidos.",
       "invitation-reminders": "Recuerda una vez a las personas las invitaciones que aún no han aceptado, dos días antes de que caduquen.",
@@ -13,7 +13,7 @@
       "smtp-changed": "Avisa a los administradores del personal de que ha cambiado el servidor de correo.",
       "request-update": "Avisa a las personas de una solicitud, y a los webhooks que lo quieren, de lo que ha pasado con ella.",
       "webhook-delivery": "Vuelve a intentar un envío a un webhook cuando un intento anterior falló.",
-      "webhook-turned-off": "Avisa a los administradores del personal de que Adiutor desactivó un webhook porque seguía fallando."
+      "webhook-turned-off": "Avisa a los administradores del personal de que se desactivó un webhook porque seguía fallando."
     },
     "summary": {
       "done": "{count, plural, one {# hecha} other {# hechas}}",

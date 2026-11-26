@@ -23,7 +23,6 @@ import { isUniqueViolation } from '../errors';
 import assertLanguageOffered from '../offered-language';
 import { assertInviteSenderLimit } from '../rate-limit';
 import recipientLocale from '../recipient-locale';
-import getStaffName from './staff-name';
 
 /** How many days the "choose your password" link stays valid. */
 const WELCOME_LINK_VALID_DAYS = 7;
@@ -126,7 +125,6 @@ export async function registerUser(
       brand: await loadEmailBrand(ctx.db),
       locale: await recipientLocale(ctx, options.locale),
       creatorName: displayName(actor),
-      staffName: await getStaffName(ctx.db),
       url: `${ctx.baseUrl}/auth/reset-password?token=${token}&welcome=1`,
       validDays: WELCOME_LINK_VALID_DAYS,
     }),

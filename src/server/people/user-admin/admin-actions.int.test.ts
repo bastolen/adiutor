@@ -93,7 +93,7 @@ describe('admin actions', () => {
     expect(await actionsAbout(jane)).toEqual(['mfa_reset']);
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
-      'Your Adiutor two-step verification was reset',
+      'Your two-step verification for Adiutor Tests was reset',
     ]);
   });
 
@@ -137,7 +137,7 @@ describe('admin actions', () => {
     });
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
-      'Your Adiutor two-step verification was reset',
+      'Your two-step verification for Adiutor Tests was reset',
     ]);
   });
 
@@ -268,8 +268,8 @@ describe('admin actions', () => {
     expect(await actionsAbout(jane)).toEqual(['account_deactivated', 'account_reactivated']);
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
-      'Your Adiutor account was deactivated',
-      'Your Adiutor account was reactivated',
+      'Your account on Adiutor Tests was deactivated',
+      'Your account on Adiutor Tests was reactivated',
     ]);
   });
 
@@ -392,7 +392,7 @@ describe('admin actions', () => {
 
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => [email.to, emailLanguage(email), email.subject])).toEqual([
-      ['jane@adiutor.test', 'nl-NL', 'Je Adiutor-account is verwijderd'],
+      ['jane@adiutor.test', 'nl-NL', 'Je account bij Adiutor Tests is verwijderd'],
     ]);
   });
 });
@@ -502,7 +502,7 @@ describe('invitations of people who lose access', () => {
     expect(sent).toEqual([
       expect.objectContaining({
         to: 'jane@adiutor.test',
-        subject: 'Your Adiutor account was deleted',
+        subject: 'Your account on Adiutor Tests was deleted',
       }),
     ]);
     const notice = defined(sent[0], 'the notice email');

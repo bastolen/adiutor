@@ -3,10 +3,10 @@
     "app": {
       "description": "Hulp krijgen zonder achter e-mails aan te zitten. Meld een probleem of vraag iets nieuws aan, volg de voortgang en keur het werk goed, allemaal op één plek."
     },
-    "documentTitle": "{page} · Adiutor",
+    "documentTitle": "{page} · {staff}",
     "loading": "Laden…",
     "skipToContent": "Direct naar de inhoud",
-    "homeLink": "Startpagina van Adiutor",
+    "homeLink": "Startpagina van {staff}",
     "companyWithUrlName": "{name} ({urlName})",
     "actions": {
       "cancel": "Annuleren",
@@ -85,8 +85,8 @@
     "providerLinked": {
       "region": "{provider} gekoppeld",
       "dismiss": "Melding over {provider} sluiten",
-      "named": "Je {provider}-account <name>{account}</name> is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>.",
-      "unnamed": "Je {provider}-account is nu gekoppeld aan je Adiutor-account, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>."
+      "named": "Je {provider}-account <name>{account}</name> is nu gekoppeld aan je account bij {staff}, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>.",
+      "unnamed": "Je {provider}-account is nu gekoppeld aan je account bij {staff}, omdat je ermee bent ingelogd. Was jij dit niet? <link>Ontkoppel het op de pagina Beveiliging</link>."
     },
     "accessNotice": {
       "dismiss": "Deze melding sluiten",
@@ -105,7 +105,6 @@
         "status": "Wacht op je goedkeuring",
         "title": "Openingstijden op de website aanpassen",
         "you": "Jij",
-        "staff": "Adiutor Support",
         "question": "Onze openingstijden veranderen volgende maand. Kunnen jullie ze op de website aanpassen?",
         "answer": "Staat klaar op de testsite. Kijk je even en keur je het goed? Dan zetten we het live.",
         "reply": "Reageren",
@@ -141,7 +140,7 @@
       "defaultLabel": "Standaardtaal",
       "defaultHint": "Voor iedereen die nog geen taal heeft gekozen. Je kunt dit later wijzigen.",
       "followDefault": "Standaard",
-      "followDefaultDescription": "Volgt de standaardtaal van Adiutor, nu {language}."
+      "followDefaultDescription": "Volgt de standaardtaal, nu {language}."
     },
     "timeZoneRegion": "{region, select, Africa {Afrika} America {Amerika} Antarctica {Antarctica} Arctic {Noordpoolgebied} Asia {Azië} Atlantic {Atlantische Oceaan} Australia {Australië} Europe {Europa} Indian {Indische Oceaan} Pacific {Stille Oceaan} other {Overige zones}}",
     "preferences": {
@@ -201,6 +200,7 @@
       }
     },
     "setByEnvironment": "Gekozen in de omgeving van de server ({variable}), dus je kunt het hier niet wijzigen.",
-    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw."
+    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw.",
+    "poweredBy": "Mogelijk gemaakt door Adiutor"
   }
 }

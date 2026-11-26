@@ -46,7 +46,7 @@
       "saved": "Opgeslagen.",
       "details": {
         "title": "Gegevens",
-        "description": "De naam die in Adiutor wordt getoond, en het adres van de pagina's."
+        "description": "De naam die iedereen ziet, en het adres van de pagina's."
       },
       "form": {
         "name": "Naam",
@@ -73,7 +73,7 @@
         }
       }
     },
-    "titleTemplate": "%s · {company} · Adiutor",
+    "titleTemplate": "%s · {company} · {staff}",
     "header": {
       "requests": "Verzoeken",
       "newRequest": "Nieuw verzoek",
@@ -83,7 +83,7 @@
     },
     "requests": {
       "title": "Verzoeken · {company}",
-      "deactivated": "Dit bedrijf is gedeactiveerd. De mensen van het bedrijf kunnen Adiutor niet gebruiken totdat het weer is geactiveerd, en de verzoeken kunnen alleen worden gelezen."
+      "deactivated": "Dit bedrijf is gedeactiveerd. De mensen van het bedrijf hebben geen toegang totdat het weer is geactiveerd, en de verzoeken kunnen alleen worden gelezen."
     }
   }
 }

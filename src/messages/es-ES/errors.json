@@ -23,7 +23,7 @@
       "ended": "Tu sesión como este usuario ha terminado, así que no se ha cambiado nada."
     },
     "setup": {
-      "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",
+      "alreadySetUp": "La configuración ya está hecha. Inicia sesión.",
       "accountDeactivated": "Esa cuenta está desactivada, así que no ha podido iniciar sesión. Usa otra dirección."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "Esta tarea ya está pausada.",
       "notPaused": "Esta tarea no está pausada.",
-      "notPausable": "Esta tarea mantiene Adiutor seguro, así que no se puede pausar.",
+      "notPausable": "Esta tarea es necesaria para la seguridad, así que no se puede pausar.",
       "running": "Esta tarea se está ejecutando ahora mismo. Vuelve a intentarlo cuando termine.",
       "noFailedJobs": "Aquí ya no queda nada que reintentar ni descartar: puede que alguien ya lo haya hecho."
     },
@@ -123,14 +123,14 @@
         "insecure_endpoint": "Usa una dirección https://, o los archivos y las claves viajarían sin cifrar."
       },
       "storageCheck": {
-        "unreachable": "Adiutor no ha podido llegar al almacenamiento. Revisa su dirección y su puerto.",
+        "unreachable": "No se ha podido llegar al almacenamiento. Revisa su dirección y su puerto.",
         "refused": "El almacenamiento ha rechazado las claves o la contraseña. Revísalas.",
         "host_key": "La clave de host del servidor no coincide con la huella. Compruébala en el propio servidor antes de volver a intentarlo.",
         "not_found": "El bucket o la carpeta no existe. Créalo primero.",
-        "not_writable": "Adiutor no puede escribir ahí. Revisa los permisos de la carpeta y el espacio libre.",
-        "not_set_up": "Esa carpeta no es de Adiutor. Revisa su ruta.",
+        "not_writable": "No se puede escribir ahí. Revisa los permisos de la carpeta y el espacio libre.",
+        "not_set_up": "Esa carpeta no está configurada para los archivos adjuntos. Revisa su ruta.",
         "timed_out": "El almacenamiento ha tardado demasiado en responder. Vuelve a intentarlo o revisa su dirección.",
-        "failed": "Adiutor no ha podido guardar, leer y borrar un archivo de prueba ahí. Revisa la configuración."
+        "failed": "No se ha podido guardar, leer y borrar un archivo de prueba ahí. Revisa la configuración."
       },
       "off": "Adjuntar archivos está desactivado.",
       "typeNotAllowed": "Ese tipo de archivo no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
@@ -161,9 +161,9 @@
         "tlsRequired": "Usa TLS o STARTTLS: sin ellos, los correos y los enlaces de inicio de sesión que contienen viajarían sin cifrar."
       },
       "check": {
-        "unreachable": "Adiutor no ha podido llegar al servidor de correo. Revisa su nombre y su puerto.",
+        "unreachable": "No se ha podido llegar al servidor de correo. Revisa su nombre y su puerto.",
         "timedOut": "El servidor de correo ha tardado demasiado en responder. Vuelve a intentarlo o revisa su nombre y su puerto.",
-        "tls": "Adiutor no ha podido proteger la conexión. Revisa la seguridad y el puerto.",
+        "tls": "No se ha podido proteger la conexión. Revisa la seguridad y el puerto.",
         "loginRefused": "El servidor de correo ha rechazado el nombre de usuario o la contraseña. Revísalos.",
         "addressRefused": "El servidor de correo ha rechazado la dirección del remitente o la tuya. Comprueba que puede enviar desde la dirección del remitente.",
         "refused": "El servidor de correo ha rechazado el correo de prueba. Revisa su configuración con tu proveedor."

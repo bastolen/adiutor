@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import Logo from '@/components/brand/logo';
+import PoweredBy from '@/components/layout/powered-by';
 import Button from '@/components/ui/button';
 import Sheet from '@/components/ui/sheet';
 import { focusRing } from '@/components/ui/styles';
@@ -38,7 +39,8 @@ interface AppNavigationProps {
 }
 
 /**
- * Logo, main navigation and account menu, used in both the sidebar and the
+ * Logo, main navigation, "Powered by Adiutor" (once the staff have a name of
+ * their own, `PoweredBy`) and account menu, used in both the sidebar and the
  * mobile menu.
  */
 function NavigationPanel({
@@ -63,6 +65,7 @@ function NavigationPanel({
       <nav aria-label={t('main')} className="flex-1">
         <NavLinks sections={sections} onNavigate={onNavigate} />
       </nav>
+      <PoweredBy className="px-1.5" />
       <AccountMenu
         name={name}
         email={email}

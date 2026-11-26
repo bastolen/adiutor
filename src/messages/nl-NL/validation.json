@@ -103,9 +103,9 @@
       "tooLong": "Gebruik een adres van maximaal {maximum, number} tekens.",
       "invalid": "Vul een webadres in, zoals https://hooks.adiutor.dev/in.",
       "scheme": "Gebruik een adres dat begint met https://.",
-      "credentials": "Haal de gebruikersnaam en het wachtwoord uit het adres: aan de handtekening ziet de ontvanger dat het Adiutor is.",
+      "credentials": "Haal de gebruikersnaam en het wachtwoord uit het adres: aan de handtekening ziet de ontvanger al wie het stuurde.",
       "insecure": "Gebruik een https://-adres: gewoon http:// werkt alleen voor deze computer.",
-      "internal": "Dit adres ligt in het eigen netwerk van Adiutor, waar webhooks nooit naartoe gaan."
+      "internal": "Dit adres ligt in het eigen netwerk van deze server, waar webhooks nooit naartoe gaan."
     },
     "webhookFormat": "Kies hoe de webhook wordt verstuurd.",
     "webhookEvents": {

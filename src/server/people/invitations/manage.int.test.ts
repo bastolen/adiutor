@@ -37,6 +37,7 @@ describe('re-inviting, resending and revoking', () => {
     expect(await getInvitationPreview(ctx, defined(first, 'the first token'))).toBeNull();
     expect(await getInvitationPreview(ctx, defined(second, 'the second token'))).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       fromInviteLink: false,
     });

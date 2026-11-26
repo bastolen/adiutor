@@ -25,7 +25,7 @@
       "verified": "Verificada",
       "notVerified": "Sin verificar",
       "nameTitle": "Nombre",
-      "nameDescription": "Cómo te ven los demás en Adiutor.",
+      "nameDescription": "Cómo te ven los demás.",
       "nameLabel": "Nombre",
       "saveName": "Guardar nombre",
       "activityTitle": "Actividad reciente",
@@ -35,7 +35,7 @@
       "activityLabel": "Tu actividad reciente",
       "nameSaved": "Nombre guardado.",
       "pictureTitle": "Foto",
-      "pictureDescription": "Aparece junto a tu nombre allí donde otros lo vean en Adiutor. Viene de una cuenta que conectaste; Adiutor no guarda archivos.",
+      "pictureDescription": "Aparece junto a tu nombre allí donde otros lo vean. Viene de una cuenta que conectaste; no se guardan archivos.",
       "pictureLabel": "Mostrar",
       "pictureProvider": "{hasAccount, select, yes {{provider} · {account}} other {{provider}}}",
       "pictureNotYet": "Inicia sesión una vez con {provider} para usar su foto.",
@@ -48,13 +48,13 @@
       "verificationFailed": "No se ha podido enviar el correo. Vuelve a intentarlo.",
       "verificationSent": "Hemos enviado un enlace de verificación a {email}. Caduca en 1 hora.",
       "languageTitle": "Idioma",
-      "languageDescription": "Adiutor y los correos que te envía usan este idioma.",
-      "languageNotOffered": "Elegiste {language}, que ahora no se ofrece, así que Adiutor usa el idioma predeterminado hasta que vuelva a ofrecerse.",
+      "languageDescription": "Las páginas que ves y los correos que recibes usan este idioma.",
+      "languageNotOffered": "Elegiste {language}, que ahora no se ofrece, así que se usa el idioma predeterminado hasta que vuelva a ofrecerse.",
       "languageLabel": "Idioma",
       "saveLanguage": "Guardar idioma",
       "languageSaved": "Idioma guardado.",
       "timeZoneTitle": "Zona horaria",
-      "timeZoneDescription": "Adiutor muestra las horas en esta zona en todos los dispositivos en los que inicias sesión, y en los correos que te envía.",
+      "timeZoneDescription": "Las horas se muestran en esta zona en todos los dispositivos en los que inicias sesión, y en los correos que recibes.",
       "timeZoneLabel": "Zona horaria",
       "browserTimeZone": "Este navegador usa la zona {zone}.",
       "useBrowserTimeZone": "Usar la zona de este navegador",
@@ -130,7 +130,7 @@
     },
     "security": {
       "title": "Seguridad",
-      "mustSetUp": "{emailCodes, select, true {Tu rol exige MFA. Añade una llave de acceso o configura una app de autenticación para seguir usando Adiutor. Los códigos por correo no bastan para tu rol.} other {Tu rol exige MFA. Añade una llave de acceso o configura una app de autenticación para seguir usando Adiutor.}}",
+      "mustSetUp": "{emailCodes, select, true {Tu rol exige MFA. Añade una llave de acceso o configura una app de autenticación para continuar. Los códigos por correo no bastan para tu rol.} other {Tu rol exige MFA. Añade una llave de acceso o configura una app de autenticación para continuar.}}",
       "recommended": "Recomendado: añade una llave de acceso o activa la verificación en dos pasos, para que una contraseña robada no baste para entrar en tu cuenta.",
       "keepLastPasskey": "Tu rol exige MFA, así que conserva esta llave de acceso hasta que hayas añadido otra llave de acceso o una app de autenticación.",
       "keepAuthenticator": "Tu rol exige MFA, así que tu app de autenticación sigue activa. Para pasarla a un teléfono nuevo, añade primero una llave de acceso, desactiva esto y vuelve a configurarla.",
@@ -199,7 +199,7 @@
         "label": "Códigos de respaldo",
         "copy": "Copiar códigos",
         "download": "Descargar",
-        "file": "Códigos de respaldo de Adiutor\n\n{codes}\n",
+        "file": "Códigos de respaldo para {staff}\n\n{codes}\n",
         "saved": "Ya he guardado estos códigos"
       },
       "authenticator": {
@@ -209,7 +209,7 @@
         "backupDescription": "Tu app de autenticación está configurada.",
         "continue": "Continuar",
         "scan": "Escanea este código QR con tu app.",
-        "qrAlt": "Código QR para añadir Adiutor a tu app de autenticación",
+        "qrAlt": "Código QR para añadir {staff} a tu app de autenticación",
         "manualKey": "¿No puedes escanearlo? Introduce esta clave: <code>{key}</code>",
         "enterCode": "Introduce el código de 6 dígitos que muestra la app.",
         "turnOn": "Activar"
@@ -276,12 +276,12 @@
         "description": "Se cierra tu sesión en todas partes y no podrás iniciar sesión hasta que un Administrador reactive tu cuenta. No se elimina nada.",
         "trigger": "Desactivar",
         "dialogTitle": "¿Desactivar tu cuenta?",
-        "dialogDescription": "Se cerrará tu sesión en todos los dispositivos de inmediato. Para volver a usar Adiutor, pide a un Administrador que reactive tu cuenta.",
+        "dialogDescription": "Se cerrará tu sesión en todos los dispositivos de inmediato. Para volver a iniciar sesión, pide a un Administrador que reactive tu cuenta.",
         "confirm": "Desactivar mi cuenta"
       },
       "staffSignIn": {
         "title": "Inicio de sesión del personal",
-        "description": "{minutes, plural, one {El personal de Adiutor puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.} other {El personal de Adiutor puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.}}",
+        "description": "{minutes, plural, one {El personal puede iniciar sesión como tú durante # minuto como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.} other {El personal puede iniciar sesión como tú durante # minutos como máximo, para ver lo que ves y comprobar qué no te funciona. Mientras tanto puede trabajar en tus solicitudes, y verás que fue el personal; no puede cambiar nada más. Recibes un correo cada vez.}}",
         "on": "Activado",
         "off": "Desactivado",
         "turnOff": "Desactivar",
@@ -296,7 +296,7 @@
     "signedInAs": {
       "note": "Estás viendo las páginas de cuenta de {name} tal como las ve. No se puede cambiar nada aquí mientras has iniciado sesión como esa persona.",
       "leftOut": "Algunos de sus datos personales se omiten, como en <link>su página de usuario</link>.",
-      "mustSetUpMfa": "{name} tiene que configurar MFA antes de poder usar Adiutor, así que esta página Seguridad es la que ve ahora."
+      "mustSetUpMfa": "{name} tiene que configurar MFA antes de poder ver nada más, así que esta página Seguridad es la que ve ahora."
     }
   }
 }

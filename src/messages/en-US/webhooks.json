@@ -12,7 +12,7 @@
       "type": "{name} changed the type from {from} to {to}.",
       "priority": "{name} changed the priority from {from} to {to}.",
       "more": "{count, plural, one {And # more change.} other {And # more changes.}}",
-      "test": "This is a test message from Adiutor for the webhook “{name}”. It works."
+      "test": "This is a test message from {staff} for the webhook “{name}”. It works."
     }
   }
 }

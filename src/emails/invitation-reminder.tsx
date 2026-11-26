@@ -9,23 +9,33 @@ import {
   EmailParagraph,
   LinkFallback,
 } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
 import translator from '@/lib/i18n/translator';
 
-import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
+import { type EmailBaseProps, type InviteTarget, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
 /**
  * Props for {@link InvitationReminderEmail}.
  */
 export interface InvitationReminderEmailProps extends EmailBaseProps {
-  /** Name (or email) of the person who sent the invitation, or the company's name. */
-  inviterName: string;
-  /** Name of the company. */
+  /**
+   * Name (or email) of the person who sent the invitation, or `null` when
+   * nobody did or their account is gone: the email then says they're invited
+   * without naming anyone, never naming the staff or the company in their
+   * place.
+   */
+  inviterName: string | null;
+  /** Name of the company, or the staff's for an invitation to the staff. */
   companyName: string;
+  /**
+   * Whether it's to a company or to the staff, whose name `companyName` then
+   * holds: the email names it once (`InviteTarget`).
+   */
+  target: InviteTarget;
   /** The role they'll get. */
   role: Role;
   /** Link to accept the invitation (replaces the earlier one). */
@@ -48,6 +58,7 @@ export default function InvitationReminderEmail({
   appUrl,
   inviterName,
   companyName,
+  target,
   role,
   url,
   expiresAt,
@@ -59,8 +70,11 @@ export default function InvitationReminderEmail({
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.invitationReminder');
   const values = {
-    inviter: inviterName,
+    // Who sent it, or `none`: the messages then name nobody in their place.
+    ...(inviterName === null ? { by: 'none' } : { by: 'person', inviter: inviterName }),
     company: companyName,
+    target,
+    staff: emailName(brand),
     role: translator(locale, 'roles')(`${role}.label`),
     expires: formatDateTime(expiresAt, locale, timeZone, { zoneName: true }),
   };
@@ -89,6 +103,7 @@ InvitationReminderEmail.PreviewProps = {
   ...PREVIEW_BASE,
   inviterName: 'Alex Doe',
   companyName: 'Adiutor',
+  target: 'company',
   role: 'client',
   url: 'https://adiutor.dev/invite/example',
   expiresAt: new Date('2026-10-25T14:05:00Z'),
@@ -110,6 +125,8 @@ export function invitationReminderEmail(
     to,
     translator(props.locale, 'emails.invitationReminder')('subject', {
       company: props.companyName,
+      target: props.target,
+      staff: emailName(props.brand),
     }),
     <InvitationReminderEmail {...props} />,
   );

@@ -180,10 +180,10 @@
       "unavailableHeading": "Je kunt hier niet meer antwoorden",
       "unavailableDescription": "Je toegang tot {reference} is veranderd sinds de e-mail is verstuurd.",
       "unknownHeading": "Deze link werkt niet",
-      "unknownDescription": "Controleer of je de hele link uit de e-mail hebt geopend. Je kunt ook antwoorden op de pagina van het verzoek in Adiutor.",
+      "unknownDescription": "Controleer of je de hele link uit de e-mail hebt geopend. Je kunt ook antwoorden op de pagina van het verzoek.",
       "problemHeading": "Deze link kan nu niet worden gebruikt",
       "openRequest": "Verzoek openen",
-      "goToAdiutor": "Naar Adiutor"
+      "goHome": "Naar {staff}"
     },
     "reply": {
       "sendAsSolution": "Versturen als oplossing",

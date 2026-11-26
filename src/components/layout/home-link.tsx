@@ -1,13 +1,16 @@
 /**
  * @file The logo link to the home page, at the top of the layouts without
- * the app's navigation. A client component, so its name comes from the root
- * provider: it sits in a route's static shell (docs/i18n.md).
+ * the app's navigation. A client component, so its name and the staff's name
+ * in it come from the root providers: it sits in a route's static shell
+ * (docs/i18n.md).
  */
 'use client';
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+
+import { useStaffName } from '@/components/brand/staff-name';
 
 /** Props of {@link HomeLink}. */
 interface HomeLinkProps {
@@ -18,12 +21,13 @@ interface HomeLinkProps {
 }
 
 /**
- * A link to `/` named "Adiutor home" for screen readers.
+ * A link to `/` named after the staff for screen readers ("Adiutor home").
  */
 export default function HomeLink({ className, children }: HomeLinkProps) {
   const t = useTranslations('common');
+  const staff = useStaffName();
   return (
-    <Link href="/" aria-label={t('homeLink')} className={className}>
+    <Link href="/" aria-label={t('homeLink', { staff })} className={className}>
       {children}
     </Link>
   );

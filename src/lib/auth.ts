@@ -32,6 +32,7 @@ import * as schema from '../db/schema';
 import type { AuthHookContext } from '../server/auth/auth-events';
 import { EMAIL_CODE_MINUTES, TWO_FACTOR_LOCK_ATTEMPTS, TWO_FACTOR_LOCK_MINUTES } from './authz/mfa';
 import { PLATFORM_ROLES } from './authz/roles';
+import { ADIUTOR_NAME } from './branding';
 import { sendEmail, sendFailureOf } from './email';
 import { appUrl, env } from './env';
 import { loadLanguageSettings, localeFromHeaders } from './i18n/default-locale';
@@ -323,7 +324,12 @@ export const auth = betterAuth({
   verification: {
     storeIdentifier: { default: 'hashed', overrides: { 'trust-device-': 'plain' } },
   },
-  appName: 'Adiutor',
+  /**
+   * The label of new authenticator entries and passkeys when the staff's name
+   * can't be read; otherwise each such request gets "<staff's name>
+   * (Adiutor)" (`signInAppNameFor`, decision 0050).
+   */
+  appName: ADIUTOR_NAME,
   secret: env.BETTER_AUTH_SECRET,
   /** Versioned secrets for rotation; `secret` then only decrypts older data. */
   secrets: parseAuthSecrets(env.BETTER_AUTH_SECRETS),
@@ -446,9 +452,22 @@ export const auth = betterAuth({
   },
 
   hooks: {
-    /** Runs before every Better Auth request; see `beforeAuthRequest`. */
+    /**
+     * Runs before every Better Auth request; see `beforeAuthRequest`. For
+     * the endpoints that label a new authenticator entry or passkey, it then
+     * sets the label as that request's app name (`signInAppNameFor`,
+     * decision 0050), on the request's own context. Never return a context
+     * change from here: Better Auth would hand the endpoint a new context
+     * object and lose the state the guards keep under this one
+     * (`src/server/auth/request-state.ts`).
+     */
     before: createAuthMiddleware(async (ctx) => {
-      await (await loadAuthGuards()).beforeAuthRequest(ctx);
+      const guards = await loadAuthGuards();
+      await guards.beforeAuthRequest(ctx);
+      const appName = await guards.signInAppNameFor(ctx);
+      if (appName) {
+        ctx.context.appName = appName;
+      }
     }),
     /** Runs after every Better Auth request; see `afterAuthRequest`. */
     after: createAuthMiddleware(async (ctx) => {
@@ -809,7 +828,8 @@ export const auth = betterAuth({
      * instead (`getActor`).
      */
     twoFactor({
-      issuer: 'Adiutor',
+      // No issuer: authenticator entries take the request's app name, which names the staff
+      // (`signInAppNameFor`).
       /** Users without a password (e.g. magic link only) can turn it on too. */
       allowPasswordless: true,
       /**
@@ -861,7 +881,8 @@ export const auth = betterAuth({
      */
     passkey({
       rpID: new URL(env.BETTER_AUTH_URL).hostname,
-      rpName: 'Adiutor',
+      // No rpName: a passkey takes the request's app name, which names the staff
+      // (`signInAppNameFor`). The rpID (the host) is what binds a passkey, and never changes.
       origin: appUrl,
       authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
       registration: {

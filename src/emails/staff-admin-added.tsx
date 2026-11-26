@@ -5,7 +5,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -52,32 +52,35 @@ export default function StaffAdminAddedEmail({
   brand = undefined,
 }: StaffAdminAddedEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.staffAdminAdded');
   // Their address once, also when it's all there is to name them by.
   const who =
     newAdminName === newAdminEmail
       ? newAdminEmail
       : t('nameWithEmail', { name: newAdminName, email: newAdminEmail });
-  let what = t('accepted', { who });
+  let what = t('accepted', { who, staff });
   if (how === 'role') {
-    what = byName ? t('madeBy', { by: byName, who }) : t('made', { who });
+    what = byName ? t('madeBy', { by: byName, who, staff }) : t('made', { who, staff });
   } else if (how === 'reactivation') {
-    what = byName ? t('reactivatedBy', { by: byName, who }) : t('reactivated', { who });
+    what = byName
+      ? t('reactivatedBy', { by: byName, who, staff })
+      : t('reactivated', { who, staff });
   } else if (byName) {
-    what = t('acceptedFrom', { by: byName, who });
+    what = t('acceptedFrom', { by: byName, who, staff });
   }
   return (
     <EmailLayout
-      preview={t('subject', { name: newAdminName })}
+      preview={t('subject', { name: newAdminName, staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading', { name: newAdminName })}</EmailHeading>
       <EmailParagraph colours={colours}>{what}</EmailParagraph>
-      <EmailParagraph colours={colours}>{t('advice')}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('advice', { staff })}</EmailParagraph>
       <EmailButton colours={colours} href={url}>
         {t('button')}
       </EmailButton>
@@ -105,7 +108,10 @@ StaffAdminAddedEmail.PreviewProps = {
 export function staffAdminAddedEmail(to: string, props: StaffAdminAddedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.staffAdminAdded')('subject', { name: props.newAdminName }),
+    translator(props.locale, 'emails.staffAdminAdded')('subject', {
+      name: props.newAdminName,
+      staff: emailName(props.brand),
+    }),
     <StaffAdminAddedEmail {...props} />,
   );
 }

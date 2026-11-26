@@ -62,8 +62,11 @@ the document's `lang` follow it. A template that shows a time also takes the rec
 see [Emails](i18n.md#emails). Templates share the frame and building blocks in
 `src/components/email/`:
 
-- `EmailLayout`: the logo, the white card and a footer that says why the email was sent, with
-  `<html lang>` set to the locale
+- `EmailLayout`: the logo, the white card and a footer that says why the email was sent and who
+  sent it (`emails.layout.sentBy`, "Sent by" and the staff's name, linked to the app), with
+  `<html lang>` set to the locale. Once the staff have a name of their own (`poweredByShown`), a
+  last small line says "Powered by Adiutor" (`emails.layout.poweredBy`), without a link, in the
+  plain text too
 - `EmailButton`, `EmailHeading`, `EmailParagraph`, `EmailNote`, `EmailCode` (a one-time code in
   a monospace box) and `LinkFallback`
 - `RoleSummary`, which names the role and what it can do from the `roles` catalogue
@@ -88,13 +91,52 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   into server code (the jobs and the instrumentation), where React has none, and ESLint refuses
   them in `src/emails` and `src/components/email`
 
-Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`, which
-later holds more of the brand than colours): `loadEmailBrand(db)` in
-`src/server/branding/email-brand.ts` reads the saved colours when the email is built and falls back
-to the defaults when they can't be read, so a mail still goes out. A job that sends several emails
+Every send passes `brand` in the template's props (`EmailBaseProps.brand`, an `EmailBrand`: the
+colours, and `name`, the staff's name, which the email's text shows instead of "Adiutor", decision
+0050): `loadEmailBrand(db)` in `src/server/branding/email-brand.ts` reads the saved colours and the
+staff's name when the email is built and falls back to Adiutor's own when they can't be read, so a
+mail still goes out. A job that sends several emails
 in a run loads it once. The Better Auth callbacks in `src/lib/auth.ts` import it next to their
 template, inside the callback. An invitation's `renderEmail(brand)` takes it, so it's rendered after
 the transaction commits. The template preview has no `brand`, so it shows the defaults.
+
+### The staff's name
+
+No email names Adiutor in its text ([decision 0050](decisions/0050-the-staffs-name-instead-of-adiutor.md)): every message that names the service takes the staff's name as
+its `{staff}` argument, from `emailName(brand)` (`theme.ts`; Adiutor's own without a brand, as in
+the preview and before setup names the staff), in the template and in its builder's subject. The
+logo's alt text is the name too. The one exception is the footer's "Powered by Adiutor", shown
+only once the name isn't Adiutor's own: with the name left as "Adiutor", an email reads as it
+always did, without that line. A template never takes the name as a prop of its own (the welcome
+email and the security notices once did): `brand` is the one source.
+
+The name may be a team's ("Acme Support", "The Service Desk"), so the messages are written to read
+right with any name, in every language:
+
+- nothing right before the name: no article and no possessive. "Your account on {staff}", never
+  "your {staff} account" or "an {staff} account"; in Dutch "je account bij {staff}", never "je
+  {staff}-account"; in Spanish "tu cuenta en {staff}", never "tu cuenta de {staff}"
+- the name is never part of a compound ("{staff} staff", "{staff}-wachtwoord") or a possessive
+  ("{staff}’s"), and is never translated or declined
+- it appears once in a sentence: a staff member who signed in as someone is "{name} from {staff}"
+  and "signed in as you", without "to {staff}" after it
+- what the software does itself has no name as the one who did it: a webhook "was turned off
+  automatically", not "{staff} turned it off", which would read as if someone on the staff had
+
+An invitation can be to the staff itself, whose name is then the company's as well, so the
+invitation emails (`invitation`, `invitationReminder`, `inviteLinkConfirmation`, `alreadyMember`,
+`alreadyInvited`) take a `target` prop (`InviteTarget`: `company` or `staff`) and their messages
+choose a sentence with `{target, select, staff {…} other {…}}`: "join Acme Support as Manager"
+for the staff, "join Beta on Acme Support as Client" for a company, never "join Acme Support on
+Acme Support". `createInvitationRecord` passes `staff` for an invitation without a company, and
+so does the reminder job (`invitation-reminders`), which names the staff by the brand's name where
+it needs the staff's name for a company's.
+
+The staff's name never stands in for a person either. When whoever sent an invitation or added
+someone to a company has no account any more by the time the email goes out, the reminder
+(`inviterName`) and the "added to a company" email (`adderName`) get `null`, and their messages
+choose a sentence that names nobody (`{by, select, none {…} other {…}}`): "You're invited to join
+Acme Support as Manager", "You were added to Beta on Acme Support as Client".
 
 `security-notice.tsx` is one template with a wording per kind (`SECURITY_NOTICE_KINDS`): a changed or
 added password, two-step verification, backup codes, passkeys and connected GitHub or Google accounts,
@@ -111,10 +153,10 @@ administrator if it wasn't expected, and a reset of two-step verification says t
 and to change the password. Most are queued (the
 `security-notice` job, see [Security emails](authentication.md#security-emails)), and the job reads
 the names when it sends them, from the IDs it was queued with: `{provider}` from the provider ID,
-`{role}` (named in the recipient's language), `{company}` from the company, `{name}` from the staff
-member and `{staff}` (the name the staff are shown with to users). The notice to a deleted account,
+`{role}` (named in the recipient's language), `{company}` from the company and `{name}` from the staff
+member; `{staff}` is the brand's name, as in every email. The notice to a deleted account,
 sent straight away (`sendAccountDeletedNotice`), names none of them. Each has a stand-in ("A provider", "a new role",
-"your company", "A staff member", "Adiutor") when it's missing, and `{minutes}` is how long signing
+"your company", "A staff member") when it's missing, and `{minutes}` is how long signing
 in as someone lasts (`IMPERSONATION_MINUTES`). Both build the email the same way
 (`buildSecurityNotice` in `src/server/auth/security-notice-email.ts`). The email names the device
 and IP address only for changes the recipient made themselves (see
@@ -173,7 +215,7 @@ invitation nobody sent (setup, the seeds) has no zone of its own.
 ## Logo
 
 Emails link to `{app URL}/brand/logo.png` instead of attaching it. Clients that block
-remote images show the alt text "Adiutor" (`emails.layout.logoAlt`) instead. `src/emails/static/logo.png` is a copy for the
+remote images show the alt text, the staff's name (`emails.layout.logoAlt`), instead. `src/emails/static/logo.png` is a copy for the
 template preview, and a test keeps the two identical.
 
 ## Previewing and seeing sent emails

@@ -60,6 +60,18 @@ most 5 per 15 minutes per user) starts again, with each code reaching the owner'
 Passkeys are their own sign-in. They require user verification (fingerprint, face or device
 PIN), enforced on the server, so they count as MFA and skip the code step.
 
+## How authenticator entries and passkeys are labelled
+
+A new authenticator entry and a new passkey are labelled with the staff's name and Adiutor's, e.g.
+"Acme Support (Adiutor)", or just "Adiutor" while that's the staff's name ([decision
+0050](decisions/0050-the-staffs-name-instead-of-adiutor.md)). Better Auth labels them with its app
+name when no issuer or passkey name is configured, so none is: for the endpoints that create them
+(`/two-factor/enable`, `/two-factor/get-totp-uri`, `/passkey/generate-register-options`),
+`signInAppNameFor` (`src/server/auth/auth-guards/sign-in-app-name.ts`) hands Better Auth the label
+as that request's app name, and the configured `appName` ("Adiutor") stands when the staff's name
+can't be read. Entries made earlier keep the label they got. A passkey is bound to the host
+(`rpID`), never to its label, so a new staff name never breaks one.
+
 ## Who requires MFA
 
 Required for staff Admins and Managers, and company Admins (`requiresMfa`), the last only

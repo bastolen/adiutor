@@ -12,7 +12,7 @@ import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import EmailMarkdown, { type EmailText } from '@/components/email/email-markdown';
 import { EmailHeading, EmailLink, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { type EmailColours, emailColours, small } from '@/components/email/theme';
+import { type EmailColours, emailColours, emailName, small } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import { formatFileSize } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locales';
@@ -417,7 +417,9 @@ export default function RequestUpdateEmail({
         </EmailButton>
       )}
       <EmailNote colours={colours}>{t('noReply')}</EmailNote>
-      <EmailNote colours={colours}>{t('signInNote', { days: REQUEST_LINK_DAYS })}</EmailNote>
+      <EmailNote colours={colours}>
+        {t('signInNote', { days: REQUEST_LINK_DAYS, staff: emailName(brand) })}
+      </EmailNote>
     </EmailLayout>
   );
 }

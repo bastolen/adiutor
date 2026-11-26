@@ -151,7 +151,7 @@ describe('startImpersonation', () => {
     await sendQueuedEmails(ctx);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe('client@adiutor.test');
-    expect(sent[0]?.subject).toBe('Sam Lee van Adiutor Tests heeft als jou ingelogd op Adiutor');
+    expect(sent[0]?.subject).toBe('Sam Lee van Adiutor Tests heeft als jou ingelogd');
     expect(sent[0]?.text).not.toContain('Vanaf:');
   });
 

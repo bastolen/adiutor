@@ -4,6 +4,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { StaffNameProvider } from '@/components/brand/staff-name';
+
 import renderInLocale from '../../../tests/i18n/render';
 import Page from '../../../tests/ui/page';
 import SignInForm from './sign-in-form';
@@ -66,6 +68,22 @@ describe('SignInForm', () => {
     getLastUsedLoginMethod.mockReturnValue(null);
   });
 
+  it('asks to sign in to the staff, by their name', () => {
+    const { unmount } = render(<SignInForm providers={[]} />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in to Adiutor' })).toBeVisible();
+    unmount();
+
+    renderInLocale(
+      'nl-NL',
+      <StaffNameProvider name="Adiutor Tests Support">
+        <SignInForm providers={[]} />
+      </StaffNameProvider>,
+    );
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Inloggen bij Adiutor Tests Support' }),
+    ).toBeVisible();
+  });
+
   it('marks the method used last time without changing button names', () => {
     getLastUsedLoginMethod.mockReturnValue('github');
     render(<SignInForm providers={['github', 'google']} />);
@@ -98,7 +116,7 @@ describe('SignInForm', () => {
   it('shows the message for an error code in the URL', () => {
     searchParams = new URLSearchParams({ error: 'signup_disabled' });
     render(<SignInForm providers={[]} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('no Adiutor account');
+    expect(screen.getByRole('alert')).toHaveTextContent('no account for that email address');
   });
 
   it('shows the note another page sent the user here with, and nothing for an unknown one', () => {

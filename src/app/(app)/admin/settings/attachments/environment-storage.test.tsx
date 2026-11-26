@@ -59,7 +59,7 @@ describe('EnvironmentStorage', () => {
     const user = userEvent.setup();
     renderInLocale('en-US', <EnvironmentStorage view={FOLDER} setUp={false} />);
 
-    expect(screen.getByText(/This folder isn’t set up as Adiutor’s yet/)).toBeVisible();
+    expect(screen.getByText(/This folder isn’t set up for attached files yet/)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Set up this folder' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Set up this folder?' });
     expect(dialog).toHaveTextContent('Do this only if it’s the right folder');

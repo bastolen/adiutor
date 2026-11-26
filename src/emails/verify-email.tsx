@@ -4,7 +4,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -31,6 +31,7 @@ export default function VerifyEmailEmail({
   brand = undefined,
 }: VerifyEmailEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.verifyEmail');
   return (
     <EmailLayout
@@ -39,7 +40,7 @@ export default function VerifyEmailEmail({
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
       <EmailParagraph colours={colours}>{t('body')}</EmailParagraph>
@@ -67,7 +68,7 @@ VerifyEmailEmail.PreviewProps = {
 export function verifyEmailEmail(to: string, props: VerifyEmailEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.verifyEmail')('subject'),
+    translator(props.locale, 'emails.verifyEmail')('subject', { staff: emailName(props.brand) }),
     <VerifyEmailEmail {...props} />,
   );
 }

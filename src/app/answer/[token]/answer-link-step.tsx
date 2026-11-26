@@ -25,6 +25,7 @@ import IconTile from '@/components/ui/icon-tile';
 import { requestPath, SOLUTION_ANSWERS } from '@/lib/requests';
 import { type SearchParams, searchParam } from '@/lib/search-params';
 import appContext from '@/server/app-context';
+import { requestStaffName } from '@/server/branding';
 import { ServiceError, serviceErrorMessage } from '@/server/errors';
 import { type AnswerLinkView, readAnswerLink } from '@/server/requests';
 
@@ -75,15 +76,16 @@ function Outcome({
  *
  * @param props - Component props.
  * @param props.message - What's wrong.
+ * @param props.staff - The staff's name, for the way on ("Go to …").
  */
-function LinkProblem({ message }: { message: string }) {
+function LinkProblem({ message, staff }: { message: string; staff: string }) {
   const t = useTranslations('requests.answerLink');
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-foreground">{t('problemHeading')}</h1>
       <Alert tone="error">{message}</Alert>
       <Button variant="secondary" fullWidth asChild>
-        <Link href={HOME_PATH}>{t('goToAdiutor')}</Link>
+        <Link href={HOME_PATH}>{t('goHome', { staff })}</Link>
       </Button>
     </div>
   );
@@ -107,17 +109,18 @@ export default async function AnswerLinkStep({
   params: Promise<{ token: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const [{ token }, query, t] = await Promise.all([
+  const [{ token }, query, t, staff] = await Promise.all([
     params,
     searchParams,
     getTranslations('requests.answerLink'),
+    requestStaffName(),
   ]);
   let view: AnswerLinkView;
   try {
     view = await readAnswerLink(appContext, token);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'rate_limited') {
-      return <LinkProblem message={serviceErrorMessage(error, await getLocale())} />;
+      return <LinkProblem message={serviceErrorMessage(error, await getLocale())} staff={staff} />;
     }
     throw error;
   }
@@ -129,7 +132,7 @@ export default async function AnswerLinkStep({
         title={t('unknownHeading')}
         description={t('unknownDescription')}
         href={HOME_PATH}
-        label={t('goToAdiutor')}
+        label={t('goHome', { staff })}
       />
     );
   }
@@ -171,7 +174,7 @@ export default async function AnswerLinkStep({
           title={t('unavailableHeading')}
           description={t('unavailableDescription', { reference })}
           href={HOME_PATH}
-          label={t('goToAdiutor')}
+          label={t('goHome', { staff })}
         />
       );
     default: {

@@ -7,7 +7,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -42,20 +42,21 @@ export default function SmtpChangedEmail({
 }: SmtpChangedEmailProps) {
   const t = translator(locale, 'emails.smtpChanged');
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   return (
     <EmailLayout
-      preview={t('subject')}
+      preview={t('subject', { staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
       <EmailParagraph colours={colours}>
-        {byName ? t('changedBy', { by: byName, server }) : t('changed', { server })}
+        {byName ? t('changedBy', { by: byName, server, staff }) : t('changed', { server, staff })}
       </EmailParagraph>
-      <EmailParagraph colours={colours}>{t('advice')}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('advice', { staff })}</EmailParagraph>
       <EmailButton colours={colours} href={url}>
         {t('button')}
       </EmailButton>
@@ -81,7 +82,9 @@ SmtpChangedEmail.PreviewProps = {
 export function smtpChangedEmail(to: string, props: SmtpChangedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.smtpChanged')('subject'),
+    translator(props.locale, 'emails.smtpChanged')('subject', {
+      staff: emailName(props.brand),
+    }),
     <SmtpChangedEmail {...props} />,
   );
 }

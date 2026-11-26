@@ -9,7 +9,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import { IMPERSONATION_MINUTES } from '@/lib/authz/impersonation';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
@@ -46,14 +46,15 @@ export interface SecurityNoticeEmailProps extends EmailBaseProps {
   company?: string;
   /** The staff member who signed in as the recipient, e.g. "Sam Lee". */
   staffMember?: string;
-  /** The name the staff are shown with to users, e.g. "Adiutor". */
-  staffName?: string;
 }
 
-/** The provider, role, company and staff member a notice names, where it has them. */
+/**
+ * The provider, role, company and staff member a notice names, where it has
+ * them, and the brand, whose name stands for the staff (`{staff}`).
+ */
 type NoticeNames = Pick<
   SecurityNoticeEmailProps,
-  'provider' | 'role' | 'company' | 'staffMember' | 'staffName'
+  'provider' | 'role' | 'company' | 'staffMember' | 'brand'
 >;
 
 /**
@@ -76,20 +77,17 @@ function sectionOf(kind: SecurityNoticeKind): string {
   return section ? `#${section}` : '';
 }
 
-/** The staff's name when none is given: the product's, as before first-run setup. */
-const FALLBACK_STAFF_NAME = 'Adiutor';
-
 /**
  * The values of a notice's arguments, in the recipient's language: the
  * names it was given, and a stand-in for any that's missing.
  *
  * @param locale - The recipient's language.
- * @returns The values for `{provider}`, `{role}`, `{company}`, `{name}`, `{staff}` and
- *   `{minutes}` (how long a sign-in as someone lasts).
+ * @returns The values for `{provider}`, `{role}`, `{company}`, `{name}`, `{staff}` (the
+ *   staff's name, `emailName`) and `{minutes}` (how long a sign-in as someone lasts).
  */
 function noticeValues(
   locale: Locale,
-  { provider, role, company, staffMember, staffName }: NoticeNames,
+  { provider, role, company, staffMember, brand }: NoticeNames,
 ) {
   const t = translator(locale, 'emails.securityNotice');
   return {
@@ -97,7 +95,7 @@ function noticeValues(
     role: role ? translator(locale, 'roles')(`${role}.label`) : t('newRole'),
     company: company ?? t('yourCompany'),
     name: staffMember ?? t('someStaffMember'),
-    staff: staffName ?? FALLBACK_STAFF_NAME,
+    staff: emailName(brand),
     minutes: IMPERSONATION_MINUTES,
   };
 }
@@ -107,7 +105,7 @@ function noticeValues(
  *
  * @param locale - The recipient's language.
  * @param kind - What changed.
- * @param names - The provider, role or company, where the change has one.
+ * @param names - The provider, role or company, where the change has one, and the brand.
  */
 function securityNoticeSubject(
   locale: Locale,
@@ -135,14 +133,13 @@ export default function SecurityNoticeEmail({
   role = undefined,
   company = undefined,
   staffMember = undefined,
-  staffName = undefined,
   locale,
   logoSrc = undefined,
   brand = undefined,
 }: SecurityNoticeEmailProps) {
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.securityNotice');
-  const values = noticeValues(locale, { provider, role, company, staffMember, staffName });
+  const values = noticeValues(locale, { provider, role, company, staffMember, brand });
   // Nothing to review in the account of someone who can't sign in (or whose account is gone).
   const withoutAccount = kind === 'account_deactivated' || kind === 'account_deleted';
   let from: string | null = null;
@@ -160,7 +157,7 @@ export default function SecurityNoticeEmail({
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason', { kind })}
+      reason={t('reason', { kind, staff: values.staff })}
     >
       <EmailHeading colours={colours}>{t(`${kind}.heading`, values)}</EmailHeading>
       <EmailParagraph colours={colours}>{t(`${kind}.body`, values)}</EmailParagraph>

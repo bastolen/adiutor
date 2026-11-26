@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 
 import CodeField from '@/components/auth/code-field';
+import { useStaffName } from '@/components/brand/staff-name';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
@@ -74,6 +75,7 @@ function AuthenticatorSteps({
   onFinish: () => void;
 }) {
   const t = useTranslations('account');
+  const staff = useStaffName();
   const refusalText = useRefusalText();
   const [step, setStep] = useState<Step>('password');
   const [password, setPassword] = useState('');
@@ -179,7 +181,7 @@ function AuthenticatorSteps({
                 // eslint-disable-next-line @next/next/no-img-element -- A generated data URL, not a static asset.
                 <img
                   src={qrCode}
-                  alt={t('security.authenticator.qrAlt')}
+                  alt={t('security.authenticator.qrAlt', { staff })}
                   width={192}
                   height={192}
                   // eslint-disable-next-line better-tailwindcss/no-restricted-classes -- A QR code needs a white background to scan, in dark mode too.

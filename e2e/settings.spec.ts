@@ -48,7 +48,13 @@ import {
   useOwnClientIp,
   invitationForm,
 } from './support/helpers';
-import { linkIn, waitForEmail, waitForEmailAbout } from './support/outbox';
+import {
+  countEmails,
+  linkIn,
+  waitForEmail,
+  waitForEmailAbout,
+  waitForNewEmail,
+} from './support/outbox';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
@@ -197,6 +203,42 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
   }
 });
 
+test('the staff’s name shows instead of Adiutor everywhere, with Powered by Adiutor', async ({
+  page,
+  browser,
+}) => {
+  const name = 'Adiutor Tests Support';
+  const visitor = await browser.newPage();
+  try {
+    await setStaffName(name);
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings');
+    await expect(page).toHaveTitle(new RegExp(`· ${name}$`));
+    await expect(page.getByText('Powered by Adiutor', { exact: true })).toBeVisible();
+
+    // Signed out, and in the emails sent from there.
+    await visitor.goto('/auth');
+    await expect(visitor.getByRole('heading', { name: `Sign in to ${name}` })).toBeVisible();
+    await expect(visitor.getByText('Powered by Adiutor', { exact: true })).toBeVisible();
+    await visitor.getByRole('button', { name: 'Sign in with an email link instead' }).click();
+    await visitor.getByLabel('Email').fill(REQUESTS_CLIENT.email);
+    const before = await countEmails(REQUESTS_CLIENT.email);
+    await visitor.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    const email = await waitForNewEmail(REQUESTS_CLIENT.email, before);
+    expect(email.subject).toBe(`Your sign-in link for ${name}`);
+    expect(email.text).toContain('Powered by Adiutor');
+
+    // With Adiutor's own name, nothing says it twice.
+    await setStaffName('Adiutor');
+    await visitor.goto('/auth');
+    await expect(visitor.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+    await expect(visitor.getByText('Powered by Adiutor', { exact: true })).toHaveCount(0);
+  } finally {
+    await visitor.close();
+    await setStaffName(STAFF_NAME);
+  }
+});
+
 test('an Admin chooses the prefix request numbers are shown with', async ({ page }) => {
   try {
     await signIn(page, PLATFORM_ADMIN);
@@ -334,12 +376,12 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     // did the notice every staff Admin gets, the one who saved it too.
     const testEmail = await waitForEmailAbout(
       PLATFORM_ADMIN.email,
-      'Adiutor can send email through this mail server',
+      `${STAFF_NAME} can send email through this mail server`,
     );
     expect(testEmail.text).toContain('smtp.adiutor.test:587');
     const notice = await waitForEmailAbout(
       PLATFORM_ADMIN.email,
-      'Adiutor sends email through another mail server',
+      `${STAFF_NAME} sends email through another mail server`,
     );
     expect(notice.text).toContain('smtp.adiutor.test:587');
 
@@ -571,7 +613,7 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
   // They accept with a new account and land on setting up MFA, as Managers must.
   const invited = await (await browser.newContext()).newPage();
   const invitation = await waitForEmail(email);
-  expect(invitation.subject).toBe(`E2E Admin invited you to join ${STAFF_NAME} on Adiutor`);
+  expect(invitation.subject).toBe(`E2E Admin invited you to join ${STAFF_NAME}`);
   await invited.goto(linkIn(invitation));
   await expect(invited.getByRole('heading', { name: `Join ${STAFF_NAME}` })).toBeVisible();
   await createAccountFromInvitation(

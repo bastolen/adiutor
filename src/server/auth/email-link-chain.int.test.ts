@@ -143,7 +143,7 @@ describe('sending a sign-in link', () => {
     expect(response.status).toBe(200);
     // Sent after the response.
     const sent = await sentEmail('The sign-in email');
-    expect(sent.subject).toBe('Your Adiutor sign-in link');
+    expect(sent.subject).toBe('Your sign-in link for Adiutor');
     expect(sent.to).toBe('jane@adiutor.test');
     expect(vi.mocked(sendEmail)).toHaveBeenCalledTimes(1);
   });

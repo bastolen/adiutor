@@ -305,7 +305,7 @@ describe('delivering news to a webhook', () => {
 
     await sendQueuedEmails(ctx);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      { to: admin.email, subject: 'Adiutor turned off the webhook “Adiutor Tests hook”' },
+      { to: admin.email, subject: 'The webhook “Adiutor Tests hook” was turned off' },
     ]);
   });
 

@@ -707,6 +707,7 @@ async function addInvitation(
     invites.emails.push({
       to: email,
       companyName: company.name,
+      target: 'company',
       inviterName: inviter.name,
       role,
       url,

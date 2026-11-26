@@ -21,6 +21,7 @@ import AccountSummary, {
   sameName,
   type SignedInAccount,
 } from '@/components/auth/account-summary';
+import { useStaffName } from '@/components/brand/staff-name';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
@@ -115,6 +116,7 @@ export default function RequestLinkForm({
   signedIn,
 }: RequestLinkFormProps) {
   const t = useTranslations('auth');
+  const staff = useStaffName();
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
   const inBrowser = useInBrowser();
@@ -187,7 +189,7 @@ export default function RequestLinkForm({
       {icon}
       <AuthHeading
         title={t('requestLink.heading', { reference })}
-        description={t('requestLink.description', { reference })}
+        description={t('requestLink.description', { reference, staff })}
       />
       <AccountSummary {...account} />
       {signedIn && (

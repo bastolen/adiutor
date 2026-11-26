@@ -571,9 +571,11 @@ keyboard support.
   them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
   never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
   Don't work around that with `maximum-scale` in the viewport: it also blocks pinch-zoom.
-- **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
-  title after each client-side navigation (only when it changed), so pages that differ get
-  different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor"), from
+- **Page titles:** "Page · Adiutor", most specific part first, ending with the staff's name
+  ("Page · Adiutor Support" once setup named them so; `{staff}`, decision 0050). Next's route
+  announcer reads the title after each client-side navigation (only when it changed), so pages
+  that differ get different titles: a company's pages add the company ("Members · Adiutor Tests ·
+  Adiutor"), from
   the company layout's `generateMetadata`, after the same access check as the pages. Next doesn't
   apply a layout's title template to the page in the layout's own route segment, so the company's
   first page names the company itself ("Requests · Adiutor Tests · Adiutor",
@@ -587,7 +589,7 @@ keyboard support.
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
   user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission). Both take
   the title as a message key (`'admin.users.title'`), translated in the request's language; the
-  company layout's template ("%s · {company} · Adiutor") is the message `companies.titleTemplate`.
+  company layout's template ("%s · {company} · {staff}") is the message `companies.titleTemplate`.
   A page that decides with a check of its own (a request's, which everyone who may see the request
   may open) uses `checkedPageMetadata` with that check.
   `src/app/permission-titles.test.ts` fails when one of them has a static title instead.
@@ -735,5 +737,20 @@ holds only hex colours that `paletteCss` wrote and checked, so nothing chosen ca
 With nothing chosen there's no `<style>` at all. `global-error.tsx`, which replaces the whole
 document and can't reach the database, keeps the theme's colours, and so do the logo and the
 favicon.
+
+### The staff's name and "Powered by Adiutor"
+
+Every text names the staff instead of Adiutor ([decision
+0050](decisions/0050-the-staffs-name-instead-of-adiutor.md)): the staff's name (`staff.name`, set at
+setup and on Settings › General, "Adiutor" until then) reaches client components through
+`StaffNameProvider` / `useStaffName()` (`src/components/brand/staff-name.tsx`, handed down by the
+root layout from `requestStaffName()`), server components and metadata through `requestStaffName()`
+and emails through `emailName(brand)`; how texts are worded around it is under [Translation
+rules](i18n.md#translation-rules). Once the name isn't Adiutor's own (`poweredByShown`, ignoring
+case and spaces), a small "Powered by Adiutor" (`PoweredBy`, `src/components/layout/powered-by.tsx`,
+in `muted-foreground`) shows at the bottom of the signed-out pages (`AuthLayout`'s and
+`CenteredLayout`'s footer, next to the theme and language button), at the bottom of the app's
+sidebar and mobile menu (above the account menu) and in every email's footer. With the name left as
+"Adiutor" it shows nowhere, so the page reads as it always did.
 
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license) and the list of files in [NOTICE](../NOTICE).

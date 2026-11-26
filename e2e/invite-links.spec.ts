@@ -12,6 +12,7 @@ import {
   LINK_JOINER,
   OWNED_COMPANY_SLUG,
   PLATFORM_ADMIN,
+  STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
@@ -100,7 +101,7 @@ test("claiming a link with an address an Admin invited keeps the Admin's invitat
 
   // The address is told to use the invitation it already has, which is still the open one.
   expect((await waitForNewEmail(email, before)).subject).toBe(
-    `You already have an invitation to ${COMPANY_NAME} on Adiutor`,
+    `You already have an invitation to ${COMPANY_NAME} on ${STAFF_NAME}`,
   );
   await page.reload();
   // The used link lists the address too, so only the open invitations' table counts.

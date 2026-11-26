@@ -82,9 +82,7 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
 
   // The Manager was emailed, naming the Admin, and the audit log has the reason.
   const notice = await waitForNewEmail(STEP_UP_MANAGER.email, emailsBefore);
-  expect(notice.subject).toBe(
-    `${PLATFORM_ADMIN.name} from ${STAFF_NAME} signed in to Adiutor as you`,
-  );
+  expect(notice.subject).toBe(`${PLATFORM_ADMIN.name} from ${STAFF_NAME} signed in as you`);
   await page.goto(`/admin/logs?q=${encodeURIComponent(STEP_UP_MANAGER.name)}`);
   await expect(page.getByRole('main')).toContainText('Signed in as a user');
   await expect(page.getByRole('main')).toContainText('Reason: Checking the company settings');
@@ -210,7 +208,7 @@ test('signed in as a company Admin who must set up MFA, the Admin sees what they
   await signInAsUser(page, COMPANY_OWNER.name, { landsOn: '/account/security?setup=required' });
 
   await expect(page.getByRole('main')).toContainText(
-    `${COMPANY_OWNER.name} has to set up MFA before they can use Adiutor, so this Security page is what they see now.`,
+    `${COMPANY_OWNER.name} has to set up MFA before they can see anything else, so this Security page is what they see now.`,
   );
   await page.getByRole('button', { name: 'Back to my account' }).click();
   await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);

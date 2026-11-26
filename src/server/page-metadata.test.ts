@@ -12,6 +12,7 @@ import type { PlatformRole } from '@/lib/authz/roles';
 import { testLocale } from '../../tests/i18n/next-intl-mocks';
 import type { Actor } from './actor';
 import { findCompanyAccess, getActor } from './authz';
+import { requestStaffName } from './branding';
 import {
   checkedPageMetadata,
   companyPermissionMetadata,
@@ -22,6 +23,9 @@ import {
 const NOT_FOUND_METADATA = {
   title: { absolute: 'Not found · Adiutor', template: 'Not found · Adiutor' },
 };
+
+/** The staff's name, which the 404 page's title ends with: Adiutor's own unless a test names them. */
+vi.mock('./branding', () => ({ requestStaffName: vi.fn() }));
 
 vi.mock('./authz', async () => {
   const { getPermissions } = await import('@/lib/authz/permissions');
@@ -68,6 +72,7 @@ function companyAccessWith(permissions: Permission[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(requestStaffName).mockResolvedValue('Adiutor');
 });
 
 describe('globalPermissionMetadata', () => {
@@ -95,6 +100,19 @@ describe('globalPermissionMetadata', () => {
     await expect(generateMetadata({})).resolves.toEqual(NOT_FOUND_METADATA);
     signInAs(null);
     await expect(generateMetadata({})).resolves.toEqual(NOT_FOUND_METADATA);
+  });
+
+  it("ends the 404 page's title with the staff's name", async () => {
+    vi.mocked(requestStaffName).mockResolvedValue('Adiutor Tests Support');
+    signInAs(null);
+    await expect(
+      globalPermissionMetadata('errors:view', 'admin.errors.title')({}),
+    ).resolves.toEqual({
+      title: {
+        absolute: 'Not found · Adiutor Tests Support',
+        template: 'Not found · Adiutor Tests Support',
+      },
+    });
   });
 
   it('adds nothing for a layout whose viewer has the permission', async () => {

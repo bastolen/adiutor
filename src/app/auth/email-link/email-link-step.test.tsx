@@ -92,9 +92,7 @@ describe('EmailLinkStep', () => {
     await renderStep({ token: 'abc', error: 'new_user_signup_disabled' });
 
     expect(screen.getByRole('heading', { name: "This link can't be used" })).toBeInTheDocument();
-    expect(
-      screen.getByText(/There's no Adiutor account for that email address/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/There's no account for that email address/)).toBeInTheDocument();
   });
 
   it.each(['INVALID_TOKEN', 'not-a-code'])(

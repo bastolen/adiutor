@@ -137,7 +137,7 @@ describe('sendTestEvent', () => {
     ]);
   });
 
-  it('sends a chat message for a chat webhook, also one that’s off', async () => {
+  it('sends a chat message from the staff, by their name, for a chat webhook, also one that’s off', async () => {
     const webhookId = await storeWebhook(db, {
       url: receiver.url,
       name: 'Staff chat',
@@ -148,7 +148,7 @@ describe('sendTestEvent', () => {
     await sendTestEvent(ctx, admin, { webhook: webhookId });
 
     expect(JSON.parse(receiver.received[0]?.body ?? '{}')).toEqual({
-      text: 'This is a test message from Adiutor for the webhook “Staff chat”. It works.',
+      text: 'This is a test message from Adiutor Tests for the webhook “Staff chat”. It works.',
     });
   });
 

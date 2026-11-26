@@ -9,6 +9,7 @@ import {
   COMPANY_SLUG,
   PLATFORM_ADMIN,
   SEEDED_REQUESTS,
+  STAFF_NAME,
 } from './support/fixtures';
 import { signIn } from './support/helpers';
 import { expect, test } from './support/test';
@@ -49,7 +50,7 @@ test('staff see a company’s requests on its page, and can raise one for it', a
   await page.getByRole('link', { name: 'Companies' }).first().click();
   await page.getByRole('row').filter({ hasText: COMPANY_SLUG }).getByRole('link').click();
 
-  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+  await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · ${STAFF_NAME}`);
   const main = page.getByRole('main');
   await expect(main.getByText(SEEDED_REQUESTS.open.title)).toBeVisible();
   // Only this company's: the list names no company, and has no company to filter by.

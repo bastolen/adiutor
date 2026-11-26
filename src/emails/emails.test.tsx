@@ -1,11 +1,12 @@
 /**
  * @file Tests for the email templates: subjects, links, logo, escaping, the
- * plain-text versions, and every template in every language.
+ * plain-text versions, every template in every language, and the staff's
+ * name in place of Adiutor's, with "Powered by Adiutor" once it's their own.
  * @vitest-environment node
  */
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_EMAIL_COLOURS, emailColoursOf } from '@/components/email/theme';
+import { DEFAULT_EMAIL_COLOURS, emailColoursOf, emailName } from '@/components/email/theme';
 import { derivePalette } from '@/lib/branding';
 import type { Email } from '@/lib/email';
 import { formatDateTime } from '@/lib/format';
@@ -79,16 +80,18 @@ const NOTICE_ADVICE: Record<Locale, { unexpected: string; reset: string; notYou:
 };
 
 /**
- * Checks what every email needs: the linked logo, the button link in the
- * HTML, and the link on its own in the plain text (followed by whitespace,
- * not a bracket), and nothing about images in the text.
+ * Checks what every email needs: the linked logo with the staff's name as
+ * its alt text, the button link in the HTML, and the link on its own in the
+ * plain text (followed by whitespace, not a bracket), and nothing about
+ * images in the text.
  *
  * @param email - The rendered email.
  * @param url - The email's main link.
+ * @param staff - The staff's name the email was built with.
  */
-function expectBasics(email: Email, url: string) {
+function expectBasics(email: Email, url: string, staff = 'Adiutor') {
   expect(email.html).toContain(`src="${appUrl}/brand/logo.png"`);
-  expect(email.html).toContain('alt="Adiutor"');
+  expect(email.html).toContain(`alt="${staff}"`);
   expect(email.html).toContain(`href="${url}"`);
   expect(email.text).toMatch(new RegExp(`${url.replace(/[.?/]/g, '\\$&')}(\\s|$)`));
   expect(email.text).not.toContain(`${url}]`);
@@ -102,7 +105,10 @@ describe('account emails', () => {
     const url = `${appUrl}/auth/email-link?token=abc`;
     const email = await magicLinkEmail('jane@adiutor.test', { ...english, url });
 
-    expect(email).toMatchObject({ to: 'jane@adiutor.test', subject: 'Your Adiutor sign-in link' });
+    expect(email).toMatchObject({
+      to: 'jane@adiutor.test',
+      subject: 'Your sign-in link for Adiutor',
+    });
     expect(email.text).toContain('expires in 5 minutes');
     expectBasics(email, url);
   });
@@ -111,7 +117,7 @@ describe('account emails', () => {
     const url = `${appUrl}/auth/reset-password?token=abc`;
     const email = await resetPasswordEmail('jane@adiutor.test', { ...english, url });
 
-    expect(email.subject).toBe('Reset your Adiutor password');
+    expect(email.subject).toBe('Reset your password for Adiutor');
     expect(email.text).toContain('Choose a new password');
     expectBasics(email, url);
   });
@@ -120,7 +126,7 @@ describe('account emails', () => {
     const url = `${appUrl}/api/auth/verify-email?token=abc`;
     const email = await verifyEmailEmail('jane@adiutor.test', { ...english, url });
 
-    expect(email.subject).toBe('Verify your Adiutor email address');
+    expect(email.subject).toBe('Verify your email address for Adiutor');
     expect(email.text).toContain('Verify email address');
     expectBasics(email, url);
   });
@@ -130,7 +136,7 @@ describe('two-step verification email', () => {
   it('shows the code first and says it expires', async () => {
     const email = await twoFactorCodeEmail('jane@adiutor.test', { ...english, code: '482915' });
 
-    expect(email.subject).toBe('Your Adiutor sign-in code');
+    expect(email.subject).toBe('Your sign-in code for Adiutor');
     expect(email.html).toContain('482915');
     // In the email theme's monospace font, so similar characters are easy to tell apart.
     expect(email.html).toMatch(/font-family:ui-monospace[^;"]*;[^"]*">482915</);
@@ -173,6 +179,7 @@ describe('company emails', () => {
       ...english,
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       url,
       validDays: 7,
@@ -190,6 +197,7 @@ describe('company emails', () => {
       ...english,
       inviterName: '<b>Sam</b>',
       companyName: 'Adiutor <script>Tests</script>',
+      target: 'company',
       role: 'watcher',
       url: `${appUrl}/invite/abc`,
       validDays: 7,
@@ -208,6 +216,7 @@ describe('company emails', () => {
       timeZone: 'UTC',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       url,
       expiresAt,
@@ -227,6 +236,7 @@ describe('company emails', () => {
     const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
       ...english,
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       url,
       validDays: 7,
@@ -242,6 +252,7 @@ describe('company emails', () => {
     const email = await alreadyMemberEmail('jane@adiutor.test', {
       ...english,
       companyName: 'Adiutor Tests',
+      target: 'company',
       url,
     });
 
@@ -254,6 +265,7 @@ describe('company emails', () => {
     const email = await alreadyInvitedEmail('jane@adiutor.test', {
       ...english,
       companyName: 'Adiutor Tests',
+      target: 'company',
     });
 
     expect(email.to).toBe('jane@adiutor.test');
@@ -273,10 +285,59 @@ describe('company emails', () => {
     const email = await alreadyInvitedEmail('jane@adiutor.test', {
       ...english,
       companyName: 'Adiutor <script>Tests</script>',
+      target: 'company',
     });
 
     expect(email.html).not.toContain('<script>');
     expect(email.html).toContain('&lt;script&gt;');
+  });
+
+  it('names the staff once in an invitation to the staff, whose name is the company’s', async () => {
+    const brand: EmailBrand = { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor Tests' };
+    const toStaff = { ...english, brand, companyName: 'Adiutor Tests', target: 'staff' } as const;
+    const url = `${appUrl}/invite/abc`;
+    const [invited, reminded, confirm, member, alreadyInvited] = await Promise.all([
+      invitationEmail('jane@adiutor.test', {
+        ...toStaff,
+        inviterName: 'Sam Doe',
+        role: 'manager',
+        url,
+        validDays: 7,
+      }),
+      invitationReminderEmail('jane@adiutor.test', {
+        ...toStaff,
+        timeZone: 'UTC',
+        inviterName: 'Sam Doe',
+        role: 'support',
+        url,
+        expiresAt: new Date('2026-10-25T14:05:00Z'),
+      }),
+      inviteLinkConfirmationEmail('jane@adiutor.test', {
+        ...toStaff,
+        role: 'finance',
+        url,
+        validDays: 1,
+      }),
+      alreadyMemberEmail('jane@adiutor.test', { ...toStaff, url: `${appUrl}/dashboard` }),
+      alreadyInvitedEmail('jane@adiutor.test', toStaff),
+    ]);
+
+    expect(invited.subject).toBe('Sam Doe invited you to join Adiutor Tests');
+    expect(invited.html).toContain('Join Adiutor Tests as Manager');
+    expect(invited.text).toContain('Sam Doe invited you to join Adiutor Tests as Manager.');
+    expect(reminded.subject).toBe('Reminder: join Adiutor Tests');
+    expect(reminded.text).toContain('Sam Doe invited you to join Adiutor Tests as Support.');
+    expect(confirm.html).toContain('One more step to join Adiutor Tests');
+    expect(member.subject).toBe("You're already a member of Adiutor Tests");
+    expect(member.text).toContain(
+      "Someone tried to invite you to Adiutor Tests, but you're already a member.",
+    );
+    expect(alreadyInvited.subject).toBe('You already have an invitation to Adiutor Tests');
+    expect(alreadyInvited.text).toContain('You opened an invite link for Adiutor Tests, but');
+    expect(alreadyInvited.text).toContain('Go to Adiutor Tests');
+    for (const email of [invited, reminded, confirm, member, alreadyInvited]) {
+      expect(`${email.subject}\n${email.html}`).not.toContain('Adiutor Tests on Adiutor Tests');
+    }
   });
 });
 
@@ -285,14 +346,14 @@ describe('staff-made changes', () => {
     const url = `${appUrl}/auth/reset-password?token=abc&welcome=1`;
     const email = await accountCreatedEmail('jane@adiutor.test', {
       ...english,
+      brand: { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor Tests' },
       creatorName: 'Alex Admin',
-      staffName: 'Adiutor Tests',
       url,
       validDays: 7,
     });
 
-    expect(email.subject).toBe('Your Adiutor account is ready');
-    expect(email.text).toContain('Alex Admin of Adiutor Tests created an Adiutor account for you.');
+    expect(email.subject).toBe('Your account on Adiutor Tests is ready');
+    expect(email.text).toContain('Alex Admin of Adiutor Tests created an account for you.');
     expect(email.text).toContain('expires in 7 days');
     // The link has two query parameters, so the HTML escapes the `&`.
     expect(email.html).toContain(`href="${url.replace('&', '&amp;')}"`);
@@ -683,15 +744,17 @@ describe('background jobs', () => {
 describe('webhooks', () => {
   const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
 
-  it('tells a staff Admin which webhook Adiutor turned off and why, never its address', async () => {
+  it('tells a staff Admin which webhook was turned off and why, never its address', async () => {
     const failing = await webhookTurnedOffEmail('alex@adiutor.test', {
       ...english,
       name: 'Procurement',
       reason: 'failing',
       url,
     });
-    expect(failing.subject).toBe('Adiutor turned off the webhook “Procurement”');
-    expect(failing.text).toContain('Every delivery to it has failed for 3 days');
+    expect(failing.subject).toBe('The webhook “Procurement” was turned off');
+    expect(failing.text).toContain(
+      'Every delivery to it has failed for 3 days, so it was turned off automatically.',
+    );
     expect(failing.text).toContain('turn it on in Settings');
     expectBasics(failing, url);
 
@@ -726,7 +789,7 @@ describe('security notices', () => {
       ip: '203.0.113.7',
     });
 
-    expect(email.subject).toBe('Two-step verification was turned off on your Adiutor account');
+    expect(email.subject).toBe('Two-step verification was turned off for your account on Adiutor');
     expect(email.text).toContain('When: Oct 23, 2026, 2:05 PM UTC');
     expect(email.text).toContain('From: Firefox on Windows, 203.0.113.7');
     expect(email.text).toContain("If this wasn't you, reset your password");
@@ -742,7 +805,7 @@ describe('security notices', () => {
       provider: 'GitHub',
     });
 
-    expect(email.subject).toBe('GitHub was connected to your Adiutor account');
+    expect(email.subject).toBe('GitHub was connected to your account on Adiutor');
     expect(email.text).not.toContain('From:');
   });
 
@@ -766,7 +829,7 @@ describe('security notices', () => {
       when,
     });
 
-    expect(email.subject).toBe('Password sign-in to your Adiutor account is paused');
+    expect(email.subject).toBe('Password sign-in to your account on Adiutor is paused');
     expect(email.text).toContain("No one signed in: the password wasn't accepted.");
     expect(email.text).toContain('sign in with an email link or a passkey');
     expect(email.text).toContain('resetting your password lifts the pause');
@@ -785,12 +848,12 @@ describe('security notices', () => {
       when,
     });
 
-    expect(email.subject).toBe('Your Adiutor account was deleted');
+    expect(email.subject).toBe('Your account on Adiutor was deleted');
     expect(email.html).not.toContain('/account/security');
     expect(email.text).not.toContain('/account/security');
     expect(email.text).toContain("You can't sign in with it any more.");
     expect(email.text).toContain('contact your administrator');
-    expect(email.text).toContain('because your Adiutor account was deleted');
+    expect(email.text).toContain('because your account on Adiutor was deleted');
   });
 
   it('tells the owner that wrong codes paused signing in with a code, and to change the password', async () => {
@@ -801,7 +864,7 @@ describe('security notices', () => {
       when,
     });
 
-    expect(email.subject).toBe('Signing in to your Adiutor account with a code is paused');
+    expect(email.subject).toBe('Signing in to your account on Adiutor with a code is paused');
     expect(email.text).toContain('paused for 15 minutes');
     expect(email.text).toContain("No one signed in: the codes weren't accepted.");
     expect(email.text).toContain("If this wasn't you, someone may know your password.");
@@ -820,9 +883,9 @@ describe('security notices', () => {
       when,
     });
 
-    expect(email.subject).toBe('Your Adiutor two-step verification was reset');
+    expect(email.subject).toBe('Your two-step verification for Adiutor was reset');
     expect(email.text).toContain(
-      'Any GitHub or Google accounts connected to your Adiutor account were disconnected',
+      'Any GitHub or Google accounts connected to your account were disconnected',
     );
     expect(email.text).toContain('you were signed out everywhere');
     // Only an administrator resets it, and it leaves the password as the only thing in the way.
@@ -922,20 +985,21 @@ describe('security notices', () => {
       kind: 'impersonation_started',
       when,
       staffMember: 'Sam Lee',
-      staffName: 'Adiutor Tests',
+      brand: { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor Tests' },
     });
 
-    expect(email.subject).toBe('Sam Lee from Adiutor Tests signed in to Adiutor as you');
+    expect(email.subject).toBe('Sam Lee from Adiutor Tests signed in as you');
     expect(email.html).toContain('Sam Lee signed in as you');
     expect(email.text).toContain(
-      "Sam Lee from Adiutor Tests signed in to Adiutor as you, to see what you see and check what isn't working.",
+      "Sam Lee from Adiutor Tests signed in as you, to see what you see and check what isn't working.",
     );
+    expect(email.text).toContain('because a staff member signed in to Adiutor Tests as you.');
     expect(email.text).toContain('It ends after at most 30 minutes.');
     expect(email.text).toContain('you can turn it off on your Security page.');
     expect(email.text).toContain("If you didn't expect this, contact your administrator.");
     expect(email.text).not.toContain('From:');
     // Straight to the switch for sign-ins by staff.
-    expectBasics(email, `${appUrl}/account/security#staff-sign-in`);
+    expectBasics(email, `${appUrl}/account/security#staff-sign-in`, 'Adiutor Tests');
   });
 
   it('says "a staff member" when the notice is built without a name', async () => {
@@ -946,7 +1010,7 @@ describe('security notices', () => {
       when,
     });
 
-    expect(email.subject).toBe('A staff member from Adiutor signed in to Adiutor as you');
+    expect(email.subject).toBe('A staff member from Adiutor signed in as you');
   });
 
   it('names the staff role', async () => {
@@ -969,334 +1033,529 @@ interface BuiltEmail {
   url: string;
 }
 
-/** Builds one email of every template (security notices apart) in a language. */
-const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = {
-  /**
-   * The sign-in link email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'magic link': async (locale) => {
-    const url = `${appUrl}/auth/email-link?token=abc`;
-    return { email: await magicLinkEmail('jane@adiutor.test', { appUrl, locale, url }), url };
-  },
-  /**
-   * The password reset email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'password reset': async (locale) => {
-    const url = `${appUrl}/auth/reset-password?token=abc`;
-    return { email: await resetPasswordEmail('jane@adiutor.test', { appUrl, locale, url }), url };
-  },
-  /**
-   * The email verification email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'email verification': async (locale) => {
-    const url = `${appUrl}/api/auth/verify-email?token=abc`;
-    return { email: await verifyEmailEmail('jane@adiutor.test', { appUrl, locale, url }), url };
-  },
-  /**
-   * The invitation.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  invitation: async (locale) => {
-    const url = `${appUrl}/invite/abc`;
-    const email = await invitationEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      inviterName: 'Sam Doe',
-      companyName: 'Adiutor Tests',
-      role: 'client',
-      url,
-      validDays: 7,
-    });
-    return { email, url };
-  },
-  /**
-   * The invitation reminder.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'invitation reminder': async (locale) => {
-    const url = `${appUrl}/invite/abc`;
-    const email = await invitationReminderEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      timeZone: 'UTC',
-      inviterName: 'Sam Doe',
-      companyName: 'Adiutor Tests',
-      role: 'watcher',
-      url,
-      expiresAt: new Date('2026-10-25T14:05:00Z'),
-    });
-    return { email, url };
-  },
-  /**
-   * The invite-link confirmation.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'invite-link confirmation': async (locale) => {
-    const url = `${appUrl}/invite/abc`;
-    const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      companyName: 'Adiutor Tests',
-      role: 'admin',
-      url,
-      validDays: 1,
-    });
-    return { email, url };
-  },
-  /**
-   * The "already a member" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'already a member': async (locale) => {
-    const url = `${appUrl}/companies/abc`;
-    const email = await alreadyMemberEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      companyName: 'Adiutor Tests',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The "already invited" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'already invited': async (locale) => ({
-    email: await alreadyInvitedEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      companyName: 'Adiutor Tests',
+/**
+ * Builds one email of every template (security notices apart) in a language,
+ * in a brand when one is given. The invitation emails come twice: to a
+ * company, and to the staff, whose name is the staff's (the brand's, else
+ * Adiutor's).
+ */
+const EVERY_TEMPLATE: Record<string, (locale: Locale, brand?: EmailBrand) => Promise<BuiltEmail>> =
+  {
+    /**
+     * The sign-in link email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'magic link': async (locale, brand) => {
+      const url = `${appUrl}/auth/email-link?token=abc`;
+      return {
+        email: await magicLinkEmail('jane@adiutor.test', { appUrl, locale, brand, url }),
+        url,
+      };
+    },
+    /**
+     * The password reset email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'password reset': async (locale, brand) => {
+      const url = `${appUrl}/auth/reset-password?token=abc`;
+      return {
+        email: await resetPasswordEmail('jane@adiutor.test', { appUrl, locale, brand, url }),
+        url,
+      };
+    },
+    /**
+     * The email verification email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'email verification': async (locale, brand) => {
+      const url = `${appUrl}/api/auth/verify-email?token=abc`;
+      return {
+        email: await verifyEmailEmail('jane@adiutor.test', { appUrl, locale, brand, url }),
+        url,
+      };
+    },
+    /**
+     * The invitation.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    invitation: async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await invitationEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        inviterName: 'Sam Doe',
+        companyName: 'Adiutor Tests',
+        target: 'company',
+        role: 'client',
+        url,
+        validDays: 7,
+      });
+      return { email, url };
+    },
+    /**
+     * The invitation reminder.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invitation reminder': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await invitationReminderEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        timeZone: 'UTC',
+        inviterName: 'Sam Doe',
+        companyName: 'Adiutor Tests',
+        target: 'company',
+        role: 'watcher',
+        url,
+        expiresAt: new Date('2026-10-25T14:05:00Z'),
+      });
+      return { email, url };
+    },
+    /**
+     * The invite-link confirmation.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invite-link confirmation': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: 'Adiutor Tests',
+        target: 'company',
+        role: 'admin',
+        url,
+        validDays: 1,
+      });
+      return { email, url };
+    },
+    /**
+     * The "already a member" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'already a member': async (locale, brand) => {
+      const url = `${appUrl}/companies/abc`;
+      const email = await alreadyMemberEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: 'Adiutor Tests',
+        target: 'company',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "already invited" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'already invited': async (locale, brand) => ({
+      email: await alreadyInvitedEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: 'Adiutor Tests',
+        target: 'company',
+      }),
+      url: `${appUrl}/auth`,
     }),
-    url: `${appUrl}/auth`,
-  }),
-  /**
-   * The welcome email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'account created': async (locale) => {
-    const url = `${appUrl}/auth/reset-password?token=abc`;
-    const email = await accountCreatedEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      creatorName: 'Alex Admin',
-      staffName: 'Adiutor Tests',
-      url,
-      validDays: 7,
-    });
-    return { email, url };
-  },
-  /**
-   * The "added to a company" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'added to a company': async (locale) => {
-    const url = `${appUrl}/companies/abc`;
-    const email = await addedToCompanyEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      adderName: 'Alex Admin',
-      companyName: 'Adiutor Tests',
-      role: 'client',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The email about what happened to a request.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'news about a request': async (locale) => {
-    const url = `${appUrl}/requests/142`;
-    const email = await requestUpdateEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      reference: 'AD-142',
-      title: 'Adiutor Tests',
-      companyName: 'Adiutor Tests',
-      url,
-      role: 'subscriber',
-      audience: 'follower',
-      items: [
-        {
-          event: 'reply',
-          by: 'Sam Support',
-          text: {
-            text: 'https://adiutor.test/manual',
-            format: 'markdown',
-            mentions: {},
-            attachments: [{ name: 'Adiutor Tests.pdf', size: 184_000 }],
+    /**
+     * The invitation to the staff.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invitation to the staff': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await invitationEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        inviterName: 'Sam Doe',
+        companyName: emailName(brand),
+        target: 'staff',
+        role: 'manager',
+        url,
+        validDays: 7,
+      });
+      return { email, url };
+    },
+    /**
+     * The reminder of an invitation to the staff.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invitation reminder for the staff': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await invitationReminderEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        timeZone: 'UTC',
+        inviterName: 'Sam Doe',
+        companyName: emailName(brand),
+        target: 'staff',
+        role: 'support',
+        url,
+        expiresAt: new Date('2026-10-25T14:05:00Z'),
+      });
+      return { email, url };
+    },
+    /**
+     * The confirmation of an invite link to the staff.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invite-link confirmation for the staff': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await inviteLinkConfirmationEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: emailName(brand),
+        target: 'staff',
+        role: 'finance',
+        url,
+        validDays: 1,
+      });
+      return { email, url };
+    },
+    /**
+     * The "already a member" email for someone already on the staff.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'already on the staff': async (locale, brand) => {
+      const url = `${appUrl}/dashboard`;
+      const email = await alreadyMemberEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: emailName(brand),
+        target: 'staff',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "already invited" email for an invitation to the staff.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'already invited to the staff': async (locale, brand) => ({
+      email: await alreadyInvitedEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        companyName: emailName(brand),
+        target: 'staff',
+      }),
+      url: `${appUrl}/auth`,
+    }),
+    /**
+     * The reminder of an invitation to the staff whose sender's account is gone.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'invitation reminder without its sender': async (locale, brand) => {
+      const url = `${appUrl}/invite/abc`;
+      const email = await invitationReminderEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        timeZone: 'UTC',
+        inviterName: null,
+        companyName: emailName(brand),
+        target: 'staff',
+        role: 'manager',
+        url,
+        expiresAt: new Date('2026-10-25T14:05:00Z'),
+      });
+      return { email, url };
+    },
+    /**
+     * The "added to a company" email when the account of whoever added them is gone.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'added to a company by someone gone': async (locale, brand) => {
+      const url = `${appUrl}/companies/abc`;
+      const email = await addedToCompanyEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        adderName: null,
+        companyName: 'Adiutor Tests',
+        role: 'client',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The welcome email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'account created': async (locale, brand) => {
+      const url = `${appUrl}/auth/reset-password?token=abc`;
+      const email = await accountCreatedEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        creatorName: 'Alex Admin',
+        url,
+        validDays: 7,
+      });
+      return { email, url };
+    },
+    /**
+     * The "added to a company" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'added to a company': async (locale, brand) => {
+      const url = `${appUrl}/companies/abc`;
+      const email = await addedToCompanyEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        adderName: 'Alex Admin',
+        companyName: 'Adiutor Tests',
+        role: 'client',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The email about what happened to a request.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'news about a request': async (locale, brand) => {
+      const url = `${appUrl}/requests/142`;
+      const email = await requestUpdateEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        reference: 'AD-142',
+        title: 'Adiutor Tests',
+        companyName: 'Adiutor Tests',
+        url,
+        role: 'subscriber',
+        audience: 'follower',
+        items: [
+          {
+            event: 'reply',
+            by: 'Sam Support',
+            text: {
+              text: 'https://adiutor.test/manual',
+              format: 'markdown',
+              mentions: {},
+              attachments: [{ name: 'Adiutor Tests.pdf', size: 184_000 }],
+            },
           },
+          { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'open', to: 'waiting' },
+          {
+            event: 'note',
+            by: 'Sam Support',
+            text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+          },
+          { event: 'assigned', by: 'Sam Support' },
+          { event: 'subscribed', by: 'Sam Support' },
+          {
+            event: 'mentioned',
+            by: 'Sam Support',
+            where: 'description',
+            text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+          },
+          {
+            event: 'raised',
+            by: 'Sam Support',
+            text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+          },
+        ],
+      });
+      return { email, url };
+    },
+    /**
+     * The email about a solution, to someone who may answer it.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'a solution to answer': async (locale, brand) => {
+      const url = `${appUrl}/requests/142`;
+      const email = await requestUpdateEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        reference: 'AD-142',
+        title: 'Adiutor Tests',
+        companyName: 'Adiutor Tests',
+        url,
+        role: 'subscriber',
+        audience: 'contributor',
+        items: [
+          {
+            event: 'status',
+            by: 'Sam Support',
+            bySide: 'staff',
+            from: 'in_progress',
+            to: 'proposed',
+          },
+        ],
+        answerLinks: {
+          approve: `${appUrl}/answer/t0k3n/approve`,
+          deny: `${appUrl}/answer/t0k3n/deny`,
         },
-        { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'open', to: 'waiting' },
-        {
-          event: 'note',
-          by: 'Sam Support',
-          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
-        },
-        { event: 'assigned', by: 'Sam Support' },
-        { event: 'subscribed', by: 'Sam Support' },
-        {
-          event: 'mentioned',
-          by: 'Sam Support',
-          where: 'description',
-          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
-        },
-        {
-          event: 'raised',
-          by: 'Sam Support',
-          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
-        },
-      ],
-    });
-    return { email, url };
-  },
-  /**
-   * The email about a solution, to someone who may answer it.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'a solution to answer': async (locale) => {
-    const url = `${appUrl}/requests/142`;
-    const email = await requestUpdateEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      reference: 'AD-142',
-      title: 'Adiutor Tests',
-      companyName: 'Adiutor Tests',
-      url,
-      role: 'subscriber',
-      audience: 'contributor',
-      items: [
-        {
-          event: 'status',
-          by: 'Sam Support',
-          bySide: 'staff',
-          from: 'in_progress',
-          to: 'proposed',
-        },
-      ],
-      answerLinks: {
-        approve: `${appUrl}/answer/t0k3n/approve`,
-        deny: `${appUrl}/answer/t0k3n/deny`,
-      },
-    });
-    return { email, url };
-  },
-  /**
-   * The "job keeps failing" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'job keeps failing': async (locale) => {
-    const url = `${appUrl}/admin/logs/errors?q=7KQ2-M9XD`;
-    const email = await jobFailingEmail('alex@adiutor.test', {
-      appUrl,
-      locale,
-      job: 'invitation-reminders',
-      failure: 'recurring',
-      count: 3,
-      reference: '7KQ2-M9XD',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The "new staff Admin" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'new staff Admin': async (locale) => {
-    const url = `${appUrl}/admin/settings/staff`;
-    const email = await staffAdminAddedEmail('alex@adiutor.test', {
-      appUrl,
-      locale,
-      newAdminName: 'Sam Tester',
-      newAdminEmail: 'sam@adiutor.test',
-      how: 'invitation',
-      byName: 'Jane Admin',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The "a webhook was turned off" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'a webhook turned off': async (locale) => {
-    const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
-    const email = await webhookTurnedOffEmail('alex@adiutor.test', {
-      appUrl,
-      locale,
-      name: 'Procurement',
-      reason: 'failing',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The mail server's test email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'mail server test': async (locale) => {
-    const url = `${appUrl}/admin/settings/email`;
-    const email = await smtpTestEmail('jane@adiutor.test', {
-      appUrl,
-      locale,
-      server: 'smtp.adiutor.test:587',
-      url,
-    });
-    return { email, url };
-  },
-  /**
-   * The "the mail server changed" email.
-   *
-   * @param locale - The language.
-   * @returns The email and its main link.
-   */
-  'mail server changed': async (locale) => {
-    const url = `${appUrl}/admin/settings/email`;
-    const email = await smtpChangedEmail('alex@adiutor.test', {
-      appUrl,
-      locale,
-      server: 'smtp.adiutor.test:587',
-      byName: 'Jane Admin',
-      url,
-    });
-    return { email, url };
-  },
-};
+      });
+      return { email, url };
+    },
+    /**
+     * The "job keeps failing" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'job keeps failing': async (locale, brand) => {
+      const url = `${appUrl}/admin/logs/errors?q=7KQ2-M9XD`;
+      const email = await jobFailingEmail('alex@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        job: 'invitation-reminders',
+        failure: 'recurring',
+        count: 3,
+        reference: '7KQ2-M9XD',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "new staff Admin" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'new staff Admin': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/staff`;
+      const email = await staffAdminAddedEmail('alex@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        newAdminName: 'Sam Tester',
+        newAdminEmail: 'sam@adiutor.test',
+        how: 'invitation',
+        byName: 'Jane Admin',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "a webhook was turned off" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'a webhook turned off': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+      const email = await webhookTurnedOffEmail('alex@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        name: 'Procurement',
+        reason: 'failing',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The mail server's test email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'mail server test': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/email`;
+      const email = await smtpTestEmail('jane@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        server: 'smtp.adiutor.test:587',
+        url,
+      });
+      return { email, url };
+    },
+    /**
+     * The "the mail server changed" email.
+     *
+     * @param locale - The language.
+     * @param brand - The brand, if any.
+     * @returns The email and its main link.
+     */
+    'mail server changed': async (locale, brand) => {
+      const url = `${appUrl}/admin/settings/email`;
+      const email = await smtpChangedEmail('alex@adiutor.test', {
+        appUrl,
+        locale,
+        brand,
+        server: 'smtp.adiutor.test:587',
+        byName: 'Jane Admin',
+        url,
+      });
+      return { email, url };
+    },
+  };
 
 /**
  * The templates whose subject has no words of its own to translate: an email
@@ -1407,6 +1666,7 @@ describe('every template in every language', () => {
       appUrl,
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       url: `${appUrl}/invite/abc`,
       validDays: 7,
@@ -1436,6 +1696,7 @@ describe('every template in every language', () => {
       timeZone: 'Asia/Kolkata',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'client',
       url: `${appUrl}/invite/abc`,
       expiresAt: new Date('2026-10-25T14:05:00Z'),
@@ -1450,6 +1711,7 @@ describe('every template in every language', () => {
       timeZone: 'Europe/Amsterdam',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'watcher',
       url: `${appUrl}/invite/abc`,
       expiresAt: new Date('2026-10-25T14:05:00Z'),
@@ -1462,6 +1724,7 @@ describe('every template in every language', () => {
       locale: 'nl-NL',
       inviterName: 'Sam Doe',
       companyName: 'Adiutor Tests',
+      target: 'company',
       role: 'watcher',
       url: `${appUrl}/invite/abc`,
       validDays: 1,
@@ -1485,6 +1748,157 @@ describe('every template in every language', () => {
     expect(notice.text).toContain('Cuándo: 23 oct 2026, 14:05 UTC');
     expect(notice.text).toContain('Desde: Firefox en Windows, 203.0.113.7');
     expect(notice.text).toContain('Enviado por Adiutor');
+  });
+});
+
+/** "Powered by Adiutor" in each language: the footer's last line once the staff have a name. */
+const POWERED_BY: Record<Locale, string> = {
+  'en-US': 'Powered by Adiutor',
+  'nl-NL': 'Mogelijk gemaakt door Adiutor',
+  'es-ES': 'Con la tecnología de Adiutor',
+};
+
+/**
+ * The words that must never come right before the staff's name, per
+ * language: an article or a possessive, which would read oddly with a name
+ * like "The Service Desk".
+ */
+const BEFORE_THE_NAME: Record<Locale, RegExp> = {
+  'en-US': /\b(?:a|an|the|your)\s+Acme Support/i,
+  'nl-NL': /\b(?:een|de|het|je|jouw)\s+Acme Support/i,
+  'es-ES': /\b(?:un|una|el|la|los|las|tu)\s+Acme Support/i,
+};
+
+/**
+ * Builds one security notice of a kind, with every name it can show.
+ *
+ * @param locale - The language.
+ * @param kind - What changed.
+ * @param brand - The brand, if any.
+ * @returns The email.
+ */
+function everyNotice(locale: Locale, kind: SecurityNoticeKind, brand?: EmailBrand) {
+  return securityNoticeEmail('jane@adiutor.test', {
+    appUrl,
+    locale,
+    brand,
+    kind,
+    when: new Date('2026-10-23T14:05:00Z'),
+    timeZone: 'UTC',
+    provider: 'GitHub',
+    role: 'client',
+    company: 'Adiutor Tests',
+    staffMember: 'Sam Lee',
+  });
+}
+
+describe('the staff’s name', () => {
+  /** A staff with a name of their own, which reads like a team's. */
+  const acme: EmailBrand = { colours: DEFAULT_EMAIL_COLOURS, name: 'Acme Support' };
+  /** The brand before setup names the staff: Adiutor's own name. */
+  const own: EmailBrand = { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor' };
+
+  /** Every email, as `[locale, name, build]`: every template and every security notice. */
+  const emails = LOCALES.flatMap((locale) => [
+    ...Object.entries(EVERY_TEMPLATE).map(
+      ([name, build]) =>
+        [locale, name, async (brand?: EmailBrand) => (await build(locale, brand)).email] as const,
+    ),
+    ...SECURITY_NOTICE_KINDS.map(
+      (kind) =>
+        [
+          locale,
+          `the ${kind} notice`,
+          (brand?: EmailBrand) => everyNotice(locale, kind, brand),
+        ] as const,
+    ),
+  ]);
+
+  it.each(emails)(
+    '%s: %s names the staff instead of Adiutor, which only says it powers it',
+    async (locale, _name, build) => {
+      const email = await build(acme);
+      const subjectAndText = `${email.subject}\n${email.text}`;
+      /**
+       * What the email says in its own words: without the footer's "Powered by
+       * Adiutor" and the test data, whose company is "Adiutor Tests".
+       *
+       * @param part - The subject, HTML or plain text.
+       * @returns The part without them.
+       */
+      const ownWords = (part: string) =>
+        part.replaceAll(POWERED_BY[locale], '').replaceAll('Adiutor Tests', '');
+
+      expect(ownWords(email.subject)).not.toContain('Adiutor');
+      expect(ownWords(email.html)).not.toContain('Adiutor');
+      expect(ownWords(email.text)).not.toContain('Adiutor');
+      expect(email.html).toContain('alt="Acme Support"');
+      expect(email.html).toContain('>Acme Support</a>');
+      // Once, at the end of the footer, in the plain text too.
+      expect(email.html.split(POWERED_BY[locale])).toHaveLength(2);
+      expect(email.text.split(POWERED_BY[locale])).toHaveLength(2);
+      expect(email.text.trimEnd().endsWith(POWERED_BY[locale])).toBe(true);
+      // Never twice in a sentence ("join Acme Support on Acme Support"), never after an article,
+      // never as part of a word ("Acme Support-account").
+      for (const sentence of subjectAndText.split(/(?<=[.!?:])\s+|\n+/)) {
+        expect(sentence.split('Acme Support').length).toBeLessThanOrEqual(2);
+      }
+      expect(subjectAndText).not.toMatch(BEFORE_THE_NAME[locale]);
+      expect(subjectAndText).not.toMatch(/Acme Support(?:-\w|['’]s\b)/);
+    },
+  );
+
+  it.each(emails)(
+    '%s: %s reads the same with Adiutor’s own name as without a brand',
+    async (locale, _name, build) => {
+      const [withoutBrand, withOwnName] = await Promise.all([build(), build(own)]);
+
+      expect(withOwnName).toEqual(withoutBrand);
+      expect(withoutBrand.html).not.toContain(POWERED_BY[locale]);
+      expect(withoutBrand.text).not.toContain(POWERED_BY[locale]);
+      expect(withoutBrand.html).toContain('alt="Adiutor"');
+    },
+  );
+
+  it('names nobody in a sender’s place when their account is gone, so the staff’s name shows once', async () => {
+    const [reminder, added] = await Promise.all([
+      invitationReminderEmail('jane@adiutor.test', {
+        ...english,
+        brand: acme,
+        timeZone: 'UTC',
+        inviterName: null,
+        companyName: 'Acme Support',
+        target: 'staff',
+        role: 'manager',
+        url: `${appUrl}/invite/abc`,
+        expiresAt: new Date('2026-10-25T14:05:00Z'),
+      }),
+      addedToCompanyEmail('jane@adiutor.test', {
+        ...english,
+        brand: acme,
+        adderName: null,
+        companyName: 'Adiutor Tests',
+        role: 'client',
+        url: `${appUrl}/companies/abc`,
+      }),
+    ]);
+
+    expect(reminder.text).toContain(
+      "You're invited to join Acme Support as Manager. The invitation is still open until Oct 25, 2026, 2:05 PM UTC.",
+    );
+    expect(reminder.text).toContain(
+      "You're receiving this because this email address was invited to Acme Support and the invitation hasn't been accepted yet.",
+    );
+    expect(added.text).toContain('You were added to Adiutor Tests on Acme Support as Client.');
+    expect(added.text).toContain(
+      "You're receiving this because your account was added to Adiutor Tests.",
+    );
+    for (const email of [reminder, added]) {
+      expect(email.text).not.toMatch(/Acme Support (?:invited|added)/);
+      for (const sentence of `${email.subject}\n${email.text}`.split(/(?<=[.!?:])\s+|\n+/)) {
+        expect(sentence.split('Acme Support').length).toBeLessThanOrEqual(2);
+      }
+    }
   });
 });
 
@@ -1597,6 +2011,7 @@ describe('brand colours', () => {
     colours: emailColoursOf(
       derivePalette({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' }),
     ),
+    name: 'Adiutor',
   };
 
   it('draws the page, the button and the links in the brand’s colours', async () => {
@@ -1638,6 +2053,7 @@ describe('brand colours', () => {
         brand,
         inviterName: 'Sam Doe',
         companyName: 'Adiutor Tests',
+        target: 'company',
         role: 'client',
         url: `${appUrl}/invite/abc`,
         validDays: 7,
@@ -1657,7 +2073,7 @@ describe('brand colours', () => {
     });
     const withDefaults = await magicLinkEmail('jane@adiutor.test', {
       ...english,
-      brand: { colours: DEFAULT_EMAIL_COLOURS },
+      brand: { colours: DEFAULT_EMAIL_COLOURS, name: 'Adiutor' },
       url: `${appUrl}/auth/email-link?token=abc`,
     });
 

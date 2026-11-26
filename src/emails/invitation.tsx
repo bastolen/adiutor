@@ -10,12 +10,12 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
-import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
+import { type EmailBaseProps, type InviteTarget, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
 /**
@@ -24,8 +24,13 @@ import renderEmail from './render';
 export interface InvitationEmailProps extends EmailBaseProps {
   /** Name (or email) of the person who sent the invitation. */
   inviterName: string;
-  /** Name of the company. */
+  /** Name of the company, or the staff's for an invitation to the staff. */
   companyName: string;
+  /**
+   * Whether it's to a company or to the staff, whose name `companyName` then
+   * holds: the email names it once (`InviteTarget`).
+   */
+  target: InviteTarget;
   /** The role they'll get. */
   role: Role;
   /** Link to accept the invitation. */
@@ -42,6 +47,7 @@ export default function InvitationEmail({
   appUrl,
   inviterName,
   companyName,
+  target,
   role,
   url,
   validDays,
@@ -54,6 +60,8 @@ export default function InvitationEmail({
   const values = {
     inviter: inviterName,
     company: companyName,
+    target,
+    staff: emailName(brand),
     role: translator(locale, 'roles')(`${role}.label`),
   };
   return (
@@ -82,6 +90,7 @@ InvitationEmail.PreviewProps = {
   ...PREVIEW_BASE,
   inviterName: 'Alex Doe',
   companyName: 'Adiutor',
+  target: 'company',
   role: 'client',
   url: 'https://adiutor.dev/invite/example',
   validDays: 7,
@@ -100,6 +109,8 @@ export function invitationEmail(to: string, props: InvitationEmailProps): Promis
     translator(props.locale, 'emails.invitation')('subject', {
       inviter: props.inviterName,
       company: props.companyName,
+      target: props.target,
+      staff: emailName(props.brand),
     }),
     <InvitationEmail {...props} />,
   );

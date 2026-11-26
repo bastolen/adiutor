@@ -97,7 +97,9 @@ describe('deactivateOwnAccount', () => {
       'trust-device-someone-else',
     ]);
     await sendQueuedEmails(ctx);
-    expect(sent.map((email) => email.subject)).toEqual(['Your Adiutor account was deactivated']);
+    expect(sent.map((email) => email.subject)).toEqual([
+      'Your account on Adiutor Tests was deactivated',
+    ]);
     expect(await actionsAbout(jane)).toEqual(['password_check_failed', 'account_deactivated']);
     const [wrong] = await auditEvents(db, {
       action: 'password_check_failed',

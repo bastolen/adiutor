@@ -99,20 +99,20 @@ describe('forgetting trusted devices', () => {
     {
       path: '/two-factor/disable',
       action: 'two_factor_disabled',
-      subject: 'Two-step verification was turned off on your Adiutor account',
+      subject: 'Two-step verification was turned off for your account on Adiutor',
       // An earlier "Trust this device" mustn't skip the code step once it's turned back on.
       forgetsDevices: true,
     },
     {
       path: '/two-factor/generate-backup-codes',
       action: 'backup_codes_regenerated',
-      subject: 'New backup codes for your Adiutor account',
+      subject: 'New backup codes for your account on Adiutor',
       forgetsDevices: false,
     },
     {
       path: '/passkey/delete-passkey',
       action: 'passkey_removed',
-      subject: 'A passkey was removed from your Adiutor account',
+      subject: 'A passkey was removed from your account on Adiutor',
       forgetsDevices: false,
     },
   ])('after $path', ({ path, action, subject, forgetsDevices }) => {

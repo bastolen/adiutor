@@ -8,7 +8,7 @@
  */
 import type { CSSProperties } from 'react';
 
-import { type BrandPalette, type HexColour, isHexColour } from '@/lib/branding';
+import { ADIUTOR_NAME, type BrandPalette, type HexColour, isHexColour } from '@/lib/branding';
 
 /** The colours an email is drawn with. */
 export interface EmailColours {
@@ -122,4 +122,15 @@ export function small(colours: EmailColours): CSSProperties {
     fontSize: '13px',
     lineHeight: '20px',
   };
+}
+
+/**
+ * The name an email shows instead of "Adiutor": the staff's, or Adiutor's
+ * own without a brand (the template preview).
+ *
+ * @param brand - The email's `brand` prop.
+ * @returns The name, for a message's `{staff}` argument.
+ */
+export function emailName(brand: { name: string } | undefined): string {
+  return brand?.name ?? ADIUTOR_NAME;
 }

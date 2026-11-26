@@ -2,7 +2,7 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welkom, {name}",
-    "staffDescription": "Werk aan verzoeken, open een bedrijf, of bekijk iedereen die Adiutor gebruikt.",
+    "staffDescription": "Werk aan verzoeken, open een bedrijf, of bekijk alle gebruikers.",
     "companyDescription": "{canRaise, select, yes {Dien een verzoek in, of bekijk hoe het met de openstaande verzoeken gaat.} other {Bekijk hoe het met de openstaande verzoeken gaat.}}",
     "mfaRecommendation": {
       "label": "Accountbeveiliging",

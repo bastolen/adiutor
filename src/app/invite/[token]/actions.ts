@@ -15,6 +15,7 @@ import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import markActingAsChanged from '@/server/auth/acting-as-changed';
 import { getActor } from '@/server/authz';
+import { requestStaffName } from '@/server/branding';
 import {
   acceptInvitation,
   acceptInvitationWithNewAccount,
@@ -76,7 +77,7 @@ export async function createAccountAction(
     }
     const t = await getTranslations('auth');
     if (result.status === 'account_exists') {
-      return { ok: false, message: t('invite.accountExists') };
+      return { ok: false, message: t('invite.accountExists', { staff: await requestStaffName() }) };
     }
     return { ok: false, message: t('invite.unusable') };
   });

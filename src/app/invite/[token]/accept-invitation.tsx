@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import accountTag from '@/components/auth/account-tag';
+import { useStaffName } from '@/components/brand/staff-name';
 import AuthDivider from '@/components/ui/auth-divider';
 import Button from '@/components/ui/button';
 import ResultAlert from '@/components/ui/result-alert';
@@ -60,6 +61,7 @@ function JoinAsSignedInUser({ token, email }: { token: string; email: string }) 
  */
 function SignInOrCreateAccount({ token }: { token: string }) {
   const t = useTranslations('auth');
+  const staff = useStaffName();
   const [result, formAction, pending, onSubmit] = useTransientActionState(
     createAccountAction,
     null,
@@ -97,7 +99,7 @@ function SignInOrCreateAccount({ token }: { token: string }) {
       <AuthDivider>{t('invite.or')}</AuthDivider>
 
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{t('invite.haveAccount')}</p>
+        <p className="text-sm text-muted-foreground">{t('invite.haveAccount', { staff })}</p>
         <Button variant="secondary" fullWidth asChild>
           <Link href={signInHref}>{t('invite.signInToAccept')}</Link>
         </Button>

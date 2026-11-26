@@ -1,63 +1,64 @@
 {
   "emails": {
     "layout": {
-      "logoAlt": "Adiutor",
-      "sentBy": "Verstuurd door <link>Adiutor</link>"
+      "logoAlt": "{staff}",
+      "sentBy": "Verstuurd door <link>{staff}</link>",
+      "poweredBy": "Mogelijk gemaakt door Adiutor"
     },
     "linkFallback": "Werkt de knop niet? Kopieer deze link naar je browser: <link>{url}</link>",
     "magicLink": {
-      "subject": "Je inloglink voor Adiutor",
-      "preview": "Je link om in te loggen bij Adiutor",
-      "reason": "Je ontvangt dit omdat iemand heeft gevraagd om met dit e-mailadres in te loggen bij Adiutor. Was jij dat niet, dan kun je deze e-mail negeren: zonder deze link kan niemand inloggen.",
-      "heading": "Inloggen bij Adiutor",
+      "subject": "Je inloglink voor {staff}",
+      "preview": "Je link om in te loggen bij {staff}",
+      "reason": "Je ontvangt dit omdat iemand heeft gevraagd om met dit e-mailadres in te loggen bij {staff}. Was jij dat niet, dan kun je deze e-mail negeren: zonder deze link kan niemand inloggen.",
+      "heading": "Inloggen bij {staff}",
       "body": "{minutes, plural, one {Log in met de knop hieronder. De link werkt één keer en verloopt over # minuut.} other {Log in met de knop hieronder. De link werkt één keer en verloopt over # minuten.}}",
       "button": "Inloggen"
     },
     "resetPassword": {
-      "subject": "Stel je Adiutor-wachtwoord opnieuw in",
-      "preview": "Kies een nieuw wachtwoord voor Adiutor",
+      "subject": "Stel je wachtwoord voor {staff} opnieuw in",
+      "preview": "Kies een nieuw wachtwoord voor {staff}",
       "reason": "Je ontvangt dit omdat iemand heeft gevraagd het wachtwoord van dit e-mailadres opnieuw in te stellen. Was jij dat niet, dan kun je deze e-mail negeren: je wachtwoord blijft hetzelfde.",
       "heading": "Stel je wachtwoord opnieuw in",
-      "body": "We hebben een verzoek ontvangen om het wachtwoord van je Adiutor-account opnieuw in te stellen. Kies een nieuw wachtwoord met de knop hieronder. De link verloopt over 1 uur.",
+      "body": "We hebben een verzoek ontvangen om het wachtwoord van je account bij {staff} opnieuw in te stellen. Kies een nieuw wachtwoord met de knop hieronder. De link verloopt over 1 uur.",
       "button": "Kies een nieuw wachtwoord"
     },
     "verifyEmail": {
-      "subject": "Bevestig je e-mailadres voor Adiutor",
+      "subject": "Bevestig je e-mailadres voor {staff}",
       "preview": "Bevestig dat dit jouw e-mailadres is",
-      "reason": "Je ontvangt dit omdat iemand heeft gevraagd dit e-mailadres te bevestigen voor een Adiutor-account. Was jij dat niet, dan kun je deze e-mail negeren.",
+      "reason": "Je ontvangt dit omdat iemand heeft gevraagd dit e-mailadres te bevestigen voor een account bij {staff}. Was jij dat niet, dan kun je deze e-mail negeren.",
       "heading": "Bevestig je e-mailadres",
       "body": "Bevestig dat dit e-mailadres van jou is. Zodra het bevestigd is, kunnen accounts met hetzelfde adres bij een provider waarmee je kunt inloggen (zoals GitHub) automatisch aan je account worden gekoppeld. De link verloopt over 1 uur.",
       "button": "E-mailadres bevestigen"
     },
     "twoFactorCode": {
-      "subject": "Je inlogcode voor Adiutor",
-      "preview": "Je Adiutor-code is {code}",
-      "reason": "Je ontvangt dit omdat iemand met je wachtwoord bij Adiutor heeft ingelogd, of codes per e-mail heeft aangezet voor je account. Was jij dat niet, wijzig dan meteen je wachtwoord.",
+      "subject": "Je inlogcode voor {staff}",
+      "preview": "Je code voor {staff} is {code}",
+      "reason": "Je ontvangt dit omdat iemand met je wachtwoord bij {staff} heeft ingelogd, of codes per e-mail heeft aangezet voor je account. Was jij dat niet, wijzig dan meteen je wachtwoord.",
       "heading": "Je inlogcode",
-      "intro": "Vul deze code in bij Adiutor om verder te gaan:",
+      "intro": "Vul deze code in om verder te gaan met inloggen:",
       "note": "{minutes, plural, one {De code verloopt over # minuut. Deel hem nooit met iemand.} other {De code verloopt over # minuten. Deel hem nooit met iemand.}}"
     },
     "invitation": {
-      "subject": "{inviter} nodigt je uit voor {company} op Adiutor",
-      "preview": "Word lid van {company} op Adiutor als {role}",
+      "subject": "{target, select, staff {{inviter} nodigt je uit voor {staff}} other {{inviter} nodigt je uit voor {company} op {staff}}}",
+      "preview": "{target, select, staff {Word lid van {staff} als {role}} other {Word lid van {company} op {staff} als {role}}}",
       "reason": "Je ontvangt dit omdat {inviter} dit e-mailadres heeft uitgenodigd voor {company}. Had je dit niet verwacht, dan kun je deze e-mail negeren.",
       "heading": "Word lid van {company}",
-      "body": "{inviter} nodigt je uit om lid te worden van {company} op Adiutor als {role}.",
+      "body": "{target, select, staff {{inviter} nodigt je uit om lid te worden van {staff} als {role}.} other {{inviter} nodigt je uit om lid te worden van {company} op {staff} als {role}.}}",
       "button": "Uitnodiging accepteren",
       "note": "{days, plural, one {De link werkt één keer en verloopt over # dag. Je kunt inloggen met een bestaand account of een nieuw account maken.} other {De link werkt één keer en verloopt over # dagen. Je kunt inloggen met een bestaand account of een nieuw account maken.}}"
     },
     "invitationReminder": {
-      "subject": "Herinnering: word lid van {company} op Adiutor",
+      "subject": "{target, select, staff {Herinnering: word lid van {staff}} other {Herinnering: word lid van {company} op {staff}}}",
       "preview": "Je uitnodiging voor {company} verloopt binnenkort",
-      "reason": "Je ontvangt dit omdat {inviter} dit e-mailadres heeft uitgenodigd voor {company} en de uitnodiging nog niet is geaccepteerd. Had je dit niet verwacht, dan kun je deze e-mail negeren.",
+      "reason": "{by, select, none {Je ontvangt dit omdat dit e-mailadres is uitgenodigd voor {company} en de uitnodiging nog niet is geaccepteerd. Had je dit niet verwacht, dan kun je deze e-mail negeren.} other {Je ontvangt dit omdat {inviter} dit e-mailadres heeft uitgenodigd voor {company} en de uitnodiging nog niet is geaccepteerd. Had je dit niet verwacht, dan kun je deze e-mail negeren.}}",
       "heading": "Je uitnodiging verloopt binnenkort",
-      "body": "{inviter} nodigt je uit om lid te worden van {company} op Adiutor als {role}. De uitnodiging staat nog open tot {expires}.",
+      "body": "{by, select, none {{target, select, staff {Je bent uitgenodigd om lid te worden van {staff} als {role}. De uitnodiging staat nog open tot {expires}.} other {Je bent uitgenodigd om lid te worden van {company} op {staff} als {role}. De uitnodiging staat nog open tot {expires}.}}} other {{target, select, staff {{inviter} nodigt je uit om lid te worden van {staff} als {role}. De uitnodiging staat nog open tot {expires}.} other {{inviter} nodigt je uit om lid te worden van {company} op {staff} als {role}. De uitnodiging staat nog open tot {expires}.}}}}",
       "button": "Uitnodiging accepteren",
       "note": "Deze link vervangt die uit de eerdere e-mail, die niet meer werkt. Hij werkt één keer."
     },
     "inviteLinkConfirmation": {
       "subject": "Bevestig je e-mailadres om lid te worden van {company}",
-      "preview": "Nog één stap om lid te worden van {company} op Adiutor",
+      "preview": "{target, select, staff {Nog één stap om lid te worden van {staff}} other {Nog één stap om lid te worden van {company} op {staff}}}",
       "reason": "Je ontvangt dit omdat iemand met dit e-mailadres een uitnodigingslink voor {company} heeft gebruikt. Was jij dat niet, dan kun je deze e-mail negeren.",
       "heading": "Bevestig je e-mailadres",
       "body": "Je hebt een uitnodigingslink voor {company} geopend. Bevestig dat dit jouw e-mailadres is om lid te worden als {role}.",
@@ -65,71 +66,71 @@
       "note": "{days, plural, one {De link werkt één keer en verloopt over # dag.} other {De link werkt één keer en verloopt over # dagen.}}"
     },
     "alreadyMember": {
-      "subject": "Je bent al lid van {company} op Adiutor",
+      "subject": "{target, select, staff {Je bent al lid van {staff}} other {Je bent al lid van {company} op {staff}}}",
       "preview": "Je hoeft niets te doen",
       "reason": "Je ontvangt dit omdat iemand dit e-mailadres heeft geprobeerd uit te nodigen voor {company}.",
       "heading": "Je bent al lid",
-      "body": "Iemand probeerde je uit te nodigen voor {company} op Adiutor, maar je bent al lid. Je hoeft niets te doen.",
+      "body": "{target, select, staff {Iemand probeerde je uit te nodigen voor {staff}, maar je bent al lid. Je hoeft niets te doen.} other {Iemand probeerde je uit te nodigen voor {company} op {staff}, maar je bent al lid. Je hoeft niets te doen.}}",
       "button": "{company} openen"
     },
     "alreadyInvited": {
-      "subject": "Je hebt al een uitnodiging voor {company} op Adiutor",
+      "subject": "{target, select, staff {Je hebt al een uitnodiging voor {staff}} other {Je hebt al een uitnodiging voor {company} op {staff}}}",
       "preview": "Gebruik je eerdere uitnodiging voor {company}",
       "reason": "Je ontvangt dit omdat iemand met dit e-mailadres een uitnodigingslink voor {company} heeft gebruikt. Was jij dat niet, dan kun je deze e-mail negeren.",
       "heading": "Je hebt al een uitnodiging",
-      "body": "Je hebt een uitnodigingslink voor {company} op Adiutor geopend, maar voor dit e-mailadres staat daar al een uitnodiging open. Gebruik de uitnodigingsmail die je eerder hebt ontvangen om lid te worden.",
+      "body": "{target, select, staff {Je hebt een uitnodigingslink voor {staff} geopend, maar voor dit e-mailadres staat daar al een uitnodiging open. Gebruik de uitnodigingsmail die je eerder hebt ontvangen om lid te worden.} other {Je hebt een uitnodigingslink voor {company} op {staff} geopend, maar voor dit e-mailadres staat daar al een uitnodiging open. Gebruik de uitnodigingsmail die je eerder hebt ontvangen om lid te worden.}}",
       "expired": "Is die uitnodiging verlopen, vraag dan degene die je uitnodigde om je een nieuwe te sturen.",
-      "button": "Naar Adiutor"
+      "button": "Naar {staff}"
     },
     "addedToCompany": {
-      "subject": "Je bent toegevoegd aan {company} op Adiutor",
-      "preview": "Je hebt nu toegang tot {company} op Adiutor",
-      "reason": "Je ontvangt dit omdat {adder} je account heeft toegevoegd aan {company}.",
+      "subject": "Je bent toegevoegd aan {company} op {staff}",
+      "preview": "Je hebt nu toegang tot {company} op {staff}",
+      "reason": "{by, select, none {Je ontvangt dit omdat je account is toegevoegd aan {company}.} other {Je ontvangt dit omdat {adder} je account heeft toegevoegd aan {company}.}}",
       "heading": "Je bent toegevoegd aan {company}",
-      "body": "{adder} heeft je toegevoegd aan {company} op Adiutor als {role}.",
+      "body": "{by, select, none {Je bent toegevoegd aan {company} op {staff} als {role}.} other {{adder} heeft je toegevoegd aan {company} op {staff} als {role}.}}",
       "button": "{company} openen"
     },
     "accountCreated": {
-      "subject": "Je Adiutor-account staat klaar",
-      "reason": "Je ontvangt dit omdat {creator} van {staff} een Adiutor-account heeft gemaakt voor dit e-mailadres. Had je dit niet verwacht, dan kun je deze e-mail negeren.",
-      "heading": "Je Adiutor-account staat klaar",
-      "body": "{creator} van {staff} heeft een Adiutor-account voor je gemaakt. Kies een wachtwoord om in te loggen.",
+      "subject": "Je account bij {staff} staat klaar",
+      "reason": "Je ontvangt dit omdat {creator} van {staff} een account heeft gemaakt voor dit e-mailadres. Had je dit niet verwacht, dan kun je deze e-mail negeren.",
+      "heading": "Je account bij {staff} staat klaar",
+      "body": "{creator} van {staff} heeft een account voor je gemaakt. Kies een wachtwoord om in te loggen.",
       "button": "Kies je wachtwoord",
       "note": "{days, plural, one {De link werkt één keer en verloopt over # dag. Je kunt ook inloggen met een link die naar dit adres wordt gestuurd, via {signInUrl}.} other {De link werkt één keer en verloopt over # dagen. Je kunt ook inloggen met een link die naar dit adres wordt gestuurd, via {signInUrl}.}}"
     },
     "staffAdminAdded": {
-      "subject": "{name} is nu beheerder van de medewerkers op Adiutor",
-      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het altijd wanneer iemand beheerder wordt.",
+      "subject": "{name} is nu beheerder van de medewerkers op {staff}",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders horen het altijd wanneer iemand beheerder wordt.",
       "heading": "{name} is nu beheerder van de medewerkers",
       "nameWithEmail": "{name} ({email})",
-      "madeBy": "{by} heeft {who} beheerder van de medewerkers gemaakt op Adiutor.",
-      "made": "{who} is beheerder van de medewerkers gemaakt op Adiutor.",
-      "acceptedFrom": "{who} heeft de uitnodiging van {by} geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
-      "accepted": "{who} heeft een uitnodiging voor de medewerkers geaccepteerd en is nu beheerder van de medewerkers op Adiutor.",
-      "reactivatedBy": "{by} heeft het account van {who} opnieuw geactiveerd, dat weer beheerder van de medewerkers is op Adiutor.",
-      "reactivated": "Het account van {who} is opnieuw geactiveerd en is weer beheerder van de medewerkers op Adiutor.",
-      "advice": "Beheerders van de medewerkers kunnen alles beheren op Adiutor, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
+      "madeBy": "{by} heeft {who} beheerder van de medewerkers gemaakt op {staff}.",
+      "made": "{who} is beheerder van de medewerkers gemaakt op {staff}.",
+      "acceptedFrom": "{who} heeft de uitnodiging van {by} geaccepteerd en is nu beheerder van de medewerkers op {staff}.",
+      "accepted": "{who} heeft een uitnodiging voor de medewerkers geaccepteerd en is nu beheerder van de medewerkers op {staff}.",
+      "reactivatedBy": "{by} heeft het account van {who} opnieuw geactiveerd, dat weer beheerder van de medewerkers is op {staff}.",
+      "reactivated": "Het account van {who} is opnieuw geactiveerd en is weer beheerder van de medewerkers op {staff}.",
+      "advice": "Beheerders van de medewerkers kunnen alles beheren op {staff}, ook de medewerkers. Herken je dit niet, haal dan hun toegang als medewerker weg in de instellingen voor medewerkers en bekijk het auditlog.",
       "button": "Instellingen voor medewerkers openen"
     },
     "smtpChanged": {
-      "subject": "Adiutor verstuurt e-mail via een andere mailserver",
-      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het altijd wanneer de mailserver wijzigt.",
+      "subject": "{staff} verstuurt e-mail via een andere mailserver",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders horen het altijd wanneer de mailserver wijzigt.",
       "heading": "De mailserver is gewijzigd",
-      "changedBy": "{by} heeft de mailserver waarmee Adiutor e-mail verstuurt gewijzigd in {server}.",
-      "changed": "De mailserver waarmee Adiutor e-mail verstuurt is gewijzigd in {server}.",
-      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die Adiutor verstuurt. Herken je dit niet, controleer dan de instellingen voor e-mail en de auditlog.",
+      "changedBy": "{by} heeft de mailserver waarmee {staff} e-mail verstuurt gewijzigd in {server}.",
+      "changed": "De mailserver waarmee {staff} e-mail verstuurt is gewijzigd in {server}.",
+      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die {staff} verstuurt. Herken je dit niet, controleer dan de instellingen voor e-mail en de auditlog.",
       "button": "Instellingen voor e-mail openen"
     },
     "smtpTest": {
-      "subject": "Adiutor kan e-mail versturen via deze mailserver",
-      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad E-mail van de instellingen van Adiutor.",
+      "subject": "{staff} kan e-mail versturen via deze mailserver",
+      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad E-mail van de instellingen.",
       "heading": "Deze mailserver werkt",
-      "body": "Adiutor stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
+      "body": "{staff} stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
       "button": "Instellingen voor e-mail openen"
     },
     "jobFailing": {
-      "subject": "Achtergrondtaak {job} blijft mislukken op Adiutor",
-      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op Adiutor: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",
+      "subject": "Achtergrondtaak {job} blijft mislukken op {staff}",
+      "reason": "Je ontvangt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders horen het wanneer een achtergrondtaak blijft mislukken, hooguit één keer per dag per taak.",
       "heading": "{job} blijft mislukken",
       "recurring": "{count, plural, one {De achtergrondtaak {job} is de laatste keer mislukt.} other {De achtergrondtaak {job} is de laatste # keer achter elkaar mislukt.}} De andere taken lopen door, maar deze doet zijn werk pas weer als het probleem is opgelost.",
       "queued": "{count, plural, one {Een taak van {job} is na de laatste poging opgegeven en wordt niet meer vanzelf uitgevoerd.} other {# taken van {job} zijn na de laatste poging opgegeven en worden niet meer vanzelf uitgevoerd.}}",
@@ -147,122 +148,122 @@
       "newRole": "een nieuwe rol",
       "yourCompany": "je bedrijf",
       "someStaffMember": "Een medewerker",
-      "reason": "{kind, select, password_sign_in_paused {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit hooguit één keer per dag.} account_deleted {Je ontvangt dit omdat je Adiutor-account is verwijderd. We sturen dit één keer, naar het adres dat het account had.} two_factor_locked {Je ontvangt dit vanwege mislukte inlogpogingen op je Adiutor-account. We sturen dit één keer telkens als inloggen met een code wordt gepauzeerd.} impersonation_started {Je ontvangt dit omdat een medewerker als jou heeft ingelogd op Adiutor. We sturen dit elke keer, zodat je het altijd weet.} other {Je ontvangt dit omdat er een beveiligingsinstelling van je Adiutor-account is gewijzigd. We sturen dit altijd, zodat je van elke wijziging weet.}}",
+      "reason": "{kind, select, password_sign_in_paused {Je ontvangt dit vanwege mislukte inlogpogingen op je account bij {staff}. We sturen dit hooguit één keer per dag.} account_deleted {Je ontvangt dit omdat je account bij {staff} is verwijderd. We sturen dit één keer, naar het adres dat het account had.} two_factor_locked {Je ontvangt dit vanwege mislukte inlogpogingen op je account bij {staff}. We sturen dit één keer telkens als inloggen met een code wordt gepauzeerd.} impersonation_started {Je ontvangt dit omdat een medewerker als jou heeft ingelogd bij {staff}. We sturen dit elke keer, zodat je het altijd weet.} other {Je ontvangt dit omdat er een beveiligingsinstelling van je account bij {staff} is gewijzigd. We sturen dit altijd, zodat je van elke wijziging weet.}}",
       "ifNotYou": "{kind, select, account_deactivated {Had je dit niet verwacht, neem dan contact op met je beheerder.} company_role_changed {Had je dit niet verwacht, neem dan contact op met je beheerder.} removed_from_company {Had je dit niet verwacht, neem dan contact op met je beheerder.} account_deleted {Had je dit niet verwacht, neem dan contact op met je beheerder.} signed_out_everywhere {Had je dit niet verwacht, neem dan contact op met je beheerder.} account_reactivated {Had je dit niet verwacht, neem dan contact op met je beheerder.} staff_role_granted {Had je dit niet verwacht, neem dan contact op met je beheerder.} staff_role_changed {Had je dit niet verwacht, neem dan contact op met je beheerder.} staff_role_removed {Had je dit niet verwacht, neem dan contact op met je beheerder.} mfa_reset {Heb je dit niet gevraagd, neem dan meteen contact op met je beheerder en wijzig je wachtwoord.} password_sign_in_paused {Was jij dit niet, dan probeert iemand misschien je wachtwoord te raden. Zorg dat je het nergens anders gebruikt, of voeg een passkey toe.} two_factor_locked {Was jij dit niet, dan kent iemand misschien je wachtwoord. Wijzig het meteen en zorg dat je het nergens anders gebruikt.} impersonation_started {Had je dit niet verwacht, neem dan contact op met je beheerder.} other {Was jij dit niet, stel dan meteen je wachtwoord opnieuw in en neem contact op met je beheerder.}}",
       "password_changed": {
-        "subject": "Je Adiutor-wachtwoord is gewijzigd",
+        "subject": "Je wachtwoord voor {staff} is gewijzigd",
         "heading": "Je wachtwoord is gewijzigd",
-        "body": "Het wachtwoord van je Adiutor-account is gewijzigd, en je bent uitgelogd op je andere apparaten."
+        "body": "Het wachtwoord van je account bij {staff} is gewijzigd, en je bent uitgelogd op je andere apparaten."
       },
       "password_added": {
-        "subject": "Er is een wachtwoord toegevoegd aan je Adiutor-account",
+        "subject": "Er is een wachtwoord toegevoegd aan je account bij {staff}",
         "heading": "Er is een wachtwoord toegevoegd",
-        "body": "Je kunt nu ook bij Adiutor inloggen met je e-mailadres en dit wachtwoord."
+        "body": "Je kunt nu ook bij {staff} inloggen met je e-mailadres en dit wachtwoord."
       },
       "password_reset": {
-        "subject": "Je Adiutor-wachtwoord is opnieuw ingesteld",
+        "subject": "Je wachtwoord voor {staff} is opnieuw ingesteld",
         "heading": "Je wachtwoord is opnieuw ingesteld",
-        "body": "Het wachtwoord van je Adiutor-account is opnieuw ingesteld met een link die naar dit adres is gestuurd, en je bent overal uitgelogd."
+        "body": "Het wachtwoord van je account bij {staff} is opnieuw ingesteld met een link die naar dit adres is gestuurd, en je bent overal uitgelogd."
       },
       "two_factor_enabled": {
-        "subject": "Verificatie in twee stappen staat aan voor je Adiutor-account",
+        "subject": "Verificatie in twee stappen staat aan voor je account bij {staff}",
         "heading": "Verificatie in twee stappen staat aan",
-        "body": "Inloggen bij Adiutor met je wachtwoord vraagt nu ook om een code."
+        "body": "Inloggen bij {staff} met je wachtwoord vraagt nu ook om een code."
       },
       "two_factor_disabled": {
-        "subject": "Verificatie in twee stappen is uitgezet voor je Adiutor-account",
+        "subject": "Verificatie in twee stappen is uitgezet voor je account bij {staff}",
         "heading": "Verificatie in twee stappen is uitgezet",
-        "body": "Inloggen bij Adiutor met je wachtwoord vraagt niet langer om een code."
+        "body": "Inloggen bij {staff} met je wachtwoord vraagt niet langer om een code."
       },
       "backup_codes_regenerated": {
-        "subject": "Nieuwe back-upcodes voor je Adiutor-account",
+        "subject": "Nieuwe back-upcodes voor je account bij {staff}",
         "heading": "Je hebt nieuwe back-upcodes",
-        "body": "Er zijn nieuwe back-upcodes gemaakt voor je Adiutor-account. Je oude back-upcodes werken niet meer."
+        "body": "Er zijn nieuwe back-upcodes gemaakt voor je account bij {staff}. Je oude back-upcodes werken niet meer."
       },
       "passkey_added": {
-        "subject": "Er is een passkey toegevoegd aan je Adiutor-account",
+        "subject": "Er is een passkey toegevoegd aan je account bij {staff}",
         "heading": "Er is een passkey toegevoegd",
-        "body": "Met een nieuwe passkey kun je nu inloggen op je Adiutor-account."
+        "body": "Met een nieuwe passkey kun je nu inloggen bij {staff}."
       },
       "passkey_removed": {
-        "subject": "Er is een passkey verwijderd van je Adiutor-account",
+        "subject": "Er is een passkey verwijderd van je account bij {staff}",
         "heading": "Er is een passkey verwijderd",
-        "body": "Met een van je passkeys kun je niet meer inloggen bij Adiutor."
+        "body": "Met een van je passkeys kun je niet meer inloggen bij {staff}."
       },
       "provider_connected": {
-        "subject": "{provider} is gekoppeld aan je Adiutor-account",
+        "subject": "{provider} is gekoppeld aan je account bij {staff}",
         "heading": "{provider} is gekoppeld",
-        "body": "Je kunt nu bij Adiutor inloggen met je {provider}-account."
+        "body": "Je kunt nu bij {staff} inloggen met je {provider}-account."
       },
       "provider_disconnected": {
-        "subject": "{provider} is ontkoppeld van je Adiutor-account",
+        "subject": "{provider} is ontkoppeld van je account bij {staff}",
         "heading": "{provider} is ontkoppeld",
-        "body": "Met je {provider}-account kun je niet meer inloggen bij Adiutor."
+        "body": "Met je {provider}-account kun je niet meer inloggen bij {staff}."
       },
       "mfa_reset": {
-        "subject": "Je verificatie in twee stappen voor Adiutor is gereset",
+        "subject": "Je verificatie in twee stappen voor {staff} is gereset",
         "heading": "Je verificatie in twee stappen is gereset",
-        "body": "Een beheerder heeft verificatie in twee stappen uitgezet voor je Adiutor-account, meestal omdat een telefoon kwijt is. GitHub- of Google-accounts die aan je Adiutor-account gekoppeld waren, zijn ontkoppeld, en je bent overal uitgelogd. Stel verificatie in twee stappen opnieuw in op je Beveiligingspagina."
+        "body": "Een beheerder heeft verificatie in twee stappen uitgezet voor je account bij {staff}, meestal omdat een telefoon kwijt is. GitHub- of Google-accounts die aan je account gekoppeld waren, zijn ontkoppeld, en je bent overal uitgelogd. Stel verificatie in twee stappen opnieuw in op je Beveiligingspagina."
       },
       "signed_out_everywhere": {
-        "subject": "Je bent uitgelogd bij Adiutor",
+        "subject": "Je bent uitgelogd bij {staff}",
         "heading": "Je bent overal uitgelogd",
-        "body": "Een beheerder heeft je Adiutor-account op elk apparaat uitgelogd. Log opnieuw in om verder te gaan."
+        "body": "Een beheerder heeft je op elk apparaat uitgelogd bij {staff}. Log opnieuw in om verder te gaan."
       },
       "account_deactivated": {
-        "subject": "Je Adiutor-account is gedeactiveerd",
+        "subject": "Je account bij {staff} is gedeactiveerd",
         "heading": "Je account is gedeactiveerd",
-        "body": "Je Adiutor-account is gedeactiveerd, en je kunt pas weer inloggen als een beheerder het opnieuw activeert."
+        "body": "Je account bij {staff} is gedeactiveerd, en je kunt pas weer inloggen als een beheerder het opnieuw activeert."
       },
       "account_reactivated": {
-        "subject": "Je Adiutor-account is opnieuw geactiveerd",
+        "subject": "Je account bij {staff} is opnieuw geactiveerd",
         "heading": "Je account is opnieuw geactiveerd",
-        "body": "Een beheerder heeft je Adiutor-account opnieuw geactiveerd. Je kunt weer inloggen."
+        "body": "Een beheerder heeft je account bij {staff} opnieuw geactiveerd. Je kunt weer inloggen."
       },
       "staff_role_granted": {
-        "subject": "Je hebt nu toegang als medewerker tot Adiutor",
+        "subject": "Je hebt nu toegang als medewerker tot {staff}",
         "heading": "Je hebt nu toegang als medewerker",
-        "body": "Een beheerder heeft je medewerker gemaakt op Adiutor, als {role}. Je kunt nu met elk bedrijf werken."
+        "body": "Een beheerder heeft je medewerker gemaakt op {staff}, als {role}. Je kunt nu met elk bedrijf werken."
       },
       "staff_role_changed": {
-        "subject": "Je medewerkersrol op Adiutor is gewijzigd",
+        "subject": "Je medewerkersrol op {staff} is gewijzigd",
         "heading": "Je medewerkersrol is gewijzigd",
-        "body": "Een beheerder heeft je medewerkersrol op Adiutor gewijzigd in {role}."
+        "body": "Een beheerder heeft je medewerkersrol op {staff} gewijzigd in {role}."
       },
       "staff_role_removed": {
-        "subject": "Je toegang als medewerker tot Adiutor is weggehaald",
+        "subject": "Je toegang als medewerker tot {staff} is weggehaald",
         "heading": "Je toegang als medewerker is weggehaald",
-        "body": "Een beheerder heeft je toegang als medewerker op Adiutor weggehaald. Je account en je lidmaatschappen van bedrijven blijven bestaan."
+        "body": "Een beheerder heeft je toegang als medewerker tot {staff} weggehaald. Je account en je lidmaatschappen van bedrijven blijven bestaan."
       },
       "password_sign_in_paused": {
-        "subject": "Inloggen met een wachtwoord op je Adiutor-account is gepauzeerd",
+        "subject": "Inloggen met een wachtwoord op je account bij {staff} is gepauzeerd",
         "heading": "Inloggen met een wachtwoord is gepauzeerd",
-        "body": "Er is te vaak een verkeerd wachtwoord ingevoerd voor je Adiutor-account, dus inloggen met een wachtwoord is een tijdje gepauzeerd. Niemand is ingelogd: het wachtwoord is niet geaccepteerd. Je kunt nog steeds inloggen met een e-maillink of een passkey, en als je je wachtwoord opnieuw instelt, vervalt de pauze."
+        "body": "Er is te vaak een verkeerd wachtwoord ingevoerd voor je account bij {staff}, dus inloggen met een wachtwoord is een tijdje gepauzeerd. Niemand is ingelogd: het wachtwoord is niet geaccepteerd. Je kunt nog steeds inloggen met een e-maillink of een passkey, en als je je wachtwoord opnieuw instelt, vervalt de pauze."
       },
       "company_role_changed": {
-        "subject": "Je rol bij {company} op Adiutor is gewijzigd",
+        "subject": "Je rol bij {company} op {staff} is gewijzigd",
         "heading": "Je rol bij {company} is gewijzigd",
-        "body": "Je rol bij {company} op Adiutor is gewijzigd in {role}."
+        "body": "Je rol bij {company} op {staff} is gewijzigd in {role}."
       },
       "removed_from_company": {
-        "subject": "Je bent verwijderd uit {company} op Adiutor",
+        "subject": "Je bent verwijderd uit {company} op {staff}",
         "heading": "Je bent verwijderd uit {company}",
-        "body": "Je bent verwijderd uit {company} op Adiutor, dus je kunt het niet meer openen. Je account en je andere bedrijven blijven bestaan."
+        "body": "Je bent verwijderd uit {company} op {staff}, dus je kunt het niet meer openen. Je account en je andere bedrijven blijven bestaan."
       },
       "account_deleted": {
-        "subject": "Je Adiutor-account is verwijderd",
+        "subject": "Je account bij {staff} is verwijderd",
         "heading": "Je account is verwijderd",
-        "body": "Een beheerder heeft je Adiutor-account verwijderd, met de inlogmethoden en de lidmaatschappen van bedrijven. Je kunt er niet meer mee inloggen."
+        "body": "Een beheerder heeft je account bij {staff} verwijderd, met de inlogmethoden en de lidmaatschappen van bedrijven. Je kunt er niet meer mee inloggen."
       },
       "two_factor_locked": {
-        "subject": "Inloggen met een code op je Adiutor-account is gepauzeerd",
+        "subject": "Inloggen met een code op je account bij {staff} is gepauzeerd",
         "heading": "Inloggen met een code is gepauzeerd",
-        "body": "Er is te vaak een verkeerde code ingevoerd voor de verificatie in twee stappen van je Adiutor-account, dus inloggen met een code is 15 minuten gepauzeerd. Niemand is ingelogd: de codes zijn niet geaccepteerd."
+        "body": "Er is te vaak een verkeerde code ingevoerd voor de verificatie in twee stappen van je account bij {staff}, dus inloggen met een code is 15 minuten gepauzeerd. Niemand is ingelogd: de codes zijn niet geaccepteerd."
       },
       "impersonation_started": {
-        "subject": "{name} van {staff} heeft als jou ingelogd op Adiutor",
+        "subject": "{name} van {staff} heeft als jou ingelogd",
         "heading": "{name} heeft als jou ingelogd",
-        "body": "{minutes, plural, one {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuut. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.} other {{name} van {staff} heeft als jou ingelogd op Adiutor, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuten. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.}}"
+        "body": "{minutes, plural, one {{name} van {staff} heeft als jou ingelogd, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuut. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.} other {{name} van {staff} heeft als jou ingelogd, om te zien wat jij ziet en te controleren wat er niet werkt. Het stopt na hooguit # minuten. Ondertussen kan niemand je inlogmethoden, je account of iemands toegang wijzigen. Wil je liever niet dat medewerkers als jou inloggen, dan kun je dit uitzetten op je pagina Beveiliging.}}"
       }
     },
     "requestUpdate": {
@@ -287,13 +288,13 @@
       "deny": "Afwijzen",
       "answerNote": "Goedkeuren rondt het verzoek af. Afwijzen stuurt het terug naar de medewerkers, en daarna kun je laten weten wat er nog niet goed is. Deze knoppen werken alleen voor jou, en maar één keer.",
       "noReply": "Antwoorden op deze e-mail worden niet gelezen. Open het verzoek om te reageren.",
-      "signInNote": "{days, plural, one {Met de links in deze e-mail log je # dag lang in bij Adiutor, dus stuur hem niet door.} other {Met de links in deze e-mail log je # dagen lang in bij Adiutor, dus stuur hem niet door.}}"
+      "signInNote": "{days, plural, one {Met de links in deze e-mail log je # dag lang in bij {staff}, dus stuur hem niet door.} other {Met de links in deze e-mail log je # dagen lang in bij {staff}, dus stuur hem niet door.}}"
     },
     "webhookTurnedOff": {
-      "subject": "Adiutor heeft de webhook ‘{name}’ uitgezet",
-      "reason": "Je krijgt dit omdat je beheerder bent onder de medewerkers van Adiutor, die webhooks instellen.",
+      "subject": "De webhook ‘{name}’ is uitgezet",
+      "reason": "Je krijgt dit omdat je beheerder van de medewerkers bent op {staff}: beheerders stellen de webhooks in.",
       "heading": "De webhook ‘{name}’ staat uit",
-      "why": "{reason, select, gone {De ontvanger antwoordde dat hij voorgoed weg is (410 Gone), dus Adiutor heeft de webhook uitgezet.} unreadable {Het adres of het ondertekeningsgeheim is niet meer te lezen met de huidige auth-geheimen van Adiutor, dus Adiutor heeft de webhook uitgezet.} other {Elke levering is {days, plural, one {# dag} other {# dagen}} lang mislukt, dus Adiutor heeft de webhook uitgezet.}}",
+      "why": "{reason, select, gone {De ontvanger antwoordde dat hij voorgoed weg is (410 Gone), dus is de webhook automatisch uitgezet.} unreadable {Het adres of het ondertekeningsgeheim is niet meer te lezen met de huidige auth-geheimen, dus is de webhook automatisch uitgezet.} other {Elke levering is {days, plural, one {# dag} other {# dagen}} lang mislukt, dus is de webhook automatisch uitgezet.}}",
       "advice": "Zolang hij uitstaat wordt er niets naartoe gestuurd, en wat er intussen gebeurt wordt later niet verstuurd. Zet hem aan in de instellingen zodra de ontvanger weer werkt; de laatste leveringen laten daar zien wat er misging.",
       "adviceUnreadable": "Zolang hij uitstaat wordt er niets naartoe gestuurd. Vul in de instellingen het adres opnieuw in en vernieuw het geheim, en zet hem daarna aan.",
       "button": "Webhook openen"

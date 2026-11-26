@@ -2,8 +2,8 @@
  * @file End-to-end tests for the 404 page: its centered layout, the theme
  * button, and the ways out (the dashboard, and back when there's a previous
  * page). Pages someone may not see (a missing permission, an unknown user,
- * another company's request) show it with its title, "Not found · Adiutor",
- * while those who may see them get the page's own title.
+ * another company's request) show it with its title, "Not found · " and the
+ * staff's name, while those who may see them get the page's own title.
  */
 import { type Page } from '@playwright/test';
 
@@ -15,6 +15,7 @@ import {
   FIRST_PAGED_REQUEST_NUMBER,
   PLATFORM_ADMIN,
   SEEDED_REQUESTS,
+  STAFF_NAME,
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
 } from './support/fixtures';
@@ -24,20 +25,20 @@ import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
 /** The 404 page's title, which pages someone may not see have too. */
-const NOT_FOUND_TITLE = 'Not found · Adiutor';
+const NOT_FOUND_TITLE = `Not found · ${STAFF_NAME}`;
 
 /** The staff pages and their titles, all of which staff Admins may see. */
 const STAFF_PAGES = [
-  { path: '/admin/users', title: 'Users · Adiutor' },
-  { path: '/admin/users/new', title: 'Add user · Adiutor' },
-  { path: '/admin/companies', title: 'Companies · Adiutor' },
-  { path: '/admin/companies/new', title: 'Add company · Adiutor' },
-  { path: '/admin/settings', title: 'Settings · Adiutor' },
-  { path: '/admin/settings/staff', title: 'Staff · Settings · Adiutor' },
-  { path: '/admin/settings/requests', title: 'Requests · Settings · Adiutor' },
-  { path: '/admin/logs', title: 'Audit log · Adiutor' },
-  { path: '/admin/logs/errors', title: 'Errors · Adiutor' },
-  { path: '/admin/logs/jobs', title: 'Jobs · Adiutor' },
+  { path: '/admin/users', title: `Users · ${STAFF_NAME}` },
+  { path: '/admin/users/new', title: `Add user · ${STAFF_NAME}` },
+  { path: '/admin/companies', title: `Companies · ${STAFF_NAME}` },
+  { path: '/admin/companies/new', title: `Add company · ${STAFF_NAME}` },
+  { path: '/admin/settings', title: `Settings · ${STAFF_NAME}` },
+  { path: '/admin/settings/staff', title: `Staff · Settings · ${STAFF_NAME}` },
+  { path: '/admin/settings/requests', title: `Requests · Settings · ${STAFF_NAME}` },
+  { path: '/admin/logs', title: `Audit log · ${STAFF_NAME}` },
+  { path: '/admin/logs/errors', title: `Errors · ${STAFF_NAME}` },
+  { path: '/admin/logs/jobs', title: `Jobs · ${STAFF_NAME}` },
 ] as const;
 
 /** An ID no user has. */
@@ -141,7 +142,7 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     await expectTitle(
       page,
       `/requests/${SEEDED_REQUESTS.waiting.number}`,
-      `Request AD-${SEEDED_REQUESTS.waiting.number} · Adiutor`,
+      `Request AD-${SEEDED_REQUESTS.waiting.number} · ${STAFF_NAME}`,
     );
     await expect(
       page.getByRole('heading', { level: 1, name: SEEDED_REQUESTS.waiting.title }),
@@ -186,11 +187,11 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     );
     // A user's page, but not its Activity tab: Support see neither devices nor the audit log.
     const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
-    await expectTitle(page, `${watcher}/companies`, 'Companies · User · Adiutor');
+    await expectTitle(page, `${watcher}/companies`, `Companies · User · ${STAFF_NAME}`);
     await expectNotFound(page, `${watcher}/activity`);
-    await expectTitle(page, '/admin/users', 'Users · Adiutor');
-    await expectTitle(page, '/admin/companies', 'Companies · Adiutor');
-    await expectTitle(page, companyPage('members'), `Members · ${COMPANY_NAME} · Adiutor`);
+    await expectTitle(page, '/admin/users', `Users · ${STAFF_NAME}`);
+    await expectTitle(page, '/admin/companies', `Companies · ${STAFF_NAME}`);
+    await expectTitle(page, companyPage('members'), `Members · ${COMPANY_NAME} · ${STAFF_NAME}`);
   });
 
   test('a staff Admin gets every staff page with its title, and it for unknown users', async ({
@@ -201,14 +202,14 @@ test.describe('pages someone may not see are titled like the 404 page', () => {
     await inOrder(STAFF_PAGES, ({ path, title }) => expectTitle(page, path, title));
 
     await openUser(page, PLATFORM_ADMIN.name);
-    await expect(page).toHaveTitle('User · Adiutor');
+    await expect(page).toHaveTitle(`User · ${STAFF_NAME}`);
     // Every tab of someone else's page, each with its title; your own page has no Manage tab.
     const watcher = `/admin/users/${await findUserId(CLIENT_WATCHER.email)}`;
     await inOrder(
       [
-        { path: `${watcher}/companies`, title: 'Companies · User · Adiutor' },
-        { path: `${watcher}/activity`, title: 'Activity · User · Adiutor' },
-        { path: `${watcher}/manage`, title: 'Manage · User · Adiutor' },
+        { path: `${watcher}/companies`, title: `Companies · User · ${STAFF_NAME}` },
+        { path: `${watcher}/activity`, title: `Activity · User · ${STAFF_NAME}` },
+        { path: `${watcher}/manage`, title: `Manage · User · ${STAFF_NAME}` },
       ],
       ({ path, title }) => expectTitle(page, path, title),
     );

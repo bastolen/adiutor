@@ -103,9 +103,9 @@
       "tooLong": "Use an address of at most {maximum, number} characters.",
       "invalid": "Enter a web address, such as https://hooks.adiutor.dev/in.",
       "scheme": "Use an address that starts with https://.",
-      "credentials": "Remove the user name and password from the address: the signature tells the receiver it’s Adiutor.",
+      "credentials": "Remove the user name and password from the address: the signature already tells the receiver who sent it.",
       "insecure": "Use an https:// address: plain http:// only works for this computer.",
-      "internal": "This address is inside Adiutor’s own network, which webhooks never reach."
+      "internal": "This address is inside this server’s own network, which webhooks never reach."
     },
     "webhookFormat": "Choose how the webhook is sent.",
     "webhookEvents": {
