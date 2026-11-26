@@ -59,8 +59,10 @@ The folders of the repository and what belongs in each. Back to the [documentati
     them. It imports no server-only code: the default language in `src/lib/i18n/` reads it, and
     Better Auth's configuration reads that.
   - `src/server/webhooks/`: webhooks (see [Webhooks](webhooks.md)): managing them (`manage.ts`),
-    the guard that keeps them out of Adiutor's own network (`address-guard.ts`), their signature
-    (`signing.ts`) and one attempt to send (`send.ts`). The rules the browser needs too are in
+    the guard that keeps them out of Adiutor's own network (`address-guard.ts`), the JSON body and
+    the chat message (`formats.ts`), their signature (`signing.ts`) and one attempt to send
+    (`send.ts`). What a webhook is told about a request is read in `src/server/requests/`
+    (`read-webhook-news.ts`), beside the emails' `readRequestUpdate`. The rules the browser needs too are in
     `src/lib/webhooks.ts`, the tables in `src/db/schema/webhooks.ts`.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest

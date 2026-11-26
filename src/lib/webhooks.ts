@@ -8,6 +8,7 @@
  */
 import { WEBHOOK_URL_MAX_LENGTH } from './input-rules';
 import { isSecureOrLocalUrl } from './local-host';
+import type { RequestEntryKind } from './requests';
 
 /**
  * What a webhook can be told about a request, each a choice of its own: the
@@ -20,6 +21,21 @@ export const WEBHOOK_EVENTS = ['raised', 'reply', 'note', 'status', 'assignee', 
 
 /** One kind of news a webhook can be told. */
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+/**
+ * The event each kind of entry of a request's history is for a webhook. A
+ * new kind of entry fails to typecheck here until someone decides what
+ * webhooks hear of it.
+ */
+export const WEBHOOK_EVENT_OF_ENTRY = {
+  comment: 'reply',
+  note: 'note',
+  status: 'status',
+  title: 'details',
+  type: 'details',
+  priority: 'details',
+  assignee: 'assignee',
+} as const satisfies Record<RequestEntryKind, WebhookEvent>;
 
 /**
  * How a webhook is sent: signed JSON with every detail (`json`, the Standard

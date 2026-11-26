@@ -30,6 +30,86 @@ A webhook has:
   when the webhook is added and when it's renewed. A renewed secret replaces the old one straight
   away.
 
+## What's sent
+
+What a webhook is told is read when it's sent (`readWebhookNews` in
+`src/server/requests/read-webhook-news.ts`), like an email about a request: the request as it is by
+then, and its events in the order they happened. People are named as the request's page names them:
+their own name, or their side's (the company's name, the staff's name) once their account is gone.
+The people a text mentions are "@" and their name. Never an email address, a user ID, a link that
+signs anyone in, or who did something while signed in as someone else
+([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)).
+
+### JSON
+
+The Standard Webhooks shape, `{ type, timestamp, data }` (`jsonBody` in
+`src/server/webhooks/formats.ts`):
+
+```json
+{
+  "type": "request.updated",
+  "timestamp": "2026-11-25T10:05:00.000Z",
+  "data": {
+    "request": {
+      "id": "019abcde-…",
+      "number": 142,
+      "reference": "AD-142",
+      "title": "The printer is broken",
+      "status": "proposed",
+      "type": { "key": "bug", "name": "Bug" },
+      "priority": "high",
+      "company": { "id": "019abcde-…", "name": "Adiutor" },
+      "url": "https://adiutor.dev/requests/142?entry=019abcdf-…#entry-019abcdf-…",
+      "raisedAt": "2026-11-25T09:12:00.000Z",
+      "lastActivityAt": "2026-11-25T10:00:00.000Z"
+    },
+    "events": [
+      {
+        "type": "reply",
+        "id": "019abcdf-…",
+        "at": "2026-11-25T10:00:00.000Z",
+        "by": { "name": "Ann Admin", "side": "staff" },
+        "text": { "format": "markdown", "text": "Fixed it, see @Sam Support's note." }
+      },
+      {
+        "type": "status",
+        "id": "019abce0-…",
+        "at": "2026-11-25T10:00:00.000Z",
+        "by": { "name": "Ann Admin", "side": "staff" },
+        "from": "in_progress",
+        "to": "proposed"
+      }
+    ]
+  }
+}
+```
+
+- **The request:** its status, priority and type key are the values Adiutor stores (`open`,
+  `todo`, `in_progress`, `waiting`, `proposed`, `done`, `cancelled`; `low`, `normal`, `high`), its
+  link opens its page at the first event that has a place there.
+- **The events**, each with an `id` (the entry of the request's history; the request's for
+  `raised`), `at` and `by` (a name and a side, `company` or `staff`):
+  - `raised`: the request was raised, with its description as `text`;
+  - `reply` and `note`: a reply or an internal note, with its `text` as it is now (`format`
+    `markdown`, or `plain` for a text written before Markdown);
+  - `status`: `from` and `to`; a solution is a reply followed by a status change to `proposed`;
+  - `assignee`: `change` (`assigned` or `unassigned`) and `person`, the staff member's name (`null`
+    once their account is gone);
+  - `details`: `field` (`title`, `type` or `priority`), `from` and `to` (a type as its key and
+    name).
+- **A test** is `{ "type": "webhook.test", "timestamp": "…", "data": { "webhook": { "name": "…" } } }`.
+
+### Chat
+
+A `{"text": "…"}` message, which Slack, Google Chat, Mattermost and Discord's Slack-compatible
+address (`…/slack`) take as it is, in Adiutor's default language (`chatBody`): the reference and
+title, a sentence per event (the `webhooks` catalogue), up to 300 characters of each text, and the
+link on a line of its own. A text is shortened to its words: its formatting, links' addresses and
+images are left out. What someone wrote can never form a chat app's markup: `<` and `>` become `‹`
+and `›` (so no `<!here>`, `<@id>` or `<users/all>`), every `@` is followed by a word joiner (so
+no `@here`, `@channel`, `@everyone` or a mention of anyone), and `![` is broken up (so no image
+loads). A delivery with more events than fit in 3,000 characters says how many more there were.
+
 ## Changes are security changes
 
 A webhook sends request texts out of Adiutor, so a stolen staff Admin session could use one to read

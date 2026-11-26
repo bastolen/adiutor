@@ -965,7 +965,8 @@ no Move menu.
   `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
   `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`,
-  `readRequestUpdate` (what one person's email about a request may show), and
+  `readRequestUpdate` (what one person's email about a request may show), `readWebhookNews` (what
+  a webhook is told, see [Webhooks](webhooks.md#whats-sent)), and
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
   Every change checks the permission and that the company is active, validates, takes a rate

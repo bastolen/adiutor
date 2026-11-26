@@ -55,6 +55,13 @@ export {
   unsubscribeFrom,
 } from './subscribers';
 export type { SubscribablePerson } from './subscribers';
+export {
+  type QueuedWebhookNews,
+  readWebhookNews,
+  type WebhookNews,
+  type WebhookNewsEvent,
+  type WebhookPerson,
+} from './read-webhook-news';
 export { readRequestUpdate } from './updates';
 export type { QueuedRequestNews, RequestUpdate, RequestUpdateItem } from './updates';
 export type { MentionablePerson } from './mentions';
