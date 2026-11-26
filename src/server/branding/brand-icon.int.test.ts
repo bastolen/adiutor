@@ -2,7 +2,8 @@
  * @file Integration tests for the browser tab icon and the page's images,
  * against the test database: Adiutor's own until something is uploaded, the
  * staff's initials for a wide logo, a new version (and drawing) when the
- * name changes and none otherwise, and the logo's address for pages.
+ * name changes and none otherwise, the logo's address for pages, and what
+ * the Appearance tab shows of them.
  */
 import { readFileSync } from 'node:fs';
 
@@ -14,6 +15,7 @@ import { saveSettings, setupTestContext, staffActor } from '../../../tests/integ
 import type { Actor } from '../actor';
 import { loadBrandIcon } from './brand-icon';
 import { setBrandImage } from './brand-images';
+import getBrandImageSettings from './image-settings';
 import requestBrandImages, { pageIcons } from './page-images';
 
 const { ctx, db } = setupTestContext();
@@ -69,6 +71,34 @@ describe('requestBrandImages', () => {
       logo: { src: `/branding/logo?v=${logo.id}`, width: 280, height: 64 },
       iconVersion: icon?.version,
     });
+  });
+});
+
+describe('getBrandImageSettings', () => {
+  it('gives no logo and Adiutor’s icon until something is uploaded', async () => {
+    expect(await getBrandImageSettings(ctx, admin)).toEqual({
+      logo: null,
+      ownIcon: false,
+      icon: null,
+    });
+  });
+
+  it('gives the logo, whether there’s an own icon, and what the icon is drawn from', async () => {
+    const logo = await setBrandImage(ctx, admin, 'logo', LOGO_PNG);
+
+    const settings = await getBrandImageSettings(ctx, admin);
+    expect(settings).toEqual({
+      logo: { src: `/branding/logo?v=${logo.id}`, width: 280, height: 64 },
+      ownIcon: false,
+      icon: { version: expect.any(String), source: 'initials' },
+    });
+    expect(settings.icon?.version).toBe((await loadBrandIcon(db, 32))?.version);
+  });
+
+  it('refuses everyone but staff Admins', async () => {
+    const support = await staffActor(db, 'support', 'support@adiutor.test');
+
+    await expect(getBrandImageSettings(ctx, support)).rejects.toMatchObject({ code: 'forbidden' });
   });
 });
 

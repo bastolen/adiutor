@@ -85,7 +85,13 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
-import { getBrandColours, removeBrandImage, setBrandColours, setBrandImage } from './branding';
+import {
+  getBrandColours,
+  getBrandImageSettings,
+  removeBrandImage,
+  setBrandColours,
+  setBrandImage,
+} from './branding';
 import { notFoundError, ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
@@ -569,6 +575,7 @@ function listOperations(): Operation[] {
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
     ['view brand colours', (w) => getBrandColours(ctx, w.actor)],
+    ['view the logo and icon settings', (w) => getBrandImageSettings(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
@@ -1112,6 +1119,7 @@ const READS: ReadonlySet<string> = new Set([
   "download a description's file (other)",
   "download an internal note's file (own)",
   'view brand colours',
+  'view the logo and icon settings',
   'view email settings',
   'list request types',
   'list users',
@@ -1308,6 +1316,7 @@ const EXPECTED: Record<string, string> = {
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
   'view brand colours': 'FFFFFFA',
+  'view the logo and icon settings': 'FFFFFFA',
   // Everyone chooses their own language, time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
   'save own first time zone': 'AAAAAAA',

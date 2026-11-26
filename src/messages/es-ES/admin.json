@@ -521,6 +521,45 @@
       },
       "appearance": {
         "title": "Apariencia",
+        "chooseFirst": "Elige primero una imagen.",
+        "logo": {
+          "title": "Logotipo",
+          "description": "Todas las páginas y correos lo muestran en lugar del de Adiutor, en modo claro y oscuro. Un logotipo con fondo transparente encaja en ambos modos.",
+          "field": "Imagen del logotipo",
+          "fieldDescription": "Un PNG o JPEG de {maximum, number} MB como máximo, de al menos {minimum, number} píxeles de alto y como mucho {widest, number} veces más ancho que alto.",
+          "preview": "Vista previa",
+          "light": "Modo claro",
+          "dark": "Modo oscuro",
+          "adiutors": "Se muestra el logotipo de Adiutor hasta que se suba uno.",
+          "chosen": "La imagen elegida, aún sin subir.",
+          "upload": "Subir logotipo",
+          "saved": "Logotipo subido.",
+          "remove": "Quitar logotipo",
+          "removeTitle": "¿Quitar el logotipo?",
+          "removeDescription": "Todas las páginas y correos vuelven a mostrar el logotipo de Adiutor, y el icono de pestaña hecho con él también desaparece, salvo que se haya subido un icono propio.",
+          "removed": "Logotipo quitado."
+        },
+        "icon": {
+          "title": "Icono de la pestaña",
+          "description": "La pequeña imagen de una pestaña del navegador y de la pantalla de inicio de un teléfono. Se hace a partir del logotipo, así que no tienes que hacer nada más: sube un icono propio solo para sustituirlo.",
+          "source": {
+            "icon": "El icono subido.",
+            "logo": "Hecho a partir del logotipo, que es más o menos cuadrado.",
+            "initials": "Las iniciales de {staff} sobre el color de acento, porque el logotipo es ancho.",
+            "adiutor": "El icono de Adiutor, hasta que se suba un logotipo o un icono."
+          },
+          "tab": "En una pestaña del navegador",
+          "touch": "En la pantalla de inicio de un teléfono",
+          "chosen": "El icono elegido, aún sin subir.",
+          "field": "Icono propio",
+          "fieldDescription": "Un PNG o JPEG de {maximum, number} MB como máximo, más o menos cuadrado y de al menos {minimum, number} píxeles de ancho y de alto.",
+          "upload": "Subir icono",
+          "saved": "Icono subido.",
+          "remove": "Quitar el icono subido",
+          "removeTitle": "¿Quitar el icono subido?",
+          "removeDescription": "La pestaña vuelve a mostrar el icono hecho a partir del logotipo, o el de Adiutor si no hay logotipo.",
+          "removed": "Icono subido quitado."
+        },
         "colours": {
           "title": "Colores de marca",
           "description": "Los colores de cada página y correo, para usuarios y personal. El texto siempre se puede leer: un color demasiado claro u oscuro para ello se ajusta, y la vista previa muestra el que se usará.",

@@ -18,13 +18,18 @@ const MESSAGES_DIR = import.meta.dirname;
 
 /**
  * The messages that keep "Adiutor", with why: they name the software itself
- * (its colours, setting it up before the staff have a name, the "Powered by
- * Adiutor" credit) or are examples of a name to type.
+ * (its colours, logo and icon, setting it up before the staff have a name,
+ * the "Powered by Adiutor" credit) or are examples of a name to type.
  */
 const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'admin.settings.appearance.colours.useAdiutor': 'the software’s own colours',
   'admin.settings.appearance.colours.accent.description': 'the software’s own accent',
   'admin.settings.appearance.colours.tint.description': 'the software’s own tint',
+  'admin.settings.appearance.logo.description': 'the software’s own logo, which it replaces',
+  'admin.settings.appearance.logo.adiutors': 'the software’s own logo, until one is uploaded',
+  'admin.settings.appearance.logo.removeDescription': 'the software’s own logo, which comes back',
+  'admin.settings.appearance.icon.source.adiutor': 'the software’s own icon, until one is made',
+  'admin.settings.appearance.icon.removeDescription': 'the software’s own icon, without a logo',
   'admin.settings.general.name.example': 'an example of a name for the staff',
   'admin.settings.general.name.description':
     'what the name replaces, Adiutor, and the credit it adds',

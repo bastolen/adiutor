@@ -694,6 +694,16 @@ export async function setBrandColours(
 }
 
 /**
+ * Removes the logo and the own browser tab icon straight from the database,
+ * so a test that uploads them leaves Adiutor's logo and icon for the next.
+ */
+export async function removeBrandImages(): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.delete(schema.brandImage);
+  });
+}
+
+/**
  * Reactivates an account straight in the database: the other way round of
  * {@link deactivateAccount}, to put a deactivated account back.
  *

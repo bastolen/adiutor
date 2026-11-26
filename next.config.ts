@@ -88,6 +88,14 @@ const nextConfig: NextConfig = {
 
   experimental: {
     /**
+     * A server action's request may be up to 2 MB, past Next's 1 MB: room for
+     * a logo or icon of up to 1 MB (`BRAND_IMAGE_MAX_MB`) with its form's
+     * overhead. The proxy already reads bodies of up to 10 MB, so this opens
+     * nothing new; each action checks its own input.
+     */
+    serverActions: { bodySizeLimit: '2mb' },
+
+    /**
      * In development, Next.js checks every navigation for instant loading in
      * the background, rendering each page again in a worker. That makes a
      * breakpoint in a Server Component stop many times per page load, so the
