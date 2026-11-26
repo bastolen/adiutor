@@ -9,6 +9,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import Card from '@/components/ui/card';
 import EmptyState from '@/components/ui/empty-state';
+import TextLink from '@/components/ui/text-link';
 import type { WebhookView } from '@/server/webhooks';
 
 import AddWebhookDialog from './add-webhook-dialog';
@@ -25,7 +26,8 @@ interface WebhooksCardProps {
 
 /**
  * The card. Webhooks are a short list the staff name, so they're a list
- * rather than a table that sorts and pages. Each shows its name, whether
+ * rather than a table that sorts and pages. Each shows its name (a link to
+ * its page, with its deliveries and controls), whether
  * it's on (or why it's off), its format, the host it sends to (never its
  * address), the types it covers and the events it sends.
  */
@@ -49,7 +51,9 @@ export default function WebhooksCard({ webhooks, types }: WebhooksCardProps) {
           {webhooks.map((webhook) => (
             <li key={webhook.id} className="flex min-w-0 flex-col gap-1 py-3">
               <p className="flex flex-wrap items-center gap-2 text-sm font-medium wrap-anywhere text-foreground">
-                {webhook.name}
+                <TextLink href={`/admin/settings/webhooks/${encodeURIComponent(webhook.id)}`}>
+                  {webhook.name}
+                </TextLink>
                 <WebhookStateBadge on={webhook.on} offReason={webhook.offReason} />
                 <WebhookFormatBadge format={webhook.format} />
               </p>

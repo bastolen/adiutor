@@ -26,6 +26,8 @@ import { REVERIFY_WRONG_ACCOUNT } from '../src/lib/sign-in/sign-in-refusals';
 import expectAccessible from './support/axe';
 import {
   backdateMfaConfirmation,
+  removeWebhooks,
+  storeWebhookToLookAt,
   findCompanyId,
   findUserId,
   storeAuditEvent,
@@ -945,6 +947,18 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page, '[role="dialog"]');
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
+      });
+
+      test('a webhook’s page, turned off, with its deliveries', async ({ page }) => {
+        const name = 'E2E Looked at';
+        try {
+          await page.goto(`/admin/settings/webhooks/${await storeWebhookToLookAt(name)}`);
+          await expect(page.getByRole('region', { name })).toContainText('Off: kept failing');
+          await expect(page.getByRole('table', { name: /^Deliveries/ })).toBeVisible();
+          await expectAccessible(page);
+        } finally {
+          await removeWebhooks([name]);
+        }
       });
 
       test('the time zone select, open, searched and with nothing found', async ({ page }) => {

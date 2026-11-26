@@ -429,7 +429,92 @@
           "copy": "Copiar secreto",
           "done": "Listo"
         },
-        "confirmFirst": "Confirma que eres tú con tu segundo paso antes de añadir o cambiar un webhook."
+        "confirmFirst": "Confirma que eres tú con tu segundo paso antes de añadir o cambiar un webhook.",
+        "page": {
+          "title": "Webhook",
+          "back": "Todos los webhooks",
+          "details": "Detalles",
+          "detailsDescription": "Adónde envía, y qué.",
+          "host": "Envía a",
+          "format": "Formato",
+          "types": "Tipos de solicitud",
+          "events": "Envía",
+          "added": "Añadido",
+          "secretRenewed": "Secreto renovado",
+          "failingSince": "Falla desde",
+          "never": "Nunca",
+          "offNote": "{reason, select, failing {Adiutor lo desactivó porque todos los envíos fallaron durante 3 días. Cuando su receptor funcione, vuelve a activarlo.} gone {Adiutor lo desactivó porque su receptor respondió que ya no existe (410 Gone).} unreadable {Adiutor lo desactivó porque su dirección o su secreto ya no se pueden leer. Escribe de nuevo su dirección y renueva su secreto, y después actívalo.} other {Está desactivado: no se le envía nada, y lo que pase mientras tanto no se envía después.}}"
+        },
+        "edit": {
+          "button": "Editar",
+          "title": "Editar {name}",
+          "description": "Los cambios se aplican a lo que pase a partir de ahora.",
+          "confirm": "Guardar",
+          "saved": "Webhook guardado.",
+          "unchanged": "No ha cambiado nada."
+        },
+        "test": {
+          "button": "Enviar una prueba",
+          "delivered": "Prueba entregada: el receptor respondió {status, number}.",
+          "failed": "La prueba no se entregó. {reason}"
+        },
+        "onOff": {
+          "turnOff": "Desactivar",
+          "turnOn": "Activar",
+          "turnedOff": "Webhook desactivado.",
+          "turnedOn": "Webhook activado."
+        },
+        "renew": {
+          "button": "Renovar secreto",
+          "title": "¿Renovar el secreto de firma?",
+          "description": "El secreto anterior deja de funcionar al instante. Los envíos que el receptor rechace mientras tanto se vuelven a intentar, así que dale pronto el nuevo secreto.",
+          "confirm": "Renovar secreto",
+          "renewed": "Secreto de firma renovado."
+        },
+        "remove": {
+          "button": "Eliminar",
+          "title": "¿Eliminar {name}?",
+          "description": "No se le enviará nada más, y sus envíos se eliminan. No se puede deshacer.",
+          "confirm": "Eliminar webhook",
+          "removed": "Webhook eliminado."
+        },
+        "deliveries": {
+          "title": "Envíos",
+          "description": "Lo que se envió en los últimos 30 días y cómo fue, nunca lo que se envió ni lo que respondió el receptor.",
+          "rows": "Envíos",
+          "caption": "Envíos",
+          "when": "Cuándo",
+          "what": "Qué",
+          "result": "Resultado",
+          "attempts": "Intentos",
+          "actions": "Acciones",
+          "test": "Prueba",
+          "attemptCount": "{count, plural, one {# intento} other {# intentos}}",
+          "nextAttempt": "Siguiente intento: {time}",
+          "status": {
+            "pending": "Enviándose",
+            "delivered": "Entregado",
+            "failed": "Fallido",
+            "cancelled": "Cancelado"
+          },
+          "emptyTitle": "Aún no hay envíos",
+          "emptyDescription": "Los envíos aparecen aquí en cuanto pasa algo que envía, o cuando envías una prueba.",
+          "resend": "Enviar de nuevo",
+          "resendLabel": "Enviar de nuevo el envío de {time}",
+          "resent": "Se envía de nuevo en la siguiente ronda."
+        },
+        "outcome": {
+          "timeout": "Sin respuesta en 10 segundos.",
+          "dns": "No se encuentra su nombre de host.",
+          "refused_address": "Su dirección está dentro de la propia red de Adiutor.",
+          "connection": "La conexión se rechazó o se cortó.",
+          "tls": "No se puede confiar en su certificado o su cifrado.",
+          "redirect": "Respondió con una redirección ({status, number}), que Adiutor nunca sigue.",
+          "http": "Respondió {status, number}.",
+          "unreadable": "Su dirección o su secreto ya no se pueden leer.",
+          "answered": "Respondió {status, number}."
+        },
+        "removedToast": "Webhook eliminado."
       }
     },
     "companies": {

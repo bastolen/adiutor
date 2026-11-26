@@ -13,7 +13,15 @@ remove webhooks, and renew their signing secrets, on **Settings › Webhooks**
 (`/admin/settings/webhooks`; the services in `src/server/webhooks/manage.ts`). The tab lists each
 webhook with whether it's on (or why it's off), its format, the host it sends to, its request
 types and its events; **Add webhook** opens a dialog with its fields, after the Admin confirms it's
-them when they haven't in the last 15 minutes, and then shows its signing secret once. Nobody else
+them when they haven't in the last 15 minutes, and then shows its signing secret once.
+
+A webhook's own page (`/admin/settings/webhooks/[webhookId]`, its name links there) shows its
+details, with a note on why it's off when it is, and its controls: **Edit** (the same fields, its
+address empty to keep the saved one), **Send a test**, **Turn off** or **Turn on**, **Renew
+secret** (the new one shown once) and **Remove** (asks first, then goes back to the list). Editing,
+renewing and turning on ask the Admin to confirm it's them first, and come back to the card. Below
+them, its deliveries of the last 30 days, newest first, with **Send again** (see
+[Tests and sending again](#tests-and-sending-again)). The page's title never names the webhook. Nobody else
 sees them, and a staff member signed in as a user can't change them
 ([decision 0028](decisions/0028-request-work-while-signed-in-as-a-user.md)).
 

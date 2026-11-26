@@ -147,7 +147,8 @@ Admins and Managers who aren't members can still add themselves with any role, a
     (see [Requests](requests.md#types-and-priorities)).
   - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
     the staff's own systems and chat channels, each with whether it's on, its format, the host it
-    sends to, its types and events, and adding one (see [Webhooks](webhooks.md)).
+    sends to, its types and events, and adding one; each webhook's page has its controls and its
+    deliveries (see [Webhooks](webhooks.md)).
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It
