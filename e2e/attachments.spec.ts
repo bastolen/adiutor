@@ -1,11 +1,16 @@
 /**
- * @file End-to-end tests for attachments (decision 0044): the files of a
- * request's texts, shown under each text with a thumbnail for an image and
- * downloaded under their names, a note's files for the staff only. Each
- * test stores a request of its own and attaches files to it directly.
+ * @file End-to-end tests for attachments (decision 0044): files attached
+ * while writing (by the Attach button, a drop and a paste, checked in the
+ * browser and uploaded at once) and sent with a reply, a note or a new
+ * request; and the files of a request's texts, shown under each text with a
+ * thumbnail for an image and downloaded under their names, a note's files
+ * for the staff only. Each test stores or raises a request of its own.
  */
+import type { Locator, Page } from '@playwright/test';
+
 import { storeAttachment, storeEntries, storeOwnRequest } from './support/db';
 import { PLATFORM_ADMIN, REQUESTS_CLIENT } from './support/fixtures';
+import { markdownEditor, toasts } from './support/helpers';
 import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
@@ -25,6 +30,61 @@ const PNG = Uint8Array.from(
  */
 function textFile(text: string): Uint8Array<ArrayBuffer> {
   return new TextEncoder().encode(text);
+}
+
+/**
+ * Chooses files with the Attach files button, as the file chooser does.
+ *
+ * @param page - The browser page.
+ * @param files - The files: name, type and bytes.
+ */
+async function chooseFiles(
+  page: Page,
+  files: { name: string; mimeType: string; buffer: Buffer }[],
+): Promise<void> {
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Attach files' }).click();
+  await (await chooser).setFiles(files);
+}
+
+/**
+ * Drops a text file on an element, as a file dragged from the desktop.
+ *
+ * @param page - The browser page.
+ * @param target - Where it's dropped.
+ * @param name - The file's name.
+ * @param text - What it says.
+ */
+async function dropFile(page: Page, target: Locator, name: string, text: string): Promise<void> {
+  const dataTransfer = await page.evaluateHandle(
+    ([fileName, content]) => {
+      const data = new DataTransfer();
+      data.items.add(new File([content], fileName, { type: 'text/plain' }));
+      return data;
+    },
+    [name, text] as const,
+  );
+  await target.dispatchEvent('dragover', { dataTransfer });
+  await target.dispatchEvent('drop', { dataTransfer });
+}
+
+/**
+ * Pastes an image into an element, as a screenshot copied to the clipboard.
+ *
+ * @param target - Where it's pasted.
+ * @param name - The image's name.
+ */
+async function pasteImage(target: Locator, name: string): Promise<void> {
+  await target.evaluate(
+    (element, [fileName, bytes]) => {
+      const data = new DataTransfer();
+      data.items.add(new File([new Uint8Array(bytes)], fileName, { type: 'image/png' }));
+      element.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    },
+    [name, [...PNG]] as const,
+  );
 }
 
 const clientCookies = signedInOnce(REQUESTS_CLIENT);
@@ -115,4 +175,96 @@ test('someone signed out who opens a file is sent to sign in', async ({ page }) 
   const { noteFile } = await requestWithFiles('A file signed out');
   await page.goto(`/attachments/${noteFile}`);
   await expect(page).toHaveURL(new RegExp(`/auth\\?callbackURL=%2Fattachments%2F${noteFile}`));
+});
+
+test('a company attaches files by button, drop and paste, and sends them with a reply', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'Files attached to a reply' });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+  const reply = await markdownEditor(page, 'Your reply');
+  const waiting = page.getByRole('list', { name: /to send$/ });
+
+  // A kind of file that can't be attached never leaves the browser.
+  await chooseFiles(page, [
+    { name: 'setup.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('MZ') },
+  ]);
+  await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    'setup.exe can’t be attached.',
+  );
+  await expect(waiting).toBeHidden();
+
+  await chooseFiles(page, [
+    { name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printer offline') },
+  ]);
+  await dropFile(page, reply, 'driver notes.txt', 'reinstall the driver');
+  await pasteImage(reply, 'screenshot.png');
+  await expect(page.getByRole('list', { name: '3 files to send' })).toBeVisible();
+  await expect(waiting.getByText('15 bytes')).toBeVisible();
+  // The pasted screenshot is a file, not a picture in the text.
+  await expect(reply.locator('img')).toHaveCount(0);
+
+  // One that isn't sent after all goes again, and focus goes back to the button.
+  await waiting.getByRole('button', { name: 'Remove driver notes.txt' }).click();
+  await expect(page.getByRole('button', { name: 'Attach files' })).toBeFocused();
+  await expect(page.getByRole('list', { name: '2 files to send' })).toBeVisible();
+
+  await reply.fill('The log and a screenshot are attached.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+  await expect(waiting).toBeHidden();
+  const sent = page.getByRole('region', { name: 'Conversation' }).getByRole('list', {
+    name: '2 attachments',
+  });
+  await expect(sent.getByRole('link', { name: 'Download printer.log, 15 bytes' })).toBeVisible();
+  await expect(sent.getByRole('link', { name: /^Download screenshot\.png/ })).toBeVisible();
+});
+
+test('the staff attach a file to an internal note', async ({ page, context }) => {
+  const number = await storeOwnRequest({ title: 'A file on a note' });
+  await context.addCookies(adminCookies());
+  await page.goto(`/requests/${number}`);
+  await page
+    .getByRole('tablist', { name: 'Write' })
+    .getByRole('tab', { name: 'Internal note' })
+    .click();
+
+  await chooseFiles(page, [
+    { name: 'driver notes.txt', mimeType: 'text/plain', buffer: Buffer.from('reinstall it') },
+  ]);
+  await expect(page.getByRole('list', { name: '1 file to send' })).toBeVisible();
+  await (await markdownEditor(page, 'Your note')).fill('Driver notes attached.');
+  await page.getByRole('button', { name: 'Add note' }).click();
+
+  await expect(toasts(page)).toContainText('Note added.');
+  await expect(
+    page
+      .getByRole('region', { name: 'Conversation' })
+      .getByRole('link', { name: 'Download driver notes.txt, 12 bytes' }),
+  ).toBeVisible();
+});
+
+test('a company raises a request with a screenshot on its description', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies(clientCookies());
+  await page.goto('/requests/new');
+  await page.getByRole('textbox', { name: 'Title' }).fill('A request raised with a screenshot');
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^Bug/ }).click();
+  const description = await markdownEditor(page, 'Description');
+  await description.fill('The error is in the screenshot.');
+  await pasteImage(description, 'error.png');
+  await expect(page.getByRole('list', { name: '1 file to send' })).toBeVisible();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
+  await expect(
+    page
+      .getByRole('region', { name: 'Description' })
+      .getByRole('link', { name: /^Download error\.png/ }),
+  ).toBeVisible();
 });

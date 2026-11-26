@@ -1,7 +1,8 @@
 /**
  * @file Server actions for the Attachments tab of Settings: where attached
  * files are kept (tried before it's saved, and only with a recent
- * confirmation) and the largest file anyone may attach.
+ * confirmation), whether people can attach files, and the largest file
+ * anyone may attach.
  */
 'use server';
 
@@ -13,7 +14,11 @@ import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { saveAttachmentLimit, saveAttachmentStorage } from '@/server/storage';
+import {
+  saveAttachmentLimit,
+  saveAttachmentsEnabled,
+  saveAttachmentStorage,
+} from '@/server/storage';
 
 import confirmFirstIfNeeded from '../../../_people/confirm-grant';
 
@@ -95,5 +100,26 @@ export async function saveLargestFileAction(
     refresh();
     const t = await getTranslations('admin.settings.attachments.largestFile');
     return { ok: true, message: t('saved') };
+  });
+}
+
+/**
+ * Turns "People can attach files" on or off.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `enabled`: the checkbox, sent only when it's ticked.
+ * @returns A confirmation that says which it is now, or why it failed.
+ */
+export async function saveAttachingAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    const on = formData.get('enabled') === 'on';
+    await saveAttachmentsEnabled(appContext, actor, on);
+    refresh();
+    const t = await getTranslations('admin.settings.attachments.attaching');
+    return { ok: true, message: on ? t('savedOn') : t('savedOff') };
   });
 }

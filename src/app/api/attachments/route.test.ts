@@ -7,13 +7,14 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ATTACHMENT_NAME_HEADER } from '@/lib/requests';
 import type { Actor } from '@/server/actor';
 import { getOptionalActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { uploadAttachment } from '@/server/requests';
 import { StorageError } from '@/server/storage';
 
-import { ATTACHMENT_NAME_HEADER, POST } from './route';
+import { POST } from './route';
 
 vi.mock('next/server', () => ({ connection: vi.fn(async () => {}) }));
 vi.mock('@/lib/env', () => ({ appUrl: 'https://adiutor.test', env: {} }));
@@ -125,6 +126,35 @@ describe('POST /api/attachments', () => {
 
     const unknown = await upload(TEXT, { 'content-length': 'many' });
     expect(unknown.status).toBe(411);
+    expect(uploadAttachment).not.toHaveBeenCalled();
+  });
+
+  it('takes a body the browser stopped sending as incomplete, not as an error', async () => {
+    const stopped = new ReadableStream<Uint8Array>({
+      /**
+       * Sends a piece of the file, then stops, as a browser that stops an upload.
+       *
+       * @param controller - The stream's controller.
+       */
+      start(controller) {
+        controller.enqueue(TEXT.slice(0, 5));
+        controller.error(new Error('aborted'));
+      },
+    });
+    const response = await POST(
+      new Request('https://adiutor.test/api/attachments', {
+        method: 'POST',
+        body: stopped,
+        // @ts-expect-error -- Node's fetch needs it for a body that's a stream; the DOM types lack it.
+        duplex: 'half',
+        headers: {
+          'sec-fetch-site': 'same-origin',
+          'content-length': String(TEXT.byteLength),
+          [ATTACHMENT_NAME_HEADER]: encodeURIComponent('printer.log'),
+        },
+      }),
+    );
+    expect(response.status).toBe(400);
     expect(uploadAttachment).not.toHaveBeenCalled();
   });
 

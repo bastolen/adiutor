@@ -19,6 +19,7 @@ import { connection } from 'next/server';
 import { mustSetUpMfa, mustStepUp } from '@/lib/authz/mfa';
 import requestLocale from '@/lib/i18n/request-locale';
 import isOwnPageFetch from '@/lib/request/own-page-fetch';
+import { ATTACHMENT_NAME_HEADER } from '@/lib/requests';
 import { maxFileBytes } from '@/lib/storage';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
@@ -31,9 +32,6 @@ import {
 } from '@/server/errors';
 import { uploadAttachment } from '@/server/requests';
 import { attachmentLimitMb, StorageError } from '@/server/storage';
-
-/** The header that carries the file's name, percent-encoded so any name fits. */
-export const ATTACHMENT_NAME_HEADER = 'x-attachment-name';
 
 /** What a browser keeps of an answer: nothing. */
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -70,11 +68,13 @@ async function refusal(
 }
 
 /**
- * Reads a body of exactly the length the browser gave.
+ * Reads a body of exactly the length the browser gave. A body that stops
+ * arriving (the browser stopped the upload: its file was removed, or the
+ * page was left) is one that came short, not an error of the server's.
  *
  * @param body - The body.
  * @param length - The length it said (`Content-Length`).
- * @returns The bytes, or `null` when the body was longer or shorter.
+ * @returns The bytes, or `null` when the body was longer or shorter, or stopped.
  */
 async function readExactly(
   body: ReadableStream<Uint8Array> | null,
@@ -89,7 +89,11 @@ async function readExactly(
   for (;;) {
     // One piece after another: they arrive in order.
     // eslint-disable-next-line no-await-in-loop -- a stream is read a piece at a time
-    const { done, value } = await reader.read();
+    const piece = await reader.read().catch(() => null);
+    if (!piece) {
+      return null;
+    }
+    const { done, value } = piece;
     if (done) {
       return read === length ? bytes : null;
     }

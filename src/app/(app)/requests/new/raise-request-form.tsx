@@ -19,6 +19,7 @@ import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 import { REQUEST_PRIORITIES } from '@/lib/requests';
 
+import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import raiseRequestAction from './actions';
 
@@ -55,6 +56,8 @@ interface RaiseRequestFormProps {
   company?: string;
   /** Whether the viewer chooses a priority: the staff who work on requests. */
   choosesPriority: boolean;
+  /** What attaching needs, while people can attach files to the description. */
+  attaching?: Attaching | null;
 }
 
 /**
@@ -62,19 +65,24 @@ interface RaiseRequestFormProps {
  * one to choose from, naming a company by its URL name too when another has
  * the same name: `companyChoiceLabels`), title, type and description. Each type says what it's
  * for. The staff also get a priority, which the type sets unless they choose
- * one; nobody else sees a priority. A refused request keeps what was typed;
- * a raised one opens its page.
+ * one; nobody else sees a priority. While people can attach files, files go
+ * with the description (`AttachmentPicker`), and the request waits for them
+ * to upload. A refused request keeps what was typed and attached; a raised
+ * one opens its page.
  */
 export default function RaiseRequestForm({
   types,
   companies,
   company = undefined,
   choosesPriority,
+  attaching = null,
 }: RaiseRequestFormProps) {
   const t = useTranslations('requests');
   const tCommon = useTranslations('common');
   const [result, formAction, pending, onSubmit] = useTransientActionState(raiseRequestAction, null);
   const [priority, setPriority] = useState(FROM_TYPE);
+  // Whether a file is uploading, which the request waits for.
+  const [uploading, setUploading] = useState(false);
   const [only] = companies;
   // The company the request is for, as far as it's chosen: who the description can mention
   // depends on it.
@@ -131,6 +139,9 @@ export default function RaiseRequestForm({
         required
         mentions={loadMentions}
       />
+      {attaching && (
+        <AttachmentPicker maxFileMb={attaching.maxFileMb} onUploadingChange={setUploading} />
+      )}
       {choosesPriority && (
         <>
           {/* The select can't hold an empty value, so "set by the type" is sent as none. */}
@@ -151,7 +162,12 @@ export default function RaiseRequestForm({
         </>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" loading={pending}>
+        <Button
+          type="submit"
+          loading={pending}
+          disabled={uploading}
+          focusableWhenDisabled={uploading}
+        >
           {t('new.submit')}
         </Button>
         <Button asChild variant="secondary">

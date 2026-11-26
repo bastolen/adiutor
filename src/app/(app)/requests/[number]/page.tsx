@@ -63,6 +63,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
+  attachmentsOn,
   findRequest,
   findRequestNumber,
   getRequest,
@@ -212,6 +213,9 @@ async function RequestContent({
   const scope = detail.company.deactivated ? 'self' : subscriberScope(detail.permissions);
   const subscriberChoices =
     scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
+  // Files go with what the reader writes, while people can attach files.
+  const on = contributes ? await attachmentsOn(appContext) : null;
+  const attaching = on && { maxFileMb: on.maxFileMb };
 
   const names = { company: detail.company.name, staff: detail.staffName };
   // The request's whole address, for the note above code copied from its texts.
@@ -237,9 +241,19 @@ async function RequestContent({
       {answers && <SolutionNotice request={detail.number} />}
       {mayWriteNote(detail.permissions) ? (
         // The staff who work on requests also write internal notes, on a tab of their own.
-        <WriteTabs request={detail.number} canWait={canWait} canPropose={canPropose} />
+        <WriteTabs
+          request={detail.number}
+          canWait={canWait}
+          canPropose={canPropose}
+          attaching={attaching}
+        />
       ) : (
-        <ReplyForm request={detail.number} canWait={canWait} canPropose={canPropose} />
+        <ReplyForm
+          request={detail.number}
+          canWait={canWait}
+          canPropose={canPropose}
+          attaching={attaching}
+        />
       )}
     </div>
   );

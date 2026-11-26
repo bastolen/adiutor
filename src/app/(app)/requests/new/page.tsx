@@ -17,7 +17,12 @@ import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
 import { getActor, getStaffPermissionsInCompanies } from '@/server/authz';
 import { checkedPageMetadata } from '@/server/page-metadata';
-import { getRequestSettings, listRequestCompanies, listRequestTypes } from '@/server/requests';
+import {
+  attachmentsOn,
+  getRequestSettings,
+  listRequestCompanies,
+  listRequestTypes,
+} from '@/server/requests';
 
 import RaiseRequestForm from './raise-request-form';
 
@@ -53,11 +58,12 @@ export const generateMetadata = checkedPageMetadata('requests.new.title', async 
 async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('requests.new');
   const actor = await getActor();
-  const [params, companies, settings, types] = await Promise.all([
+  const [params, companies, settings, types, attaching] = await Promise.all([
     searchParams,
     raisableCompanies(actor),
     getRequestSettings(appContext),
     listRequestTypes(appContext, actor),
+    attachmentsOn(appContext),
   ]);
   if (companies.length === 0) {
     notFound();
@@ -85,6 +91,7 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
             companies={companies.map(({ slug, name }) => ({ slug, name }))}
             company={companies.find(({ slug }) => slug === asked)?.slug}
             choosesPriority={staff}
+            attaching={attaching && { maxFileMb: attaching.maxFileMb }}
           />
         </ClientMessages>
       </Card>

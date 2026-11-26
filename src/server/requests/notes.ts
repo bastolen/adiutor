@@ -12,6 +12,7 @@ import { requestReplySchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import { assertReplyLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
@@ -36,16 +37,19 @@ import { tellStaffOnRequest } from './updates';
  * @param input - Form input.
  * @param input.request - The request's number or ID.
  * @param input.body - The note.
+ * @param input.attachments - Files the actor uploaded for the note (`claimAttachments`), which
+ *   only the readers of notes can download.
  * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:manage`, `invalid` when the company is deactivated, `rate_limited` when the
- *   actor has written too often (`RATE_LIMITS.requestRepliesPerUser`).
+ *   actor has written too often (`RATE_LIMITS.requestRepliesPerUser`); `invalid` or `conflict`
+ *   for files that can't be sent with it.
  * @throws {ZodError} When the note isn't valid.
  */
 export default async function addNote(
   ctx: ServiceContext,
   actor: Actor,
-  input: { request: string; body: string },
+  input: { request: string; body: string; attachments?: readonly string[] },
 ): Promise<void> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:manage');
   const body = requestReplySchema.parse(input.body);
@@ -67,6 +71,12 @@ export default async function addNote(
         })
         .returning({ id: requestEntry.id }),
       'the new note',
+    );
+    await claimAttachments(
+      tx,
+      actor,
+      { requestId: locked.id, entryId: note.id },
+      input.attachments ?? [],
     );
     // Whoever writes a note follows the request; of the people it mentions, only the staff do.
     await subscribeAutomatically(tx, locked.id, [actor.id]);

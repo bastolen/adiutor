@@ -7,7 +7,7 @@ import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import type { ActionResult } from '@/lib/action-result';
-import field from '@/lib/form-data';
+import field, { fieldValues } from '@/lib/form-data';
 import { requestPath } from '@/lib/requests';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
@@ -25,7 +25,7 @@ import { raiseRequest } from '@/server/requests';
  *
  * @param _previous - The previous result (unused).
  * @param formData - Fields `company` (its URL name), `title`, `type`, `description` and,
- *   from the staff, `priority`.
+ *   from the staff, `priority`, and an `attachment` for each file sent with it.
  * @returns Why it failed; on success the browser is sent to the new request.
  */
 export default async function raiseRequestAction(
@@ -40,6 +40,7 @@ export default async function raiseRequestAction(
       type: field(formData, 'type'),
       description: field(formData, 'description'),
       priority: field(formData, 'priority'),
+      attachments: fieldValues(formData, 'attachment'),
     });
     refresh();
     redirect(`${requestPath(number)}?raised=1`);

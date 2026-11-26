@@ -34,6 +34,7 @@ import {
   attachmentLimitMb,
   getAttachmentSettings,
   saveAttachmentLimit,
+  saveAttachmentsEnabled,
   saveAttachmentStorage,
 } from './settings';
 
@@ -258,6 +259,7 @@ describe('getAttachmentSettings', () => {
     expect(await getAttachmentSettings(ctx, admin, SETTINGS_DECIDE)).toEqual({
       storage: { source: 'settings', view: null },
       maxFileMb: { value: 10, ceiling: 50, fromEnvironment: false },
+      enabled: { value: false, offByEnvironment: false, storageChosen: false },
       vercel: false,
     });
 
@@ -281,6 +283,46 @@ describe('getAttachmentSettings', () => {
     expect(
       (await getAttachmentSettings(ctx, admin, { ATTACHMENTS_STORAGE: 'off' })).storage,
     ).toEqual({ source: 'environment', view: null });
+  });
+});
+
+describe('saveAttachmentsEnabled', () => {
+  it('turns attaching on once a storage is chosen, and off again', async () => {
+    const before = await refusal(() => saveAttachmentsEnabled(ctx, admin, true, SETTINGS_DECIDE));
+    expect(before).toMatchObject({ code: 'conflict', key: 'errors.attachments.storageFirst' });
+
+    await saveAttachmentStorage(ctx, admin, { driver: 'local', dir: folder }, SETTINGS_DECIDE);
+    await saveAttachmentsEnabled(ctx, admin, true, SETTINGS_DECIDE);
+    expect((await getAttachmentSettings(ctx, admin, SETTINGS_DECIDE)).enabled).toEqual({
+      value: true,
+      offByEnvironment: false,
+      storageChosen: true,
+    });
+
+    await saveAttachmentsEnabled(ctx, admin, false, SETTINGS_DECIDE);
+    expect((await getAttachmentSettings(ctx, admin, SETTINGS_DECIDE)).enabled.value).toBe(false);
+  });
+
+  it('takes a storage the environment chooses, and can’t turn on what it turned off', async () => {
+    const environment = { ATTACHMENTS_STORAGE: 'local', ATTACHMENTS_DIR: folder } as const;
+    await saveAttachmentsEnabled(ctx, admin, true, environment);
+    expect((await getAttachmentSettings(ctx, admin, environment)).enabled.value).toBe(true);
+
+    const off = { ATTACHMENTS_STORAGE: 'off' } as const;
+    const error = await refusal(() => saveAttachmentsEnabled(ctx, admin, true, off));
+    expect(error).toMatchObject({ code: 'conflict', key: 'errors.attachments.offByEnvironment' });
+    // Saved on, and still off while the environment says so.
+    expect((await getAttachmentSettings(ctx, admin, off)).enabled).toEqual({
+      value: false,
+      offByEnvironment: true,
+      storageChosen: false,
+    });
+  });
+
+  it('is for staff Admins only', async () => {
+    const manager = await staffActor(db, 'manager');
+    const error = await refusal(() => saveAttachmentsEnabled(ctx, manager, false, SETTINGS_DECIDE));
+    expect(error.code).toBe('forbidden');
   });
 });
 

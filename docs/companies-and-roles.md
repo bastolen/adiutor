@@ -146,8 +146,9 @@ Admins and Managers who aren't members can still add themselves with any role, a
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
   - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
-    it's saved and with the staff Admin's second step from the last 15 minutes, and the largest
-    file anyone may attach; each only shown when the server's environment chooses it (see
+    it's saved and with the staff Admin's second step from the last 15 minutes, whether people can
+    attach files (only once there's a storage), and the largest file anyone may attach; each only
+    shown when the server's environment chooses it (see
     [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it

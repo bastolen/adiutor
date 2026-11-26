@@ -118,7 +118,7 @@ test('an Admin chooses the prefix request numbers are shown with', async ({ page
   }
 });
 
-test('an Admin chooses a folder for attached files, which is tried first, and the largest file', async ({
+test('an Admin chooses a folder for attached files, which is tried first, turns attaching on and chooses the largest file', async ({
   page,
 }) => {
   const before = await attachmentSettingRows();
@@ -130,6 +130,10 @@ test('an Admin chooses a folder for attached files, which is tried first, and th
     await expect(
       page.getByText('No storage is chosen yet, so nobody can attach files.'),
     ).toBeVisible();
+    // Attaching can only be turned on once there's a storage.
+    const attaching = page.getByRole('checkbox', { name: 'People can attach files' });
+    await expect(attaching).toBeDisabled();
+    await expect(attaching).toHaveAccessibleDescription('Choose where files are kept first.');
 
     await page.getByRole('combobox', { name: 'Storage' }).click();
     await page.getByRole('option', { name: /A folder on this server/ }).click();
@@ -151,6 +155,13 @@ test('an Admin chooses a folder for attached files, which is tried first, and th
     // The test file is gone; the marker stays.
     expect(await readdir(folder)).toContain('.adiutor-attachments');
 
+    await attaching.check();
+    await page
+      .getByRole('region', { name: 'Attaching files' })
+      .getByRole('button', { name: 'Save' })
+      .click();
+    await expect(toasts(page)).toContainText('People can attach files now.');
+
     const megabytes = page.getByRole('spinbutton', { name: 'Megabytes' });
     await expect(megabytes).toHaveAccessibleDescription('From 1 to 50.');
     await megabytes.fill('20');
@@ -158,6 +169,7 @@ test('an Admin chooses a folder for attached files, which is tried first, and th
     await expect(toasts(page)).toContainText('Largest file saved.');
     await page.reload();
     await expect(megabytes).toHaveValue('20');
+    await expect(attaching).toBeChecked();
   } finally {
     await restoreAttachmentSettings(before);
     await rm(folder, { recursive: true, force: true });

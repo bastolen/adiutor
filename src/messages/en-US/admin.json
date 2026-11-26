@@ -428,6 +428,15 @@
           "endpointPlaceholder": "https://",
           "hostKeyPlaceholder": "SHA256:"
         },
+        "attaching": {
+          "title": "Attaching files",
+          "description": "Whether people can attach files to requests, replies and internal notes. While it’s off, files already attached can still be downloaded.",
+          "label": "People can attach files",
+          "storageFirst": "Choose where files are kept first.",
+          "save": "Save",
+          "savedOn": "People can attach files now.",
+          "savedOff": "Attaching files is turned off."
+        },
         "largestFile": {
           "title": "Largest file",
           "description": "The largest file anyone may attach.",

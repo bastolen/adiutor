@@ -428,6 +428,15 @@
           "endpointPlaceholder": "https://",
           "hostKeyPlaceholder": "SHA256:"
         },
+        "attaching": {
+          "title": "Adjuntar archivos",
+          "description": "Si las personas pueden adjuntar archivos a las solicitudes, las respuestas y las notas internas. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
+          "label": "Las personas pueden adjuntar archivos",
+          "storageFirst": "Primero elige dónde se guardan los archivos.",
+          "save": "Guardar",
+          "savedOn": "Ahora las personas pueden adjuntar archivos.",
+          "savedOff": "Adjuntar archivos está desactivado."
+        },
         "largestFile": {
           "title": "Archivo más grande",
           "description": "El archivo más grande que alguien puede adjuntar.",

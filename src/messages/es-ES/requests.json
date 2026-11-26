@@ -287,7 +287,22 @@
     },
     "attachments": {
       "label": "{count, plural, one {# archivo adjunto} other {# archivos adjuntos}}",
-      "download": "Descargar {name}, {size}"
+      "download": "Descargar {name}, {size}",
+      "attach": "Adjuntar archivos",
+      "hint": "También puedes soltar o pegar archivos: hasta {count, number} de como máximo {maximum, number} MB cada uno.",
+      "dropHere": "Suelta los archivos para adjuntarlos.",
+      "waiting": "{count, plural, one {# archivo para enviar} other {# archivos para enviar}}",
+      "uploading": "Subiendo, {progress, number, percent}",
+      "uploadingLabel": "Subiendo {name}",
+      "remove": "Quitar {name}",
+      "ready": "{name} está listo para enviar.",
+      "removed": "{name} no se enviará.",
+      "waitForUploads": "Espera a que se suban los archivos para enviar.",
+      "tooLarge": "{name} es demasiado grande: adjunta archivos de como máximo {maximum, number} MB.",
+      "typeNotAllowed": "{name} no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
+      "empty": "{name} está vacío.",
+      "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
+      "failed": "No se ha podido subir {name}. Vuelve a intentarlo."
     }
   }
 }

@@ -112,6 +112,12 @@ export const MAX_ATTACHMENTS_PER_TEXT = 10;
 /** The longest a file's name may be, its extension included. */
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
 
+/** Where the browser uploads a file to attach (`src/app/api/attachments/route.ts`). */
+export const ATTACHMENT_UPLOAD_PATH = '/api/attachments';
+
+/** The header that carries an uploaded file's name, percent-encoded so any name fits. */
+export const ATTACHMENT_NAME_HEADER = 'x-attachment-name';
+
 /**
  * The extension of a file's name, in lower case.
  *

@@ -11,6 +11,7 @@ import { useTranslations } from 'next-intl';
 
 import Tabs from '@/components/ui/tabs';
 
+import type { Attaching } from '../../_requests/attachment-picker';
 import NoteForm from './note-form';
 import ReplyForm from './reply-form';
 
@@ -23,15 +24,18 @@ import ReplyForm from './reply-form';
  * @param props.request - The request's number.
  * @param props.canWait - Whether the reply form offers "Send and wait for the company".
  * @param props.canPropose - Whether the reply form offers "Send as solution".
+ * @param props.attaching - What attaching needs, while people can attach files.
  */
 export default function WriteTabs({
   request,
   canWait,
   canPropose = false,
+  attaching = null,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
+  attaching?: Attaching | null;
 }) {
   const t = useTranslations('requests.note');
   return (
@@ -42,13 +46,20 @@ export default function WriteTabs({
           value: 'reply',
           label: t('replyTab'),
           icon: MessageSquare,
-          content: <ReplyForm request={request} canWait={canWait} canPropose={canPropose} />,
+          content: (
+            <ReplyForm
+              request={request}
+              canWait={canWait}
+              canPropose={canPropose}
+              attaching={attaching}
+            />
+          ),
         },
         {
           value: 'note',
           label: t('noteTab'),
           icon: Lock,
-          content: <NoteForm request={request} />,
+          content: <NoteForm request={request} attaching={attaching} />,
         },
       ]}
     />

@@ -54,6 +54,12 @@ export interface AttachmentSettings {
     | { source: 'settings'; view: StorageView | null };
   /** The largest file, in megabytes: its value, the most it may be, and whether the environment chose it. */
   maxFileMb: { value: number; ceiling: number; fromEnvironment: boolean };
+  /**
+   * "People can attach files": whether it's on, whether the environment
+   * turned attachments off (`ATTACHMENTS_STORAGE=off`, which locks it off),
+   * and whether a storage is chosen, which turning it on needs.
+   */
+  enabled: { value: boolean; offByEnvironment: boolean; storageChosen: boolean };
   /** Whether Adiutor runs on Vercel, where a folder on its disk can't be chosen. */
   vercel: boolean;
 }
@@ -93,7 +99,10 @@ export async function getAttachmentSettings(
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
   const vercel = environment.VERCEL === '1';
   const fromEnvironment = storageFromEnvironment(environment);
-  const { 'attachments.storage': stored } = await readSettings(ctx.db, ['attachments.storage']);
+  const { 'attachments.storage': stored, 'attachments.enabled': enabled } = await readSettings(
+    ctx.db,
+    ['attachments.storage', 'attachments.enabled'],
+  );
   let storage: AttachmentSettings['storage'];
   if (fromEnvironment.state === 'set') {
     storage = { source: 'environment', view: storageView(fromEnvironment.config) };
@@ -109,6 +118,11 @@ export async function getAttachmentSettings(
       value: await attachmentLimitMb(ctx.db, environment),
       ceiling: maxFileMbCeiling(vercel),
       fromEnvironment: environment.ATTACHMENTS_MAX_FILE_MB !== undefined,
+    },
+    enabled: {
+      value: enabled && storage.view !== null,
+      offByEnvironment: fromEnvironment.state === 'off',
+      storageChosen: storage.view !== null,
     },
     vercel,
   };
@@ -268,4 +282,42 @@ export async function saveAttachmentLimit(
   const maxFileMb = maxFileMbSchema(maxFileMbCeiling(environment.VERCEL === '1')).parse(input);
   await ctx.db.transaction((tx) => writeSettings(tx, { 'attachments.max_file_mb': maxFileMb }));
   return maxFileMb;
+}
+
+/**
+ * Turns "People can attach files" on or off. Off hides every Attach button
+ * and refuses uploads; files already attached stay where they are and can
+ * still be downloaded. Turning it on needs a storage (chosen here or by the
+ * server's environment), and is refused while the environment turned
+ * attachments off. Staff Admins only, like the tab's other settings, without
+ * a confirmation or an audit event: it gives nobody a way in.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `staff:manage`.
+ * @param on - Whether people can attach files.
+ * @param environment - The server's environment.
+ * @throws {ServiceError} `conflict` while the environment turned attachments
+ *   off, or when turning it on without a storage.
+ */
+export async function saveAttachmentsEnabled(
+  ctx: ServiceContext,
+  actor: Actor,
+  on: boolean,
+  environment: AttachmentEnvironment = env,
+): Promise<void> {
+  assertNotSignedInAs(actor);
+  assertPermission(getGlobalPermissions(actor), 'staff:manage');
+  const fromEnvironment = storageFromEnvironment(environment);
+  if (fromEnvironment.state === 'off') {
+    throw new ServiceError('conflict', 'errors.attachments.offByEnvironment');
+  }
+  await ctx.db.transaction(async (tx) => {
+    if (on && fromEnvironment.state !== 'set') {
+      const { 'attachments.storage': stored } = await readSettings(tx, ['attachments.storage']);
+      if (!stored) {
+        throw new ServiceError('conflict', 'errors.attachments.storageFirst');
+      }
+    }
+    await writeSettings(tx, { 'attachments.enabled': on });
+  });
 }

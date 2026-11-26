@@ -350,7 +350,9 @@ run tries again. `pnpm jobs:list` shows every job with its last and next run, an
 Files people attach to requests are kept in a storage a staff Admin chooses on the **Attachments**
 tab of Settings, unless the server's environment chooses it
 ([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
-a folder on another server over SFTP. Without one, attachments are off.
+a folder on another server over SFTP. Without one, attachments are off. Once there's a storage, a
+staff Admin turns on **People can attach files** on the same tab; while it's off, nobody can attach
+files, and the files already attached can still be downloaded.
 
 - **In Settings,** a storage is tried before it's saved: Adiutor writes a small file there, reads
   it back and deletes it, and says what went wrong if any step fails (unreachable, keys refused,

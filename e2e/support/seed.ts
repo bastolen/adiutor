@@ -157,8 +157,10 @@ export default async function seedTestDatabase(): Promise<void> {
         'staff.default_time_zone': E2E_TIME_ZONE,
         // A tick just ran, so pages don't warn that background jobs aren't running.
         'jobs.last_tick': new Date(),
-        // Attached files go to a folder of the tests' own (emptied by the global setup).
+        // Attached files go to a folder of the tests' own (emptied by the global setup), and
+        // people can attach them.
         'attachments.storage': { driver: 'local', dir: ATTACHMENTS_DIR },
+        'attachments.enabled': true,
       });
     });
     const platformAdmin = await addPerson(PLATFORM_ADMIN, { platformRole: 'platform_admin' });

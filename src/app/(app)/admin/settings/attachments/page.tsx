@@ -1,7 +1,8 @@
 /**
  * @file The Attachments tab of Settings, served at
- * `/admin/settings/attachments`: where files people attach are kept, and
- * the largest file anyone may attach (decision 0044). Each is chosen here
+ * `/admin/settings/attachments`: where files people attach are kept,
+ * whether people can attach files, and the largest file anyone may attach
+ * (decision 0044). Each is chosen here
  * unless the server's environment chooses it, which this page then only
  * shows. Staff Admins only (`staff:manage`). The heading and tabs come from
  * the Settings layout.
@@ -19,6 +20,7 @@ import { requireGlobalPermission } from '@/server/authz';
 import { globalPermissionMetadata } from '@/server/page-metadata';
 import { getAttachmentSettings } from '@/server/storage';
 
+import AttachingForm from './attaching-form';
 import EnvironmentStorage from './environment-storage';
 import LargestFileForm from './largest-file-form';
 import StorageForm from './storage-form';
@@ -58,6 +60,14 @@ async function AttachmentSettingsCards() {
           ) : (
             <StorageForm current={storage.view} vercel={settings.vercel} />
           )}
+        </Card>
+
+        <Card id="attaching" title={t('attaching.title')} description={t('attaching.description')}>
+          <AttachingForm
+            on={settings.enabled.value}
+            storageChosen={settings.enabled.storageChosen}
+            offByEnvironment={settings.enabled.offByEnvironment}
+          />
         </Card>
 
         <Card

@@ -33,6 +33,12 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
 - **Settings chooses it, unless the environment does:** a staff Admin sets it up on the
   Attachments tab, and the server's environment (`ATTACHMENTS_STORAGE`, or `off`) wins over it, so
   an operator can fix it, or keep staff from choosing one; the tab then only shows it.
+- **Attaching has a switch of its own,** "People can attach files", off until a staff Admin turns
+  it on and only once there's a storage: a storage can be set up and tried before anyone attaches,
+  and attaching turned off again without losing it. Files already attached stay downloadable.
+- **Only the uploader sends an upload:** a text takes only its writer's own unsent uploads (with the
+  same staff member signed in as them, if one was), and a file that isn't theirs refuses the whole
+  text without naming it.
 - **A storage is tried before it's saved** (a small file written, read back and deleted), with the
   staff Admin's second step from the last 15 minutes and a record in the audit log: it decides
   where every company's files go, and holds credentials.

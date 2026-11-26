@@ -939,6 +939,29 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
+      test('a reply with files waiting to be sent, an image among them', async ({ page }) => {
+        const number = await storeOwnRequest({ title: 'Files waiting for the scan' });
+        await page.goto(`/requests/${number}`);
+        const chooser = page.waitForEvent('filechooser');
+        await page.getByRole('button', { name: 'Attach files' }).click();
+        await (
+          await chooser
+        ).setFiles([
+          {
+            name: 'error.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+              'base64',
+            ),
+          },
+          { name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printer offline') },
+        ]);
+        await expect(page.getByRole('list', { name: '2 files to send' })).toBeVisible();
+        await expect(page.getByText('Wait until the files are uploaded to send.')).toBeHidden();
+        await expectAccessible(page);
+      });
+
       test('the fields of an SFTP server on the Attachments tab of Settings', async ({ page }) => {
         // Only chosen in the select: nothing is saved.
         await page.goto('/admin/settings/attachments');

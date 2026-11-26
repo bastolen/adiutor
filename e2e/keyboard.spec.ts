@@ -1165,6 +1165,30 @@ test.describe('requests', () => {
       await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
     });
 
+    test('a file is attached and taken off again with the keyboard, focus going back to Attach', async ({
+      page,
+    }) => {
+      const number = await storeOwnRequest({ title: 'A file attached with the keyboard' });
+      await page.goto(`/requests/${number}`);
+      const attach = page.getByRole('button', { name: 'Attach files' });
+      expect(await cursorOf(attach)).toBe('pointer');
+
+      // Enter on the button opens the file chooser.
+      await attach.focus();
+      const chooser = page.waitForEvent('filechooser');
+      await page.keyboard.press('Enter');
+      await (
+        await chooser
+      ).setFiles({ name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printed') });
+
+      // Tab reaches the file's Remove button, and removing it gives focus back to Attach.
+      const remove = page.getByRole('button', { name: 'Remove printer.log' });
+      await pressUntilFocused(page, 'Tab', remove);
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('list', { name: /to send$/ })).toBeHidden();
+      await expect(attach).toBeFocused();
+    });
+
     test('code and a table in a request’s text are reached and scrolled with the keyboard', async ({
       page,
       context,

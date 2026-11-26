@@ -21,6 +21,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError } from '../errors';
 import { signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import {
   assertReplyLimit,
   CHANGE_MOMENT,
@@ -54,18 +55,20 @@ import { tellPeopleOnRequest } from './updates';
  * @param input.request - The request's number or ID.
  * @param input.body - The reply.
  * @param input.status - A status to set with it (`REQUEST_STATUSES`); empty to leave that to the reply.
+ * @param input.attachments - Files the actor uploaded for the reply (`claimAttachments`).
  * @returns The request's status after the reply.
  * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has replied too often
- *   (`RATE_LIMITS.requestRepliesPerUser`).
+ *   (`RATE_LIMITS.requestRepliesPerUser`); `invalid` or `conflict` for files that can't be sent
+ *   with it.
  * @throws {ZodError} When the reply or the status isn't valid.
  */
 export default async function replyToRequest(
   ctx: ServiceContext,
   actor: Actor,
-  input: { request: string; body: string; status?: string },
+  input: { request: string; body: string; status?: string; attachments?: readonly string[] },
 ): Promise<{ status: RequestStatus }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
@@ -94,6 +97,12 @@ export default async function replyToRequest(
         .values({ ...entry, kind: 'comment', body, bodyFormat: WRITTEN_TEXT_FORMAT })
         .returning({ id: requestEntry.id }),
       'the new reply',
+    );
+    await claimAttachments(
+      tx,
+      actor,
+      { requestId: locked.id, entryId: reply.id },
+      input.attachments ?? [],
     );
     // Whoever replies follows the request from then on, and so do the people the reply mentions.
     await subscribeAutomatically(tx, locked.id, [actor.id]);

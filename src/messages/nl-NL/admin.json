@@ -428,6 +428,15 @@
           "endpointPlaceholder": "https://",
           "hostKeyPlaceholder": "SHA256:"
         },
+        "attaching": {
+          "title": "Bestanden toevoegen",
+          "description": "Of mensen bestanden kunnen toevoegen aan verzoeken, reacties en interne notities. Zolang het uit staat, blijven bestanden die al zijn toegevoegd te downloaden.",
+          "label": "Mensen kunnen bestanden toevoegen",
+          "storageFirst": "Kies eerst waar bestanden worden bewaard.",
+          "save": "Opslaan",
+          "savedOn": "Mensen kunnen nu bestanden toevoegen.",
+          "savedOff": "Bestanden toevoegen staat uit."
+        },
         "largestFile": {
           "title": "Grootste bestand",
           "description": "Het grootste bestand dat iemand mag toevoegen.",

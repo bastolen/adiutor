@@ -287,7 +287,22 @@
     },
     "attachments": {
       "label": "{count, plural, one {# attachment} other {# attachments}}",
-      "download": "Download {name}, {size}"
+      "download": "Download {name}, {size}",
+      "attach": "Attach files",
+      "hint": "You can also drop or paste files: up to {count, number} of at most {maximum, number} MB each.",
+      "dropHere": "Drop the files to attach them.",
+      "waiting": "{count, plural, one {# file to send} other {# files to send}}",
+      "uploading": "Uploading, {progress, number, percent}",
+      "uploadingLabel": "Uploading {name}",
+      "remove": "Remove {name}",
+      "ready": "{name} is ready to send.",
+      "removed": "{name} won’t be sent.",
+      "waitForUploads": "Wait until the files are uploaded to send.",
+      "tooLarge": "{name} is too large: attach files of at most {maximum, number} MB.",
+      "typeNotAllowed": "{name} can’t be attached. Attach images, PDFs, text, Office or OpenDocument files, archives or screen recordings.",
+      "empty": "{name} is empty.",
+      "tooMany": "Attach at most {maximum, number} files to one text.",
+      "failed": "{name} couldn’t be uploaded. Try again."
     }
   }
 }

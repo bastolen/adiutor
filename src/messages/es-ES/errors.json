@@ -137,7 +137,11 @@
       "incomplete": "El archivo llegó incompleto. Vuelve a intentarlo.",
       "badName": "No se ha podido leer el nombre del archivo. Cámbiale el nombre y vuelve a intentarlo.",
       "signedOut": "Vuelve a iniciar sesión para adjuntar archivos.",
-      "confirmFirst": "Confirma que eres tú antes de adjuntar archivos."
+      "confirmFirst": "Confirma que eres tú antes de adjuntar archivos.",
+      "offByEnvironment": "El entorno del servidor ha desactivado adjuntar archivos, así que no se puede activar aquí.",
+      "storageFirst": "Elige dónde se guardan los archivos antes de que las personas puedan adjuntarlos.",
+      "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
+      "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo."
     }
   }
 }

@@ -16,6 +16,7 @@ export {
   attachmentLimitMb,
   getAttachmentSettings,
   saveAttachmentLimit,
+  saveAttachmentsEnabled,
   saveAttachmentStorage,
 } from './settings';
 export { hostKeyFingerprint } from './sftp';

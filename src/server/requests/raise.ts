@@ -21,6 +21,7 @@ import { companyDeactivatedError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { incrementSetting } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
@@ -73,19 +74,27 @@ async function nextRequestNumber(
  * @param input.type - What kind of request it is: a type's key, which must exist and not be
  *   archived.
  * @param input.priority - A priority, from the staff (`REQUEST_PRIORITIES`); empty for the type's.
+ * @param input.attachments - Files the actor uploaded for the description (`claimAttachments`).
  * @returns The new request's ID and number.
  * @throws {ServiceError} `not_found` when the actor may not see the company, `forbidden`
  *   without `requests:contribute`, `invalid` when the company is deactivated or the type can't
  *   be chosen (`errors.requestTypes.unavailable`), `rate_limited` when whoever acts has raised
  *   too many requests (`RATE_LIMITS.requestsPerUser`), `signed_in_as` when the sign-in as the
- *   actor ended meanwhile.
+ *   actor ended meanwhile; `invalid` or `conflict` for files that can't be sent with it.
  * @throws {ZodError} When no company was chosen (asked first, like the form does), or the
  *   title, description, type or priority isn't valid.
  */
 export default async function raiseRequest(
   ctx: ServiceContext,
   actor: Actor,
-  input: { companyId: string; title: string; description: string; type: string; priority?: string },
+  input: {
+    companyId: string;
+    title: string;
+    description: string;
+    type: string;
+    priority?: string;
+    attachments?: readonly string[];
+  },
 ): Promise<{ id: string; number: number }> {
   // A company that wasn't chosen is a field to fill in, not a page that doesn't exist.
   const companyRef = requestCompanySchema.parse(input.companyId);
@@ -132,6 +141,12 @@ export default async function raiseRequest(
         })
         .returning({ id: request.id, number: request.number }),
       'the new request',
+    );
+    await claimAttachments(
+      tx,
+      actor,
+      { requestId: raised.id, entryId: null },
+      input.attachments ?? [],
     );
     // Whoever raises a request follows it, and so do the people its description mentions.
     await subscribeAutomatically(tx, raised.id, [actor.id]);

@@ -412,8 +412,11 @@ A file attached to a request is uploaded on its own first, then sent with its te
   file is chosen per install (at most 50 MB, and 4 on Vercel).
 - **Row first, then the file:** a row is stored before its file is written and marked uploaded
   after, so a file never sits in storage without a row; one that couldn't be stored takes its row
-  back. An unsent upload is only its uploader's to send, for 24 hours, and the `attachment-files`
-  job purges it after 25, or once the uploader's account is gone.
+  back. An unsent upload is only its uploader's to send, for 24 hours (`claimAttachments`: their
+  own finished upload, unclaimed, with the same staff member signed in as them if one was), and
+  the `attachment-files` job purges it after 25, or once the uploader's account is gone. A text
+  with a file that isn't the writer's to send is refused whole, and names only a file of their
+  own, so nobody learns another person's file name by guessing its ID.
 - **A file is read by whoever reads its text** (`loadAttachment` in
   `src/server/requests/attachments.ts`): the request's own access (`getRequestAccess`: the
   company's people while it's active, and the staff), and for an internal note's file the readers

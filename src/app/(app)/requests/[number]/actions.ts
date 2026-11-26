@@ -38,7 +38,8 @@ import refreshOnConflict from '../../_requests/refresh-on-conflict';
  * wait for the company's answer.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `request` (its number), `body` and, optionally, `status`.
+ * @param formData - Fields `request` (its number), `body`, optionally `status`, and an
+ *   `attachment` for each file sent with it.
  * @returns A confirmation, or why it failed.
  */
 export async function replyAction(
@@ -52,6 +53,7 @@ export async function replyAction(
       request: field(formData, 'request'),
       body: field(formData, 'body'),
       status: asked,
+      attachments: fieldValues(formData, 'attachment'),
     });
     refresh();
     const t = await getTranslations('requests.reply');
@@ -63,7 +65,8 @@ export async function replyAction(
  * Adds an internal note to a request, which only the staff read.
  *
  * @param _previous - The previous result (unused).
- * @param formData - Fields `request` (its number) and `body`.
+ * @param formData - Fields `request` (its number) and `body`, and an `attachment` for each file
+ *   sent with it.
  * @returns A confirmation, or why it failed.
  */
 export async function noteAction(
@@ -75,6 +78,7 @@ export async function noteAction(
     await addNote(appContext, actor, {
       request: field(formData, 'request'),
       body: field(formData, 'body'),
+      attachments: fieldValues(formData, 'attachment'),
     });
     refresh();
     const t = await getTranslations('requests.note');

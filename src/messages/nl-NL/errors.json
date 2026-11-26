@@ -137,7 +137,11 @@
       "incomplete": "Het bestand kwam onvolledig aan. Probeer het opnieuw.",
       "badName": "De naam van het bestand kon niet worden gelezen. Geef het een andere naam en probeer het opnieuw.",
       "signedOut": "Log opnieuw in om bestanden toe te voegen.",
-      "confirmFirst": "Bevestig dat jij het bent voordat je bestanden toevoegt."
+      "confirmFirst": "Bevestig dat jij het bent voordat je bestanden toevoegt.",
+      "offByEnvironment": "De omgeving van de server heeft bestanden toevoegen uitgezet, dus je kunt het hier niet aanzetten.",
+      "storageFirst": "Kies waar bestanden worden bewaard voordat mensen ze kunnen toevoegen.",
+      "tooMany": "Voeg hoogstens {maximum, number} bestanden aan één tekst toe.",
+      "someUnavailable": "Een van de bestanden is niet meer beschikbaar. Voeg het opnieuw toe."
     }
   }
 }

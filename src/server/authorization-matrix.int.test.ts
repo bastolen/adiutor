@@ -173,7 +173,12 @@ import {
   loadAttachment,
   uploadAttachment,
 } from './requests';
-import { getAttachmentSettings, saveAttachmentLimit, saveAttachmentStorage } from './storage';
+import {
+  getAttachmentSettings,
+  saveAttachmentLimit,
+  saveAttachmentsEnabled,
+  saveAttachmentStorage,
+} from './storage';
 
 const { ctx, db, sent, storage } = setupTestContext();
 
@@ -570,6 +575,8 @@ function listOperations(): Operation[] {
           bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
         }),
     ],
+    // After the upload, which it would refuse.
+    ['turn attaching files off', (w) => saveAttachmentsEnabled(ctx, w.actor, false, {})],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -1045,6 +1052,7 @@ const EXPECTED: Record<string, string> = {
   'view attachment settings': 'FFFFFFA',
   'choose where attachments are kept': 'FFFFFFA',
   'choose the largest attachment': 'FFFFFFA',
+  'turn attaching files off': 'FFFFFFA',
   // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
   'upload a file to attach': 'FAAAFAA',
   // A file is read by whoever reads its text: a description's by everyone who sees the request,

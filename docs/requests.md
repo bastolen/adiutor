@@ -9,9 +9,8 @@ requests behave and where the code is; why they're built this way is in
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
 the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), and for the
-board in [decision 0037](decisions/0037-a-board-of-requests.md).
-
-Not built yet, for a later change: attachments.
+board in [decision 0037](decisions/0037-a-board-of-requests.md), and for its attachments in
+[decision 0044](decisions/0044-attachments.md).
 
 ## Words
 
@@ -718,6 +717,22 @@ in [Attachments](deploying.md#attachments).
   none for the description), so it's read by whoever reads that text: a note's files only by the
   staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
   filtered like its mentions; `loadAttachment` checks the same for a download).
+- **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
+  files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
+  request, reply and write a note have an "Attach files" button, take files dropped on the form,
+  and take files or a screenshot pasted into it (a paste that also holds text, such as a copy from
+  a document, stays a paste of the text). The browser checks each file's kind, its size and how
+  many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it at once with its progress
+  shown (`upload-attachment.ts`, to `POST /api/attachments`), and the form sends its ID as an
+  `attachment` field; the file never rides along with the form. While a file uploads, the send
+  buttons wait, still focusable, and say why. A text still needs its words: files don't replace
+  them.
+- **Sending** (`claimAttachments`, in the transaction that stores the text, after the text's row):
+  only the writer's own finished uploads that no text has claimed yet, from the last 24 hours, and
+  with the same staff member signed in as them if one was, so a file uploaded while signed in as
+  someone isn't theirs alone to send. A file that can't be sent, or more than 10 on the text,
+  refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
+  is no longer available. Attach it again."), anyone else's isn't.
 - **On a request's page,** each text shows its files under it (`AttachmentList` in
   `src/app/(app)/_requests/`, a `FileTile` each): a thumbnail for a PNG, JPEG, GIF or WebP image,
   loaded from Adiutor itself, or an icon for the file's kind, with its name and size. A tile is a
@@ -976,8 +991,9 @@ no Move menu.
   subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `uploadAttachment` and `loadAttachment` (attached
-  files), `listRequestCompanies`, `listRequests` (built from
+- `src/server/requests/` (a folder module): `attachmentsOn`, `uploadAttachment` and
+  `loadAttachment` (attached files, which the services that store a text claim with
+  `claimAttachments`), `listRequestCompanies`, `listRequests` (built from
   `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
   sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into
   `RequestListItem`s), `listBoard` (the board's lanes, see [The board](#the-board)), `findRequest`,
