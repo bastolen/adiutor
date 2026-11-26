@@ -79,7 +79,7 @@
     },
     "new": {
       "title": "New request",
-      "description": "{audience, select, staff {Raise a request for a company, for example after a phone call.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
+      "description": "{audience, select, staff {Raise a request for a company, or for someone there who asked you, for example by phone.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
       "back": "Requests",
       "company": "Company",
       "companyPlaceholder": "Choose a company",
@@ -92,6 +92,9 @@
       "priorityLabel": "Priority",
       "priorityFromType": "Set by the type",
       "priorityHint": "Only staff see the priority.",
+      "raiseForLabel": "Raise it for",
+      "raiseForSelf": "Yourself",
+      "raiseForHint": "Someone at the company who asked you, for example by phone. They show as who raised it, follow it and get an email.",
       "submit": "Raise request"
     },
     "detail": {

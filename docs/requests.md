@@ -851,8 +851,12 @@ says so with a "Show everything" button.
   them (its people and the staff), under the company's header with its Requests tab still current
   (see [The board](#the-board)).
 - **`/requests/new`**: the company (only when there's more than one to choose from), a title, a
-  type with what each is for, and a description. The staff also choose a priority, or leave it to
-  the type. It opens the new request. A company that wasn't chosen is asked for like any other
+  type with what each is for, and a description. The staff also choose who it's for, themselves
+  ("Yourself") or someone at the company (see
+  [Raising a request for someone](#raising-a-request-for-someone)), and a priority, or leave it to
+  the type. The people come with a company that's chosen already; choosing another asks for its
+  people (`raiseForChoicesAction`, busy meanwhile) and puts the choice back to "Yourself". It opens
+  the new request. A company that wasn't chosen is asked for like any other
   field (`requestCompanySchema`); "not found" is for a company the reader may not see.
 - **`/requests/<number>`**: what was asked (Description), the Conversation with every reply and
   change (and, for the staff, every internal note), oldest first unless the reader chose otherwise
