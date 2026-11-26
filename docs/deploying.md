@@ -130,9 +130,9 @@ image is in [decision 0013](decisions/0013-one-docker-image-with-the-whole-appli
 docker build -t adiutor .
 ```
 
-`.dockerignore` keeps your `node_modules`, builds, test output, database files, `.env` files and
-other checkouts of the repository (`.claude/`, which have their own `.env` files) out of the
-image, wherever they are in the folder; the build uses placeholder settings and connects to nothing. Give the real settings when
+`.dockerignore` keeps your `node_modules`, builds, test output, database files, `.env` files,
+Claude Security scan reports (`CLAUDE-SECURITY-*`) and other checkouts of the repository
+(`.claude/`, which have their own `.env` files) out of the image, wherever they are in the folder; the build uses placeholder settings and connects to nothing. Give the real settings when
 you run it, never at build time, so they don't end up in the image:
 
 ```bash
