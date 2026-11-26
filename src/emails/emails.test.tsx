@@ -384,6 +384,31 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('tells someone a request was raised for, with its description in full', async () => {
+    const url = `${appUrl}/requests/142#request-description`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'raised',
+          by: 'Sam Support',
+          text: { text: 'It prints **blank** pages.', format: 'markdown', mentions: {} },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('Sam Support raised this request for you:');
+    expect(email.html).toContain('<strong>blank</strong>');
+    expect(email.html).toContain('Sam Support raised this request for you.');
+    expectBasics(email, url);
+  });
+
   it('shows the staff an internal note in full, marked as one', async () => {
     const url = `${appUrl}/requests/142`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
@@ -1020,6 +1045,11 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
           event: 'mentioned',
           by: 'Sam Support',
           where: 'description',
+          text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
+        },
+        {
+          event: 'raised',
+          by: 'Sam Support',
           text: { text: 'Adiutor Tests', format: 'plain', mentions: {} },
         },
       ],

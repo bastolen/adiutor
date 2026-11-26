@@ -44,6 +44,7 @@ import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
 
 import {
+  actorFor,
   addMember as addMembership,
   connectProvider,
   createCompany,
@@ -151,6 +152,7 @@ import {
   listAssignableStaff,
   listBoard,
   listMentionable,
+  listRaisableFor,
   listRequestCompanies,
   listRequests,
   listRequestTypes,
@@ -229,6 +231,8 @@ interface World {
   failedJobs: { retry: string; discard: string };
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
+  /** The key of each company's Admin, to raise a request for (`listRaisableFor`). */
+  raiseFor: { own: string; other: string };
 }
 
 /**
@@ -613,6 +617,29 @@ function listOperations(): Operation[] {
       'raise request (other)',
       (w) => raiseRequest(ctx, w.actor, { ...NEW_REQUEST, companyId: w.other.id }),
     ],
+    ['list who a request can be raised for (own)', (w) => listRaisableFor(ctx, w.actor, w.own.id)],
+    [
+      'list who a request can be raised for (other)',
+      (w) => listRaisableFor(ctx, w.actor, w.other.id),
+    ],
+    [
+      'raise request for someone (own)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: w.own.id,
+          raisedFor: w.raiseFor.own,
+        }),
+    ],
+    [
+      'raise request for someone (other)',
+      (w) =>
+        raiseRequest(ctx, w.actor, {
+          ...NEW_REQUEST,
+          companyId: w.other.id,
+          raisedFor: w.raiseFor.other,
+        }),
+    ],
     [
       'reply to request (own)',
       (w) => replyToRequest(ctx, w.actor, { request: w.requests.own, body: 'Any news?' }),
@@ -821,6 +848,8 @@ const READS: ReadonlySet<string> = new Set([
   'show requests as a board (own)',
   'show requests as a board (other)',
   'list companies to raise a request for',
+  'list who a request can be raised for (own)',
+  'list who a request can be raised for (other)',
   'look up a request (own)',
   'look up a request (other)',
   'view request (own)',
@@ -845,6 +874,8 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'dismiss own MFA recommendation',
   'raise request (own)',
   'raise request (other)',
+  'raise request for someone (own)',
+  'raise request for someone (other)',
   'reply to request (own)',
   'reply to request (other)',
   'reply and wait for the company (own)',
@@ -1041,6 +1072,11 @@ const EXPECTED: Record<string, string> = {
   // Watchers follow requests and Finance reads them: neither raises one.
   'raise request (own)': 'FAAAFAA',
   'raise request (other)': 'NNNAFAA',
+  // Only the staff who work on requests raise one for someone at the company, and list who.
+  'list who a request can be raised for (own)': 'FFFAFAA',
+  'list who a request can be raised for (other)': 'NNNAFAA',
+  'raise request for someone (own)': 'FFFAFAA',
+  'raise request for someone (other)': 'NNNAFAA',
   'reply to request (own)': 'FAAAFAA',
   'reply to request (other)': 'NNNAFAA',
   // Only the staff who work on requests set a request to waiting.
@@ -1200,6 +1236,19 @@ async function createWorld(role: MatrixRole): Promise<World> {
   await claimInviteLink(ctx, (await createLink(otherAdmin, other.id)).token, actor.email);
   const invitationFromLink = tokenFrom(defined(sent.at(-1), 'the invitation email'));
   const outsider = await createUser(db, 'outsider@adiutor.test');
+  const keyFinder = await actorFor(db, staffToRemove);
+  /**
+   * Finds a company's Admin by the key the staff's form names them by.
+   *
+   * @param companyId - The company.
+   * @param person - Its Admin.
+   * @returns Their key there.
+   */
+  const raiseForKey = async (companyId: string, person: Actor) =>
+    defined(
+      (await listRaisableFor(ctx, keyFinder, companyId)).find(({ name }) => name === person.name),
+      'the key of the person to raise a request for',
+    ).key;
   return {
     actor,
     own,
@@ -1251,6 +1300,10 @@ async function createWorld(role: MatrixRole): Promise<World> {
       other: String(
         (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
       ),
+    },
+    raiseFor: {
+      own: await raiseForKey(own.id, ownAdmin),
+      other: await raiseForKey(other.id, otherAdmin),
     },
   };
 }

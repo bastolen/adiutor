@@ -342,6 +342,25 @@ describe('RequestDetails', () => {
     expect(valueOf('Raised by')).toHaveTextContent('Adiutor Tests');
   });
 
+  it('says who raised a request for someone, which then has a first response', async () => {
+    await renderDetails({
+      detail: detailOf({
+        raisedOnBehalf: {
+          userId: null,
+          name: 'Sam Support',
+          side: 'staff',
+          isViewer: false,
+          picture: null,
+        },
+      }),
+    });
+
+    // The Client reads the page.
+    expect(valueOf('Raised by')).toHaveTextContent('Casey Client');
+    expect(valueOf('Raised by')).toHaveTextContent('Sam Support raised this for you');
+    expect(valueOf('First response')).toHaveTextContent('Not yet');
+  });
+
   it('puts the staff’s status select in place of the status, and the controls under the details', async () => {
     await renderDetails({
       detail: detailOf({ reopenedAt: new Date('2026-11-13T10:00:00Z') }),

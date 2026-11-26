@@ -251,7 +251,7 @@
     },
     "requestUpdate": {
       "subject": "{reference}: {title}",
-      "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} other {{name} subscribed you to this request.}}",
+      "preview": "{event, select, reply {{name} replied.} status {{name} changed the status.} assigned {{name} assigned this request to you.} mentioned {{name} mentioned you.} note {{name} wrote an internal note.} raised {{name} raised this request for you.} other {{name} subscribed you to this request.}}",
       "reason": "{role, select, assignee {You’re receiving this because this request is assigned to you. You can turn off emails about requests in <account>your account</account>.} other {You’re receiving this because you’re subscribed to this request. To stop, open the request and choose Unsubscribe, or turn off emails about requests in <account>your account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
       "reply": "<strong>{name}</strong> replied:",
@@ -261,6 +261,7 @@
       "assigned": "<strong>{name}</strong> assigned this request to you.",
       "mentioned": "{where, select, description {<strong>{name}</strong> mentioned you in the description:} note {<strong>{name}</strong> mentioned you in an internal note:} other {<strong>{name}</strong> mentioned you in a reply:}}",
       "subscribed": "<strong>{name}</strong> subscribed you to this request.",
+      "raised": "<strong>{name}</strong> raised this request for you:",
       "button": "Open request",
       "answerQuestion": "Does this solve your request?",
       "approve": "Approve",

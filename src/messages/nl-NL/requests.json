@@ -79,7 +79,7 @@
     },
     "new": {
       "title": "Nieuw verzoek",
-      "description": "{audience, select, staff {Dien een verzoek in voor een bedrijf, bijvoorbeeld na een telefoongesprek.} other {Vertel {staff} wat je nodig hebt. Ze reageren op de pagina van het verzoek.}}",
+      "description": "{audience, select, staff {Dien een verzoek in voor een bedrijf, of voor iemand daar die het je vroeg, bijvoorbeeld telefonisch.} other {Vertel {staff} wat je nodig hebt. Ze reageren op de pagina van het verzoek.}}",
       "back": "Verzoeken",
       "company": "Bedrijf",
       "companyPlaceholder": "Kies een bedrijf",
@@ -92,6 +92,9 @@
       "priorityLabel": "Prioriteit",
       "priorityFromType": "Bepaald door het type",
       "priorityHint": "Alleen medewerkers zien de prioriteit.",
+      "raiseForLabel": "Indienen voor",
+      "raiseForSelf": "Jezelf",
+      "raiseForHint": "Iemand van het bedrijf die het je vroeg, bijvoorbeeld telefonisch. Diegene staat vermeld als indiener, volgt het verzoek en krijgt een e-mail.",
       "submit": "Verzoek indienen"
     },
     "detail": {
@@ -256,6 +259,11 @@
       "versionLine": "{name} heeft dit gewijzigd op {time}.",
       "editNote": "Notitie bewerken",
       "noteLabel": "Notitie"
+    },
+    "raisedFor": {
+      "forName": "Ingediend door {staff} voor {name}",
+      "forYou": "Ingediend door {staff} voor jou",
+      "byYou": "Door jou ingediend voor {name}"
     },
     "signedInAs": {
       "workForYou": "Gedaan door {staff}, ingelogd als jou",

@@ -2,7 +2,8 @@
  * @file The page that raises a request, served at `/requests/new`. For
  * everyone who may raise one somewhere: a company's Admins and Clients in
  * their own companies, and the staff who work on requests in any active
- * company. Everyone else gets the 404 page.
+ * company, also for someone there (decision 0047). Everyone else gets the
+ * 404 page.
  */
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -17,7 +18,12 @@ import type { Actor } from '@/server/actor';
 import appContext from '@/server/app-context';
 import { getActor, getStaffPermissionsInCompanies } from '@/server/authz';
 import { checkedPageMetadata } from '@/server/page-metadata';
-import { getRequestSettings, listRequestCompanies, listRequestTypes } from '@/server/requests';
+import {
+  getRequestSettings,
+  listRaisableFor,
+  listRequestCompanies,
+  listRequestTypes,
+} from '@/server/requests';
 
 import RaiseRequestForm from './raise-request-form';
 
@@ -45,7 +51,9 @@ export const generateMetadata = checkedPageMetadata('requests.new.title', async 
 /**
  * Loads and shows the form. The company in the address (`?company=`, from a
  * company's own list) is chosen already when it's one the viewer may raise a
- * request in.
+ * request in. For the staff, the people a request in a company that's chosen
+ * already can be raised for come with it; the form asks for them when
+ * another company is chosen.
  *
  * @param props - Component props.
  * @param props.searchParams - Query parameters: `company`, a company's URL name.
@@ -64,6 +72,11 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
   }
   const asked = searchParam(params.company);
   const staff = getStaffPermissionsInCompanies(actor).has('requests:manage');
+  const [only] = companies;
+  const chosen =
+    companies.length === 1 && only ? only : companies.find(({ slug }) => slug === asked);
+  const raiseForChoices =
+    staff && chosen ? await listRaisableFor(appContext, actor, chosen.id) : [];
 
   return (
     <>
@@ -83,8 +96,10 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
               .filter(({ archived }) => !archived)
               .map(({ key, name, description }) => ({ key, name, description }))}
             companies={companies.map(({ slug, name }) => ({ slug, name }))}
-            company={companies.find(({ slug }) => slug === asked)?.slug}
+            company={chosen?.slug}
             choosesPriority={staff}
+            raisesFor={staff}
+            raiseForChoices={raiseForChoices}
           />
         </ClientMessages>
       </Card>

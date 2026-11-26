@@ -54,6 +54,7 @@ import {
   boardLane,
   openBoard,
   createFreshAccount,
+  searchSelect,
 } from './support/helpers';
 import { emailsAbout, linkIn, waitForEmailAbout } from './support/outbox';
 import { inOrder, repeatInOrder } from './support/sequence';
@@ -465,6 +466,51 @@ test('the staff raise a request for a company and choose its priority', async ({
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(toasts(page).getByText('Request raised.')).toHaveCount(0);
+});
+
+test('the staff raise a request for someone at a company, who reads it as theirs', async ({
+  page,
+}) => {
+  // A title of the test's own, which the email's subject holds.
+  const title = `Raised for a Client ${randomUUID().slice(0, 8)}`;
+  // A sign-in of the test's own, not the spec's shared one: it signs out later.
+  await signIn(page, SUPPORT_STAFF);
+  await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
+  const raiseFor = page.getByRole('combobox', { name: 'Raise it for' });
+  await expect(raiseFor).toHaveText('Yourself');
+  // The company has more people than a short select lists, so it's searched.
+  const people = await searchSelect(raiseFor, 'E2E Req');
+  await people.getByRole('option', { name: REQUESTS_CLIENT.name }).click();
+  await expect(raiseFor).toHaveText(REQUESTS_CLIENT.name);
+  await page.getByRole('textbox', { name: 'Title' }).fill(title);
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^Support/ }).click();
+  await (await markdownEditor(page, 'Description')).fill('Asked by phone.');
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
+  const address = new URL(page.url()).pathname;
+  await expect(detail(page, 'Raised by')).toContainText(REQUESTS_CLIENT.name);
+  await expect(detail(page, 'Raised by')).toContainText(
+    `You raised this for ${REQUESTS_CLIENT.name}`,
+  );
+  // It's the company's request, so the staff's first response is still to come.
+  await expect(detail(page, 'First response')).toHaveText('Not yet');
+
+  // The Client is told, with the description, and reads the request as theirs.
+  const email = await waitForEmailAbout(REQUESTS_CLIENT.email, title);
+  expect(email.text).toContain(`${SUPPORT_STAFF.name} raised this request for you:`);
+  expect(email.text).toContain('Asked by phone.');
+  await signOut(page);
+  await signIn(page, REQUESTS_CLIENT);
+  await page.goto(address);
+  await expect(detail(page, 'Raised by')).toContainText(
+    `${SUPPORT_STAFF.name} raised this for you`,
+  );
+  await expect(
+    page.getByRole('region', { name: 'Details' }).getByRole('button', { name: 'Unsubscribe' }),
+  ).toBeVisible();
 });
 
 test('a company without requests invites its first one, under All too', async ({
