@@ -203,8 +203,10 @@ title, a sentence per event (the `webhooks` catalogue), up to 300 characters of 
 link on a line of its own. A text is shortened to its words: its formatting, links' addresses and
 images are left out. What someone wrote can never form a chat app's markup: `<` and `>` become `‹`
 and `›` (so no `<!here>`, `<@id>` or `<users/all>`), every `@` is followed by a word joiner (so
-no `@here`, `@channel`, `@everyone` or a mention of anyone), and `![` is broken up (so no image
-loads). A delivery with more events than fit in 3,000 characters says how many more there were.
+no `@here`, `@channel`, `@everyone` or a mention of anyone), `![` is broken up (so no image
+loads), and so is a `]` before `(`, `[` or `:` (so no Markdown link, which Mattermost and Discord
+show as its words, hides where it goes). An address written out in full stays one, and a chat app
+may show a preview of it. A delivery with more events than fit in 3,000 characters says how many more there were.
 
 ## Changes are security changes
 

@@ -15,7 +15,9 @@
  *   What someone wrote never forms a chat app's markup: `<` and `>` become
  *   `‹` and `›` (no `<!here>`, `<@id>` or `<users/all>`), every `@` is
  *   followed by a word joiner (no `@here`, `@channel`, `@everyone` or
- *   `@someone`), and `![` is broken up, so no image loads.
+ *   `@someone`), `![` is broken up, so no image loads, and so is a `]`
+ *   before `(`, `[` or `:`, so no Markdown link hides its address (Mattermost
+ *   and Discord read `[text](address)` as a link).
  */
 import type { Nodes, Root } from 'mdast';
 
@@ -92,7 +94,9 @@ export function testJsonBody(options: { name: string; now: Date }): string {
 
 /**
  * Makes what someone wrote safe to put in a chat message: it can't form a
- * chat app's markup, ping anyone or load an image.
+ * chat app's markup, ping anyone, load an image or hide a link's address
+ * behind other words. A word joiner (U+2060), which shows as nothing, breaks
+ * each sign up.
  *
  * @param text - The text.
  * @returns The text to put in the message.
@@ -101,8 +105,9 @@ export function chatSafe(text: string): string {
   return text
     .replaceAll('<', '‹')
     .replaceAll('>', '›')
-    .replaceAll('@', '@⁠')
-    .replaceAll('![', '!⁠[');
+    .replaceAll('@', '@\u2060')
+    .replaceAll('![', '!\u2060[')
+    .replace(/\](?=[([:])/g, ']\u2060');
 }
 
 /** The kinds of node that end a block of text, so the next one starts after a space. */

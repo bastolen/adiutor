@@ -200,6 +200,33 @@ describe('chatBody', () => {
     expect(text).toContain('@⁠here');
   });
 
+  it('keeps a link written in code, in a title or in a name from hiding its address', () => {
+    const text = textOf(
+      chatBody(
+        {
+          ...newsWith({
+            type: 'reply',
+            id: 'e1',
+            at: AT,
+            by: { name: 'Pat [support](https://evil.adiutor.test)', side: 'company' },
+            text: {
+              format: 'markdown',
+              text: '`[log in to view the invoice](https://evil.adiutor.test/phish)`',
+            },
+          }),
+          request: {
+            ...newsWith().request,
+            title: 'Invoice overdue [Open invoice](https://evil.adiutor.test/login)',
+          },
+        },
+        { baseUrl: 'https://adiutor.dev', locale: 'en-US' },
+      ),
+    );
+
+    expect(text).not.toMatch(/\]\(/);
+    expect(text).toContain('[log in to view the invoice]\u2060(https://evil.adiutor.test/phish)');
+  });
+
   it('says how many more changes there were when they don’t all fit', () => {
     const events = Array.from({ length: 200 }, (_, index) => ({
       type: 'assignee' as const,
@@ -249,6 +276,16 @@ describe('excerptOf', () => {
 });
 
 describe('chatSafe', () => {
+  it('breaks a Markdown link up, so its words can’t hide its address', () => {
+    expect(chatSafe('[Open invoice](https://evil.adiutor.test/login)')).toBe(
+      '[Open invoice]\u2060(https://evil.adiutor.test/login)',
+    );
+    expect(chatSafe('[Open invoice][1] and [1]: https://evil.adiutor.test')).toBe(
+      '[Open invoice]\u2060[1] and [1]\u2060: https://evil.adiutor.test',
+    );
+    expect(chatSafe('A list [of things] stays.')).toBe('A list [of things] stays.');
+  });
+
   it('breaks markup, pings and images, and leaves the rest', () => {
     expect(chatSafe('a <b> @c ![d]')).toBe('a ‹b› @⁠c !⁠[d]');
     expect(chatSafe('Plain text, 100% fine & dandy.')).toBe('Plain text, 100% fine & dandy.');
