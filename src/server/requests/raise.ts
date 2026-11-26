@@ -25,6 +25,7 @@ import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellWebhooks } from './tell-webhooks';
 import { typeToGive } from './types';
 import { tellMentioned } from './updates';
 
@@ -144,6 +145,10 @@ export default async function raiseRequest(
     });
     // A new request emails nobody but the people its description mentions.
     await tellMentioned(tx, { requestId: raised.id, entryId: null, actorId: actor.id }, mentioned);
+    // The webhooks that chose new requests hear of it.
+    await tellWebhooks(tx, { requestId: raised.id, typeKey: type }, [
+      { event: 'raised', entryId: null },
+    ]);
     return raised;
   });
 }

@@ -349,6 +349,15 @@ written and sent is in [Email](email.md), and the jobs that send them in
   builds a note item only for a reader with `requests:view-internal`, so a note queued for anyone
   else by mistake is left out, and an email with nothing left isn't sent.
 
+## Webhooks
+
+The staff's own systems and chat channels can hear of a request too, through webhooks that staff
+Admins set up (see [Webhooks](webhooks.md)). Which webhooks hear of what is decided in one place,
+`tellWebhooks` (`src/server/requests/tell-webhooks.ts`), queued in the change's transaction like
+the emails: a request raised, a reply, an internal note, a status change, an assignment or removal,
+and a change of title, type or priority, for the webhooks that chose it and cover the request's
+type, whoever made the change.
+
 ## Numbers
 
 - Requests are numbered in **one series** across Adiutor: 1, 2, 3. The number comes from the

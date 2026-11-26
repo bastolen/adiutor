@@ -489,7 +489,8 @@ deadlocking:
    finds the company deactivated, which leaves the rest of its transaction for a deactivation to
    slip in before it.
 8. A `webhook` row, `FOR NO KEY UPDATE`, then its `webhook_delivery` rows: a change to the webhook
-   (`src/server/webhooks/manage.ts`; turning it off cancels its pending deliveries). Nothing above
+   (`src/server/webhooks/manage.ts`; turning it off cancels its pending deliveries) and recording a
+   delivery's attempt (`src/server/webhooks/deliver.ts`, after the send). Nothing above
    locks a webhook: a request change only reads which webhooks hear of it, and a new delivery's
    foreign key takes `FOR KEY SHARE`, which doesn't wait for `FOR NO KEY UPDATE`.
 9. Sessions and audit events, last.

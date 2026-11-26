@@ -30,6 +30,31 @@ A webhook has:
   when the webhook is added and when it's renewed. A renewed secret replaces the old one straight
   away.
 
+## How news reaches a webhook
+
+A webhook is a recipient of the news about requests, like a person on a request
+([decision 0031](decisions/0031-emails-about-requests.md)), through the same queued job:
+
+- **Who hears of what** is decided in one place, `tellWebhooks` (`src/server/requests/tell-webhooks.ts`),
+  in the transaction of each change: a webhook that's on hears of the events it chose, on the request
+  types it covers, whoever made the change. A change of type reaches the webhooks of the type it
+  had and of the type it got, each once. Each piece of news is a `request-update` job for the
+  webhook, holding IDs only (the request, the webhook, the type that matched, the event and the
+  entry).
+- **One delivery per tick:** the jobs of one webhook about one request share a batch key, so a reply
+  and the status change it brought, or three replies in five minutes, go out as one delivery with
+  their events in order (`deliverWebhookNews` in `src/server/webhooks/deliver.ts`).
+- **Checked again when it's sent:** news for a webhook that's off or gone, that no longer chooses
+  the event or covers the type the news was queued for, or about an entry that's gone, is skipped.
+- **The first attempt** is made by the job, straight away; the delivery is recorded with the IDs of
+  what it tells of (`webhook_delivery`), its result and the receiver's status, never its answer. A
+  receiver that fails is recorded, never thrown: it fails no job and records no error in the app.
+  An attempt goes on only while the delivery is still at the attempt before it, and records only
+  if that still holds, so an attempt run twice never records twice.
+- **At least once:** a job that ran but couldn't be noted as done is run again, and its news can
+  then go out in a second delivery, as an email can arrive twice. A receiver drops what it already
+  has by an event's `id`.
+
 ## What's sent
 
 What a webhook is told is read when it's sent (`readWebhookNews` in

@@ -129,7 +129,7 @@ describe('addWebhook', () => {
       'http://10.0.0.5/hook',
       'http://169.254.169.254/latest/meta-data',
       'http://[::1]:4000/hook',
-      'http://2130706433/hook',
+      'http://167772165/hook', // 10.0.0.5, written as one number
       'http://[::ffff:192.168.1.1]/hook',
     ]) {
       // eslint-disable-next-line no-await-in-loop -- one address at a time, each refused before anything is stored

@@ -37,6 +37,36 @@ export const WEBHOOK_EVENT_OF_ENTRY = {
   assignee: 'assignee',
 } as const satisfies Record<RequestEntryKind, WebhookEvent>;
 
+/** What decides whether a webhook hears of a piece of news. */
+export interface WebhookChoices {
+  /** What it's told about. */
+  events: readonly WebhookEvent[];
+  /** Whether it covers every request type. */
+  allTypes: boolean;
+  /** The types it covers otherwise. */
+  types: readonly string[];
+}
+
+/**
+ * Whether a webhook hears of a piece of news: it chose the event, and covers
+ * the request's type (every type, or one of those chosen).
+ *
+ * @param webhook - What the webhook chose.
+ * @param news - The news.
+ * @param news.event - What happened.
+ * @param news.typeKey - The request's type.
+ * @returns Whether it's told.
+ */
+export function webhookCovers(
+  webhook: WebhookChoices,
+  news: { event: WebhookEvent; typeKey: string },
+): boolean {
+  return (
+    webhook.events.includes(news.event) &&
+    (webhook.allTypes || webhook.types.includes(news.typeKey))
+  );
+}
+
 /**
  * How a webhook is sent: signed JSON with every detail (`json`, the Standard
  * Webhooks way), or a short message a chat app's incoming webhook shows as

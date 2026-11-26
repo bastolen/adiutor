@@ -46,7 +46,9 @@ configurations in VS Code, which turn the time limit off (see
   (`tests/http/webhook-receiver.ts`) starts a small HTTP server on `127.0.0.1` that keeps every request
   it gets and answers as the test says (a status, a delay, a redirect, no answer). Loopback is
   inside Adiutor's own network, which webhooks never reach, so a unit test gives the send its rules
-  (`addressRules(['127.0.0.1/32'])`).
+  (`addressRules(['127.0.0.1/32'])`) and the integration tests allow it in their environment
+  (`WEBHOOK_ALLOWED_NETWORKS` in `vitest.config.mts`). `storeWebhook` (`tests/integration/helpers/`)
+  stores a webhook to such a receiver, sealed as the service seals it.
 - **A module split into a folder** (see "Modules that outgrow one file" in
   [Code style](code-style.md)) has a test file next to each of its files, and the helpers they
   share in the folder's `test-helpers.ts`. When the tests share a database test context, that file
