@@ -257,11 +257,12 @@ const sizeFormats = new Map<string, Intl.NumberFormat>();
 
 /**
  * Formats a file's size in the largest unit it fills, the way the reader's
- * language writes it: one decimal below 10 of a unit, none above.
+ * language writes it: one decimal below 10 of a unit, none above. Bytes are
+ * written out, since their short form drops the plural ("14 byte").
  *
  * @param bytes - The size.
  * @param locale - The reader's language.
- * @returns E.g. "512 byte", "240 kB", "1.2 MB".
+ * @returns E.g. "512 bytes", "240 kB", "1.2 MB".
  */
 export function formatFileSize(bytes: number, locale: Locale): string {
   const { unit, bytes: per } =
@@ -274,7 +275,7 @@ export function formatFileSize(bytes: number, locale: Locale): string {
     new Intl.NumberFormat(locale, {
       style: 'unit',
       unit,
-      unitDisplay: 'short',
+      unitDisplay: unit === 'byte' ? 'long' : 'short',
       maximumFractionDigits: decimals,
     });
   sizeFormats.set(key, format);

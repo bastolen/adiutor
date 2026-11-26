@@ -201,7 +201,7 @@ describe('formatList', () => {
 
 describe('formatFileSize', () => {
   it('uses the largest unit the size fills, with one decimal below 10', () => {
-    expect(formatFileSize(512, 'en-US')).toBe('512 byte');
+    expect(formatFileSize(512, 'en-US')).toBe('512 bytes');
     expect(formatFileSize(240_000, 'en-US')).toBe('240 kB');
     expect(formatFileSize(1_234_567, 'en-US')).toBe('1.2 MB');
     expect(formatFileSize(25_000_000, 'en-US')).toBe('25 MB');
@@ -210,5 +210,11 @@ describe('formatFileSize', () => {
   it('writes the size the reader’s way', () => {
     expect(formatFileSize(1_234_567, 'nl-NL')).toBe('1,2 MB');
     expect(formatFileSize(1_234_567, 'es-ES')).toBe('1,2 MB');
+  });
+
+  it('writes bytes out, in the plural where the language has one', () => {
+    expect(formatFileSize(1, 'en-US')).toBe('1 byte');
+    expect(formatFileSize(14, 'nl-NL')).toBe('14 byte');
+    expect(formatFileSize(14, 'es-ES')).toBe('14 bytes');
   });
 });

@@ -42,7 +42,7 @@ import { join } from 'node:path';
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
+import { impersonation, invitation, inviteLink, membership, requestEntry, user } from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -54,6 +54,7 @@ import {
   createSession,
   createStaffSettings,
   saveSettings,
+  storeAttachment,
   createUser,
   inSequence,
   memberActor,
@@ -72,7 +73,7 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
-import { ServiceError, type ServiceErrorCode } from './errors';
+import { notFoundError, ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
   listFailedJobs,
@@ -169,11 +170,25 @@ import {
   unsubscribe,
   updateRequestDetails,
   updateRequestType,
+  loadAttachment,
   uploadAttachment,
 } from './requests';
 import { getAttachmentSettings, saveAttachmentLimit, saveAttachmentStorage } from './storage';
 
-const { ctx, db, sent } = setupTestContext();
+const { ctx, db, sent, storage } = setupTestContext();
+
+/**
+ * Downloads an attached file, refusing as "not found" when there's none for
+ * the reader (`loadAttachment` answers nothing then), as the route does.
+ *
+ * @param actor - The reader.
+ * @param id - The attachment.
+ */
+async function download(actor: Actor, id: string): Promise<void> {
+  if (!(await loadAttachment(ctx, actor, id))) {
+    throw notFoundError();
+  }
+}
 
 /** The roles in the matrix. Company roles are members of company A. */
 const ROLES = [
@@ -236,6 +251,8 @@ interface World {
   failedJobs: { retry: string; discard: string };
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
+  /** A file attached to each request's description, and one to an internal note on the own one. */
+  attachments: { own: string; other: string; ownNote: string };
 }
 
 /**
@@ -541,6 +558,10 @@ function listOperations(): Operation[] {
         ),
     ],
     ['choose the largest attachment', (w) => saveAttachmentLimit(ctx, w.actor, '20', {})],
+    // A file nobody may download is missing to them: `loadAttachment` answers nothing.
+    ["download a description's file (own)", (w) => download(w.actor, w.attachments.own)],
+    ["download a description's file (other)", (w) => download(w.actor, w.attachments.other)],
+    ["download an internal note's file (own)", (w) => download(w.actor, w.attachments.ownNote)],
     [
       'upload a file to attach',
       (w) =>
@@ -829,6 +850,9 @@ const READS: ReadonlySet<string> = new Set([
   'list staff',
   'view staff settings',
   'view attachment settings',
+  "download a description's file (own)",
+  "download a description's file (other)",
+  "download an internal note's file (own)",
   'list request types',
   'list users',
   'view user',
@@ -1023,6 +1047,11 @@ const EXPECTED: Record<string, string> = {
   'choose the largest attachment': 'FFFFFFA',
   // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
   'upload a file to attach': 'FAAAFAA',
+  // A file is read by whoever reads its text: a description's by everyone who sees the request,
+  // a note's by the staff.
+  "download a description's file (own)": 'AAAAAAA',
+  "download a description's file (other)": 'NNNAAAA',
+  "download an internal note's file (own)": 'NNNAAAA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',
   'add request type': 'FFFFFFA',
@@ -1238,6 +1267,16 @@ async function createWorld(role: MatrixRole): Promise<World> {
   await claimInviteLink(ctx, (await createLink(otherAdmin, other.id)).token, actor.email);
   const invitationFromLink = tokenFrom(defined(sent.at(-1), 'the invitation email'));
   const outsider = await createUser(db, 'outsider@adiutor.test');
+  const ownRequest = await raiseRequest(ctx, ownAdmin, { ...NEW_REQUEST, companyId: own.id });
+  const otherRequest = await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id });
+  // An internal note on the own request, with a file of its own.
+  const note = firstRow(
+    await db
+      .insert(requestEntry)
+      .values({ requestId: ownRequest.id, kind: 'note', authorSide: 'staff', body: 'Toner?' })
+      .returning({ id: requestEntry.id }),
+    'the note',
+  );
   return {
     actor,
     own,
@@ -1282,13 +1321,11 @@ async function createWorld(role: MatrixRole): Promise<World> {
       retry: await storeQueuedJob(db, 'security-notice'),
       discard: await storeQueuedJob(db, 'security-notice'),
     },
-    requests: {
-      own: String(
-        (await raiseRequest(ctx, ownAdmin, { ...NEW_REQUEST, companyId: own.id })).number,
-      ),
-      other: String(
-        (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
-      ),
+    requests: { own: String(ownRequest.number), other: String(otherRequest.number) },
+    attachments: {
+      own: await storeAttachment(db, storage, { requestId: ownRequest.id }),
+      other: await storeAttachment(db, storage, { requestId: otherRequest.id }),
+      ownNote: await storeAttachment(db, storage, { requestId: ownRequest.id, entryId: note.id }),
     },
   };
 }

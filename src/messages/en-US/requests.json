@@ -284,6 +284,10 @@
         "name": "New feature",
         "description": "Something new, or a change to how things work."
       }
+    },
+    "attachments": {
+      "label": "{count, plural, one {# attachment} other {# attachments}}",
+      "download": "Download {name}, {size}"
     }
   }
 }

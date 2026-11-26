@@ -72,6 +72,26 @@ describe('proxy', () => {
   it('lets public pages through', () => {
     expect(signedOut('/invite/abc').headers.get('location')).toBeNull();
   });
+
+  it('gives an attached file a fixed policy that runs nothing, and a page its own with a nonce', () => {
+    /**
+     * Runs the proxy for a signed-in request.
+     *
+     * @param path - The request path.
+     * @returns The policy it sends.
+     */
+    const policyFor = (path: string) =>
+      proxy(
+        new NextRequest(new URL(path, 'http://localhost:3000'), {
+          headers: { cookie: 'better-auth.session_token=token.signature' },
+        }),
+      ).headers.get('content-security-policy');
+
+    expect(policyFor('/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a')).toBe(
+      "default-src 'none'; sandbox",
+    );
+    expect(policyFor('/requests/1')).toMatch(/script-src 'self' 'nonce-/);
+  });
 });
 
 describe('the matcher', () => {

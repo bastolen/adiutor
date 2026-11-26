@@ -73,6 +73,7 @@ import {
   type RequestDetail,
 } from '@/server/requests';
 
+import AttachmentList from '../../_requests/attachment-list';
 import PersonLine, { PersonAvatar, personName } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
@@ -317,6 +318,7 @@ async function RequestContent({
               ) : (
                 descriptionText
               )}
+              <AttachmentList attachments={detail.description.attachments} />
             </div>
           </Card>
         </div>

@@ -26,6 +26,7 @@ import {
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
+import AttachmentList from '../../_requests/attachment-list';
 import PersonLine, {
   PersonAvatar,
   personName,
@@ -277,6 +278,7 @@ export default function Thread({
               ) : (
                 text
               )}
+              <AttachmentList attachments={entry.body?.attachments} />
             </Entry>
           );
         }

@@ -5,14 +5,21 @@
  * its row is stored, the file is written to the storage, and the row is
  * marked uploaded, so no file is ever in storage without a row the cleanup
  * job can find. The upload is unsent until the text it's sent with claims it
- * (`claimAttachments`).
+ * (`claimAttachments`). Downloading one goes through the same checks as
+ * reading its text (`loadAttachment`).
  */
-import { and, eq, gt, isNull, not, or, sql } from 'drizzle-orm';
+import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
-import { requestAttachment } from '@/db/schema';
+import { requestAttachment, requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
-import { attachmentTypeOf, cleanAttachmentName } from '@/lib/requests';
+import {
+  attachmentTypeOf,
+  cleanAttachmentName,
+  type RequestEntryKind,
+  STAFF_ONLY_ENTRY_KINDS,
+} from '@/lib/requests';
 import { maxFileBytes } from '@/lib/storage';
+import { idSchema } from '@/lib/validation';
 
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
@@ -21,6 +28,7 @@ import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { readSettings } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
 import { attachmentKey, attachmentLimitMb, type FileStorage } from '../storage';
+import { getRequestAccess } from './access';
 import matchesAttachmentKind from './attachment-checks';
 import { listRequestCompanies } from './list';
 
@@ -184,4 +192,79 @@ export async function uploadAttachment(
     throw new ServiceError('conflict', 'errors.attachments.unavailable', { name });
   }
   return { id: stored.id, name, size, contentType: type.contentType, thumbnail: type.thumbnail };
+}
+
+/** A file to download, as its route serves it. */
+export interface AttachmentToServe {
+  /** Its name, for the download. */
+  name: string;
+  /** The type it's served as. */
+  contentType: string;
+  /** Its bytes, as they arrive from the storage. */
+  body: ReadableStream<Uint8Array>;
+}
+
+/**
+ * A file to download, for a reader who may read the text it's attached to:
+ * the request's own access (`getRequestAccess`: the company's people while
+ * it's active, and the staff), and for an internal note's file, the readers
+ * of notes (`requests:view-internal`). An unsent file is nobody's to
+ * download, a removed one is gone, and anything the reader may not read is
+ * missing too, so nothing says it exists.
+ *
+ * @param ctx - Service context.
+ * @param actor - The reader.
+ * @param id - The attachment's ID, as the address gave it.
+ * @returns The file, or `null` when there's none for this reader.
+ * @throws {StorageError} When the storage fails (not when the file is merely missing).
+ */
+export async function loadAttachment(
+  ctx: ServiceContext,
+  actor: Actor,
+  id: string,
+): Promise<AttachmentToServe | null> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) {
+    return null;
+  }
+  const [row] = await ctx.db
+    .select({
+      requestId: requestAttachment.requestId,
+      name: requestAttachment.name,
+      contentType: requestAttachment.contentType,
+      entryKind: requestEntry.kind,
+    })
+    .from(requestAttachment)
+    .leftJoin(requestEntry, eq(requestAttachment.entryId, requestEntry.id))
+    .where(
+      and(
+        eq(requestAttachment.id, parsed.data),
+        isNotNull(requestAttachment.requestId),
+        isNull(requestAttachment.removedAt),
+      ),
+    );
+  if (!row?.requestId) {
+    return null;
+  }
+  const access = await getRequestAccess(ctx.db, actor, row.requestId).catch((error: unknown) => {
+    if (error instanceof ServiceError && error.code === 'not_found') {
+      return null;
+    }
+    throw error;
+  });
+  const staffOnly =
+    row.entryKind !== null &&
+    (STAFF_ONLY_ENTRY_KINDS as readonly RequestEntryKind[]).includes(row.entryKind);
+  if (!access || (staffOnly && !access.permissions.has('requests:view-internal'))) {
+    return null;
+  }
+  const storage = ctx.storage ? await ctx.storage() : null;
+  const file = storage ? await storage.get(attachmentKey(parsed.data)) : null;
+  if (!file) {
+    // A row without its file: a storage that changed, or files not backed up with the database.
+    // eslint-disable-next-line no-console -- The ID only: it names no one.
+    console.warn('An attachment has no file in the storage:', parsed.data);
+    return null;
+  }
+  return { name: row.name, contentType: row.contentType, body: file.body };
 }

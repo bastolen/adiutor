@@ -414,6 +414,21 @@ A file attached to a request is uploaded on its own first, then sent with its te
   after, so a file never sits in storage without a row; one that couldn't be stored takes its row
   back. An unsent upload is only its uploader's to send, for 24 hours, and the `attachment-files`
   job purges it after 25, or once the uploader's account is gone.
+- **A file is read by whoever reads its text** (`loadAttachment` in
+  `src/server/requests/attachments.ts`): the request's own access (`getRequestAccess`: the
+  company's people while it's active, and the staff), and for an internal note's file the readers
+  of notes (`requests:view-internal`, by `STAFF_ONLY_ENTRY_KINDS`). `getRequest` gives each text
+  only the files its reader may see, the same way, so a company never learns that a note has a
+  file. An unsent or removed file, or one the reader may not read, is "not found", by its address
+  too.
+- **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
+  name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
+  quotes or backslashes), its type from the allow-list with `nosniff`,
+  `Cross-Origin-Resource-Policy: same-origin`, and `Cache-Control: no-store`, so a shared
+  computer keeps no file after sign-out. The proxy gives these paths a fixed policy that runs
+  nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
+  over a route's own. Thumbnails load from the same address: an image element shows an image
+  whatever its `Content-Disposition` says, and `img-src 'self'` stays.
 
 ## Where attached files are kept
 

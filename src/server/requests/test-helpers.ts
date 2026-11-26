@@ -31,7 +31,7 @@ import {
  * module afresh (Vitest isolates test files), so each gets its own context
  * and hooks, as when it called `setupTestContext()` itself.
  */
-export const { ctx, db, sent } = setupTestContext();
+export const { ctx, db, sent, storage } = setupTestContext();
 
 /**
  * Stores a request without going through the service, with the next number

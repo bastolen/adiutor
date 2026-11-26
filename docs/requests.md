@@ -708,6 +708,25 @@ A description, a reply or a note can mention people. Why it's built this way is 
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
 
+## Attachments
+
+Files attached to a request's texts: its description, its replies and its internal notes. Why
+they're built this way is in [decision 0044](decisions/0044-attachments.md); where they're kept is
+in [Attachments](deploying.md#attachments).
+
+- **A file belongs to a text** (`request_attachment`, with the request and the reply or note, or
+  none for the description), so it's read by whoever reads that text: a note's files only by the
+  staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
+  filtered like its mentions; `loadAttachment` checks the same for a download).
+- **On a request's page,** each text shows its files under it (`AttachmentList` in
+  `src/app/(app)/_requests/`, a `FileTile` each): a thumbnail for a PNG, JPEG, GIF or WebP image,
+  loaded from Adiutor itself, or an icon for the file's kind, with its name and size. A tile is a
+  link that downloads the file ("Download error.png, 240 kB" to screen readers); nothing opens in
+  the page.
+- **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
+  kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
+  Someone signed out is sent to sign in and back; a file they may not read is "not found".
+
 ## Signed in as a user
 
 A staff member signed in as a user
@@ -957,7 +976,8 @@ no Move menu.
   subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests` (built from
+- `src/server/requests/` (a folder module): `uploadAttachment` and `loadAttachment` (attached
+  files), `listRequestCompanies`, `listRequests` (built from
   `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
   sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into
   `RequestListItem`s), `listBoard` (the board's lanes, see [The board](#the-board)), `findRequest`,

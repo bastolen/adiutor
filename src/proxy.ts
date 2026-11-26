@@ -19,7 +19,13 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { contentSecurityPolicy, createNonce, NONCE_HEADER } from '@/lib/request/csp';
+import {
+  ATTACHMENTS_PATH,
+  contentSecurityPolicy,
+  createNonce,
+  FILE_POLICY,
+  NONCE_HEADER,
+} from '@/lib/request/csp';
 import PATHNAME_HEADER from '@/lib/request/pathname-header';
 
 /**
@@ -62,7 +68,9 @@ export function isPublicPath(pathname: string): boolean {
 export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const nonce = createNonce();
-  const policy = contentSecurityPolicy(nonce);
+  // An attached file gets a fixed policy: Next.js puts the proxy's headers over a route's own,
+  // so the route can't set it itself.
+  const policy = pathname.startsWith(ATTACHMENTS_PATH) ? FILE_POLICY : contentSecurityPolicy(nonce);
   /**
    * Adds the policy to a response.
    *

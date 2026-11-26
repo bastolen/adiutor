@@ -27,10 +27,12 @@ import {
   hashToken,
 } from '../../src/lib/sign-in/tokens';
 import { readSettings, writeSettings } from '../../src/server/settings';
+import { attachmentKey, storageFor } from '../../src/server/storage';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
 import {
+  ATTACHMENTS_DIR,
   COMPANY_SLUG,
   E2E_AUTH_SECRET,
   INVITE_LINK_LIFETIME_MS,
@@ -1075,4 +1077,47 @@ export async function resetActivityView(email: string): Promise<void> {
       .set({ activityOrder: null, activityGroups: null })
       .where(eq(schema.user.email, email));
   });
+}
+
+/**
+ * Attaches a file to a test's own request directly, row and file, as a sent
+ * upload: to its description, or to one of its entries (a reply or a note),
+ * found by its text. The file goes to the test server's storage folder.
+ *
+ * @param number - The request's number.
+ * @param file - The file.
+ * @param file.name - Its name.
+ * @param file.contentType - Its type, from the allow-list.
+ * @param file.bytes - Its bytes.
+ * @param file.entryText - The whole text of the entry it's attached to; the description without one.
+ * @returns The attachment's ID.
+ */
+export async function storeAttachment(
+  number: number,
+  file: { name: string; contentType: string; bytes: Uint8Array<ArrayBuffer>; entryText?: string },
+): Promise<string> {
+  const entryId = file.entryText === undefined ? null : await findEntryId(number, file.entryText);
+  const id = await withTestDatabase(
+    async (db) =>
+      firstRow(
+        await db
+          .insert(schema.requestAttachment)
+          .values({
+            requestId: await requestIdOf(db, number),
+            entryId,
+            name: file.name,
+            contentType: file.contentType,
+            size: file.bytes.byteLength,
+            uploadedAt: new Date(),
+          })
+          .returning({ id: schema.requestAttachment.id }),
+        'the attachment',
+      ).id,
+  );
+  await storageFor({ driver: 'local', dir: ATTACHMENTS_DIR }).put(
+    attachmentKey(id),
+    file.bytes,
+    file.contentType,
+  );
+  return id;
 }

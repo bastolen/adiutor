@@ -284,6 +284,10 @@
         "name": "Nieuwe functie",
         "description": "Iets nieuws, of een wijziging in hoe iets werkt."
       }
+    },
+    "attachments": {
+      "label": "{count, plural, one {# bijlage} other {# bijlagen}}",
+      "download": "{name} downloaden, {size}"
     }
   }
 }

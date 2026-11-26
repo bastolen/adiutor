@@ -27,13 +27,14 @@ import expectAccessible from './support/axe';
 import {
   findCompanyId,
   findUserId,
+  storeAnswerLink,
+  storeAttachment,
   storeAuditEvent,
   storeInvitation,
-  storeAnswerLink,
   storeInviteLink,
+  storeOwnRequest,
   storeRequestLink,
   storeSignInLink,
-  storeOwnRequest,
 } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -913,6 +914,28 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('region', { name: 'Conversation' })).toContainText(
           'Internal note',
         );
+        await expectAccessible(page);
+      });
+
+      test('a request with attachments, an image among them', async ({ page }) => {
+        const number = await storeOwnRequest({ title: 'Attachments for the scan' });
+        await storeAttachment(number, {
+          name: 'error.png',
+          contentType: 'image/png',
+          bytes: Uint8Array.from(
+            atob(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            ),
+            (character) => character.charCodeAt(0),
+          ),
+        });
+        await storeAttachment(number, {
+          name: 'printer.log',
+          contentType: 'text/plain',
+          bytes: new TextEncoder().encode('printer offline'),
+        });
+        await page.goto(`/requests/${number}`);
+        await expect(page.getByRole('list', { name: '2 attachments' })).toBeVisible();
         await expectAccessible(page);
       });
 

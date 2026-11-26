@@ -19,6 +19,10 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
   who sends it, its size, its type by extension and by its first bytes (an allow-list), before
   it's stored; the text's form then sends the files' IDs, and its service claims them. The largest
   file is chosen per install, at most 50 MB, and 4 on Vercel, which refuses a larger request body.
+- **Served by Adiutor, always as a download:** a file comes from `/attachments/<id>` to whoever
+  may read its text, with `Content-Disposition: attachment`, `nosniff`, no caching and a policy
+  that runs nothing. Images show as thumbnails from the same address, so nothing loads from
+  elsewhere ([decision 0021](0021-markdown-for-request-text.md) keeps images in a text as links).
 - **The upload is the one route the proxy skips:** the proxy holds every body in memory, whoever
   sends it, and cuts one over its limit short without a word. Raising its limit would let anyone
   make the server hold that much for any path; the route checks the session and the origin itself.

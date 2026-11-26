@@ -58,6 +58,13 @@ export const E2E_TIME_ZONE = 'UTC';
 export const OUTBOX_DIR = resolve('e2e/.outbox');
 
 /**
+ * Folder the test server keeps attached files in: the seed saves it as the
+ * storage on the Attachments tab of Settings (a local folder), and the
+ * global setup empties it before a run.
+ */
+export const ATTACHMENTS_DIR = resolve('e2e/.attachments');
+
+/**
  * Better Auth secret of the test server. The seed needs it too, to encrypt
  * the Admin's authenticator secret the way Better Auth stores it. It's fixed
  * (never read from `.env` or the environment), so the seed and the server
