@@ -874,7 +874,10 @@ test('a reply and the status it sets reach the other side’s inbox as one email
   // The staff ask something and wait for the answer; whoever raised it follows the request.
   await signIn(page, SUPPORT_STAFF);
   await page.goto(`/requests/${number}`);
-  await page.getByRole('textbox', { name: 'Your reply' }).fill('Is it **plugged in**?');
+  // Typed into the editor once it's there, which formats the bold as it's written: filled in
+  // before it loads, the plain field would send the Markdown as typed, and after, the editor
+  // would keep the asterisks.
+  await (await markdownEditor(page, 'Your reply')).pressSequentially('Is it **plugged in**?');
   await page.getByRole('button', { name: 'Send and wait for the company' }).click();
   await expect(toasts(page)).toContainText('Reply sent.');
 

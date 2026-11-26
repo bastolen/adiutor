@@ -1448,9 +1448,13 @@ test.describe('requests', () => {
       await page.keyboard.press('Delete');
       await expect(reply).toHaveText('');
 
-      // The field, then its buttons. Sending keeps focus on the button, which stays.
+      // The field, then Attach files (people can attach files), then its buttons. Sending keeps
+      // focus on the button, which stays.
+      const attach = page.getByRole('button', { name: 'Attach files' });
       await reply.focus();
       await page.keyboard.type('We are looking into it.');
+      await page.keyboard.press('Tab');
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(send).toBeFocused();
       await page.keyboard.press('Enter');
@@ -1465,7 +1469,7 @@ test.describe('requests', () => {
       await page.keyboard.type('two');
       await expect(reply.getByRole('listitem')).toHaveCount(2);
       await page.keyboard.press('Tab');
-      await expect(send).toBeFocused();
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Shift+Tab');
       await expect(reply).toBeFocused();
       // The item nests with its own shortcut, and the text is cleared for the next step.
@@ -1479,6 +1483,7 @@ test.describe('requests', () => {
       // conversation's heading, not to nowhere.
       await reply.focus();
       await page.keyboard.type('Which printer is it?');
+      await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
       await expect(sendAndWait).toBeFocused();
@@ -1517,7 +1522,10 @@ test.describe('requests', () => {
       await expect(note).toBeFocused();
       await page.keyboard.type('Checked the cable.');
 
-      // Adding the note keeps focus on the button, which stays.
+      // Past Attach files (people can attach files), adding the note keeps focus on the button,
+      // which stays.
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('button', { name: 'Attach files' })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(add).toBeFocused();
       await page.keyboard.press('Enter');
