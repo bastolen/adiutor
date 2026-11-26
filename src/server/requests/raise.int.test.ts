@@ -2,11 +2,11 @@
  * @file Integration tests for raising a request. Which roles may raise one is
  * in the authorization matrix.
  */
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 
-import { membership, request, setting } from '@/db/schema';
+import { membership, request, requestParticipant, setting, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { appUrl } from '@/lib/env';
 
@@ -22,6 +22,7 @@ import {
 } from '../../../tests/integration/helpers';
 import { RATE_LIMITS } from '../rate-limit';
 import { incrementSetting } from '../settings';
+import mentionKey from './mention-key';
 import raiseRequest from './raise';
 import { ctx, db, deactivatedMeanwhile, storedRequest, storeRequestType } from './test-helpers';
 
@@ -383,5 +384,205 @@ describe('request numbers', () => {
     expect(row?.lastActivityAt).toEqual(row?.createdAt);
     // Not when its transaction started, which was before it waited.
     expect(row?.createdAt.getTime()).toBeGreaterThanOrEqual(waitedUntil);
+  });
+});
+
+/**
+ * Who is subscribed to a request.
+ *
+ * @param requestId - The request.
+ * @returns Their user IDs, sorted.
+ */
+async function subscribersOf(requestId: string): Promise<string[]> {
+  const rows = await db
+    .select({ userId: requestParticipant.userId })
+    .from(requestParticipant)
+    .where(
+      and(eq(requestParticipant.requestId, requestId), eq(requestParticipant.role, 'subscriber')),
+    );
+  return rows.map(({ userId }) => userId).sort();
+}
+
+describe('raiseRequest: for someone at the company', () => {
+  it('makes it theirs, on the company’s side, keeps the staff member, and has both follow it', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+
+    const raised = await raiseRequest(ctx, support, {
+      ...INPUT,
+      companyId: company.id,
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    expect(await storedRequest(raised.id)).toMatchObject({
+      createdBy: client.id,
+      createdBySide: 'company',
+      createdOnBehalf: true,
+      createdOnBehalfBy: support.id,
+      createdSignedInAs: false,
+      createdSignedInAsStaffId: null,
+    });
+    expect(await subscribersOf(raised.id)).toEqual([client.id, support.id].sort());
+  });
+
+  it('raises it for the staff member themself when nobody is named', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    const raised = await raiseRequest(ctx, support, {
+      ...INPUT,
+      companyId: company.id,
+      raisedFor: '',
+    });
+
+    expect(await storedRequest(raised.id)).toMatchObject({
+      createdBy: support.id,
+      createdBySide: 'staff',
+      createdOnBehalf: false,
+      createdOnBehalfBy: null,
+    });
+  });
+
+  it('raises it for a company’s Admin too', async () => {
+    const company = await createCompany(db);
+    const manager = await staffActor(db, 'manager');
+    const admin = await memberActor(db, company.id, 'admin');
+
+    const raised = await raiseRequest(ctx, manager, {
+      ...INPUT,
+      companyId: company.id,
+      raisedFor: mentionKey(company.id, admin.id),
+    });
+
+    expect(await storedRequest(raised.id)).toMatchObject({
+      createdBy: admin.id,
+      createdOnBehalfBy: manager.id,
+    });
+  });
+
+  it.each([
+    [
+      'a Watcher, who can’t raise a request',
+      async (companyId: string) => (await memberActor(db, companyId, 'watcher')).id,
+    ],
+    [
+      'a deactivated account',
+      async (companyId: string) => {
+        const { id } = await memberActor(db, companyId, 'client');
+        await db.update(user).set({ deactivatedAt: new Date() }).where(eq(user.id, id));
+        return id;
+      },
+    ],
+    [
+      'someone without a name to show',
+      async (companyId: string) => {
+        const { id } = await memberActor(db, companyId, 'client');
+        await db.update(user).set({ name: '  ' }).where(eq(user.id, id));
+        return id;
+      },
+    ],
+    [
+      'someone at another company',
+      async () => {
+        const other = await createCompany(db);
+        return (await memberActor(db, other.id, 'client')).id;
+      },
+    ],
+    ['a staff member', async () => (await staffActor(db, 'manager')).id],
+    [
+      'a staff member who works on requests and is a Client there too',
+      async (companyId: string) => {
+        const { id } = await staffActor(db, 'support');
+        await addMember(db, companyId, id, 'client');
+        return id;
+      },
+    ],
+  ])('refuses %s', async (_who, personIn) => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const person = await personIn(company.id);
+
+    await expect(
+      raiseRequest(ctx, support, {
+        ...INPUT,
+        companyId: company.id,
+        raisedFor: mentionKey(company.id, person),
+      }),
+    ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notRaisableFor' });
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('refuses a key that stands for nobody, or is too long to be a key', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+
+    await expect(
+      raiseRequest(ctx, support, { ...INPUT, companyId: company.id, raisedFor: 'nobody' }),
+    ).rejects.toMatchObject({ code: 'invalid', key: 'errors.requests.notRaisableFor' });
+    await expect(
+      raiseRequest(ctx, support, { ...INPUT, companyId: company.id, raisedFor: 'k'.repeat(23) }),
+    ).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('refuses a name from someone at the company, even its Admin', async () => {
+    const company = await createCompany(db);
+    const admin = await memberActor(db, company.id, 'admin');
+    const client = await memberActor(db, company.id, 'client');
+
+    await expect(
+      raiseRequest(ctx, admin, {
+        ...INPUT,
+        companyId: company.id,
+        raisedFor: mentionKey(company.id, client.id),
+      }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    expect(await db.$count(request)).toBe(0);
+  });
+
+  it('refuses someone who became a Watcher while the request was under way', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+
+    // The request finds them as a Client, then waits for their row while they become a Watcher.
+    const { second } = await atTheSameMoment(
+      db,
+      (tx) => tx.select({ id: user.id }).from(user).where(eq(user.id, client.id)).for('update'),
+      () =>
+        raiseRequest(ctx, support, {
+          ...INPUT,
+          companyId: company.id,
+          raisedFor: mentionKey(company.id, client.id),
+        }),
+      async (tx) => {
+        await tx
+          .update(membership)
+          .set({ role: 'watcher' })
+          .where(eq(membership.userId, client.id));
+      },
+    );
+
+    expect(second).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'invalid', key: 'errors.requests.notRaisableFor' },
+    });
+    expect(await db.$count(request)).toBe(0);
+    expect(await counterRow()).toEqual([]);
+  });
+
+  it('counts against the staff member’s limit, not the person’s', async () => {
+    const company = await createCompany(db);
+    const support = await staffActor(db, 'support');
+    const client = await memberActor(db, company.id, 'client');
+    await fillRateLimitBucket(db, `request:user:${support.id}`, RATE_LIMITS.requestsPerUser.limit);
+
+    await expect(
+      raiseRequest(ctx, support, {
+        ...INPUT,
+        companyId: company.id,
+        raisedFor: mentionKey(company.id, client.id),
+      }),
+    ).rejects.toMatchObject({ code: 'rate_limited' });
   });
 });

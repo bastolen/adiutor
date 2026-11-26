@@ -33,6 +33,8 @@ export type {
 export { editReply, editRequestDescription } from './edits';
 export { default as addNote } from './notes';
 export { default as raiseRequest } from './raise';
+export { listRaisableFor } from './raise-for';
+export type { RaisableForPerson } from './raise-for';
 export { default as replyToRequest } from './reply';
 export { default as changeRequestStatus } from './status';
 export { default as answerSolution } from './solutions';

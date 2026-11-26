@@ -8,8 +8,9 @@ requests behave and where the code is; why they're built this way is in
 [decision 0019](decisions/0019-requests-one-series-plain-text-and-a-history.md), for their
 text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for the people on a
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
-the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), and for the
-board in [decision 0037](decisions/0037-a-board-of-requests.md).
+the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), for the
+board in [decision 0037](decisions/0037-a-board-of-requests.md), and for raising one for someone
+in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md).
 
 Not built yet, for a later change: attachments.
 
@@ -54,6 +55,9 @@ Four permissions in the request's company (`src/lib/authz/permissions.ts`):
   access, so its requests are "not found" to them (see
   [Companies and roles](companies-and-roles.md)). For the staff they stay on the company's own
   page and under All, and leave the Active and Waiting lists that cover several companies.
+- The staff who work on requests (`requests:manage`) can **raise a request for someone** at the
+  company, an Admin or a Client, who is then who raised it (see
+  [Raising a request for someone](#raising-a-request-for-someone)).
 - While a staff member is **signed in as a user**, they can do that user's request work, which
   records them (see [Signed in as a user](#signed-in-as-a-user)); managing request types stays
   off.
@@ -254,7 +258,8 @@ Someone subscribed to a request follows it: a request's assignees and subscriber
   for the staff, the staff in another. Like the assignees' dialog it saves only what its editor
   changed. A deactivated company's request has neither button.
 - **Automatically** (`subscribeAutomatically`, in the transaction of the change): whoever raises a
-  request, replies to it or is mentioned in it is subscribed. Someone who unsubscribes stays
+  request (and, for a request raised for someone, both that person and the staff member), replies
+  to it or is mentioned in it is subscribed. Someone who unsubscribes stays
   unsubscribed until they reply or are mentioned again. Editing a text subscribes the people it
   mentions newly, not the ones it mentioned already.
 - **Who sees the subscribers** (`getRequest`): the staff see everyone, each on their side. Someone
@@ -708,6 +713,30 @@ A description, a reply or a note can mention people. Why it's built this way is 
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
 
+## Raising a request for someone
+
+Someone at a company who asks by phone or by email can have a staff member raise the request for
+them ([decision 0047](decisions/0047-staff-raise-a-request-for-someone.md)).
+
+- **Who:** the staff who work on requests (`requests:manage`) raise it for an active Admin or
+  Client of the company with a name to show: someone who could raise it themselves, on the
+  company's side. Not a Watcher, who can't raise a request, and not someone whose own request
+  would be the staff's (a staff member who works on requests and is also a member). Anyone else
+  who names someone is refused (`forbidden`).
+- **Named by their key:** `listRaisableFor` lists the people by name with their key in the company
+  (`mentionKey`), and `raiseRequest` takes that key (`raisedFor`), never a user ID. A key that
+  stands for nobody it can be raised for is refused (`errors.requests.notRaisableFor`). The
+  raising transaction locks the person's account row with the actor's (`assertStillMayChange`'s
+  `alsoLock`) and checks them again (`assertStillRaisableFor`), so someone who became a Watcher,
+  left the company or was deactivated meanwhile has nothing raised for them.
+- **The record:** the person is who raised it (`created_by`), on the company's side
+  (`created_by_side`), so it counts as the company's request. A flag and the staff member
+  (`created_on_behalf`, `created_on_behalf_by`) say who raised it for them; the flag outlives the
+  staff member's account. A staff member signed in as another staff member who raises it for
+  someone is recorded as usual (`signedInAsWork`), for the staff member they're signed in as.
+- **Following it:** both the person and the staff member are subscribed.
+- **Rate limits** count against the staff member (`actingUserId`), who is acting.
+
 ## Signed in as a user
 
 A staff member signed in as a user
@@ -964,7 +993,8 @@ no Move menu.
   `findRequestNumber`, `getRequest`, `setActivityView` (how the reader reads the activity),
   `raiseRequest`, `replyToRequest`, `addNote`, `changeRequestStatus`,
   `updateRequestDetails`, `changeAssignees`, `listAssignableStaff`, `countAssignedRequests`,
-  `listMentionable`, `subscribe`, `unsubscribe`, `changeSubscribers`, `listSubscribable`,
+  `listRaisableFor` (who a request can be raised for), `listMentionable`, `subscribe`,
+  `unsubscribe`, `changeSubscribers`, `listSubscribable`,
   `readRequestUpdate` (what one person's email about a request may show), and
   `unassignFrom` and `unsubscribeFrom` for the services that end someone's request work or their
   access.
