@@ -292,6 +292,7 @@
       "hint": "También puedes soltar o pegar archivos: hasta {count, number} de como máximo {maximum, number} MB cada uno.",
       "dropHere": "Suelta los archivos para adjuntarlos.",
       "waiting": "{count, plural, one {# archivo para enviar} other {# archivos para enviar}}",
+      "queued": "Esperando para subir",
       "uploading": "Subiendo, {progress, number, percent}",
       "uploadingLabel": "Subiendo {name}",
       "remove": "Quitar {name}",

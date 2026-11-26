@@ -292,6 +292,7 @@
       "hint": "Je kunt bestanden ook neerzetten of plakken: tot {count, number} van hoogstens {maximum, number} MB per stuk.",
       "dropHere": "Laat de bestanden los om ze toe te voegen.",
       "waiting": "{count, plural, one {# bestand om te versturen} other {# bestanden om te versturen}}",
+      "queued": "Wacht op uploaden",
       "uploading": "Bezig met uploaden, {progress, number, percent}",
       "uploadingLabel": "{name} wordt geüpload",
       "remove": "{name} verwijderen",

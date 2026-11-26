@@ -141,7 +141,8 @@
       "offByEnvironment": "De omgeving van de server heeft bestanden toevoegen uitgezet, dus je kunt het hier niet aanzetten.",
       "storageFirst": "Kies waar bestanden worden bewaard voordat mensen ze kunnen toevoegen.",
       "tooMany": "Voeg hoogstens {maximum, number} bestanden aan één tekst toe.",
-      "someUnavailable": "Een van de bestanden is niet meer beschikbaar. Voeg het opnieuw toe."
+      "someUnavailable": "Een van de bestanden is niet meer beschikbaar. Voeg het opnieuw toe.",
+      "tooManyAtOnce": "Je uploadt al {maximum, number} bestanden. Wacht tot er een klaar is."
     }
   }
 }

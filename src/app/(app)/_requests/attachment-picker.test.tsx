@@ -171,7 +171,48 @@ describe('AttachmentPicker', () => {
     );
     expect(await screen.findByRole('list', { name: '10 files to send' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Attach at most 10 files to one text.');
-    expect(uploadAttachment).toHaveBeenCalledTimes(10);
+    // Three upload at a time; the rest wait their turn.
+    expect(uploadAttachment).toHaveBeenCalledTimes(3);
+  });
+
+  it('uploads three files at a time, starting the next as one ends', async () => {
+    const { chooser } = renderPicker();
+    choose(chooser, [
+      textFile('one.log'),
+      textFile('two.log'),
+      textFile('three.log'),
+      textFile('four.log'),
+    ]);
+    const waiting = await screen.findByRole('list', { name: '4 files to send' });
+    expect(uploads.map(({ file }) => file.name)).toEqual(['one.log', 'two.log', 'three.log']);
+    expect(within(waiting).getByText('Waiting to upload')).toBeInTheDocument();
+
+    act(() =>
+      defined(uploads[0], 'the first upload').finish({
+        ok: true,
+        file: { id: 'attachment-1', name: 'one.log', size: 15 },
+      }),
+    );
+    await waitFor(() => expect(uploads).toHaveLength(4));
+    expect(uploads[3]?.file.name).toBe('four.log');
+    expect(within(waiting).queryByText('Waiting to upload')).not.toBeInTheDocument();
+  });
+
+  it('never starts a waiting file that was removed', async () => {
+    const user = userEvent.setup();
+    const { chooser } = renderPicker();
+    choose(
+      chooser,
+      ['one.log', 'two.log', 'three.log', 'four.log'].map((name) => textFile(name)),
+    );
+    const waiting = await screen.findByRole('list', { name: '4 files to send' });
+    await user.click(within(waiting).getByRole('button', { name: 'Remove four.log' }));
+
+    act(() =>
+      defined(uploads[0], 'the first upload').finish({ ok: false, reason: null, stopped: true }),
+    );
+    await waitFor(() => expect(uploadAttachment).toHaveBeenCalledTimes(3));
+    expect(uploads.map(({ file }) => file.name)).not.toContain('four.log');
   });
 
   it('says why Adiutor refused an upload, and takes the file off', async () => {

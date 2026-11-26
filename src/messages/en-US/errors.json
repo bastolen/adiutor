@@ -141,7 +141,8 @@
       "offByEnvironment": "The server’s environment turned attaching files off, so it can’t be turned on here.",
       "storageFirst": "Choose where files are kept before people can attach them.",
       "tooMany": "Attach at most {maximum, number} files to one text.",
-      "someUnavailable": "One of the files is no longer available. Attach it again."
+      "someUnavailable": "One of the files is no longer available. Attach it again.",
+      "tooManyAtOnce": "You’re uploading {maximum, number} files already. Wait for one to finish."
     }
   }
 }

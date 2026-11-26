@@ -67,10 +67,42 @@ async function refusal(
   return Response.json({ error: message }, { status, headers: NO_STORE });
 }
 
+/** How long a body may send nothing before it counts as stopped, in milliseconds. */
+const BODY_IDLE_MS = 30_000;
+
+/**
+ * Reads the next piece of a body, or nothing when it fails or sends nothing
+ * for `BODY_IDLE_MS`, which then cancels it.
+ *
+ * @param reader - The body's reader.
+ * @returns The piece, or `null`.
+ */
+function nextPiece(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<ReadableStreamReadResult<Uint8Array> | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve(null);
+      reader.cancel().catch(() => {});
+    }, BODY_IDLE_MS);
+    reader.read().then(
+      (piece) => {
+        clearTimeout(timer);
+        resolve(piece);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+    );
+  });
+}
+
 /**
  * Reads a body of exactly the length the browser gave. A body that stops
  * arriving (the browser stopped the upload: its file was removed, or the
- * page was left) is one that came short, not an error of the server's.
+ * page was left), or sends nothing for 30 seconds, is one that came short,
+ * not an error of the server's.
  *
  * @param body - The body.
  * @param length - The length it said (`Content-Length`).
@@ -89,7 +121,7 @@ async function readExactly(
   for (;;) {
     // One piece after another: they arrive in order.
     // eslint-disable-next-line no-await-in-loop -- a stream is read a piece at a time
-    const piece = await reader.read().catch(() => null);
+    const piece = await nextPiece(reader);
     if (!piece) {
       return null;
     }
@@ -141,13 +173,18 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return refusal(400, 'errors.attachments.badName');
   }
-  const bytes = await readExactly(request.body, length);
-  if (!bytes) {
-    return refusal(400, 'errors.attachments.incomplete');
-  }
-
   try {
-    const uploaded = await uploadAttachment(appContext, actor, { name, bytes });
+    // The body is read only once the service has done every check it can without it.
+    const uploaded = await uploadAttachment(appContext, actor, {
+      name,
+      size: length,
+      /**
+       * Reads the file's bytes.
+       *
+       * @returns The bytes.
+       */
+      read: () => readExactly(request.body, length),
+    });
     return Response.json(uploaded, { status: 201, headers: NO_STORE });
   } catch (error) {
     if (error instanceof ServiceError) {

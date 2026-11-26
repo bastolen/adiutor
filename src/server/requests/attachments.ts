@@ -1,10 +1,10 @@
 /**
  * @file Uploading a file to attach to a request's text (decision 0044): one
  * file at a time, before the text is sent. The file's name, type and size
- * are checked, its bytes against its type, and the uploader's limits; then
- * its row is stored, the file is written to the storage, and the row is
- * marked uploaded, so no file is ever in storage without a row the cleanup
- * job can find. The upload is unsent until the text it's sent with claims it
+ * and the uploader's limits are checked before it's read, its bytes against
+ * its type after; its row is stored first, the file is written to the
+ * storage, and the row is marked uploaded, so no file is ever in storage
+ * without a row the cleanup job can find. The upload is unsent until the text it's sent with claims it
  * (`claimAttachments`). Downloading one goes through the same checks as
  * reading its text (`loadAttachment`). The staff who work on requests remove
  * one (`removeAttachment`): its row stays, as the mark of who removed it, and
@@ -12,6 +12,7 @@
  */
 import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
+import type { DatabaseOrTransaction } from '@/db';
 import { requestAttachment, requestEntry } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import {
@@ -19,6 +20,7 @@ import {
   cleanAttachmentName,
   type RequestEntryKind,
   STAFF_ONLY_ENTRY_KINDS,
+  UPLOADS_AT_ONCE,
 } from '@/lib/requests';
 import { maxFileBytes } from '@/lib/storage';
 import { idSchema } from '@/lib/validation';
@@ -84,16 +86,23 @@ export async function attachmentsOn(ctx: ServiceContext): Promise<AttachmentsOn 
 }
 
 /**
+ * The uploads under way on this server, by the person who is really acting:
+ * with each holding its whole file in memory, one person can't hold many.
+ */
+const uploadsUnderWay = new Map<string, number>();
+
+/**
  * How much someone uploaded in the last 24 hours: what they uploaded
  * themselves, and what they uploaded while signed in as someone else
- * (counted for them, as every limit of request work is).
+ * (counted for them, as every limit of request work is). Uploads still under
+ * way count with the size they said.
  *
- * @param ctx - Service context.
+ * @param db - Database client or transaction.
  * @param acting - The person who is really acting (`actingUserId`).
  * @returns The bytes.
  */
-async function uploadedToday(ctx: ServiceContext, acting: string): Promise<number> {
-  const [row] = await ctx.db
+async function uploadedToday(db: DatabaseOrTransaction, acting: string): Promise<number> {
+  const [row] = await db
     .select({ bytes: sql<string>`coalesce(sum(${requestAttachment.size}), 0)` })
     .from(requestAttachment)
     .where(
@@ -109,26 +118,88 @@ async function uploadedToday(ctx: ServiceContext, acting: string): Promise<numbe
 }
 
 /**
+ * Stores the row of an upload that's starting, once the day's total allows
+ * its size. One person's uploads take turns at this (a lock on them for the
+ * transaction), so uploads side by side can't pass the total together.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user.
+ * @param file - The file as it was announced.
+ * @param file.name - Its name, cleaned.
+ * @param file.contentType - The type it's stored as.
+ * @param file.size - Its size in bytes, as the browser said.
+ * @returns The row's ID.
+ * @throws {ServiceError} `rate_limited` past `DAILY_UPLOAD_BYTES`.
+ */
+async function startUpload(
+  ctx: ServiceContext,
+  actor: Actor,
+  file: { name: string; contentType: string; size: number },
+): Promise<string> {
+  const acting = actingUserId(actor);
+  return ctx.db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`attachment-upload:${acting}`}, 0))`,
+    );
+    if ((await uploadedToday(tx, acting)) + file.size > DAILY_UPLOAD_BYTES) {
+      throw new ServiceError('rate_limited', 'errors.attachments.dailyTotal');
+    }
+    return firstRow(
+      await tx
+        .insert(requestAttachment)
+        .values({ uploadedBy: actor.id, ...signedInAsWork(actor), ...file })
+        .returning({ id: requestAttachment.id }),
+      'the attachment',
+    ).id;
+  });
+}
+
+/**
+ * Takes back the row of an upload whose file was never stored.
+ *
+ * @param ctx - Service context.
+ * @param id - The row.
+ */
+async function abandonUpload(ctx: ServiceContext, id: string): Promise<void> {
+  // If this fails too, the job purges the unfinished row after an hour.
+  await ctx.db
+    .delete(requestAttachment)
+    .where(eq(requestAttachment.id, id))
+    .catch(() => {});
+}
+
+/**
  * Uploads a file, for a text that will be sent with it. Allowed for whoever
  * may raise a request in some company (each text's service checks its own
  * permission when it claims the file), also while a staff member is signed
  * in as them, which the row records.
  *
+ * Everything that can be refused cheaply is, before a byte of the file is
+ * read: attaching off, someone who can't write requests, a name, type or
+ * size that isn't allowed, the hourly limit (which every such attempt counts
+ * towards), more than `UPLOADS_AT_ONCE` at once, and the day's total. Only
+ * then is the file read (`read`) and checked against its type. Its row is
+ * stored before the file, and marked uploaded after, so no file is ever in
+ * storage without a row; a storage that fails leaves the row unfinished for
+ * the cleanup job, which deletes whatever the storage may have kept.
+ *
  * @param ctx - Service context.
  * @param actor - The acting user.
- * @param input - The file.
- * @param input.name - Its name, as the browser sent it.
- * @param input.bytes - Its bytes.
+ * @param input - The upload.
+ * @param input.name - The file's name, as the browser sent it.
+ * @param input.size - Its size in bytes, as the browser announced it.
+ * @param input.read - Reads the file: its bytes, or `null` when they didn't all arrive.
  * @returns The uploaded file.
  * @throws {ServiceError} `conflict` while attaching is off, `forbidden` for
  *   someone who can't write requests anywhere, `invalid` for a name, size
- *   or bytes that aren't allowed, `rate_limited` past the limits.
- * @throws {StorageError} When the storage fails; the row is taken back.
+ *   or bytes that aren't allowed or a file that came incomplete,
+ *   `rate_limited` past the limits.
+ * @throws {StorageError} When the storage fails; the row stays unfinished.
  */
 export async function uploadAttachment(
   ctx: ServiceContext,
   actor: Actor,
-  input: { name: string; bytes: Uint8Array<ArrayBuffer> },
+  input: { name: string; size: number; read: () => Promise<Uint8Array<ArrayBuffer> | null> },
 ): Promise<UploadedAttachment> {
   const on = await attachmentsOn(ctx);
   if (!on) {
@@ -143,15 +214,12 @@ export async function uploadAttachment(
   if (!name || !type) {
     throw new ServiceError('invalid', 'errors.attachments.typeNotAllowed');
   }
-  const size = input.bytes.byteLength;
+  const { size } = input;
   if (size === 0) {
     throw new ServiceError('invalid', 'errors.attachments.empty');
   }
   if (size > maxFileBytes(on.maxFileMb)) {
     throw new ServiceError('invalid', 'errors.attachments.tooLarge', { maximum: on.maxFileMb });
-  }
-  if (!matchesAttachmentKind(type.check, input.bytes)) {
-    throw new ServiceError('invalid', 'errors.attachments.notItsType');
   }
   const acting = actingUserId(actor);
   await assertRateLimit(
@@ -159,42 +227,44 @@ export async function uploadAttachment(
     `attachment-upload:user:${acting}`,
     RATE_LIMITS.attachmentUploadsPerUser,
   );
-  if ((await uploadedToday(ctx, acting)) + size > DAILY_UPLOAD_BYTES) {
-    throw new ServiceError('rate_limited', 'errors.attachments.dailyTotal');
+  const underWay = uploadsUnderWay.get(acting) ?? 0;
+  if (underWay >= UPLOADS_AT_ONCE) {
+    throw new ServiceError('rate_limited', 'errors.attachments.tooManyAtOnce', {
+      maximum: UPLOADS_AT_ONCE,
+    });
   }
-
-  const stored = firstRow(
-    await ctx.db
-      .insert(requestAttachment)
-      .values({
-        uploadedBy: actor.id,
-        ...signedInAsWork(actor),
-        name,
-        contentType: type.contentType,
-        size,
-      })
-      .returning({ id: requestAttachment.id }),
-    'the attachment',
-  );
+  uploadsUnderWay.set(acting, underWay + 1);
   try {
-    await on.storage.put(attachmentKey(stored.id), input.bytes, type.contentType);
-  } catch (error) {
-    // Nothing was kept, so neither is its row; the job purges it if this fails too.
-    await ctx.db
-      .delete(requestAttachment)
-      .where(eq(requestAttachment.id, stored.id))
-      .catch(() => {});
-    throw error;
+    const id = await startUpload(ctx, actor, { name, contentType: type.contentType, size });
+    const bytes = await input.read();
+    if (!bytes || bytes.byteLength !== size) {
+      await abandonUpload(ctx, id);
+      throw new ServiceError('invalid', 'errors.attachments.incomplete');
+    }
+    if (!matchesAttachmentKind(type.check, bytes)) {
+      await abandonUpload(ctx, id);
+      throw new ServiceError('invalid', 'errors.attachments.notItsType');
+    }
+    // A storage that fails may still have kept the file (a timeout after it stored it): the row
+    // stays unfinished, and the cleanup job deletes both after an hour.
+    await on.storage.put(attachmentKey(id), bytes, type.contentType);
+    const uploaded = await ctx.db
+      .update(requestAttachment)
+      .set({ uploadedAt: sql`now()` })
+      .where(and(eq(requestAttachment.id, id), isNull(requestAttachment.uploadedAt)))
+      .returning({ id: requestAttachment.id });
+    if (uploaded.length === 0) {
+      throw new ServiceError('conflict', 'errors.attachments.unavailable', { name });
+    }
+    return { id, name, size, contentType: type.contentType, thumbnail: type.thumbnail };
+  } finally {
+    const left = (uploadsUnderWay.get(acting) ?? 1) - 1;
+    if (left > 0) {
+      uploadsUnderWay.set(acting, left);
+    } else {
+      uploadsUnderWay.delete(acting);
+    }
   }
-  const uploaded = await ctx.db
-    .update(requestAttachment)
-    .set({ uploadedAt: sql`now()` })
-    .where(and(eq(requestAttachment.id, stored.id), isNull(requestAttachment.uploadedAt)))
-    .returning({ id: requestAttachment.id });
-  if (uploaded.length === 0) {
-    throw new ServiceError('conflict', 'errors.attachments.unavailable', { name });
-  }
-  return { id: stored.id, name, size, contentType: type.contentType, thumbnail: type.thumbnail };
 }
 
 /** A file to download, as its route serves it. */

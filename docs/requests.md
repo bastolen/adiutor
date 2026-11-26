@@ -729,7 +729,7 @@ in [Attachments](deploying.md#attachments).
   have an "Attach files" button, take files dropped on the form,
   and take files or a screenshot pasted into it (a paste that also holds text, such as a copy from
   a document, stays a paste of the text). The browser checks each file's kind, its size and how
-  many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it at once with its progress
+  many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it, three at a time (`UPLOADS_AT_ONCE`; the rest say they're waiting), with its progress
   shown (`upload-attachment.ts`, to `POST /api/attachments`), and the form sends its ID as an
   `attachment` field; the file never rides along with the form. While a file uploads, the send
   buttons wait, still focusable, and say why. A text still needs its words: files don't replace

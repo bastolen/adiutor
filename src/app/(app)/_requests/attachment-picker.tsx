@@ -24,6 +24,7 @@ import {
   attachmentTypeOf,
   cleanAttachmentName,
   MAX_ATTACHMENTS_PER_TEXT,
+  UPLOADS_AT_ONCE,
 } from '@/lib/requests';
 import { maxFileBytes } from '@/lib/storage';
 
@@ -44,6 +45,8 @@ interface WaitingFile {
   name: string;
   /** Its size in bytes. */
   size: number;
+  /** Whether its upload has started; at most `UPLOADS_AT_ONCE` run at a time. */
+  started: boolean;
   /** How far its upload is, from 0 to 1. */
   progress: number;
   /** Its ID once it's uploaded, which the form sends. */
@@ -139,6 +142,54 @@ export default function AttachmentPicker({
     setFiles((waiting) => waiting.filter((candidate) => candidate.key !== key));
   };
 
+  // The files waiting for their upload to start, oldest first, and how many uploads run now.
+  const queue = useRef<{ key: string; name: string; file: File; stop: AbortController }[]>([]);
+  const running = useRef(0);
+
+  /**
+   * Starts the next waiting uploads, so that at most `UPLOADS_AT_ONCE` run
+   * at a time (the server takes no more from one person); each that ends
+   * starts the next. A file removed while it waited is skipped.
+   */
+  const startUploads = () => {
+    while (running.current < UPLOADS_AT_ONCE && queue.current.length > 0) {
+      const next = queue.current.shift();
+      if (next && !next.stop.signal.aborted) {
+        const { key, name, file, stop } = next;
+        running.current += 1;
+        update(key, { started: true });
+        uploadAttachment(file, {
+          /**
+           * Shows how far the upload is.
+           *
+           * @param progress - From 0 to 1.
+           */
+          onProgress: (progress) => update(key, { progress }),
+          signal: stop.signal,
+        })
+          .then(
+            (outcome) => {
+              if (outcome.ok) {
+                update(key, { id: outcome.file.id, name: outcome.file.name, progress: 1 });
+                setSaid(t('ready', { name: outcome.file.name }));
+                return;
+              }
+              if (outcome.stopped) {
+                return;
+              }
+              drop(key);
+              setRefusal(outcome.reason ?? t('failed', { name }));
+            },
+            () => {},
+          )
+          .finally(() => {
+            running.current -= 1;
+            startUploads();
+          });
+      }
+    }
+  };
+
   /**
    * Checks files and starts uploading the ones that may be attached. What
    * can't be is said, the first such file only.
@@ -170,39 +221,19 @@ export default function AttachmentPicker({
         key: crypto.randomUUID(),
         name,
         size: file.size,
+        started: false,
         progress: 0,
         id: null,
         preview: type?.thumbnail ? URL.createObjectURL(file) : null,
         stop: new AbortController(),
       };
       started.push(waiting);
-      uploadAttachment(file, {
-        /**
-         * Shows how far the upload is.
-         *
-         * @param progress - From 0 to 1.
-         */
-        onProgress: (progress) => update(waiting.key, { progress }),
-        signal: waiting.stop.signal,
-      }).then(
-        (outcome) => {
-          if (outcome.ok) {
-            update(waiting.key, { id: outcome.file.id, name: outcome.file.name, progress: 1 });
-            setSaid(t('ready', { name: outcome.file.name }));
-            return;
-          }
-          if (outcome.stopped) {
-            return;
-          }
-          drop(waiting.key);
-          setRefusal(outcome.reason ?? t('failed', { name }));
-        },
-        () => {},
-      );
+      queue.current.push({ key: waiting.key, name, file, stop: waiting.stop });
     });
     setRefusal(refused);
     if (started.length > 0) {
       setFiles((waiting) => [...waiting, ...started]);
+      startUploads();
     }
   };
   // For the form's listeners, which are added once: `add` as it is when files come.
@@ -215,6 +246,7 @@ export default function AttachmentPicker({
     }
     /** Empties the list once the form is reset (after it was sent). */
     const clear = () => {
+      queue.current = [];
       current.current.forEach((file) => {
         if (file.preview) {
           URL.revokeObjectURL(file.preview);
@@ -339,9 +371,12 @@ export default function AttachmentPicker({
                 <FileTile
                   name={file.name}
                   detail={
-                    file.id === null
-                      ? t('uploading', { progress: file.progress })
-                      : formatFileSize(file.size, locale)
+                    // eslint-disable-next-line no-nested-ternary -- three states of one line: waiting, uploading, uploaded
+                    file.id !== null
+                      ? formatFileSize(file.size, locale)
+                      : file.started
+                        ? t('uploading', { progress: file.progress })
+                        : t('queued')
                   }
                   icon={<Icon aria-hidden="true" />}
                   thumbnail={file.preview ?? undefined}

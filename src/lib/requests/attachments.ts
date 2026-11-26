@@ -109,6 +109,12 @@ export const ATTACHMENT_ACCEPT = ATTACHMENT_TYPES.flatMap((type) =>
 /** The most files one text (a description, reply or note) may have, removed ones aside. */
 export const MAX_ATTACHMENTS_PER_TEXT = 10;
 
+/**
+ * How many uploads one person may have under way at once: the server holds
+ * each file in memory while it checks it, and the picker sends no more.
+ */
+export const UPLOADS_AT_ONCE = 3;
+
 /** The longest a file's name may be, its extension included. */
 export const ATTACHMENT_NAME_MAX_LENGTH = 255;
 

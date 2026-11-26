@@ -1,8 +1,9 @@
 /**
  * @file Tests for the attachments' upload route: only a page of this site
  * may send, the session must count, the size must be given and within the
- * limit and match the body, the name is read from its header, and every
- * refusal is JSON in the reader's language, never kept.
+ * limit and match the body, the name is read from its header, the body is
+ * read only once the service has done its checks, and every refusal is JSON
+ * in the reader's language, never kept.
  * @vitest-environment node
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -63,31 +64,64 @@ function upload(body: Uint8Array<ArrayBuffer>, headers: Record<string, string> =
 /** A small text file. */
 const TEXT = new TextEncoder().encode('printer offline');
 
+/** What the service answers for a stored file. */
+const STORED = {
+  id: 'attachment-id',
+  name: 'Printer log é.txt',
+  size: 15,
+  contentType: 'text/plain',
+  thumbnail: false,
+};
+
 beforeEach(() => {
   vi.mocked(getOptionalActor).mockReset().mockResolvedValue(actor);
-  vi.mocked(uploadAttachment).mockReset();
+  // As the service does: once its checks pass, it reads the file, and refuses one that came short.
+  vi.mocked(uploadAttachment)
+    .mockReset()
+    .mockImplementation(async (_ctx, _actor, input) => {
+      if (!(await input.read())) {
+        throw new ServiceError('invalid', 'errors.attachments.incomplete');
+      }
+      return STORED;
+    });
 });
 
 describe('POST /api/attachments', () => {
-  it('uploads the file with its decoded name, and answers what was stored', async () => {
-    const stored = {
-      id: 'attachment-id',
-      name: 'Printer log é.txt',
-      size: 15,
-      contentType: 'text/plain',
-      thumbnail: false,
-    };
-    vi.mocked(uploadAttachment).mockResolvedValue(stored);
-
+  it('uploads the file with its decoded name and size, and answers what was stored', async () => {
     const response = await upload(TEXT);
 
     expect(response.status).toBe(201);
-    expect(await response.json()).toEqual(stored);
+    expect(await response.json()).toEqual(STORED);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(uploadAttachment).toHaveBeenCalledExactlyOnceWith({ db: 'the database' }, actor, {
       name: 'Printer log é.txt',
-      bytes: TEXT,
+      size: TEXT.byteLength,
+      read: expect.any(Function),
     });
+  });
+
+  it('reads nothing of the body when the service refuses before it', async () => {
+    vi.mocked(uploadAttachment).mockRejectedValueOnce(
+      new ServiceError('conflict', 'errors.attachments.off'),
+    );
+    const pull = vi.fn();
+    const response = await POST(
+      new Request('https://adiutor.test/api/attachments', {
+        method: 'POST',
+        // Asked for nothing until someone reads it.
+        body: new ReadableStream<Uint8Array>({ pull }, { highWaterMark: 0 }),
+        // @ts-expect-error -- Node's fetch needs it for a body that's a stream; the DOM types lack it.
+        duplex: 'half',
+        headers: {
+          'sec-fetch-site': 'same-origin',
+          'content-length': String(TEXT.byteLength),
+          [ATTACHMENT_NAME_HEADER]: encodeURIComponent('printer.log'),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(pull).not.toHaveBeenCalled();
   });
 
   it('refuses what another site sends, and someone signed out', async () => {
@@ -120,13 +154,14 @@ describe('POST /api/attachments', () => {
       error: 'That file is too large: attach files of at most 1 MB.',
     });
 
-    const short = await upload(TEXT, { 'content-length': String(TEXT.byteLength + 5) });
-    expect(short.status).toBe(400);
-    expect(await short.json()).toEqual({ error: 'The file arrived incomplete. Try again.' });
-
     const unknown = await upload(TEXT, { 'content-length': 'many' });
     expect(unknown.status).toBe(411);
     expect(uploadAttachment).not.toHaveBeenCalled();
+
+    // Shorter than it said: the service's reader gives nothing.
+    const short = await upload(TEXT, { 'content-length': String(TEXT.byteLength + 5) });
+    expect(short.status).toBe(400);
+    expect(await short.json()).toEqual({ error: 'The file arrived incomplete. Try again.' });
   });
 
   it('takes a body the browser stopped sending as incomplete, not as an error', async () => {
@@ -155,7 +190,38 @@ describe('POST /api/attachments', () => {
       }),
     );
     expect(response.status).toBe(400);
-    expect(uploadAttachment).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ error: 'The file arrived incomplete. Try again.' });
+  });
+
+  it('takes a body that sends nothing for 30 seconds as incomplete', async () => {
+    vi.useFakeTimers();
+    try {
+      const pending = POST(
+        new Request('https://adiutor.test/api/attachments', {
+          method: 'POST',
+          // Never sends a byte.
+          body: new ReadableStream<Uint8Array>({
+            /**
+             * Waits for bytes that never come.
+             *
+             * @returns A promise that never settles.
+             */
+            pull: () => new Promise(() => {}),
+          }),
+          // @ts-expect-error -- Node's fetch needs it for a body that's a stream; the DOM types lack it.
+          duplex: 'half',
+          headers: {
+            'sec-fetch-site': 'same-origin',
+            'content-length': String(TEXT.byteLength),
+            [ATTACHMENT_NAME_HEADER]: encodeURIComponent('printer.log'),
+          },
+        }),
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect((await pending).status).toBe(400);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('refuses a name that doesn’t decode', async () => {

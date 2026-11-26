@@ -141,7 +141,8 @@
       "offByEnvironment": "El entorno del servidor ha desactivado adjuntar archivos, así que no se puede activar aquí.",
       "storageFirst": "Elige dónde se guardan los archivos antes de que las personas puedan adjuntarlos.",
       "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
-      "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo."
+      "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo.",
+      "tooManyAtOnce": "Ya estás subiendo {maximum, number} archivos. Espera a que termine uno."
     }
   }
 }

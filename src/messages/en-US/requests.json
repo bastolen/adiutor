@@ -292,6 +292,7 @@
       "hint": "You can also drop or paste files: up to {count, number} of at most {maximum, number} MB each.",
       "dropHere": "Drop the files to attach them.",
       "waiting": "{count, plural, one {# file to send} other {# files to send}}",
+      "queued": "Waiting to upload",
       "uploading": "Uploading, {progress, number, percent}",
       "uploadingLabel": "Uploading {name}",
       "remove": "Remove {name}",

@@ -407,12 +407,21 @@ A file attached to a request is uploaded on its own first, then sent with its te
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
   extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its
   name.
-- **Limits per person who really acts** (`actingUserId`): 100 uploads an hour, and 1 GB in any 24
-  hours, sent or not (`DAILY_UPLOAD_BYTES`), so one account can't fill the storage. The largest
-  file is chosen per install (at most 50 MB, and 4 on Vercel).
+- **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
+  the person may write requests anywhere, the name and type, the announced size and the hourly
+  limit come first, and the body is read only after them, so a refused upload costs no memory. A
+  body that sends nothing for 30 seconds counts as incomplete.
+- **Limits per person who really acts** (`actingUserId`): 100 uploads an hour, counting every
+  attempt that gets past the checks above (one refused for its bytes too), at most 3 under way at
+  once (`UPLOADS_AT_ONCE`, as each holds its file in memory; the picker sends no more), and 1 GB in
+  any 24 hours, sent or not (`DAILY_UPLOAD_BYTES`), counted under a lock on the person so uploads
+  side by side can't pass it together. The largest file is chosen per install (at most 50 MB, and
+  4 on Vercel).
 - **Row first, then the file:** a row is stored before its file is written and marked uploaded
-  after, so a file never sits in storage without a row; one that couldn't be stored takes its row
-  back. An unsent upload is only its uploader's to send, for 24 hours (`claimAttachments`: their
+  after, so a file never sits in storage without a row. A file refused for its bytes, or that came
+  short, takes its row back (nothing was stored); one the storage failed to store keeps its row
+  unfinished, since the storage may have kept it all the same (a timeout after it did), and the
+  `attachment-files` job deletes both after an hour. An unsent upload is only its uploader's to send, for 24 hours (`claimAttachments`: their
   own finished upload, unclaimed, with the same staff member signed in as them if one was), and
   the `attachment-files` job purges it after 25, or once the uploader's account is gone. A text
   with a file that isn't the writer's to send is refused whole, and names only a file of their

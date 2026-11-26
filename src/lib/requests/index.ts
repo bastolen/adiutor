@@ -148,4 +148,5 @@ export {
   attachmentTypeOf,
   cleanAttachmentName,
   MAX_ATTACHMENTS_PER_TEXT,
+  UPLOADS_AT_ONCE,
 } from './attachments';
