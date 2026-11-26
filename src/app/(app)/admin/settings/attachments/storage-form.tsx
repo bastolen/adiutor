@@ -14,6 +14,7 @@ import {
   ReturnToField,
   useRecentConfirmation,
 } from '@/components/auth/recent-confirmation';
+import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
 import CheckboxField from '@/components/ui/checkbox-field';
 import ResultAlert from '@/components/ui/result-alert';
@@ -216,13 +217,18 @@ function SftpFields({ saved }: { saved: Extract<StorageView, { driver: 'sftp' }>
  * @param props - Form props.
  * @param props.current - The saved storage, without its secrets, or `null`.
  * @param props.vercel - Whether Adiutor runs on Vercel.
+ * @param props.setUp - Whether the saved storage is set up as Adiutor's; `null` when that
+ *   couldn't be told, or there's none. A folder that isn't says so: testing and saving it again
+ *   sets it up.
  */
 export default function StorageForm({
   current,
   vercel,
+  setUp = null,
 }: {
   current: StorageView | null;
   vercel: boolean;
+  setUp?: boolean | null;
 }) {
   const t = useTranslations('admin.settings.attachments.storage');
   // Changes are turned off while a staff member is signed in as the user.
@@ -264,6 +270,7 @@ export default function StorageForm({
         <ResultAlert result={result} />
         <ReturnToField />
         {current === null && <p className="text-sm text-muted-foreground">{t('none')}</p>}
+        {current !== null && setUp === false && <Alert tone="info">{t('notSetUpSettings')}</Alert>}
         <SelectField
           label={t('driver')}
           name="driver"

@@ -247,6 +247,14 @@ describe('POST /api/attachments', () => {
     );
     expect((await upload(TEXT)).status).toBe(429);
 
+    // A folder that isn't set up says so, rather than "try again".
+    vi.mocked(uploadAttachment).mockRejectedValueOnce(new StorageError('not_set_up'));
+    const notSetUp = await upload(TEXT);
+    expect(notSetUp.status).toBe(503);
+    expect(await notSetUp.json()).toEqual({
+      error: 'Attaching files isn’t set up yet. Ask a staff Admin to set up where files are kept.',
+    });
+
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(uploadAttachment).mockRejectedValueOnce(new StorageError('unreachable'));
     const unavailable = await upload(TEXT);

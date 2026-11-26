@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterAll, beforeEach, inject } from 'vitest';
+import { afterAll, beforeAll, beforeEach, inject } from 'vitest';
 
 import { createDatabase, type Database } from '@/db';
 import type { Email } from '@/lib/email';
@@ -63,6 +63,11 @@ export function setupTestContext(): TestContext {
      */
     storage: async () => storage,
   };
+
+  // Set up on purpose, as a staff Admin's test before saving would.
+  beforeAll(async () => {
+    await storage.setUp();
+  });
 
   beforeEach(async () => {
     sent.length = 0;

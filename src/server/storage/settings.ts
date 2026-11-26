@@ -27,7 +27,7 @@ import { ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { secretToSave } from '../sealed-secrets';
 import { readSettings, writeSettings } from '../settings';
-import { storageFor } from './active';
+import { activeStorage, storageFor } from './active';
 import checkStorage from './check';
 import { StorageError } from './errors';
 import { openStorage, sealStorage } from './secrets';
@@ -54,6 +54,12 @@ export interface AttachmentSettings {
     | { source: 'settings'; view: StorageView | null };
   /** The largest file, in megabytes: its value, the most it may be, and whether the environment chose it. */
   maxFileMb: { value: number; ceiling: number; fromEnvironment: boolean };
+  /**
+   * Whether the storage files go to now is set up as Adiutor's (a folder
+   * with its marker; a bucket always is), or `null` without a storage or
+   * when it couldn't be reached to tell.
+   */
+  storageSetUp: boolean | null;
   /**
    * "People can attach files": whether it's on, whether the environment
    * turned attachments off (`ATTACHMENTS_STORAGE=off`, which locks it off),
@@ -112,8 +118,13 @@ export async function getAttachmentSettings(
   } else {
     storage = { source: 'environment', view: null };
   }
+  // Asked of the storage itself: a folder without its marker is one a server started without.
+  const active =
+    storage.view === null ? null : await activeStorage(ctx.db, environment).catch(() => null);
+  const storageSetUp = active ? await active.isSetUp().catch(() => null) : null;
   return {
     storage,
+    storageSetUp,
     maxFileMb: {
       value: await attachmentLimitMb(ctx.db, environment),
       ceiling: maxFileMbCeiling(vercel),
@@ -319,5 +330,57 @@ export async function saveAttachmentsEnabled(
       }
     }
     await writeSettings(tx, { 'attachments.enabled': on });
+  });
+}
+
+/**
+ * Sets up the storage files go to now as Adiutor's, on purpose: for a
+ * folder (local disk or SFTP), writes its marker, after trying it as a save
+ * would. It's how a staff Admin sets up a storage the server's environment
+ * chooses, which no save in Settings tries (one chosen here is set up when
+ * it's saved). Only for the place the environment or Settings chose, with
+ * the staff Admin's second step from the last 15 minutes, and recorded in
+ * the audit log.
+ *
+ * @param ctx - Service context.
+ * @param actor - The acting user; needs `staff:manage`.
+ * @param environment - The server's environment.
+ * @throws {ServiceError} `conflict` without a storage, `confirmation_required`
+ *   without a recent confirmation, `rate_limited`, or `invalid` for a
+ *   storage that fails its test.
+ */
+export async function setUpStorage(
+  ctx: ServiceContext,
+  actor: Actor,
+  environment: AttachmentEnvironment = env,
+): Promise<void> {
+  assertNotSignedInAs(actor);
+  assertPermission(getGlobalPermissions(actor), 'staff:manage');
+  if (needsRecentConfirmation(actor)) {
+    throw new ServiceError('confirmation_required', 'errors.attachments.confirmationRequired');
+  }
+  await assertRateLimit(ctx, `storage-check:user:${actor.id}`, RATE_LIMITS.storageChecksPerUser);
+  const fromEnvironment = storageFromEnvironment(environment);
+  let config: StorageConfig | null = null;
+  if (fromEnvironment.state === 'set') {
+    ({ config } = fromEnvironment);
+  } else if (fromEnvironment.state === 'unset') {
+    const { 'attachments.storage': stored } = await readSettings(ctx.db, ['attachments.storage']);
+    config = stored ? await openStorage(stored) : null;
+  }
+  if (!config) {
+    throw new ServiceError('conflict', 'errors.attachments.storageFirst');
+  }
+  const chosen = config;
+  await checkBeforeSaving(
+    'A storage',
+    () => checkStorage(storageFor(chosen)),
+    (error) => (error instanceof StorageError ? error.failure : null),
+    (failure) => `errors.attachments.storageCheck.${failure}`,
+  );
+  await recordEvent(ctx, {
+    action: 'attachment_storage_set_up',
+    actorUserId: actor.id,
+    details: { staff: true, driver: chosen.driver, place: placeOf(chosen) },
   });
 }

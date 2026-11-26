@@ -2,8 +2,9 @@
  * @file The SFTP driver: files in a folder on another server, at their key
  * under it, over SSH (`ssh2`). Every connection checks the server's host key
  * against the fingerprint it was given, and a connection to any other key
- * is refused. Like the local disk, the folder has a marker file: reading and
- * deleting refuse without it, and only storing a file writes it. A single
+ * is refused. Like the local disk, the folder has a marker file: storing,
+ * reading and deleting refuse without it, and only setting the storage up
+ * writes it (`setUp`). A single
  * call connects, works and disconnects; a file being read keeps its
  * connection until the read ends; a session (a job's run) shares one.
  */
@@ -295,20 +296,34 @@ function callsOn(
   };
 
   return {
+    /** Writes the marker unless it's there. */
+    async setUp() {
+      if ((await sizeOf(connection, marker, timeouts.call)) === null) {
+        await call(connection, timeouts.call, (done) =>
+          connection.sftp.writeFile(marker, MARKER_TEXT, done),
+        );
+      }
+    },
+
     /**
-     * Stores a file, writing the marker the first time: beside its place
-     * first, then renamed into it, so nobody reads half a file.
+     * Whether the folder has the marker.
+     *
+     * @returns Whether it has.
+     */
+    async isSetUp() {
+      return (await sizeOf(connection, marker, timeouts.call)) !== null;
+    },
+
+    /**
+     * Stores a file, in a folder with the marker: beside its place first,
+     * then renamed into it, so nobody reads half a file.
      *
      * @param key - Where.
      * @param bytes - The file.
      */
     async put(key: string, bytes: Uint8Array<ArrayBuffer>) {
       const path = pathOf(key);
-      if ((await sizeOf(connection, marker, timeouts.call)) === null) {
-        await call(connection, timeouts.call, (done) =>
-          connection.sftp.writeFile(marker, MARKER_TEXT, done),
-        );
-      }
+      await assertMarked();
       await makeFolders(path);
       const temporary = `${path}.${randomUUID()}.tmp`;
       await call(connection, timeouts.put, (done) =>
@@ -432,6 +447,20 @@ export default function sftpStorage(
     delete: (key) => once((calls) => calls.delete(key)),
 
     /**
+     * Writes the marker on a connection of its own.
+     *
+     * @returns When it's there.
+     */
+    setUp: () => once((calls) => calls.setUp()),
+
+    /**
+     * Looks for the marker on a connection of its own.
+     *
+     * @returns Whether it's there.
+     */
+    isSetUp: () => once((calls) => calls.isSetUp()),
+
+    /**
      * Runs several calls on one connection, closed when they're done (a
      * file read in a session must be read before it ends).
      *
@@ -447,6 +476,8 @@ export default function sftpStorage(
           put: calls.put,
           get: calls.get,
           delete: calls.delete,
+          setUp: calls.setUp,
+          isSetUp: calls.isSetUp,
           /**
            * Runs more calls on the same connection.
            *

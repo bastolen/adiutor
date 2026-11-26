@@ -61,9 +61,12 @@ How to set it up is in [Deploying](../deploying.md#attachments). The choices beh
   and are the same paths in every storage, so files can be copied from one to another as they are.
 - **Errors name a kind, never a reply:** a driver's failure says unreachable, refused, not found,
   not writable, timed out and the like (`StorageError`), so it can be logged and shown as it is.
-- **A folder is marked as Adiutor's:** on the local disk and over SFTP, a marker file, written
-  with the first file, must be there before a file is read or deleted, so a server started
-  without its volume fails loudly instead of taking every file for gone.
+- **A folder is marked as Adiutor's, on purpose:** on the local disk and over SFTP, a marker file
+  must be there before a file is stored, read or deleted, so a server started without its volume
+  fails loudly instead of keeping files on a disk that goes away or taking every file for gone.
+  Only setting the folder up writes it (the test before a storage is saved, or a staff Admin's
+  **Set up this folder** for one the environment chooses), never an upload: the first upload on a
+  fresh container would otherwise mark the wrong folder.
 
 ## Consequences
 

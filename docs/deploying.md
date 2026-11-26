@@ -374,10 +374,13 @@ the same):
 
 - **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
   exists and the app can write to). It serves one server only, and never Vercel, whose disk doesn't
-  keep files. Adiutor writes a marker file in it (`.adiutor-attachments`) with the first file, and
-  refuses to read or delete files where it's missing, so a server started without the folder (or a
-  container without its volume) fails instead of taking every file for gone. Keep the marker with
-  the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
+  keep files. A marker file in it (`.adiutor-attachments`) says it's Adiutor's: without it, Adiutor
+  refuses to store, read or delete files there, so a server started without its folder (or a
+  container without its volume) fails instead of keeping files on a disk that goes away or taking
+  every file for gone. Only setting the folder up writes the marker, never an upload: saving the
+  storage on the Attachments tab (its test before saving), or, for a folder the environment
+  chooses, **Set up this folder** on that tab, which a staff Admin presses once the folder is the
+  right one (the tab says when a folder isn't set up). Keep the marker with the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
   the app's container and on every container that runs the jobs:
 
   ```bash
@@ -413,7 +416,7 @@ the same):
   key per type, and Adiutor is given its ED25519 key when it has one (else ECDSA, then RSA); check
   the fingerprint against the server's own `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`,
   since a scan can't tell an impostor. The
-  folder must exist, with an absolute path, and like the local disk it gets the marker file.
+  folder must exist, with an absolute path, and like the local disk it's set up with the marker file.
   Each upload or download opens its own connection, so it's slower than the others.
 
 **Back up the files with the database.** A file is found by its row in the database, and a row

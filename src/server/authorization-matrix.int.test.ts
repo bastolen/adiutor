@@ -179,6 +179,7 @@ import {
   saveAttachmentLimit,
   saveAttachmentsEnabled,
   saveAttachmentStorage,
+  setUpStorage,
 } from './storage';
 
 const { ctx, db, sent, storage } = setupTestContext();
@@ -567,6 +568,14 @@ function listOperations(): Operation[] {
         ),
     ],
     ['choose the largest attachment', (w) => saveAttachmentLimit(ctx, w.actor, '20', {})],
+    [
+      'set up where attachments are kept',
+      (w) =>
+        setUpStorage(ctx, w.actor, {
+          ATTACHMENTS_STORAGE: 'local',
+          ATTACHMENTS_DIR: mkdtempSync(join(tmpdir(), 'adiutor-matrix-')),
+        }),
+    ],
     // A file nobody may download is missing to them: `loadAttachment` answers nothing.
     ["download a description's file (own)", (w) => download(w.actor, w.attachments.own)],
     ["download a description's file (other)", (w) => download(w.actor, w.attachments.other)],
@@ -1071,6 +1080,7 @@ const EXPECTED: Record<string, string> = {
   'view attachment settings': 'FFFFFFA',
   'choose where attachments are kept': 'FFFFFFA',
   'choose the largest attachment': 'FFFFFFA',
+  'set up where attachments are kept': 'FFFFFFA',
   'turn attaching files off': 'FFFFFFA',
   // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
   'upload a file to attach': 'FAAAFAA',

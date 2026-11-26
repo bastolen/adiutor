@@ -56,9 +56,13 @@ async function AttachmentSettingsCards() {
       >
         <Card id="storage" title={t('storage.title')} description={t('storage.description')}>
           {storage.source === 'environment' ? (
-            <EnvironmentStorage view={storage.view} />
+            <EnvironmentStorage view={storage.view} setUp={settings.storageSetUp} />
           ) : (
-            <StorageForm current={storage.view} vercel={settings.vercel} />
+            <StorageForm
+              current={storage.view}
+              vercel={settings.vercel}
+              setUp={settings.storageSetUp}
+            />
           )}
         </Card>
 

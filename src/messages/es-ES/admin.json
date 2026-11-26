@@ -426,7 +426,14 @@
           "offInEnvironment": "Los archivos adjuntos están desactivados en el entorno del servidor (ATTACHMENTS_STORAGE=off).",
           "dirPlaceholder": "/data/attachments",
           "endpointPlaceholder": "https://",
-          "hostKeyPlaceholder": "SHA256:"
+          "hostKeyPlaceholder": "SHA256:",
+          "notSetUp": "Esta carpeta aún no está configurada como de Adiutor, así que no se pueden guardar, leer ni quitar archivos en ella. Si es la carpeta correcta (en un servidor, con su volumen montado), configúrala.",
+          "notSetUpSettings": "Esta carpeta no está configurada como de Adiutor, así que no se pueden guardar, leer ni quitar archivos en ella. Si es la carpeta correcta (en un servidor, con su volumen montado), pruébala y guárdala de nuevo para configurarla.",
+          "setUp": "Configurar esta carpeta",
+          "setUpTitle": "¿Configurar esta carpeta?",
+          "setUpDescription": "Hazlo solo si es la carpeta correcta: en un servidor, el volumen que guarda los archivos de Adiutor tiene que estar montado ahí. Adiutor guardará entonces los archivos aquí.",
+          "setUpConfirm": "Configurar carpeta",
+          "setUpDone": "Carpeta configurada. Adiutor escribió, leyó y borró un archivo de prueba ahí."
         },
         "attaching": {
           "title": "Adjuntar archivos",

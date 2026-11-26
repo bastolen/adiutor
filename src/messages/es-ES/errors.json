@@ -142,7 +142,8 @@
       "storageFirst": "Elige dónde se guardan los archivos antes de que las personas puedan adjuntarlos.",
       "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
       "someUnavailable": "Uno de los archivos ya no está disponible. Vuelve a adjuntarlo.",
-      "tooManyAtOnce": "Ya estás subiendo {maximum, number} archivos. Espera a que termine uno."
+      "tooManyAtOnce": "Ya estás subiendo {maximum, number} archivos. Espera a que termine uno.",
+      "notSetUp": "Adjuntar archivos aún no está configurado. Pide a un administrador que configure dónde se guardan los archivos."
     }
   }
 }

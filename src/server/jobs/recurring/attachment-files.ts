@@ -7,7 +7,9 @@
  * couldn't be deleted when they were removed. Each file is deleted before
  * its row is (or is marked deleted), so a run that stops halfway leaves
  * nothing a later run can't find. It does nothing while no storage is
- * chosen; turning attachments off in Settings doesn't stop it.
+ * chosen, or while it isn't set up (a folder without its marker: a server
+ * started without its volume); turning attachments off in Settings doesn't
+ * stop it.
  */
 import { and, asc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
@@ -60,6 +62,10 @@ export default defineRecurringJob({
       return { summary: { unsentFiles: 0, removedFiles: 0 } };
     }
     const { purged, removedFiles } = await storage.session(async (shared) => {
+      // A folder that isn't Adiutor's: not a place to delete files from, or to mark them deleted.
+      if (!(await shared.isSetUp())) {
+        return { purged: 0, removedFiles: 0 };
+      }
       let count = 0;
       let full = true;
       while (full && Date.now() < deadline.getTime()) {

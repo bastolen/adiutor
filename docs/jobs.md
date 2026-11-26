@@ -48,7 +48,8 @@ A tick runs every recurring job that's due, one after another, then the queued j
 `attachment-files` works on one storage connection a run, deletes each file before its row (or,
 for a removed file, before noting that it's deleted: its row stays as the mark of who removed it),
 so a run that stops halfway leaves nothing behind that the next one can't find, and does nothing
-while no storage is chosen (see [Attachments](deploying.md#attachments)). It also runs from a jobs
+while no storage is chosen, or while its folder isn't set up as Adiutor's (see
+[Attachments](deploying.md#attachments)). It also runs from a jobs
 container, which therefore needs the storage too: the same volume, for local disk.
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a

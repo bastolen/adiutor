@@ -1,10 +1,12 @@
 /**
  * @file Playwright global setup: prepares and seeds the test database, and
- * empties the email outbox and the attached files' folder before the tests
+ * empties the email outbox and the attached files' folder (set up as
+ * Adiutor's, as a staff Admin's test before saving would) before the tests
  * run.
  */
 import { mkdir, rm } from 'node:fs/promises';
 
+import { storageFor } from '../../src/server/storage';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import prepareTestDatabase from '../../tests/database/prepare-database';
 import { ATTACHMENTS_DIR, OUTBOX_DIR } from './fixtures';
@@ -21,4 +23,5 @@ export default async function globalSetup(): Promise<void> {
   // The storage's folder must exist; the seeded database has no files in it.
   await rm(ATTACHMENTS_DIR, { recursive: true, force: true });
   await mkdir(ATTACHMENTS_DIR, { recursive: true });
+  await storageFor({ driver: 'local', dir: ATTACHMENTS_DIR }).setUp();
 }

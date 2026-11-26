@@ -3,8 +3,12 @@
  * 25 hours, once the uploader's account is gone, and unfinished uploads
  * after an hour; a sent file, or one uploaded lately, stays; the files of
  * removed attachments that are still in storage are deleted; nothing
- * happens without a storage.
+ * happens without a storage, or in a folder that isn't set up.
  */
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -20,7 +24,7 @@ import {
   storeAttachment,
   storeRequest,
 } from '../../../../tests/integration/helpers';
-import { attachmentKey } from '../../storage';
+import { attachmentKey, storageFor } from '../../storage';
 import attachmentFiles from './attachment-files';
 
 const { ctx, db, storage } = setupTestContext();
@@ -135,6 +139,32 @@ describe('attachment-files', () => {
     // Its row stays: it's the mark that says who removed it.
     expect(await left()).toContain(removed);
     expect(await run()).toEqual({ summary: { unsentFiles: 0, removedFiles: 0 } });
+  });
+
+  it('does nothing in a folder that isn’t set up as Adiutor’s', async () => {
+    const old = await storeAttachment(db, storage, {
+      uploadedBy: uploader,
+      createdAt: minutesAgo(26 * 60),
+    });
+    // A server started without its volume: an empty folder, without the marker.
+    const empty = await mkdtemp(join(tmpdir(), 'adiutor-unmarked-'));
+    try {
+      const unmarked = storageFor({ driver: 'local', dir: empty });
+      expect(
+        await run({
+          ...ctx,
+          /**
+           * The folder without its marker.
+           *
+           * @returns Its storage.
+           */
+          storage: async () => unmarked,
+        }),
+      ).toEqual({ summary: { unsentFiles: 0, removedFiles: 0 } });
+      expect(await left()).toEqual([old]);
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
   });
 
   it('does nothing while no storage is chosen', async () => {

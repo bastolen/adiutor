@@ -22,8 +22,10 @@ async function textOf(body: ReadableStream<Uint8Array>): Promise<string> {
 }
 
 describe('bucketStorage on an S3 server', () => {
-  it('stores a file, reads it back and deletes it', async () => {
+  it('stores a file, reads it back and deletes it, a bucket needing no setting up', async () => {
     const storage = bucketStorage(TEST_BUCKET);
+    expect(await storage.isSetUp()).toBe(true);
+    await expect(storage.setUp()).resolves.toBeUndefined();
     const key = attachmentKey(randomUUID());
     await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
 

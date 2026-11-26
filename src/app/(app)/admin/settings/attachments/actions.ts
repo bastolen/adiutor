@@ -1,8 +1,8 @@
 /**
  * @file Server actions for the Attachments tab of Settings: where attached
  * files are kept (tried before it's saved, and only with a recent
- * confirmation), whether people can attach files, and the largest file
- * anyone may attach.
+ * confirmation), setting up the one the environment chooses, whether people
+ * can attach files, and the largest file anyone may attach.
  */
 'use server';
 
@@ -18,6 +18,7 @@ import {
   saveAttachmentLimit,
   saveAttachmentsEnabled,
   saveAttachmentStorage,
+  setUpStorage,
 } from '@/server/storage';
 
 import confirmFirstIfNeeded from '../../../_people/confirm-grant';
@@ -121,5 +122,29 @@ export async function saveAttachingAction(
     refresh();
     const t = await getTranslations('admin.settings.attachments.attaching');
     return { ok: true, message: on ? t('savedOn') : t('savedOff') };
+  });
+}
+
+/**
+ * Sets up the storage files go to now (one the environment chooses) as
+ * Adiutor's, after sending the staff Admin to confirm it's them when they
+ * haven't lately.
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - No fields of its own but the return address (`ReturnToField`).
+ * @returns A confirmation, or why it failed.
+ */
+export async function setUpStorageAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await confirmFirstIfNeeded(formData, '/admin/settings/attachments#storage', () =>
+      setUpStorage(appContext, actor),
+    );
+    refresh();
+    const t = await getTranslations('admin.settings.attachments.storage');
+    return { ok: true, message: t('setUpDone') };
   });
 }

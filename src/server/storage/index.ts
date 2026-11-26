@@ -18,6 +18,7 @@ export {
   saveAttachmentLimit,
   saveAttachmentsEnabled,
   saveAttachmentStorage,
+  setUpStorage,
 } from './settings';
 export { hostKeyFingerprint } from './sftp';
 export type { FileStorage, StoredFile } from './types';

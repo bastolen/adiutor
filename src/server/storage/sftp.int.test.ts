@@ -31,8 +31,10 @@ async function textOf(body: ReadableStream<Uint8Array>): Promise<string> {
 }
 
 describe('sftpStorage on an SFTP server', () => {
-  it('stores a file, reads it back and deletes it', async () => {
+  it('stores a file once the folder is set up, reads it back and deletes it', async () => {
     const storage = sftpStorage(await newFolder());
+    await storage.setUp();
+    expect(await storage.isSetUp()).toBe(true);
     const key = attachmentKey(randomUUID());
     await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
 
@@ -49,6 +51,7 @@ describe('sftpStorage on an SFTP server', () => {
     const storage = sftpStorage(await newFolder());
     const keys = [attachmentKey(randomUUID()), attachmentKey(randomUUID())];
     await storage.session(async (shared) => {
+      await shared.setUp();
       for (const key of keys) {
         // eslint-disable-next-line no-await-in-loop -- one connection, one call at a time
         await shared.put(key, new Uint8Array([1, 2, 3]), 'application/octet-stream');
@@ -61,8 +64,14 @@ describe('sftpStorage on an SFTP server', () => {
     expect(await storage.get(keys[0] ?? '')).toBeNull();
   });
 
-  it('refuses to read or delete in a folder without the marker', async () => {
+  it('refuses to store, read or delete in a folder that isn’t set up', async () => {
     const storage = sftpStorage(await newFolder());
+    expect(await storage.isSetUp()).toBe(false);
+    await expect(
+      storage.put(attachmentKey(randomUUID()), new Uint8Array([1]), 'image/png'),
+    ).rejects.toMatchObject({ failure: 'not_set_up' });
+    // Storing never marks it.
+    expect(await storage.isSetUp()).toBe(false);
     await expect(storage.get(attachmentKey(randomUUID()))).rejects.toMatchObject({
       failure: 'not_set_up',
     });
@@ -71,12 +80,10 @@ describe('sftpStorage on an SFTP server', () => {
     });
   });
 
-  it('says a folder that isn’t there is missing', async () => {
+  it('can’t set up a folder that isn’t there', async () => {
     const config = await newFolder();
     const storage = sftpStorage({ ...config, dir: `${config.dir}/missing` });
-    await expect(
-      storage.put(attachmentKey(randomUUID()), new Uint8Array([1]), 'image/png'),
-    ).rejects.toMatchObject({ failure: 'not_found' });
+    await expect(storage.setUp()).rejects.toMatchObject({ failure: 'not_found' });
   });
 
   it('refuses a server whose host key isn’t the one expected', async () => {

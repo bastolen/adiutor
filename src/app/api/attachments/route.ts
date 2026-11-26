@@ -190,6 +190,9 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof ServiceError) {
       return refusal(STATUS[error.code], error.key, error.values);
     }
+    if (error instanceof StorageError && error.failure === 'not_set_up') {
+      return refusal(503, 'errors.attachments.notSetUp');
+    }
     if (error instanceof StorageError) {
       // The kind only, as the storage's own reply may say more than it should.
       // eslint-disable-next-line no-console -- An upload that couldn't be stored should show up in the logs.

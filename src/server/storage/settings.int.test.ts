@@ -4,7 +4,7 @@
  * place, refused while the environment chooses, with a confirmation, a limit
  * and an audit event), the largest file, and the storage files go to.
  */
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -36,6 +36,7 @@ import {
   saveAttachmentLimit,
   saveAttachmentsEnabled,
   saveAttachmentStorage,
+  setUpStorage,
 } from './settings';
 
 const { ctx, db } = setupTestContext();
@@ -258,6 +259,7 @@ describe('getAttachmentSettings', () => {
   it('shows the saved storage without its secret, or nothing yet', async () => {
     expect(await getAttachmentSettings(ctx, admin, SETTINGS_DECIDE)).toEqual({
       storage: { source: 'settings', view: null },
+      storageSetUp: null,
       maxFileMb: { value: 10, ceiling: 50, fromEnvironment: false },
       enabled: { value: false, offByEnvironment: false, storageChosen: false },
       vercel: false,
@@ -323,6 +325,53 @@ describe('saveAttachmentsEnabled', () => {
     const manager = await staffActor(db, 'manager');
     const error = await refusal(() => saveAttachmentsEnabled(ctx, manager, false, SETTINGS_DECIDE));
     expect(error.code).toBe('forbidden');
+  });
+});
+
+describe('setUpStorage', () => {
+  /**
+   * The environment that chooses the test's folder.
+   *
+   * @returns The environment.
+   */
+  const chosen = () => ({ ATTACHMENTS_STORAGE: 'local', ATTACHMENTS_DIR: folder }) as const;
+
+  it('sets up a folder the environment chose, once tried, and records it', async () => {
+    expect((await getAttachmentSettings(ctx, admin, chosen())).storageSetUp).toBe(false);
+
+    await setUpStorage(ctx, admin, chosen());
+
+    expect(await readdir(folder)).toContain('.adiutor-attachments');
+    expect((await getAttachmentSettings(ctx, admin, chosen())).storageSetUp).toBe(true);
+    const [event] = await auditEvents(db, { action: 'attachment_storage_set_up' });
+    expect(event?.details).toEqual({ staff: true, driver: 'local', place: folder });
+  });
+
+  it('marks a folder chosen in Settings when it’s tested and saved', async () => {
+    await saveAttachmentStorage(ctx, admin, { driver: 'local', dir: folder }, SETTINGS_DECIDE);
+    expect((await getAttachmentSettings(ctx, admin, SETTINGS_DECIDE)).storageSetUp).toBe(true);
+  });
+
+  it('needs a storage, a recent confirmation, and a staff Admin, within the limit', async () => {
+    const none = await refusal(() => setUpStorage(ctx, admin, SETTINGS_DECIDE));
+    expect(none).toMatchObject({ code: 'conflict', key: 'errors.attachments.storageFirst' });
+
+    const unconfirmed = { ...admin, canConfirmSessions: true, mfaConfirmedUntil: null };
+    expect((await refusal(() => setUpStorage(ctx, unconfirmed, chosen()))).code).toBe(
+      'confirmation_required',
+    );
+    const manager = await staffActor(db, 'manager');
+    expect((await refusal(() => setUpStorage(ctx, manager, chosen()))).code).toBe('forbidden');
+
+    // Another staff Admin, whose bucket the attempts above haven't started.
+    const busy = await staffActor(db, 'platform_admin');
+    await fillRateLimitBucket(
+      db,
+      `storage-check:user:${busy.id}`,
+      RATE_LIMITS.storageChecksPerUser.limit,
+    );
+    expect((await refusal(() => setUpStorage(ctx, busy, chosen()))).code).toBe('rate_limited');
+    expect(await readdir(folder)).toEqual([]);
   });
 });
 

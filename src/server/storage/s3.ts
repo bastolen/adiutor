@@ -220,6 +220,16 @@ export default function bucketStorage(
       throw await replyError(response);
     },
 
+    /** Needs nothing: a bucket is never a folder a missing volume leaves behind. */
+    setUp: async () => {},
+
+    /**
+     * Always set up: see `setUp`.
+     *
+     * @returns `true`.
+     */
+    isSetUp: async () => true,
+
     /**
      * Runs the calls; every request signs in on its own.
      *

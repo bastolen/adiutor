@@ -426,7 +426,14 @@
           "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
           "dirPlaceholder": "/data/attachments",
           "endpointPlaceholder": "https://",
-          "hostKeyPlaceholder": "SHA256:"
+          "hostKeyPlaceholder": "SHA256:",
+          "notSetUp": "This folder isn’t set up as Adiutor’s yet, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), set it up.",
+          "notSetUpSettings": "This folder isn’t set up as Adiutor’s, so files can’t be kept, read or removed there. If it’s the right folder (on a server, with its volume mounted), test and save it again to set it up.",
+          "setUp": "Set up this folder",
+          "setUpTitle": "Set up this folder?",
+          "setUpDescription": "Do this only if it’s the right folder: on a server, the volume that keeps Adiutor’s files must be mounted there. Adiutor then keeps files here.",
+          "setUpConfirm": "Set up folder",
+          "setUpDone": "Folder set up. Adiutor wrote, read back and deleted a test file there."
         },
         "attaching": {
           "title": "Attaching files",

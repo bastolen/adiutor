@@ -1,15 +1,19 @@
 /**
  * @file The Storage card's content while the server's environment chooses
  * where files are kept: what it chose, without any secret, and that it
- * can't be changed here. Its text comes from
+ * can't be changed here; and, for a folder that isn't set up as Adiutor's
+ * yet, the button that sets it up. Its text comes from
  * `admin.settings.attachments.storage`.
  */
 import { useTranslations } from 'next-intl';
 
 import Alert from '@/components/ui/alert';
 import { DescriptionList, DescriptionRow } from '@/components/ui/description-list';
+import RowAction from '@/components/ui/row-action';
 import SetByEnvironment from '@/components/ui/set-by-environment';
 import type { StorageView } from '@/lib/storage';
+
+import { setUpStorageAction } from './actions';
 
 /**
  * The storage's settings as a list, by driver.
@@ -74,19 +78,47 @@ function StorageDetails({ view }: { view: StorageView }) {
 }
 
 /**
- * What the environment chose, or that it turned attachments off.
+ * What the environment chose, or that it turned attachments off. A folder
+ * that isn't set up as Adiutor's (local disk or SFTP without its marker:
+ * the volume isn't mounted, or nobody set it up yet) says so, with **Set up
+ * this folder**, which asks first, sends the staff Admin to confirm it's
+ * them when they haven't lately, and tries the folder before it marks it.
  *
- * @param props - Props.
+ * @param props - Component props.
  * @param props.view - The storage, without its secrets; `null` when the environment turned attachments off.
+ * @param props.setUp - Whether it's set up as Adiutor's; `null` when that couldn't be told.
  */
-export default function EnvironmentStorage({ view }: { view: StorageView | null }) {
+export default function EnvironmentStorage({
+  view,
+  setUp = null,
+}: {
+  view: StorageView | null;
+  setUp?: boolean | null;
+}) {
   const t = useTranslations('admin.settings.attachments.storage');
   if (view === null) {
     return <Alert tone="info">{t('offInEnvironment')}</Alert>;
   }
   return (
-    <SetByEnvironment variable="ATTACHMENTS_STORAGE">
-      <StorageDetails view={view} />
-    </SetByEnvironment>
+    <div className="flex flex-col gap-4">
+      <SetByEnvironment variable="ATTACHMENTS_STORAGE">
+        <StorageDetails view={view} />
+      </SetByEnvironment>
+      {setUp === false && (
+        <div className="flex flex-col items-start gap-3">
+          <Alert tone="info">{t('notSetUp')}</Alert>
+          <RowAction
+            action={setUpStorageAction}
+            label={t('setUp')}
+            confirm={{
+              title: t('setUpTitle'),
+              description: t('setUpDescription'),
+              confirmLabel: t('setUpConfirm'),
+            }}
+            confirmFirst
+          />
+        </div>
+      )}
+    </div>
   );
 }

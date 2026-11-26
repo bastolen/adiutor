@@ -426,7 +426,14 @@
           "offInEnvironment": "Bijlagen staan uit in de omgeving van de server (ATTACHMENTS_STORAGE=off).",
           "dirPlaceholder": "/data/attachments",
           "endpointPlaceholder": "https://",
-          "hostKeyPlaceholder": "SHA256:"
+          "hostKeyPlaceholder": "SHA256:",
+          "notSetUp": "Deze map is nog niet ingesteld als map van Adiutor, dus bestanden kunnen er niet worden bewaard, gelezen of verwijderd. Is het de juiste map (op een server: met het volume gekoppeld), stel hem dan in.",
+          "notSetUpSettings": "Deze map is niet ingesteld als map van Adiutor, dus bestanden kunnen er niet worden bewaard, gelezen of verwijderd. Is het de juiste map (op een server: met het volume gekoppeld), test en sla hem dan opnieuw op om hem in te stellen.",
+          "setUp": "Deze map instellen",
+          "setUpTitle": "Deze map instellen?",
+          "setUpDescription": "Doe dit alleen als het de juiste map is: op een server moet het volume met de bestanden van Adiutor daar gekoppeld zijn. Adiutor bewaart bestanden dan hier.",
+          "setUpConfirm": "Map instellen",
+          "setUpDone": "Map ingesteld. Adiutor heeft er een testbestand geschreven, teruggelezen en verwijderd."
         },
         "attaching": {
           "title": "Bestanden toevoegen",

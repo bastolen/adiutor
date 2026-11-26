@@ -1,10 +1,11 @@
 /**
  * @file The local disk driver: files in a folder on the server, at their key
- * under it. A marker file says the folder is Adiutor's: reading and deleting
- * refuse without it, so a server started without its volume (a jobs
- * container, say) can't take files for gone and mark them deleted. Only
- * storing a file writes the marker, the first time. One server only: several
- * would each see their own disk.
+ * under it. A marker file says the folder is Adiutor's: storing, reading and
+ * deleting refuse without it, so a server started without its volume (a
+ * jobs container, say) can't keep files on a disk that goes away, or take
+ * files for gone and mark them deleted. Only setting the storage up writes
+ * the marker (`setUp`). One server only: several would each see their own
+ * disk.
  */
 import { randomUUID } from 'node:crypto';
 import { type FileHandle, mkdir, open, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -93,14 +94,14 @@ export default function diskStorage(dir: string): FileStorage {
     driver: 'local',
 
     /**
-     * Stores a file, writing the marker the first time.
+     * Stores a file, in a folder with the marker.
      *
      * @param key - Where.
      * @param bytes - The file.
      */
     async put(key, bytes) {
       const path = pathOf(key);
-      await mark();
+      await assertMarked();
       // Written beside its place first, so nobody ever reads half a file.
       const temporary = `${path}.${randomUUID()}.tmp`;
       try {
@@ -155,6 +156,26 @@ export default function diskStorage(dir: string): FileStorage {
       try {
         await rm(path, { force: true });
       } catch (error) {
+        throw diskError(error);
+      }
+    },
+
+    /** Writes the marker, in a folder that must exist. */
+    setUp: mark,
+
+    /**
+     * Whether the folder has the marker.
+     *
+     * @returns Whether it has.
+     */
+    async isSetUp() {
+      try {
+        await stat(marker);
+        return true;
+      } catch (error) {
+        if (isMissing(error)) {
+          return false;
+        }
         throw diskError(error);
       }
     },

@@ -42,6 +42,21 @@ export interface FileStorage {
    */
   delete(key: string): Promise<void>;
   /**
+   * Marks the place as Adiutor's, so files can be kept there: a marker file
+   * in a folder (local disk and SFTP), nothing for a bucket. Only ever on
+   * purpose (the test before a storage is saved, or a staff Admin setting up
+   * the one the environment chooses), never by storing a file: a folder
+   * that isn't marked (a server started without its volume) refuses every
+   * call instead of taking files for gone.
+   */
+  setUp(): Promise<void>;
+  /**
+   * Whether the place is marked as Adiutor's (a bucket always is).
+   *
+   * @returns Whether it is.
+   */
+  isSetUp(): Promise<boolean>;
+  /**
    * Runs several calls on one connection, for drivers that connect (a job
    * that deletes many files); the others just run them.
    *

@@ -464,6 +464,13 @@ environment does (see [Attachments](deploying.md#attachments) and
   (`attachment_storage_changed`, with the driver and its place, never a secret). A failure is told
   and logged by its kind only (`StorageError`): unreachable, refused, host key, not found and so
   on, never what the server replied.
+- **A folder is Adiutor's only on purpose** (`setUp` on `FileStorage`): the marker file that every
+  store, read and delete needs is written only by the test before saving, or by a staff Admin's
+  **Set up this folder** for a folder the environment chooses (`setUpStorage`: the same
+  confirmation, limit and test, in the audit log as `attachment_storage_set_up`), never by an
+  upload. A server started without its volume refuses files instead of keeping them on a disk that
+  goes away, and the `attachment-files` job leaves such a folder alone instead of marking files
+  deleted.
 - **SFTP checks the host key** against the fingerprint given, on every connection.
 - **Saving a storage connects to whatever address it names**, from the server: a server of your own
   on the local network needs this. An operator who doesn't want staff Admins to choose sets the
