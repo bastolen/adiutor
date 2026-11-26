@@ -354,6 +354,26 @@ describe('who is told about work done while signed in as someone', () => {
     expect(theirs).not.toHaveProperty('raisedSignedInAs');
     expect(theirs.description).not.toHaveProperty('editedSignedInAs');
   });
+
+  it('marks raising a request for someone as the staff member’s work, not the person’s', async () => {
+    const company = await createCompany(db);
+    const admin = await staffActor(db, 'platform_admin');
+    await db.update(user).set({ name: 'Ann Staff' }).where(eq(user.id, admin.id));
+    const manager = await staffActor(db, 'manager');
+    const client = await memberActor(db, company.id, 'client');
+    const raised = await raiseRequest(ctx, await signInAs(admin, manager), {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'They called about it.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    expect((await getRequest(ctx, manager, raised.id)).raisedSignedInAs).toEqual({
+      staffName: 'Ann Staff',
+    });
+    expect(await getRequest(ctx, client, raised.id)).not.toHaveProperty('raisedSignedInAs');
+  });
 });
 
 describe('subscriptions changed while signed in as someone', () => {

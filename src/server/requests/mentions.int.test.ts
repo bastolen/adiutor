@@ -89,6 +89,24 @@ describe('listMentionable', () => {
     expect(JSON.stringify(inRequest)).not.toContain('@adiutor.test');
   });
 
+  it('gives whoever a request was raised for the staff member who raised it for them', async () => {
+    const company = await createCompany(db);
+    const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');
+    const support = await staffActor(db, 'support', 'raised-for@adiutor.test');
+    await staffActor(db, 'manager', 'elsewhere@adiutor.test');
+    const raised = await raiseRequest(ctx, support, {
+      companyId: company.id,
+      title: 'The printer is broken',
+      description: 'They called about it.',
+      type: 'bug',
+      raisedFor: mentionKey(company.id, client.id),
+    });
+
+    const people = await listMentionable(ctx, client, { request: raised.id });
+
+    expect(names(people)).toEqual(['raised-for (staff)']);
+  });
+
   it('gives someone at the company their colleagues, and the staff the request already shows', async () => {
     const company = await createCompany(db);
     const client = await memberActor(db, company.id, 'client', 'casey@adiutor.test');

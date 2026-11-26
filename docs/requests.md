@@ -638,8 +638,8 @@ A description, a reply or a note can mention people. Why it's built this way is 
 - **Who may be mentioned** (`listMentionable`, for whoever may write there:
   `requests:contribute`): the staff can mention everyone at the request's company and every staff
   member who reads requests; someone at the company can mention their colleagues, and the staff
-  members whose names the request already shows them (who raised it, replied, changed it, is or
-  was assigned; not who only changed the priority or wrote an internal note, which they don't
+  members whose names the request already shows them (who raised it or raised it for someone,
+  replied, changed it, is or was assigned; not who only changed the priority or wrote an internal note, which they don't
   see). For a request that isn't
   raised yet, someone at the company gets their colleagues only. Never the writer themselves, a
   deactivated account, or someone without a name to show; someone on the staff who is also in the
@@ -734,6 +734,15 @@ them ([decision 0047](decisions/0047-staff-raise-a-request-for-someone.md)).
   (`created_on_behalf`, `created_on_behalf_by`) say who raised it for them; the flag outlives the
   staff member's account. A staff member signed in as another staff member who raises it for
   someone is recorded as usual (`signedInAsWork`), for the staff member they're signed in as.
+- **On the page** (`getRequest`'s `raisedOnBehalf`, `RaisedForNote`): every reader of the request
+  reads who raised it for the person, after the time in the description's header and under "Raised
+  by" in the Details: "Ann raised this for Pat", "Ann raised this for you" for Pat, "You raised
+  this for Pat" for Ann, and the staff's name once Ann's account is gone. As the company's request
+  it has a first response. Code copied from the description names the staff member as who wrote
+  it, and the company can mention them, as the request shows their name.
+- **Signed in as someone:** a mark on raising (see [Signed in as a user](#signed-in-as-a-user))
+  is about the staff member who raised it for the person, the one who did the work: they and the
+  staff who see the audit log read it, not the person it was raised for.
 - **Following it:** both the person and the staff member are subscribed.
 - **Rate limits** count against the staff member (`actingUserId`), who is acting.
 
@@ -843,7 +852,8 @@ says so with a "Show everything" button.
   change (and, for the staff, every internal note), oldest first unless the reader chose otherwise
   (see [Reading the activity](#reading-the-activity)), and a Details bar: status, who
   it's assigned to, who is subscribed, type, priority (staff),
-  company, who raised it and when, the staff's first response and the last activity, with the
+  company, who raised it (and who raised it for them) and when, the staff's first response and the
+  last activity, with the
   controls. The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1200px of

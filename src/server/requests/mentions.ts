@@ -7,7 +7,8 @@
  * mention everyone at the request's company and every staff member who
  * reads requests. Someone at the company can mention their colleagues and
  * the staff members whose names the request already shows them: who raised
- * it, replied to it, changed it, is assigned to it or was assigned. They
+ * it (or raised it for someone), replied to it, changed it, is assigned to
+ * it or was assigned. They
  * learn nothing else about who is on the staff. Nobody mentions themselves,
  * a deactivated account, or someone without a name to show.
  *
@@ -154,6 +155,13 @@ async function mentionable(
                     isNotNull(request.createdBy),
                   ),
                 ),
+            ),
+            inArray(
+              user.id,
+              db
+                .select({ id: request.createdOnBehalfBy })
+                .from(request)
+                .where(and(eq(request.id, place.requestId), isNotNull(request.createdOnBehalfBy))),
             ),
           ),
         ),

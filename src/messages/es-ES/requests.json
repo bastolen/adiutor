@@ -257,6 +257,11 @@
       "editNote": "Editar nota",
       "noteLabel": "Nota"
     },
+    "raisedFor": {
+      "forName": "La creó {staff} para {name}",
+      "forYou": "La creó {staff} para ti",
+      "byYou": "La creaste tú para {name}"
+    },
     "signedInAs": {
       "workForYou": "Lo hizo {staff} con la sesión iniciada como tú",
       "workForYouUnnamed": "Lo hizo alguien del personal con la sesión iniciada como tú",

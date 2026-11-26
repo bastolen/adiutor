@@ -257,6 +257,11 @@
       "editNote": "Notitie bewerken",
       "noteLabel": "Notitie"
     },
+    "raisedFor": {
+      "forName": "Ingediend door {staff} voor {name}",
+      "forYou": "Ingediend door {staff} voor jou",
+      "byYou": "Door jou ingediend voor {name}"
+    },
     "signedInAs": {
       "workForYou": "Gedaan door {staff}, ingelogd als jou",
       "workForYouUnnamed": "Gedaan door een medewerker, ingelogd als jou",

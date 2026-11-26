@@ -257,6 +257,11 @@
       "editNote": "Edit note",
       "noteLabel": "Note"
     },
+    "raisedFor": {
+      "forName": "{staff} raised this for {name}",
+      "forYou": "{staff} raised this for you",
+      "byYou": "You raised this for {name}"
+    },
     "signedInAs": {
       "workForYou": "{staff} did this while signed in as you",
       "workForYouUnnamed": "A staff member did this while signed in as you",
