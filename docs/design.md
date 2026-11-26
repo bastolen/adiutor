@@ -489,7 +489,7 @@ keyboard support.
 
   Pages with section tabs (a company's Requests, Members and Settings; the account's Profile,
   Preferences, Security and Activity; a user's Overview, Companies, Activity and Manage; the Logs;
-  Settings' General, Staff and Requests) get their header and tabs from a layout
+  Settings' General, Staff, Requests and Connections) get their header and tabs from a layout
   (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/users/[userId]/layout.tsx`,
   `admin/logs/layout.tsx`, `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. The layouts of a company's pages and of Settings

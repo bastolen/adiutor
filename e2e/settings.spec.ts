@@ -433,6 +433,8 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
     await restoreAttachmentSettings([]);
     await signIn(page, PLATFORM_ADMIN);
     await page.goto('/admin/settings/connections');
+    // The mail server's card shares the tab: the storage's own controls are in its card.
+    const card = page.getByRole('region', { name: 'Where files are kept' });
     await expect(
       page.getByText('No storage is chosen yet, so nobody can attach files.'),
     ).toBeVisible();
@@ -447,14 +449,14 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
 
     // A folder that isn't there fails its test, and what was typed stays.
     await dir.fill(join(folder, 'missing'));
-    await page.getByRole('button', { name: 'Test and save' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    await card.getByRole('button', { name: 'Test and save' }).click();
+    await expect(card.getByRole('alert')).toContainText(
       "The bucket or the folder doesn't exist. Create it first.",
     );
     await expect(dir).toHaveValue(join(folder, 'missing'));
 
     await dir.fill(folder);
-    await page.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save' }).click();
     await expect(toasts(page)).toContainText('Storage saved.');
     await expect(page.getByText('No storage is chosen yet')).toBeHidden();
     await expect(dir).toHaveValue(folder);
@@ -504,14 +506,13 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await accessKeyId.fill('e2e-key-id');
 
     // Saving needs a recent confirmation: the step-up page comes back to the storage's card.
-    const save = page.getByRole('button', { name: 'Test and save' });
+    const card = page.getByRole('region', { name: 'Where files are kept' });
+    const save = card.getByRole('button', { name: 'Test and save' });
     await expect(save).toHaveCount(0);
-    const confirm = page
-      .getByRole('region', { name: 'Where files are kept' })
-      .getByRole('link', { name: /^Confirm it.s you$/ });
+    const confirm = card.getByRole('link', { name: /^Confirm it.s you$/ });
     await expect(confirm).toHaveAttribute(
       'href',
-      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fattachments%23storage&for=change',
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fconnections%23storage&for=change',
     );
     await confirm.click();
     await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
@@ -536,6 +537,8 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await restoreSmtpSetting(null);
     await signIn(page, PLATFORM_ADMIN);
     await page.goto('/admin/settings/connections');
+    // The storage's card shares the tab: the mail server's own controls are in its card.
+    const card = page.getByRole('region', { name: 'Mail server' });
     // The tests' server runs in production, where a missing mail server means no sign-in links.
     await expect(
       page.getByText(
@@ -553,8 +556,8 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await page.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
 
     // Without TLS to another computer, production refuses it, and what was typed stays.
-    await page.getByRole('button', { name: 'Test and save' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    await card.getByRole('button', { name: 'Test and save' }).click();
+    await expect(card.getByRole('alert')).toContainText(
       'Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted.',
     );
     await expect(host).toHaveValue('smtp.adiutor.test');
@@ -562,7 +565,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await page.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^STARTTLS/ }).click();
     await page.getByLabel('Password').fill('e2e-mail-password');
-    await page.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save' }).click();
     await expect(toasts(page)).toContainText(
       'Mail server saved. A test email reached you through it.',
     );
