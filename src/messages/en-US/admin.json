@@ -253,7 +253,7 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where webhooks send.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, where attached files are kept, and where webhooks send.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",

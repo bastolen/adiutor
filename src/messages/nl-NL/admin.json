@@ -253,7 +253,7 @@
     },
     "settings": {
       "title": "Instellingen",
-      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, en waar webhooks naartoe sturen.",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, waar bijlagen worden bewaard, en waar webhooks naartoe sturen.",
       "sections": "Onderdelen van de instellingen",
       "tabs": {
         "general": "Algemeen",

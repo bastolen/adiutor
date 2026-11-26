@@ -253,7 +253,7 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes y adónde envían los webhooks.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, dónde se guardan los archivos adjuntos y adónde envían los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
