@@ -21,16 +21,17 @@ export { getRequestSettings, listRequestCompanies, listRequests } from './list';
 export { listBoard } from './board';
 export type { BoardCard, BoardLane, ListBoardOptions } from './board';
 export type { ListRequestsOptions, RequestCompany, RequestListItem } from './list';
-export { findRequest, findRequestNumber, getRequest, MAX_EARLIER_CHUNKS } from './detail';
+export { findRequest, findRequestNumber, getRequest } from './detail';
+export type { RequestDetail } from './detail';
+export type { SignedInAsMark } from './detail-reader';
 export type {
   MentionedPerson,
   RequestAttachmentView,
-  RequestDetail,
-  RequestEntryView,
   RequestText,
-  SignedInAsMark,
   TextVersion,
-} from './detail';
+} from './detail-texts';
+export { MAX_EARLIER_CHUNKS } from './detail-thread';
+export type { RequestEntryView } from './detail-thread';
 export { editReply, editRequestDescription } from './edits';
 export { default as addNote } from './notes';
 export { default as raiseRequest } from './raise';
