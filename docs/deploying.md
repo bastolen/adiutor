@@ -341,6 +341,22 @@ monitoring notices, for example when the mail setup is broken and reminders can'
 run tries again. `pnpm jobs:list` shows every job with its last and next run, and
 `pnpm jobs:run <name>` runs one job now.
 
+## Webhooks
+
+Staff Admins can have Adiutor send what happens to requests to addresses they choose (webhooks).
+Adiutor never sends one inside its own network: an address that is, or resolves to, a private,
+loopback, link-local (where clouds serve their metadata), shared, multicast or reserved address is
+refused, checked on every connection (see
+[Webhooks' addresses](security-measures.md#webhooks-addresses)). In production a webhook's address
+must be `https://`.
+
+For a receiver on your own network, such as an on-premises system, allow its network with
+`WEBHOOK_ALLOWED_NETWORKS`: IP addresses or CIDR ranges, comma-separated, e.g. `10.20.0.0/16`.
+Allow as little as you can: every address in it can be reached by anyone who can add a webhook.
+Only the server's environment sets it, never anyone in the app. Each range allows its own family
+only: an IPv6 range never allows an IPv4 address, written in IPv6 (`::ffff:10.0.0.1`) or not, so
+allow an IPv4 network in IPv4.
+
 ## Logs
 
 The server and the scripts in `scripts/` log to standard output and error. Before anything is

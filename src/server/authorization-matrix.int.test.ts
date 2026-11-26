@@ -38,7 +38,14 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { impersonation, invitation, inviteLink, membership, user } from '@/db/schema';
+import {
+  impersonation,
+  invitation,
+  inviteLink,
+  membership,
+  user,
+  webhookDelivery,
+} from '@/db/schema';
 import type { CompanyRole, PlatformRole } from '@/lib/authz/roles';
 import { defined, firstRow } from '@/lib/defined';
 import { hashToken } from '@/lib/sign-in/tokens';
@@ -56,6 +63,8 @@ import {
   setupTestContext,
   staffActor,
   storeQueuedJob,
+  storeRequest,
+  storeWebhook,
   tokenFrom,
   addPassword,
 } from '../../tests/integration/helpers';
@@ -167,6 +176,18 @@ import {
   updateRequestDetails,
   updateRequestType,
 } from './requests';
+import {
+  addWebhook,
+  getWebhook,
+  listDeliveries,
+  listWebhooks,
+  removeWebhook,
+  renewWebhookSecret,
+  resendDelivery,
+  sendTestEvent,
+  setWebhookOn,
+  updateWebhook,
+} from './webhooks';
 
 const { ctx, db, sent } = setupTestContext();
 
@@ -231,6 +252,11 @@ interface World {
   failedJobs: { retry: string; discard: string };
   /** The number of a request in each company, raised by its Admin. */
   requests: { own: string; other: string };
+  /**
+   * A webhook to view, test and change, with a failed delivery to send again;
+   * one that's off (to turn on); and one to remove.
+   */
+  webhooks: { kept: string; failed: string; off: string; removable: string };
   /** The key of each company's Admin, to raise a request for (`listRaisableFor`). */
   raiseFor: { own: string; other: string };
 }
@@ -548,6 +574,48 @@ function listOperations(): Operation[] {
     ['move request type', (w) => moveRequestType(ctx, w.actor, { type: 'bug', direction: 'up' })],
     ['archive request type', (w) => archiveRequestType(ctx, w.actor, { type: 'new_feature' })],
     ['restore request type', (w) => restoreRequestType(ctx, w.actor, { type: 'new_feature' })],
+    ['list webhooks', (w) => listWebhooks(ctx, w.actor)],
+    ['view webhook', (w) => getWebhook(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'add webhook',
+      (w) =>
+        addWebhook(ctx, w.actor, {
+          name: 'Procurement',
+          url: 'https://hooks.adiutor.test/in',
+          format: 'json',
+          events: ['raised', 'reply'],
+          allTypes: true,
+          types: [],
+        }),
+    ],
+    [
+      'change webhook',
+      (w) =>
+        updateWebhook(ctx, w.actor, {
+          webhook: w.webhooks.kept,
+          name: 'Purchasing',
+          url: '',
+          format: 'chat',
+          events: ['raised'],
+          allTypes: false,
+          types: ['bug'],
+        }),
+    ],
+    ['renew webhook secret', (w) => renewWebhookSecret(ctx, w.actor, { webhook: w.webhooks.kept })],
+    ['list webhook deliveries', (w) => listDeliveries(ctx, w.actor, { webhook: w.webhooks.kept })],
+    // To an address that never resolves (`.test`): it fails at once, which a test only reports.
+    ['send a webhook test', (w) => sendTestEvent(ctx, w.actor, { webhook: w.webhooks.kept })],
+    [
+      'send a webhook delivery again',
+      (w) =>
+        resendDelivery(ctx, w.actor, { webhook: w.webhooks.kept, delivery: w.webhooks.failed }),
+    ],
+    [
+      'turn webhook off',
+      (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.kept, on: false }),
+    ],
+    ['turn webhook on', (w) => setWebhookOn(ctx, w.actor, { webhook: w.webhooks.off, on: true })],
+    ['remove webhook', (w) => removeWebhook(ctx, w.actor, { webhook: w.webhooks.removable })],
     [
       'change staff role',
       (w) => changeStaffRole(ctx, w.actor, { userId: w.staffMember, role: 'finance' }),
@@ -1025,6 +1093,18 @@ const EXPECTED: Record<string, string> = {
   'move request type': 'FFFFFFA',
   'archive request type': 'FFFFFFA',
   'restore request type': 'FFFFFFA',
+  // Webhooks send request texts out of Adiutor: only staff Admins, who manage the types, set them up.
+  'list webhooks': 'FFFFFFA',
+  'view webhook': 'FFFFFFA',
+  'add webhook': 'FFFFFFA',
+  'change webhook': 'FFFFFFA',
+  'renew webhook secret': 'FFFFFFA',
+  'list webhook deliveries': 'FFFFFFA',
+  'send a webhook test': 'FFFFFFA',
+  'send a webhook delivery again': 'FFFFFFA',
+  'turn webhook off': 'FFFFFFA',
+  'turn webhook on': 'FFFFFFA',
+  'remove webhook': 'FFFFFFA',
   'change staff role': 'FFFFFFA',
   'remove from staff': 'FFFFFFA',
   'list users': 'FFFAAAA',
@@ -1191,6 +1271,28 @@ async function openInvitation(admin: Actor, companyId: string, email: string): P
 }
 
 /**
+ * Stores the webhooks a world is given: one to view, test and change, with a
+ * failed delivery of a request to send again; one that's off; one to remove.
+ *
+ * @returns Their IDs, and the delivery's.
+ */
+async function storeMatrixWebhooks(): Promise<World['webhooks']> {
+  const kept = await storeWebhook(db, { name: 'Kept' });
+  const company = await createCompany(db, { name: 'Adiutor Tests Hooks' });
+  const { id: requestId } = await storeRequest(db, company.id);
+  const [failed] = await db
+    .insert(webhookDelivery)
+    .values({ webhookId: kept, requestId, status: 'failed', attempts: 6 })
+    .returning({ id: webhookDelivery.id });
+  return {
+    kept,
+    failed: defined(failed, 'the failed delivery').id,
+    off: await storeWebhook(db, { name: 'Off', off: { at: new Date(), reason: 'manual' } }),
+    removable: await storeWebhook(db, { name: 'Removable' }),
+  };
+}
+
+/**
  * Creates the world for one role.
  *
  * @param role - The role to act as.
@@ -1301,6 +1403,7 @@ async function createWorld(role: MatrixRole): Promise<World> {
         (await raiseRequest(ctx, otherAdmin, { ...NEW_REQUEST, companyId: other.id })).number,
       ),
     },
+    webhooks: await storeMatrixWebhooks(),
     raiseFor: {
       own: await raiseForKey(own.id, ownAdmin),
       other: await raiseForKey(other.id, otherAdmin),

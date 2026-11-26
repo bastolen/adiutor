@@ -269,6 +269,15 @@
       "answerNote": "Si la apruebas, la solicitud se cierra. Si la rechazas, vuelve al personal y después puedes decirles qué sigue sin funcionar. Estos botones solo funcionan para ti, y solo una vez.",
       "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud.",
       "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en Adiutor durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en Adiutor durante # días, así que no lo reenvíes.}}"
+    },
+    "webhookTurnedOff": {
+      "subject": "Adiutor desactivó el webhook «{name}»",
+      "reason": "Recibes esto porque eres administrador del personal de Adiutor, que configura los webhooks.",
+      "heading": "El webhook «{name}» está desactivado",
+      "why": "{reason, select, gone {Su receptor respondió que ya no existe (410 Gone), así que Adiutor lo desactivó.} unreadable {Su dirección o su secreto de firma ya no se pueden leer con los secretos de autenticación actuales de Adiutor, así que Adiutor lo desactivó.} other {Todos los envíos han fallado durante {days, plural, one {# día} other {# días}}, así que Adiutor lo desactivó.}}",
+      "advice": "No se le envía nada mientras está desactivado, y lo que pase mientras tanto no se envía después. Cuando su receptor vuelva a funcionar, actívalo en la configuración, donde sus últimos envíos muestran qué falló.",
+      "adviceUnreadable": "No se le envía nada mientras está desactivado. Escribe de nuevo su dirección y renueva su secreto en la configuración, y después actívalo.",
+      "button": "Abrir el webhook"
     }
   }
 }

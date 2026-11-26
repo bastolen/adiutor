@@ -25,6 +25,7 @@ import { securityNoticeEmail } from './security-notice';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';
+import { webhookTurnedOffEmail } from './webhook-turned-off';
 
 /** The app URL used in every test email. */
 const appUrl = 'https://adiutor.test';
@@ -599,6 +600,39 @@ describe('background jobs', () => {
   });
 });
 
+describe('webhooks', () => {
+  const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+
+  it('tells a staff Admin which webhook Adiutor turned off and why, never its address', async () => {
+    const failing = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'failing',
+      url,
+    });
+    expect(failing.subject).toBe('Adiutor turned off the webhook “Procurement”');
+    expect(failing.text).toContain('Every delivery to it has failed for 3 days');
+    expect(failing.text).toContain('turn it on in Settings');
+    expectBasics(failing, url);
+
+    const gone = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'gone',
+      url,
+    });
+    expect(gone.text).toContain('gone for good (410 Gone)');
+
+    const unreadable = await webhookTurnedOffEmail('alex@adiutor.test', {
+      ...english,
+      name: 'Procurement',
+      reason: 'unreadable',
+      url,
+    });
+    expect(unreadable.text).toContain('Enter its address again and renew its secret');
+  });
+});
+
 describe('security notices', () => {
   const when = new Date('2026-10-23T14:05:00Z');
 
@@ -1123,6 +1157,23 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
       newAdminEmail: 'sam@adiutor.test',
       how: 'invitation',
       byName: 'Jane Admin',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "a webhook was turned off" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'a webhook turned off': async (locale) => {
+    const url = `${appUrl}/admin/settings/webhooks/019abcde-0000-7000-8000-000000000001`;
+    const email = await webhookTurnedOffEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      name: 'Procurement',
+      reason: 'failing',
       url,
     });
     return { email, url };

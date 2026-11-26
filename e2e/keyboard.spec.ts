@@ -11,6 +11,7 @@ import {
   providerStepUpCookieValue,
 } from '../src/lib/sign-in/oauth-providers';
 import {
+  backdateMfaConfirmation,
   findUserId,
   forgetLimitsOf,
   resetActivityView,
@@ -778,6 +779,42 @@ test.describe('signed in', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
+  });
+
+  test('the add-webhook dialog keeps focus inside, its choices move with the arrow keys, and Escape returns it', async ({
+    page,
+  }) => {
+    // Opening it needs a recent second step.
+    await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
+    await page.goto('/admin/settings/webhooks');
+    const add = page.getByRole('button', { name: 'Add webhook' });
+
+    await add.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Add a webhook' });
+    await expect(dialog).toBeVisible();
+    // The format is one stop: the arrow keys move between its choices.
+    const json = dialog.getByRole('radio', { name: 'Signed JSON' });
+    await json.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(dialog.getByRole('radio', { name: 'Chat message' })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: 'Chat message' })).toBeFocused();
+    // Picking "Chosen types" with the keyboard shows the types to choose, next in the tab order.
+    await dialog.getByRole('radio', { name: 'All request types' }).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(dialog.getByRole('radio', { name: 'Chosen types' })).toBeChecked();
+    await page.keyboard.press('Tab');
+    await expect(dialog.getByRole('checkbox').first()).toBeFocused();
+    await repeatInOrder(12, async () => {
+      await page.keyboard.press('Tab');
+      expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(
+        true,
+      );
+    });
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(add).toBeFocused();
   });
 
   test('the add-passkey dialog keeps focus inside and returns it on Escape', async ({ page }) => {

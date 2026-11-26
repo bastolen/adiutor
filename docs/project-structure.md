@@ -58,6 +58,12 @@ The folders of the repository and what belongs in each. Back to the [documentati
     every setting (key, schema, fallback) and the checks between them, `store.ts` reads and writes
     them. It imports no server-only code: the default language in `src/lib/i18n/` reads it, and
     Better Auth's configuration reads that.
+  - `src/server/webhooks/`: webhooks (see [Webhooks](webhooks.md)): managing them (`manage.ts`),
+    the guard that keeps them out of Adiutor's own network (`address-guard.ts`), the JSON body and
+    the chat message (`formats.ts`), their signature (`signing.ts`) and one attempt to send
+    (`send.ts`). What a webhook is told about a request is read in `src/server/requests/`
+    (`read-webhook-news.ts`), beside the emails' `readRequestUpdate`. The rules the browser needs too are in
+    `src/lib/webhooks.ts`, the tables in `src/db/schema/webhooks.ts`.
 - `src/lib/`: code shared by the server and the browser, with a few server-only exceptions below.
   General helpers (`env`, `format`, `search-params`, `validation`, ...) sit at its root; the rest
   is grouped by topic. `validation.ts` (zod schemas) is for the server; the limits client
@@ -98,5 +104,6 @@ The folders of the repository and what belongs in each. Back to the [documentati
   authenticator), `database/` (which database the tests use, and preparing it), `integration/` (the
   integration tests' setup, which points `@/db` at the test database, and helpers), `i18n/`
   (next-intl's stand-ins for unit tests, and rendering in another language), `ui/` (what component
-  and action tests share: the kept-alive page, the form data and the confirmation window) and
-  `build/` (whether a local e2e run can reuse the last build).
+  and action tests share: the kept-alive page, the form data and the confirmation window),
+  `http/` (a receiver for webhooks on `127.0.0.1`) and `build/` (whether a local e2e run can
+  reuse the last build).

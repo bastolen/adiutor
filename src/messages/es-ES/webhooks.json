@@ -1,0 +1,18 @@
+{
+  "webhooks": {
+    "chat": {
+      "heading": "{reference}: {title}",
+      "raised": "{name} creó esta solicitud: {excerpt}",
+      "reply": "{name} respondió: {excerpt}",
+      "note": "{name} escribió una nota interna: {excerpt}",
+      "status": "{change, select, reopened {{name} reabrió esta solicitud.} done {{name} marcó esta solicitud como resuelta.} cancelled {{name} canceló esta solicitud.} proposed {{name} propuso una solución.} approved {{name} aprobó la solución.} denied {{name} no aprobó la solución.} other {{name} cambió el estado de {from} a {to}.}}",
+      "assignee": "{change, select, assigned {{name} asignó a {person} a esta solicitud.} other {{name} quitó a {person} de esta solicitud.}}",
+      "assigneeGone": "{change, select, assigned {{name} asignó a un miembro del personal a esta solicitud.} other {{name} quitó a un miembro del personal de esta solicitud.}}",
+      "title": "{name} cambió el título de «{from}» a «{to}».",
+      "type": "{name} cambió el tipo de {from} a {to}.",
+      "priority": "{name} cambió la prioridad de {from} a {to}.",
+      "more": "{count, plural, one {Y # cambio más.} other {Y # cambios más.}}",
+      "test": "Este es un mensaje de prueba de Adiutor para el webhook «{name}». Funciona."
+    }
+  }
+}

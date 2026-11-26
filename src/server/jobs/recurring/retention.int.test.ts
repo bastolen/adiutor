@@ -6,9 +6,16 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { appError, auditEvent, jobRun, queuedJob, signInError } from '@/db/schema';
+import { appError, auditEvent, jobRun, queuedJob, signInError, webhookDelivery } from '@/db/schema';
 
-import { later, setupTestContext, auditEvents } from '../../../../tests/integration/helpers';
+import {
+  auditEvents,
+  createCompany,
+  later,
+  setupTestContext,
+  storeRequest,
+  storeWebhook,
+} from '../../../../tests/integration/helpers';
 import retention, { RETENTION_CHUNK_ROWS } from './retention';
 
 const { ctx, db } = setupTestContext();
@@ -125,5 +132,23 @@ describe('retention', () => {
       (await db.select({ status: queuedJob.status }).from(queuedJob)).map(({ status }) => status),
     ).toEqual(expect.arrayContaining(['succeeded', 'queued']));
     expect(await db.select().from(queuedJob)).toHaveLength(2);
+  });
+
+  it('removes deliveries to webhooks after 30 days, whatever their status', async () => {
+    const company = await createCompany(db);
+    const { id: requestId } = await storeRequest(db, company.id);
+    const webhookId = await storeWebhook(db);
+    const longAgo = sql`now() - interval '31 days'`;
+    await db.insert(webhookDelivery).values([
+      { webhookId, requestId, status: 'delivered', createdAt: longAgo },
+      { webhookId, requestId, status: 'pending', createdAt: longAgo },
+      { webhookId, test: true, status: 'failed', createdAt: longAgo },
+      { webhookId, requestId, status: 'delivered' },
+    ]);
+
+    await expect(retention.run(ctx, { deadline: later })).resolves.toMatchObject({
+      summary: { webhookDeliveries: 3 },
+    });
+    expect(await db.select().from(webhookDelivery)).toHaveLength(1);
   });
 });

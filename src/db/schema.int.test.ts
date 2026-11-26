@@ -80,6 +80,11 @@ describe('database rules', () => {
     'request_text_version_body_format_valid',
     'request_text_version_edited_by_side_valid',
     'request_type_starting_priority_valid',
+    'webhook_delivery_last_error_valid',
+    'webhook_delivery_status_valid',
+    'webhook_events_valid',
+    'webhook_format_valid',
+    'webhook_turned_off_reason_valid',
   ];
 
   it('limits every text column with a fixed set of values to those values', async () => {

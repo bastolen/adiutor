@@ -1,8 +1,9 @@
 /**
  * @file Whether a host name is this computer, for the settings that are only
  * allowed for local development: plain `http://` and unencrypted SMTP in
- * production (`env-schema.ts`, which the end-to-end tests rely on), and the
- * development seed (`src/lib/dev-seed-guard.ts`). Pure.
+ * production (`env-schema.ts`, which the end-to-end tests rely on, and a
+ * webhook's address, `src/lib/webhooks.ts`), and the development seed
+ * (`src/lib/dev-seed-guard.ts`). Pure.
  */
 
 /** The loopback names and addresses, as `URL.hostname` gives them (IPv6 in brackets). */
@@ -28,4 +29,17 @@ export default function isLocalHostname(hostname: string): boolean {
     LOCAL_HOSTNAMES.has(host) ||
     (host.endsWith(LOCALHOST_DOMAIN) && host.length > LOCALHOST_DOMAIN.length)
   );
+}
+
+/**
+ * Whether a web address is fit for production: `https://`, or `http://` on
+ * this computer ({@link isLocalHostname}), as the end-to-end tests run a
+ * production build on `http://localhost`. Anything else (`ftp://`, plain
+ * `http://` to another computer) isn't.
+ *
+ * @param url - The address, parsed.
+ * @returns Whether it may be used in production.
+ */
+export function isSecureOrLocalUrl(url: URL): boolean {
+  return url.protocol === 'https:' || (url.protocol === 'http:' && isLocalHostname(url.hostname));
 }

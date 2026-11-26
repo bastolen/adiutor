@@ -36,7 +36,7 @@
       },
       "settings": {
         "title": "Settings",
-        "description": "Manage the staff, languages, time zone and request types."
+        "description": "Manage the staff, languages, time zone, request types and webhooks."
       },
       "logs": {
         "title": "Logs",

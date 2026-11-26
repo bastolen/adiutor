@@ -27,6 +27,7 @@ import { storeMentions } from './mentions';
 import { assertStillRaisableFor, personToRaiseFor, raisedForSchema } from './raise-for';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellWebhooks } from './tell-webhooks';
 import { typeToGive } from './types';
 import { tellMentioned, tellRaisedFor } from './updates';
 
@@ -192,6 +193,10 @@ export default async function raiseRequest(
     if (raisedFor) {
       await tellRaisedFor(tx, { requestId: raised.id, actorId: actor.id, raisedFor });
     }
+    // The webhooks that chose new requests hear of it.
+    await tellWebhooks(tx, { requestId: raised.id, typeKey: type }, [
+      { event: 'raised', entryId: null },
+    ]);
     return raised;
   });
 }

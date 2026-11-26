@@ -102,6 +102,12 @@
     "requestTypes": {
       "unavailable": "Dit type kan niet meer worden gekozen. Kies een ander.",
       "lastActive": "Houd minstens één type dat niet gearchiveerd is, anders kan er geen verzoek worden ingediend."
+    },
+    "webhooks": {
+      "confirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je wijzigt waar webhooks naartoe sturen.",
+      "unreadable": "Het adres of geheim van deze webhook is niet meer te lezen. Vul het adres opnieuw in en vernieuw daarna het geheim.",
+      "off": "Zet de webhook eerst aan: naar een webhook die uitstaat wordt niets verstuurd.",
+      "stillSending": "Deze levering wordt nog verstuurd. Wacht tot de pogingen voorbij zijn."
     }
   }
 }

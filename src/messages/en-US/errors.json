@@ -102,6 +102,12 @@
     "requestTypes": {
       "unavailable": "This type can’t be chosen any more. Pick another one.",
       "lastActive": "Keep at least one type that isn’t archived, or no request can be raised."
+    },
+    "webhooks": {
+      "confirmationRequired": "Confirm it’s you with your second step before changing where webhooks send.",
+      "unreadable": "This webhook’s address or secret can’t be read any more. Enter its address again, then renew its secret.",
+      "off": "Turn the webhook on first: nothing is sent to a webhook that’s off.",
+      "stillSending": "This delivery is still being sent. Wait for its attempts to end."
     }
   }
 }

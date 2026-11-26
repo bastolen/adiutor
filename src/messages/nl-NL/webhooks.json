@@ -1,0 +1,18 @@
+{
+  "webhooks": {
+    "chat": {
+      "heading": "{reference}: {title}",
+      "raised": "{name} heeft dit verzoek ingediend: {excerpt}",
+      "reply": "{name} reageerde: {excerpt}",
+      "note": "{name} schreef een interne notitie: {excerpt}",
+      "status": "{change, select, reopened {{name} heeft dit verzoek heropend.} done {{name} heeft dit verzoek gemarkeerd als afgerond.} cancelled {{name} heeft dit verzoek geannuleerd.} proposed {{name} heeft een oplossing voorgesteld.} approved {{name} heeft de oplossing goedgekeurd.} denied {{name} heeft de oplossing niet goedgekeurd.} other {{name} heeft de status gewijzigd van {from} naar {to}.}}",
+      "assignee": "{change, select, assigned {{name} heeft {person} aan dit verzoek toegewezen.} other {{name} heeft {person} van dit verzoek gehaald.}}",
+      "assigneeGone": "{change, select, assigned {{name} heeft een medewerker aan dit verzoek toegewezen.} other {{name} heeft een medewerker van dit verzoek gehaald.}}",
+      "title": "{name} heeft de titel gewijzigd van ‘{from}’ naar ‘{to}’.",
+      "type": "{name} heeft het type gewijzigd van {from} naar {to}.",
+      "priority": "{name} heeft de prioriteit gewijzigd van {from} naar {to}.",
+      "more": "{count, plural, one {En nog # wijziging.} other {En nog # wijzigingen.}}",
+      "test": "Dit is een testbericht van Adiutor voor de webhook ‘{name}’. Het werkt."
+    }
+  }
+}

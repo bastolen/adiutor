@@ -89,6 +89,32 @@
     "requestStatus": "Kies een status.",
     "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",
     "locale": "Kies een van de talen.",
-    "timeZone": "Kies een van de tijdzones."
+    "timeZone": "Kies een van de tijdzones.",
+    "webhookName": {
+      "empty": "Vul een naam in voor de webhook.",
+      "tooLong": "Gebruik maximaal {maximum, number} tekens voor de naam van de webhook.",
+      "controlCharacters": "Haal regeleinden en stuurtekens uit de naam van de webhook.",
+      "hiddenCharacters": "Haal onzichtbare tekens en tekens voor de schrijfrichting uit de naam van de webhook.",
+      "noVisibleCharacter": "Gebruik minstens één letter, cijfer of symbool in de naam van de webhook.",
+      "webAddress": "Haal webadressen uit de naam van de webhook."
+    },
+    "webhookUrl": {
+      "empty": "Vul het adres in om naartoe te sturen.",
+      "tooLong": "Gebruik een adres van maximaal {maximum, number} tekens.",
+      "invalid": "Vul een webadres in, zoals https://hooks.adiutor.dev/in.",
+      "scheme": "Gebruik een adres dat begint met https://.",
+      "credentials": "Haal de gebruikersnaam en het wachtwoord uit het adres: aan de handtekening ziet de ontvanger dat het Adiutor is.",
+      "insecure": "Gebruik een https://-adres: gewoon http:// werkt alleen voor deze computer.",
+      "internal": "Dit adres ligt in het eigen netwerk van Adiutor, waar webhooks nooit naartoe gaan."
+    },
+    "webhookFormat": "Kies hoe de webhook wordt verstuurd.",
+    "webhookEvents": {
+      "empty": "Kies minstens één ding om te versturen.",
+      "unknown": "Kies uit de gebeurtenissen in de lijst."
+    },
+    "webhookTypes": {
+      "empty": "Kies minstens één verzoektype, of allemaal.",
+      "unknown": "Kies uit de verzoektypen in de lijst."
+    }
   }
 }

@@ -33,7 +33,7 @@ describe('Shortcuts', () => {
       'View and manage every company.',
     );
     expect(screen.getByRole('link', { name: /^Settings/ })).toHaveTextContent(
-      'Manage the staff, languages, time zone and request types.',
+      'Manage the staff, languages, time zone, request types and webhooks.',
     );
     expect(screen.getByRole('link', { name: /^Logs/ })).toHaveTextContent(
       'The audit log, the errors people ran into and the background jobs.',

@@ -1,0 +1,18 @@
+{
+  "webhooks": {
+    "chat": {
+      "heading": "{reference}: {title}",
+      "raised": "{name} raised this request: {excerpt}",
+      "reply": "{name} replied: {excerpt}",
+      "note": "{name} added an internal note: {excerpt}",
+      "status": "{change, select, reopened {{name} reopened this request.} done {{name} marked this request as done.} cancelled {{name} cancelled this request.} proposed {{name} proposed a solution.} approved {{name} approved the solution.} denied {{name} didn’t approve the solution.} other {{name} changed the status from {from} to {to}.}}",
+      "assignee": "{change, select, assigned {{name} assigned {person} to this request.} other {{name} removed {person} from this request.}}",
+      "assigneeGone": "{change, select, assigned {{name} assigned a staff member to this request.} other {{name} removed a staff member from this request.}}",
+      "title": "{name} changed the title from “{from}” to “{to}”.",
+      "type": "{name} changed the type from {from} to {to}.",
+      "priority": "{name} changed the priority from {from} to {to}.",
+      "more": "{count, plural, one {And # more change.} other {And # more changes.}}",
+      "test": "This is a test message from Adiutor for the webhook “{name}”. It works."
+    }
+  }
+}

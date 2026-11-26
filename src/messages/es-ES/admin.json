@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal y cómo se numeran y clasifican las solicitudes.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes y adónde envían los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
         "staff": "Personal",
-        "requests": "Solicitudes"
+        "requests": "Solicitudes",
+        "webhooks": "Webhooks"
       },
       "general": {
         "name": {
@@ -369,6 +370,151 @@
           "restoreLabel": "Restaurar {name}",
           "restored": "{name} restaurado."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Envía lo que pasa con las solicitudes a tus propios sistemas como JSON firmado, o a un canal de chat como mensaje. Cada webhook elige los tipos de solicitud y los eventos que recibe.",
+          "listLabel": "Webhooks",
+          "empty": "Aún no hay webhooks. Añade uno para enviar lo que pasa con las solicitudes a un sistema tuyo o a un canal de chat."
+        },
+        "status": {
+          "on": "Activado",
+          "manual": "Desactivado",
+          "failing": "Desactivado: seguía fallando",
+          "gone": "Desactivado: el receptor ya no existe",
+          "unreadable": "Desactivado: no se puede leer"
+        },
+        "format": {
+          "json": "JSON firmado",
+          "chat": "Mensaje de chat"
+        },
+        "allTypes": "Todos los tipos de solicitud",
+        "events": {
+          "raised": "Solicitudes creadas",
+          "reply": "Respuestas",
+          "note": "Notas internas",
+          "status": "Cambios de estado",
+          "assignee": "Personal asignado",
+          "details": "Título, tipo y prioridad"
+        },
+        "summary": "A {host} · {types}",
+        "fields": {
+          "nameLabel": "Nombre",
+          "nameHint": "Cómo lo llama el personal, por ejemplo Compras o Chat del personal.",
+          "urlLabel": "Dirección",
+          "urlHint": "Adónde enviarlo: una dirección https://. Puede contener un token, así que Adiutor la guarda en secreto y solo muestra su host.",
+          "urlKeepHint": "Déjala vacía para conservar la dirección guardada, que Adiutor nunca vuelve a mostrar.",
+          "formatLabel": "Formato",
+          "formatJsonHint": "Firmado como describe Standard Webhooks, con todos los detalles, para un sistema tuyo.",
+          "formatChatHint": "Un mensaje breve que Slack, Google Chat, Mattermost y Discord muestran tal cual, en el idioma predeterminado de Adiutor.",
+          "typesLegend": "Tipos de solicitud",
+          "allTypesHint": "Todos los tipos, también los que se añadan más adelante.",
+          "chosenTypes": "Tipos elegidos",
+          "eventsLegend": "Enviar",
+          "staffOnly": "Las notas internas y las prioridades son solo para el personal: envíalas solo a un lugar que únicamente lea el personal."
+        },
+        "add": {
+          "button": "Añadir webhook",
+          "title": "Añadir un webhook",
+          "description": "A partir de ahora, lo que elijas aquí se envía a esta dirección.",
+          "confirm": "Añadir webhook",
+          "added": "Webhook añadido."
+        },
+        "secret": {
+          "title": "Copia el secreto de firma",
+          "description": "Adiutor no lo volverá a mostrar. El receptor comprueba con él la firma de cada envío.",
+          "label": "Secreto de firma",
+          "copy": "Copiar secreto",
+          "done": "Listo"
+        },
+        "confirmFirst": "Confirma que eres tú con tu segundo paso antes de añadir o cambiar un webhook.",
+        "page": {
+          "title": "Webhook",
+          "back": "Todos los webhooks",
+          "details": "Detalles",
+          "detailsDescription": "Adónde envía, y qué.",
+          "host": "Envía a",
+          "format": "Formato",
+          "types": "Tipos de solicitud",
+          "events": "Envía",
+          "added": "Añadido",
+          "secretRenewed": "Secreto renovado",
+          "failingSince": "Falla desde",
+          "never": "Nunca",
+          "offNote": "{reason, select, failing {Adiutor lo desactivó porque todos los envíos fallaron durante 3 días. Cuando su receptor funcione, vuelve a activarlo.} gone {Adiutor lo desactivó porque su receptor respondió que ya no existe (410 Gone).} unreadable {Adiutor lo desactivó porque su dirección o su secreto ya no se pueden leer. Escribe de nuevo su dirección y renueva su secreto, y después actívalo.} other {Está desactivado: no se le envía nada, y lo que pase mientras tanto no se envía después.}}"
+        },
+        "edit": {
+          "button": "Editar",
+          "title": "Editar {name}",
+          "description": "Los cambios se aplican a lo que pase a partir de ahora.",
+          "confirm": "Guardar",
+          "saved": "Webhook guardado.",
+          "unchanged": "No ha cambiado nada."
+        },
+        "test": {
+          "button": "Enviar una prueba",
+          "delivered": "Prueba entregada: el receptor respondió {status, number}.",
+          "failed": "La prueba no se entregó. {reason}"
+        },
+        "onOff": {
+          "turnOff": "Desactivar",
+          "turnOn": "Activar",
+          "turnedOff": "Webhook desactivado.",
+          "turnedOn": "Webhook activado."
+        },
+        "renew": {
+          "button": "Renovar secreto",
+          "title": "¿Renovar el secreto de firma?",
+          "description": "El secreto anterior deja de funcionar al instante. Los envíos que el receptor rechace mientras tanto se vuelven a intentar, así que dale pronto el nuevo secreto.",
+          "confirm": "Renovar secreto",
+          "renewed": "Secreto de firma renovado."
+        },
+        "remove": {
+          "button": "Eliminar",
+          "title": "¿Eliminar {name}?",
+          "description": "No se le enviará nada más, y sus envíos se eliminan. No se puede deshacer.",
+          "confirm": "Eliminar webhook",
+          "removed": "Webhook eliminado."
+        },
+        "deliveries": {
+          "title": "Envíos",
+          "description": "Lo que se envió en los últimos 30 días y cómo fue, nunca lo que se envió ni lo que respondió el receptor.",
+          "rows": "Envíos",
+          "caption": "Envíos",
+          "when": "Cuándo",
+          "what": "Qué",
+          "result": "Resultado",
+          "attempts": "Intentos",
+          "actions": "Acciones",
+          "test": "Prueba",
+          "attemptCount": "{count, plural, one {# intento} other {# intentos}}",
+          "nextAttempt": "Siguiente intento: {time}",
+          "status": {
+            "pending": "Enviándose",
+            "delivered": "Entregado",
+            "failed": "Fallido",
+            "cancelled": "Cancelado"
+          },
+          "emptyTitle": "Aún no hay envíos",
+          "emptyDescription": "Los envíos aparecen aquí en cuanto pasa algo que envía, o cuando envías una prueba.",
+          "resend": "Enviar de nuevo",
+          "resendLabel": "Enviar de nuevo el envío de {time}",
+          "resent": "Se envía de nuevo en la siguiente ronda."
+        },
+        "outcome": {
+          "timeout": "Sin respuesta en 10 segundos.",
+          "dns": "No se encuentra su nombre de host.",
+          "refused_address": "Su dirección está dentro de la propia red de Adiutor.",
+          "connection": "La conexión se rechazó o se cortó.",
+          "tls": "No se puede confiar en su certificado o su cifrado.",
+          "redirect": "Respondió con una redirección ({status, number}), que Adiutor nunca sigue.",
+          "http": "Respondió {status, number}.",
+          "unreadable": "Su dirección o su secreto ya no se pueden leer.",
+          "answered": "Respondió {status, number}."
+        },
+        "removedToast": "Webhook eliminado."
       }
     },
     "companies": {

@@ -129,7 +129,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
 
 ## Staff screens
 
-- **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with three tabs, each a page
+- **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with four tabs, each a page
   of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages.
   Every tab is for staff Admins, so none is left out. The address before it had tabs,
   `/admin/staff`, is gone (no redirect).
@@ -145,6 +145,10 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
+  - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
+    the staff's own systems and chat channels, each with whether it's on, its format, the host it
+    sends to, its types and events, and adding one; each webhook's page has its controls and its
+    deliveries (see [Webhooks](webhooks.md)).
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It

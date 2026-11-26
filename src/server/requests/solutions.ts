@@ -34,6 +34,7 @@ import {
 import { storeMentions } from './mentions';
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
+import { tellWebhooks } from './tell-webhooks';
 import { type RequestNews, tellPeopleOnRequest } from './updates';
 
 /**
@@ -126,6 +127,7 @@ export default async function answerSolution(
     await options.onAnswered?.(tx);
     // The people on the request hear of the answer, and the reason with it, in one email.
     await tellPeopleOnRequest(tx, { request: locked, actorId: actor.id }, news, mentioned);
+    await tellWebhooks(tx, { requestId: locked.id, typeKey: locked.type }, news);
     return { status };
   });
 }

@@ -253,12 +253,13 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, and how requests are numbered and typed.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where webhooks send.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",
         "staff": "Staff",
-        "requests": "Requests"
+        "requests": "Requests",
+        "webhooks": "Webhooks"
       },
       "general": {
         "name": {
@@ -369,6 +370,151 @@
           "restoreLabel": "Restore {name}",
           "restored": "{name} restored."
         }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "card": {
+          "title": "Webhooks",
+          "description": "Send what happens to requests to your own systems as signed JSON, or to a chat channel as a message. Each webhook picks the request types and events it gets.",
+          "listLabel": "Webhooks",
+          "empty": "No webhooks yet. Add one to send what happens to requests to a system of yours or a chat channel."
+        },
+        "status": {
+          "on": "On",
+          "manual": "Off",
+          "failing": "Off: kept failing",
+          "gone": "Off: receiver gone",
+          "unreadable": "Off: can’t be read"
+        },
+        "format": {
+          "json": "Signed JSON",
+          "chat": "Chat message"
+        },
+        "allTypes": "All request types",
+        "events": {
+          "raised": "Requests raised",
+          "reply": "Replies",
+          "note": "Internal notes",
+          "status": "Status changes",
+          "assignee": "Assignees",
+          "details": "Title, type and priority"
+        },
+        "summary": "To {host} · {types}",
+        "fields": {
+          "nameLabel": "Name",
+          "nameHint": "What the staff call it, e.g. Procurement or Staff chat.",
+          "urlLabel": "Address",
+          "urlHint": "Where to send it: an https:// address. It may hold a token, so Adiutor keeps it secret and shows only its host.",
+          "urlKeepHint": "Leave it empty to keep the saved address, which Adiutor never shows again.",
+          "formatLabel": "Format",
+          "formatJsonHint": "Signed as Standard Webhooks describes, with every detail, for a system of yours.",
+          "formatChatHint": "A short message that Slack, Google Chat, Mattermost and Discord show as it is, in Adiutor’s default language.",
+          "typesLegend": "Request types",
+          "allTypesHint": "Every type, also the ones added later.",
+          "chosenTypes": "Chosen types",
+          "eventsLegend": "Send",
+          "staffOnly": "Internal notes and priorities are only for the staff: send them only to a place that the staff alone read."
+        },
+        "add": {
+          "button": "Add webhook",
+          "title": "Add a webhook",
+          "description": "From now on, what you choose here is sent to this address.",
+          "confirm": "Add webhook",
+          "added": "Webhook added."
+        },
+        "secret": {
+          "title": "Copy the signing secret",
+          "description": "Adiutor won’t show it again. The receiver checks each delivery’s signature with it.",
+          "label": "Signing secret",
+          "copy": "Copy secret",
+          "done": "Done"
+        },
+        "confirmFirst": "Confirm it’s you with your second step before adding or changing a webhook.",
+        "page": {
+          "title": "Webhook",
+          "back": "All webhooks",
+          "details": "Details",
+          "detailsDescription": "Where it sends, and what.",
+          "host": "Sends to",
+          "format": "Format",
+          "types": "Request types",
+          "events": "Sends",
+          "added": "Added",
+          "secretRenewed": "Secret renewed",
+          "failingSince": "Failing since",
+          "never": "Never",
+          "offNote": "{reason, select, failing {Adiutor turned it off because every delivery failed for 3 days. Once its receiver works, turn it on again.} gone {Adiutor turned it off because its receiver answered that it’s gone for good (410 Gone).} unreadable {Adiutor turned it off because its address or secret can’t be read any more. Enter its address again and renew its secret, then turn it on.} other {It’s off: nothing is sent to it, and what happens meanwhile isn’t sent later.}}"
+        },
+        "edit": {
+          "button": "Edit",
+          "title": "Edit {name}",
+          "description": "Changes apply to what happens from now on.",
+          "confirm": "Save",
+          "saved": "Webhook saved.",
+          "unchanged": "Nothing changed."
+        },
+        "test": {
+          "button": "Send a test",
+          "delivered": "Test delivered: the receiver answered {status, number}.",
+          "failed": "The test wasn’t delivered. {reason}"
+        },
+        "onOff": {
+          "turnOff": "Turn off",
+          "turnOn": "Turn on",
+          "turnedOff": "Webhook turned off.",
+          "turnedOn": "Webhook turned on."
+        },
+        "renew": {
+          "button": "Renew secret",
+          "title": "Renew the signing secret?",
+          "description": "The old secret stops working at once. Deliveries the receiver refuses meanwhile are tried again, so give it the new secret soon.",
+          "confirm": "Renew secret",
+          "renewed": "Signing secret renewed."
+        },
+        "remove": {
+          "button": "Remove",
+          "title": "Remove {name}?",
+          "description": "Nothing more is sent to it, and its deliveries are deleted. This can’t be undone.",
+          "confirm": "Remove webhook",
+          "removed": "Webhook removed."
+        },
+        "deliveries": {
+          "title": "Deliveries",
+          "description": "What was sent in the last 30 days and how it went, never what was sent or what the receiver answered.",
+          "rows": "Deliveries",
+          "caption": "Deliveries",
+          "when": "When",
+          "what": "What",
+          "result": "Result",
+          "attempts": "Attempts",
+          "actions": "Actions",
+          "test": "Test",
+          "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
+          "nextAttempt": "Next attempt: {time}",
+          "status": {
+            "pending": "Sending",
+            "delivered": "Delivered",
+            "failed": "Failed",
+            "cancelled": "Cancelled"
+          },
+          "emptyTitle": "No deliveries yet",
+          "emptyDescription": "Deliveries appear here once something it sends happens, or you send a test.",
+          "resend": "Send again",
+          "resendLabel": "Send the delivery of {time} again",
+          "resent": "It’s sent again at the next tick."
+        },
+        "outcome": {
+          "timeout": "No answer within 10 seconds.",
+          "dns": "Its host name can’t be found.",
+          "refused_address": "Its address is inside Adiutor’s own network.",
+          "connection": "The connection was refused or broke off.",
+          "tls": "Its certificate or encryption can’t be trusted.",
+          "redirect": "It answered with a redirect ({status, number}), which Adiutor never follows.",
+          "http": "It answered {status, number}.",
+          "unreadable": "Its address or secret can’t be read any more.",
+          "answered": "Answered {status, number}."
+        },
+        "removedToast": "Webhook removed."
       }
     },
     "companies": {

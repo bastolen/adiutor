@@ -15,6 +15,7 @@ import { signedInAsWork } from '../signed-in-as';
 import { assertReplyLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { storeMentions } from './mentions';
 import { subscribeAutomatically } from './subscribers';
+import { tellWebhooks } from './tell-webhooks';
 import { tellStaffOnRequest } from './updates';
 
 /**
@@ -80,5 +81,9 @@ export default async function addNote(
     });
     // The staff on the request, and the staff it mentions, hear of it by email; nobody else does.
     await tellStaffOnRequest(tx, { request: locked, actorId: actor.id }, note.id, mentioned);
+    // Webhooks are the staff's: those that chose internal notes hear of it (decision 0046).
+    await tellWebhooks(tx, { requestId: locked.id, typeKey: locked.type }, [
+      { event: 'note', entryId: note.id },
+    ]);
   });
 }
