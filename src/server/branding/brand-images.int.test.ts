@@ -74,10 +74,13 @@ describe('setBrandImage', () => {
   it('replaces the image before under a new ID, keeping the other kind', async () => {
     const icon = await setBrandImage(ctx, admin, 'icon', await squarePng(64));
     const first = await setBrandImage(ctx, admin, 'logo', LOGO_PNG);
+    expect((await loadBrandImage(db, 'logo'))?.id).toBe(first.id);
     const second = await setBrandImage(ctx, admin, 'logo', LOGO_JPEG);
 
     expect(second.id).not.toBe(first.id);
     expect(await loadBrandImages(db)).toEqual({ logo: second, icon });
+    // The bytes served follow the new upload, though the first one's were kept.
+    expect((await loadBrandImage(db, 'logo'))?.id).toBe(second.id);
   });
 
   it('records each upload in the audit log', async () => {

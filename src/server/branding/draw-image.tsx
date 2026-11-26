@@ -88,7 +88,7 @@ export function isBlankPng(png: Uint8Array): boolean {
  * @param facts - What its header says it is (`imageFacts`).
  * @param box - The room it may take.
  * @returns The new PNG and its size, or `null` when the image didn't decode
- *   (nothing showed).
+ *   (nothing showed, or the drawing couldn't read it).
  */
 export async function redrawImage(
   bytes: Uint8Array,
@@ -96,12 +96,18 @@ export async function redrawImage(
   box: ImageSize,
 ): Promise<DrawnImage | null> {
   const size = fitInto(facts, box);
-  const content = await drawPng(
-    <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- Drawn into a PNG by ImageResponse, never shown in a page. */}
-      <img src={imageDataUrl(bytes, facts.type)} width={size.width} height={size.height} alt="" />
-    </div>,
-    size,
-  );
+  let content: Uint8Array;
+  try {
+    content = await drawPng(
+      <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- Drawn into a PNG by ImageResponse, never shown in a page. */}
+        <img src={imageDataUrl(bytes, facts.type)} width={size.width} height={size.height} alt="" />
+      </div>,
+      size,
+    );
+  } catch {
+    // Some files the header check takes, the drawing can't read (it says so by throwing).
+    return null;
+  }
   return isBlankPng(content) ? null : { content, ...size };
 }

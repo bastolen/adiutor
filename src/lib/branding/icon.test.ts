@@ -38,9 +38,21 @@ describe('brandIconSource', () => {
     });
   });
 
-  it('takes the logo for a name whose initials the font can’t draw', () => {
+  it('draws the Latin letters the font has, Romanian and Vietnamese ones included', () => {
+    expect(brandIconSource({ logo: WIDE }, 'Ștefan Ước')).toEqual({
+      kind: 'initials',
+      letters: 'ȘƯ',
+    });
+    expect(brandIconSource({ logo: WIDE }, 'Ạnh Đức')).toEqual({ kind: 'initials', letters: 'ẠĐ' });
+  });
+
+  it('takes the logo for a name whose initials the font can’t draw, which would fetch a font', () => {
     expect(brandIconSource({ logo: WIDE }, 'サポート')).toEqual({ kind: 'logo' });
     expect(brandIconSource({ logo: WIDE }, 'Служба поддержки')).toEqual({ kind: 'logo' });
+    // Letters of Latin Extended-A the font lacks, first or second.
+    expect(brandIconSource({ logo: WIDE }, 'Ŏlga Support')).toEqual({ kind: 'logo' });
+    expect(brandIconSource({ logo: WIDE }, 'Acme Ĭnc')).toEqual({ kind: 'logo' });
+    expect(brandIconSource({ logo: WIDE }, 'Ǆuro')).toEqual({ kind: 'logo' });
   });
 
   it('gives nothing, Adiutor’s own icon, without an upload', () => {

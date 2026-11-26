@@ -117,48 +117,103 @@ function pngSize(bytes: Uint8Array): ImageSize | null {
 /**
  * Whether a JPEG marker starts a frame (SOF0 to SOF15), the segment that
  * holds the image's size: every `C0` to `CF` except `C4` (Huffman tables),
- * `C8` (reserved) and `CC` (arithmetic coding).
+ * `C8` (reserved) and `CC` (arithmetic coding conditioning).
  *
  * @param marker - The byte after `FF`.
- * @returns Whether it's a frame's start.
+ * @returns Whether it's a frame's start, of any kind.
  */
 function isFrameStart(marker: number): boolean {
   return marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker);
 }
 
 /**
- * The size of a JPEG, from its first frame header, walking the segments
- * before it by their lengths. Stops at the image data (`SOS`) or the end.
+ * The frames taken: baseline, extended and progressive (SOF0 to SOF2), the
+ * ones browsers and Adiutor's drawing decode. Lossless, hierarchical and
+ * arithmetic-coded JPEGs are refused.
+ */
+const TAKEN_FRAMES: ReadonlySet<number> = new Set([0xc0, 0xc1, 0xc2]);
+
+/**
+ * The segments that may come before the image data, which every decoder
+ * skips by their length: application data and comments (`E0` to `EF`,
+ * `FE`), quantisation and Huffman tables (`DB`, `C4`), the restart interval
+ * (`DD`) and arithmetic coding conditioning (`CC`).
+ *
+ * @param marker - The byte after `FF`.
+ * @returns Whether it's one of them.
+ */
+function isSkippedSegment(marker: number): boolean {
+  return (marker >= 0xe0 && marker <= 0xef) || [0xfe, 0xdb, 0xc4, 0xdd, 0xcc].includes(marker);
+}
+
+/**
+ * Whether a JPEG's image data holds another frame or image start before its
+ * end (`EOI`). Inside the image data an `FF` byte is always followed by `00`
+ * (stuffing) or a marker, so any frame start found there is one a decoder
+ * would read. Decoders stop at the end, so what follows it (the extra
+ * pictures phones append) doesn't count.
+ *
+ * @param bytes - The file.
+ * @param from - Where the image data starts.
+ * @returns Whether another frame or start of image comes before the end.
+ */
+function hasLaterFrame(bytes: Uint8Array, from: number): boolean {
+  for (let at = from; at + 1 < bytes.length; at += 1) {
+    if (bytes[at] === 0xff) {
+      const marker = bytes[at + 1] ?? 0;
+      if (marker === 0xd9) {
+        return false;
+      }
+      if (isFrameStart(marker) || marker === 0xd8) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * The size of a JPEG, read strictly so it's the size every decoder reads:
+ * from its start marker to its image data (`SOS`) only fill bytes, the
+ * segments every decoder skips by their length and exactly one frame header
+ * of a kind that's taken, and no other frame anywhere after. A decoder that
+ * reads a byte or a marker differently (`FF 00`, a reserved marker, a
+ * second frame) could otherwise decode a far larger image than the header
+ * claimed, so anything else is refused.
  *
  * @param bytes - The file, starting with `FF D8`.
- * @returns Its size, or `null` when no frame header comes first.
+ * @returns Its size, or `null` when it isn't read the same by every decoder.
  */
 function jpegSize(bytes: Uint8Array): ImageSize | null {
+  let size: ImageSize | null = null;
   let at = 2;
   while (at + 1 < bytes.length) {
+    const marker = bytes[at + 1] ?? 0;
     if (bytes[at] !== 0xff) {
       return null;
     }
-    const marker = bytes[at + 1] ?? 0;
     if (marker === 0xff) {
-      // Fill byte before a marker.
+      // A fill byte before a marker.
       at += 1;
-    } else if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
-      // Markers without a length.
-      at += 2;
-    } else if (marker === 0xd9 || marker === 0xda) {
-      // The end, or the image data, before any frame header.
-      return null;
+    } else if (marker === 0xda) {
+      // The image data: the frame header must have come, and no other frame after.
+      return size && !hasLaterFrame(bytes, at + 2) ? size : null;
     } else {
       const length = readUint(bytes, at + 2, 2);
       if (length === null || length < 2) {
         return null;
       }
-      if (isFrameStart(marker)) {
+      if (TAKEN_FRAMES.has(marker) && !size) {
         // Length, precision (1 byte), height, width.
         const height = readUint(bytes, at + 5, 2);
         const width = readUint(bytes, at + 7, 2);
-        return width && height ? { width, height } : null;
+        if (!width || !height) {
+          return null;
+        }
+        size = { width, height };
+      } else if (!isSkippedSegment(marker)) {
+        // A second frame, another kind of frame, stuffing or a marker some decoder reads otherwise.
+        return null;
       }
       at += 2 + length;
     }

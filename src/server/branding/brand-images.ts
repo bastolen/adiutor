@@ -85,8 +85,20 @@ export async function loadBrandImages(db: DatabaseOrTransaction): Promise<BrandI
   return images;
 }
 
+/** A brand image with its bytes. */
+export type LoadedBrandImage = BrandImageFacts & { content: Uint8Array };
+
 /**
- * Loads one brand image with its bytes, to serve it.
+ * The bytes read last of each kind, by the image's ID: an ID is never
+ * reused, so they stay right for as long as it's the current one. At most
+ * one image of each kind, so a few hundred kilobytes per process.
+ */
+const loadedImages = new Map<BrandImageKind, LoadedBrandImage>();
+
+/**
+ * Loads one brand image with its bytes, to serve it. Only its ID is read
+ * when its bytes are already kept, so the public routes that serve it don't
+ * read them from the database for every request.
  *
  * @param db - Database client or transaction.
  * @param kind - Which image.
@@ -95,7 +107,18 @@ export async function loadBrandImages(db: DatabaseOrTransaction): Promise<BrandI
 export async function loadBrandImage(
   db: DatabaseOrTransaction,
   kind: BrandImageKind,
-): Promise<(BrandImageFacts & { content: Uint8Array }) | null> {
+): Promise<LoadedBrandImage | null> {
+  const [current] = await db
+    .select({ id: brandImage.id })
+    .from(brandImage)
+    .where(eq(brandImage.kind, kind));
+  if (!current) {
+    return null;
+  }
+  const kept = loadedImages.get(kind);
+  if (kept?.id === current.id) {
+    return kept;
+  }
   const [row] = await db
     .select({
       id: brandImage.id,
@@ -104,7 +127,11 @@ export async function loadBrandImage(
       content: brandImage.content,
     })
     .from(brandImage)
-    .where(eq(brandImage.kind, kind));
+    .where(eq(brandImage.id, current.id));
+  if (row) {
+    loadedImages.set(kind, row);
+  }
+  // Replaced or removed in between: the next request reads the current one.
   return row ?? null;
 }
 

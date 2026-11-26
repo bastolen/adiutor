@@ -2,8 +2,8 @@
  * @file The browser tab icon made from the brand (decision 0052), at
  * `/branding/icon`: 32 pixels square, or an Apple touch icon with
  * `?size=180`. Public (`PUBLIC_PATHS` in `src/proxy.ts`), like the pages that
- * link it. Each version is drawn once per process (`loadBrandIcon`), so
- * however it's asked for, a request never draws it again.
+ * link it. Each version is drawn once per process and size (`loadBrandIcon`),
+ * so asking for it again never draws it again, whatever `?v=` says.
  */
 import { connection, type NextRequest } from 'next/server';
 

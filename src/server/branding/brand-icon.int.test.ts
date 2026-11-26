@@ -42,12 +42,21 @@ describe('loadBrandIcon', () => {
     const first = await loadBrandIcon(db, 32);
     expect(first && imageFacts(first.png)).toEqual({ type: 'png', width: 32, height: 32 });
     // The same brand: the icon drawn before.
-    expect(await loadBrandIcon(db, 32)).toBe(first);
+    expect((await loadBrandIcon(db, 32))?.png).toBe(first?.png);
 
     await saveSettings(db, { 'staff.name': 'Beta Tests' });
     const renamed = await loadBrandIcon(db, 32);
     expect(renamed?.version).not.toBe(first?.version);
     expect(renamed?.png).not.toEqual(first?.png);
+  });
+
+  it('draws once for requests that come together', async () => {
+    await saveSettings(db, { 'staff.name': 'Adiutor Tests Together' });
+    await setBrandImage(ctx, admin, 'logo', LOGO_PNG);
+
+    const [first, second] = await Promise.all([loadBrandIcon(db, 32), loadBrandIcon(db, 32)]);
+    expect(first?.png).toBeDefined();
+    expect(second?.png).toBe(first?.png);
   });
 
   it('draws an Apple touch icon at its own size', async () => {

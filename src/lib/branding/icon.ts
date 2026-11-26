@@ -18,11 +18,15 @@ export const BRAND_ICON_SIZES = [32, 180] as const;
 export type BrandIconSize = (typeof BRAND_ICON_SIZES)[number];
 
 /**
- * Whether initials can be drawn: the letters of a Latin script and digits,
- * which the font the icon is drawn in has. Any other script would show as
- * empty boxes.
+ * Whether initials can be drawn: digits and upper-case Latin letters that
+ * the font the icon is drawn in has (Basic Latin, Latin-1, Latin
+ * Extended-A, Romanian's Ș and Ț, Vietnamese), checked letter by letter.
+ * For any other letter, `ImageResponse` would fetch a font from Google
+ * Fonts while drawing, which the server must never do, so the logo is used
+ * instead. The few letters of those blocks the font lacks are left out.
  */
-const DRAWABLE_INITIALS = /^[\p{Script=Latin}\p{Nd}]+$/u;
+const DRAWABLE_INITIALS =
+  /^(?!.*[\u0114\u012C\u0138\u013F\u0149\u014E])[A-Z0-9\u00C0-\u00D6\u00D8-\u00DE\u0100-\u017F\u01A0\u01AF\u0218\u021A\u1EA0-\u1EF8]+$/u;
 
 /**
  * Where the browser tab icon comes from.
@@ -47,7 +51,7 @@ export function brandIconSource(
     return { kind: 'logo' };
   }
   const letters = initialsOf(staffName);
-  // A name in another script still gets an icon: the logo, made to fit.
+  // A name the font can't draw still gets an icon: the logo, made to fit.
   return DRAWABLE_INITIALS.test(letters) ? { kind: 'initials', letters } : { kind: 'logo' };
 }
 

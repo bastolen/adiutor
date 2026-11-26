@@ -110,6 +110,34 @@ describe('drawBrandIcon', () => {
   });
 });
 
+describe('drawing initials', () => {
+  it('never fetches a font: every letter it draws is in the built-in font', async () => {
+    const fetched: string[] = [];
+    const realFetch = globalThis.fetch;
+    // Satori asks for a font with `fetch` when a letter is missing; its own files are `data:`.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.startsWith('data:')) {
+        fetched.push(url);
+      }
+      return realFetch(input, init);
+    });
+    try {
+      for (const name of ['Ångström Hjälp', 'Ștefan Ước', 'Ạnh Đức', 'Zoë Łukasz']) {
+        const plan = planBrandIcon({ logo: WIDE_LOGO }, name, ADIUTOR_PALETTE);
+        expect(plan?.source.kind).toBe('initials');
+        if (plan) {
+          // eslint-disable-next-line no-await-in-loop -- One name after the other, to tell which fetched.
+          await drawBrandIcon(plan, 32, null);
+        }
+      }
+      expect(fetched).toEqual([]);
+    } finally {
+      vi.mocked(globalThis.fetch).mockRestore();
+    }
+  });
+});
+
 describe('icoOf', () => {
   it('wraps a PNG as an .ico holding one 32-bit image of its size', () => {
     const png = new Uint8Array([1, 2, 3, 4, 5]);

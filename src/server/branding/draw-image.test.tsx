@@ -95,6 +95,20 @@ describe('redrawImage', () => {
     expect(drawn && holdsSecret(drawn.content)).toBe(false);
   });
 
+  it('gives nothing for a JPEG the drawing can’t read, rather than failing', async () => {
+    // A frame header straight after the start marker: valid, but not what the drawing expects.
+    const frame = [0xff, 0xc0, 0, 11, 8, 0, 64, 0, 64, 1, 1, 0x11, 0];
+    const scan = [0xff, 0xda, 0, 8, 1, 1, 0, 0, 0x3f, 0, 0x12, 0xff, 0xd9];
+    const odd = new Uint8Array([0xff, 0xd8, ...frame, ...scan]);
+    const facts = imageFacts(odd);
+    expect(facts).toEqual({ type: 'jpeg', width: 64, height: 64 });
+    if (!facts) {
+      return;
+    }
+
+    expect(await redrawImage(odd, facts, { width: 1024, height: 256 })).toBeNull();
+  });
+
   it('gives nothing for an image that doesn’t decode past its header', async () => {
     const broken = new Uint8Array([...LOGO_PNG.subarray(0, 40), ...new Uint8Array(400).fill(7)]);
     const facts = imageFacts(broken);

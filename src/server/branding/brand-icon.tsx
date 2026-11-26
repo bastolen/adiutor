@@ -47,8 +47,12 @@ export interface DrawnBrandIcon {
 /** The background of an Apple touch icon drawn from an image, which must be opaque. */
 const TOUCH_ICON_BACKGROUND = '#ffffff';
 
-/** The icons drawn so far, the latest per size. */
-const drawnIcons = new Map<BrandIconSize, DrawnBrandIcon>();
+/**
+ * The icons drawn so far, the latest per size, as the drawing under way:
+ * requests that come while it's drawn wait for the same one rather than
+ * draw it again. A drawing gives `null` when its image changed meanwhile.
+ */
+const drawnIcons = new Map<BrandIconSize, { version: string; png: Promise<Uint8Array | null> }>();
 
 /**
  * Works out how the icon is drawn from what was uploaded.
@@ -159,28 +163,69 @@ export async function loadBrandIconPlan(db: Database): Promise<BrandIconPlan | n
 }
 
 /**
- * The icon as it is now, at one size: drawn once per version and kept.
+ * Reads the image an icon is drawn from and draws it.
+ *
+ * @param db - Database client.
+ * @param plan - How it's drawn.
+ * @param size - Its width and height.
+ * @returns The PNG, or `null` when the image changed since the plan was read.
+ */
+async function drawFromCurrent(
+  db: Database,
+  plan: BrandIconPlan,
+  size: BrandIconSize,
+): Promise<Uint8Array | null> {
+  const image = plan.source.kind === 'initials' ? null : await loadBrandImage(db, plan.source.kind);
+  if (plan.imageId !== null && image?.id !== plan.imageId) {
+    return null;
+  }
+  return drawBrandIcon(plan, size, image);
+}
+
+/**
+ * The icon as it is now, at one size: drawn once per version and kept, and
+ * requests that come while it's drawn wait for that drawing. The image it's
+ * drawn from is read after the plan; should an upload or a removal land in
+ * between, the plan is worked out again (once), so an icon is never kept
+ * under a version it doesn't show.
  *
  * @param db - Database client.
  * @param size - Its width and height.
- * @returns The icon and its version, or `null` while it's Adiutor's own.
+ * @param again - Whether this is the second try, after the image changed.
+ * @returns The icon and its version, or `null` while it's Adiutor's own (or
+ *   when the images keep changing while it's read).
  */
 export async function loadBrandIcon(
   db: Database,
   size: BrandIconSize,
+  again = false,
 ): Promise<DrawnBrandIcon | null> {
   const plan = await loadBrandIconPlan(db);
   if (!plan) {
     return null;
   }
   const kept = drawnIcons.get(size);
-  if (kept?.version === plan.version) {
-    return kept;
+  const drawing = kept?.version === plan.version ? kept.png : drawFromCurrent(db, plan, size);
+  if (drawing !== kept?.png) {
+    drawnIcons.set(size, { version: plan.version, png: drawing });
   }
-  const image = plan.source.kind === 'initials' ? null : await loadBrandImage(db, plan.source.kind);
-  const icon = { version: plan.version, png: await drawBrandIcon(plan, size, image) };
-  drawnIcons.set(size, icon);
-  return icon;
+  let png: Uint8Array | null;
+  try {
+    png = await drawing;
+  } catch (error) {
+    // A drawing that failed isn't kept: the next request tries again.
+    if (drawnIcons.get(size)?.png === drawing) {
+      drawnIcons.delete(size);
+    }
+    throw error;
+  }
+  if (png) {
+    return { version: plan.version, png };
+  }
+  if (drawnIcons.get(size)?.png === drawing) {
+    drawnIcons.delete(size);
+  }
+  return again ? null : loadBrandIcon(db, size, true);
 }
 
 /**

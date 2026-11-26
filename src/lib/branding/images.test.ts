@@ -80,46 +80,92 @@ function frame(marker: number, width: number, height: number): number[] {
 /** A JFIF segment, which comes first in most JPEGs. */
 const JFIF = segment(0xe0, [0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]);
 
+/** The start of the image data, some image data with a stuffed `FF`, and the end of the image. */
+const SCAN = [...segment(0xda, [1, 1, 0, 0, 0x3f, 0]), 0x12, 0xff, 0x00, 0x34, 0xff, 0xd9];
+
+/**
+ * A JPEG of the given parts, between its start marker and its image data.
+ *
+ * @param parts - The segments before the image data.
+ * @returns The bytes.
+ */
+function jpeg(...parts: number[][]): Uint8Array {
+  return new Uint8Array([0xff, 0xd8, ...parts.flat(), ...SCAN]);
+}
+
 describe('imageFacts', () => {
   it('reads a PNG’s size from its header', () => {
     expect(imageFacts(pngStart(280, 64))).toEqual({ type: 'png', width: 280, height: 64 });
   });
 
-  it('reads a JPEG’s size from its first frame header, past other segments', () => {
-    const bytes = new Uint8Array([
-      0xff,
-      0xd8,
-      ...JFIF,
-      ...segment(0xc4, [0, 1, 2]),
-      ...frame(0xc0, 640, 160),
-    ]);
-    expect(imageFacts(bytes)).toEqual({ type: 'jpeg', width: 640, height: 160 });
+  it('reads a JPEG’s size from its frame header, past the segments every decoder skips', () => {
+    const tables = [...segment(0xdb, [0, 1, 2]), ...segment(0xc4, [0, 1, 2])];
+    expect(imageFacts(jpeg(JFIF, tables, frame(0xc0, 640, 160)))).toEqual({
+      type: 'jpeg',
+      width: 640,
+      height: 160,
+    });
   });
 
   it('reads a progressive JPEG, and skips fill bytes before a marker', () => {
-    const bytes = new Uint8Array([0xff, 0xd8, ...JFIF, 0xff, ...frame(0xc2, 300, 300)]);
-    expect(imageFacts(bytes)).toEqual({ type: 'jpeg', width: 300, height: 300 });
+    expect(imageFacts(jpeg(JFIF, [0xff], frame(0xc2, 300, 300)))).toEqual({
+      type: 'jpeg',
+      width: 300,
+      height: 300,
+    });
+  });
+
+  it('reads past an Exif thumbnail, itself a JPEG, and ignores pictures after the end', () => {
+    const thumbnail = [0xff, 0xd8, ...frame(0xc0, 8000, 8000), 0xff, 0xd9];
+    const exif = segment(0xe1, [0x45, 0x78, 0x69, 0x66, 0, 0, ...thumbnail]);
+    const appended = [0xff, 0xd8, ...frame(0xc0, 9000, 9000), ...SCAN];
+    const bytes = new Uint8Array([...jpeg(exif, frame(0xc0, 64, 64)), ...appended]);
+    expect(imageFacts(bytes)).toEqual({ type: 'jpeg', width: 64, height: 64 });
   });
 
   it('refuses a JPEG whose image data comes before any frame header', () => {
-    const bytes = new Uint8Array([
-      0xff,
-      0xd8,
-      ...JFIF,
-      ...segment(0xda, [1, 2, 3]),
-      ...frame(0xc0, 64, 64),
-    ]);
+    const bytes = new Uint8Array([0xff, 0xd8, ...JFIF, ...SCAN, ...frame(0xc0, 64, 64)]);
     expect(imageFacts(bytes)).toBeNull();
   });
 
   it('refuses a JPEG without a height (one given after the image data)', () => {
-    expect(imageFacts(new Uint8Array([0xff, 0xd8, ...JFIF, ...frame(0xc0, 64, 0)]))).toBeNull();
+    expect(imageFacts(jpeg(JFIF, frame(0xc0, 64, 0)))).toBeNull();
+  });
+
+  it('refuses a small frame header that decoders skip, before the large one they read', () => {
+    // `FF 00` is stuffing to decoders, which then never see the fake frame in the APP15 segment.
+    const fake = [...frame(0xc0, 64, 64)];
+    expect(
+      imageFacts(jpeg([0xff, 0x00, 0x00, 0x06], segment(0xef, fake), frame(0xc0, 12000, 12000))),
+    ).toBeNull();
+  });
+
+  it('refuses a second frame header, before or in the image data', () => {
+    expect(imageFacts(jpeg(frame(0xc0, 64, 64), frame(0xc2, 12000, 12000)))).toBeNull();
+    const later = new Uint8Array([
+      0xff,
+      0xd8,
+      ...frame(0xc0, 64, 64),
+      ...segment(0xda, [1]),
+      0x12,
+      ...frame(0xc0, 12000, 12000),
+      0xff,
+      0xd9,
+    ]);
+    expect(imageFacts(later)).toBeNull();
+  });
+
+  it('refuses reserved markers and the kinds of frame it doesn’t take', () => {
+    expect(imageFacts(jpeg(segment(0x02, [0, 0]), frame(0xc0, 64, 64)))).toBeNull();
+    expect(imageFacts(jpeg(frame(0xc3, 64, 64)))).toBeNull();
+    expect(imageFacts(jpeg(frame(0xc9, 64, 64)))).toBeNull();
   });
 
   it('refuses files cut short', () => {
     expect(imageFacts(pngStart(280, 64).subarray(0, 20))).toBeNull();
-    const jpeg = new Uint8Array([0xff, 0xd8, ...JFIF, ...frame(0xc0, 64, 64)]);
-    expect(imageFacts(jpeg.subarray(0, jpeg.length - 14))).toBeNull();
+    const whole = jpeg(JFIF, frame(0xc0, 64, 64));
+    expect(imageFacts(whole.subarray(0, 2 + JFIF.length + 5))).toBeNull();
+    expect(imageFacts(whole.subarray(0, whole.length - SCAN.length))).toBeNull();
     expect(imageFacts(new Uint8Array([0xff, 0xd8]))).toBeNull();
   });
 
