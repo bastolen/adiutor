@@ -32,6 +32,8 @@ export interface AuthHookContext {
       secure?: boolean;
     },
   ) => unknown;
+  /** Sets a header on the response. */
+  setHeader?: (name: string, value: string) => void;
   /**
    * Route parameters, e.g. `{ id: 'github' }` for provider callbacks; any of
    * them may be missing.

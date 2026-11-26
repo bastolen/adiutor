@@ -2,7 +2,7 @@
  * @file Integration tests for reading a request's attachments: each text
  * with its own files, a note's files only for the staff, unsent files for
  * nobody, a removed file as who removed it; and downloading one, for whoever
- * may read its text and nobody else.
+ * may read its text and nobody else, checked before the storage is read.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -94,8 +94,8 @@ beforeEach(async () => {
  * @returns Its text, or `null` when there's none for the reader.
  */
 async function downloaded(actor: Actor, id: string): Promise<string | null> {
-  const file = await loadAttachment(ctx, actor, id);
-  return file ? new Response(file.body).text() : null;
+  const stored = await (await loadAttachment(ctx, actor, id))?.readFile();
+  return stored ? new Response(stored.body).text() : null;
 }
 
 describe('getRequest', () => {
@@ -154,6 +154,20 @@ describe('loadAttachment', () => {
     );
     expect(await downloaded(other, files.reply)).toBeNull();
     expect(await downloaded(client, 'not-an-id')).toBeNull();
+  });
+
+  it('checks the reader before the storage, and reads it only for the bytes', async () => {
+    const get = vi.spyOn(storage, 'get');
+    expect(await loadAttachment(ctx, client, files.note)).toBeNull();
+    expect(await loadAttachment(ctx, support, files.removed)).toBeNull();
+    const file = await loadAttachment(ctx, client, files.reply);
+    expect(file).toMatchObject({ name: 'printer.log' });
+    // Nothing is read for someone refused, nor before the file's bytes are wanted.
+    expect(get).not.toHaveBeenCalled();
+    const stored = await file?.readFile();
+    expect(stored?.size).toBe(15);
+    expect(get).toHaveBeenCalledExactlyOnceWith(attachmentKey(files.reply));
+    get.mockRestore();
   });
 
   it('keeps a deactivated company’s files for the staff only', async () => {

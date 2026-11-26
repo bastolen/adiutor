@@ -464,12 +464,24 @@ A file attached to a request is uploaded on its own first, then sent with its te
   mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
-  quotes or backslashes), its type from the allow-list with `nosniff`,
-  `Cross-Origin-Resource-Policy: same-origin`, and `Cache-Control: no-store`, so a shared
-  computer keeps no file after sign-out. The proxy gives these paths a fixed policy that runs
+  quotes or backslashes), its type from the allow-list with `nosniff`, and
+  `Cross-Origin-Resource-Policy: same-origin`. The proxy gives these paths a fixed policy that runs
   nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
   over a route's own. Thumbnails load from the same address: an image element shows an image
   whatever its `Content-Disposition` says, and `img-src 'self'` stays.
+- **Kept by the reader's browser, checked every time** ([decision
+  0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
+no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
+  keeps it out of every shared cache, as what's served depends on who asks. `no-cache` makes the
+  browser ask before each use: the route runs `loadAttachment`'s checks first, and only then
+  answers `304` to a copy that's the file (`matchesIfNoneMatch`, without reading the storage), so a
+  removed file, or a reader who lost access, is "not found" whatever copy they kept. "Not found"
+  and an unavailable storage are `no-store`. Signing out asks the browser to drop its cache
+  (`Clear-Site-Data: "cache"`, `clearCacheAtSignOut`), so a shared computer keeps no file after
+  sign-out in Chrome, Edge and Safari. Firefox ignores it for now, and a session that ends without
+  signing out in that browser (it expires, it's signed out from another device, or the account
+  deactivates itself) clears nothing: such a copy stays in the browser's cache on disk until the
+  browser drops it.
 
 ## The logo and the browser tab icon
 

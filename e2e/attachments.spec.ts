@@ -1,10 +1,12 @@
 /**
- * @file End-to-end tests for attachments (decision 0044): files attached
- * while writing (by the Attach button, a drop and a paste, checked in the
- * browser and uploaded at once) and sent with a reply, a note or a new
- * request; and the files of a request's texts, shown under each text with a
- * thumbnail for an image and downloaded under their names, a note's files
- * for the staff only. Each test stores or raises a request of its own.
+ * @file End-to-end tests for attachments (decisions 0044 and 0054): files
+ * attached while writing (by the Attach button, a drop and a paste, checked
+ * in the browser and uploaded at once) and sent with a reply, a note or a
+ * new request; and the files of a request's texts, shown under each text
+ * with a thumbnail for an image and downloaded under their names, a note's
+ * files for the staff only, kept by the reader's browser and checked with
+ * the server before each use. Each test stores or raises a request of its
+ * own.
  */
 import type { Locator, Page } from '@playwright/test';
 
@@ -133,31 +135,52 @@ test('a company reads the files of a request’s texts and downloads them, never
   await expect(description.getByRole('list', { name: '1 attachment' })).toBeVisible();
   // The screenshot shows as a thumbnail, loaded from Adiutor itself.
   await expect(description.locator('img')).toHaveJSProperty('naturalWidth', 1);
-  await expect(
-    description.getByRole('link', { name: /^Download error\.png, \d+ bytes$/ }),
-  ).toBeVisible();
+  const screenshot = description.getByRole('link', { name: /^Download error\.png, \d+ bytes$/ });
+  await expect(screenshot).toBeVisible();
+
+  // The browser kept it, and asks again when the page loads afresh: the same file, not sent again.
+  const thumbnail = (await screenshot.getAttribute('href')) ?? '';
+  const reloaded = page.waitForResponse((response) => response.url().endsWith(thumbnail));
+  await page.reload();
+  const checked = await reloaded;
+  expect(await checked.request().headerValue('if-none-match')).toBe(`"${thumbnail.split('/')[2]}"`);
+  expect(checked.status()).toBe(304);
+  await expect(description.locator('img')).toHaveJSProperty('naturalWidth', 1);
 
   const conversation = page.getByRole('region', { name: 'Conversation' });
   const log = conversation.getByRole('link', { name: 'Download printer.log, 15 bytes' });
   await expect(log).toBeVisible();
   await expect(conversation.getByText('driver notes.txt')).toHaveCount(0);
 
-  // A download under its name, which nothing keeps, sniffs or shows elsewhere.
+  // A download under its name, which nothing sniffs or shows elsewhere, and only the reader's
+  // browser keeps, asking before each use.
   const download = page.waitForEvent('download');
   await log.click();
   expect((await download).suggestedFilename()).toBe('printer.log');
-  const response = await page.request.get((await log.getAttribute('href')) ?? '');
+  const href = (await log.getAttribute('href')) ?? '';
+  const response = await page.request.get(href);
   expect(response.status()).toBe(200);
   expect(await response.text()).toBe('printer offline');
+  const etag = `"${href.split('/')[2]}"`;
   expect(response.headers()).toMatchObject({
     'content-disposition': 'attachment; filename="printer.log"; filename*=UTF-8\'\'printer.log',
     'x-content-type-options': 'nosniff',
-    'cache-control': 'no-store',
+    etag,
+    'cache-control': 'private, no-cache',
     'content-security-policy': "default-src 'none'; sandbox",
   });
+  const unchanged = await page.request.get(href, { headers: { 'If-None-Match': etag } });
+  expect(unchanged.status()).toBe(304);
+  expect(unchanged.headers()).toMatchObject({ etag, 'cache-control': 'private, no-cache' });
 
-  // The note's file is missing to the company, even by its address.
-  expect((await page.request.get(`/attachments/${noteFile}`)).status()).toBe(404);
+  // The note's file is missing to the company, even by its address, and with its tag.
+  const asked: Record<string, string>[] = [{}, { 'If-None-Match': `"${noteFile}"` }];
+  for (const headers of asked) {
+    // eslint-disable-next-line no-await-in-loop -- One answer at a time, each checked.
+    const refused = await page.request.get(`/attachments/${noteFile}`, { headers });
+    expect(refused.status()).toBe(404);
+    expect(refused.headers()['cache-control']).toBe('no-store');
+  }
 });
 
 test('the staff read an internal note’s files too', async ({ page, context }) => {
@@ -313,6 +336,9 @@ test('the staff remove a file, whose place says who removed it, and focus stays 
   const description = page.getByRole('region', { name: 'Description' });
   const link = description.getByRole('link', { name: /^Download error\.png/ });
   const href = (await link.getAttribute('href')) ?? '';
+  // The copy a browser kept is the file until it's removed.
+  const kept = { headers: { 'If-None-Match': `"${href.split('/')[2]}"` } };
+  expect((await page.request.get(href, kept)).status()).toBe(304);
 
   await description.getByRole('button', { name: 'Remove error.png' }).click();
   const dialog = page.getByRole('alertdialog', { name: 'Remove error.png?' });
@@ -323,6 +349,8 @@ test('the staff remove a file, whose place says who removed it, and focus stays 
   await expect(link).toHaveCount(0);
   await expect(description.getByRole('heading', { name: 'Description' })).toBeFocused();
   expect((await page.request.get(href)).status()).toBe(404);
+  // A copy kept in a browser is refused too: the server always says whether it's still there.
+  expect((await page.request.get(href, kept)).status()).toBe(404);
 
   // The company sees the same place, and can't remove anything.
   await context.clearCookies();
