@@ -15,7 +15,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     `theme.ts`, their inline styles (see [Email](email.md)).
   - `language/`: the language options (`LANGUAGE_OPTIONS`), `LanguageFlag` and the language fields
     of the forms (see [Languages](i18n.md)).
-  - `theme/`: the light and dark options and the hook that reads and changes the preference.
+  - `theme/`: the light and dark options, the hook that reads and changes the preference, and the
+    mode a staff Admin may keep every page in (`ForcedThemeProvider`, `useForcedTheme`).
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
   what the request pages share (the list, the board, the badges, the text, the people, the files
