@@ -379,7 +379,7 @@ load or mislead in a reader's browser:
 
 A person's picture is the picture of a GitHub or Google account they connected, but browsers never
 load it from the provider: Adiutor serves it from `/avatars/<account ID>` (see
-[decision 0022](decisions/0022-profile-pictures-from-providers.md)), so the Content Security Policy
+[decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)), so the Content Security Policy
 keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
 
 - **What's kept:** only an `https` address on the provider's own picture hosts, noted from its
@@ -389,8 +389,12 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   only for an address on those hosts, gives up after 5 seconds, follows no redirect, and accepts
   only PNG, JPEG, GIF and WebP up to 1 MB (never SVG). It stores nothing, and a failure is logged
   without the address.
-- **Who gets it:** someone signed in, and only while that account is its owner's current picture;
-  anything else gets "not found". The account ID in the address isn't the user's ID, so it tells a
+- **Who gets it:** someone signed in, and only while that account is its owner's current picture.
+  The owner alone also gets the other pictures they can choose (each provider's first confirmed
+  account, `choiceAccounts`), so the account page previews each choice, but a staff member signed
+  in as them doesn't: the page gives them initials there (`ownPictureChoices`)
+  ([decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)).
+  Anything else gets "not found". The account ID in the address isn't the user's ID, so it tells a
   company user nothing about who someone is beyond the picture they show next to their name.
 - **In the browser:** the image comes with its type, `X-Content-Type-Options: nosniff`, and
   `Cache-Control: private, max-age=86400`; its address changes when the provider's does.

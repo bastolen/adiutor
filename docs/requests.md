@@ -733,7 +733,7 @@ A description, a reply or a note can mention people. Why it's built this way is 
   see in it, `visibleName`), or whose account is gone, is shown as their side.
 - **Avatars show people's pictures:** a person's avatar shows the picture they chose from a connected
   GitHub or Google account, or their initials (`RequestPerson.picture`, loaded for the whole page with
-  `loadPictures`; see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). Everyone
+  `loadPictures`; see [decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)). Everyone
   who reads their name gets it; the picture's address says nothing more about who they are.
 - **For the staff, a name links to the user's page.** The services give a person's ID only to
   readers who may open that page (`users:view`, which every staff role has; `RequestPerson.userId`
