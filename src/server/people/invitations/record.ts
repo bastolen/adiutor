@@ -10,7 +10,7 @@ import type { DatabaseTransaction } from '@/db';
 import { invitation, inviteLink, membership, user } from '@/db/schema';
 import { alreadyInvitedEmail } from '@/emails/already-invited';
 import { alreadyMemberEmail } from '@/emails/already-member';
-import type { EmailBrand } from '@/emails/base-props';
+import type { EmailBrand, InviteTarget } from '@/emails/base-props';
 import { invitationEmail } from '@/emails/invitation';
 import { inviteLinkConfirmationEmail } from '@/emails/invite-link-confirmation';
 import { type Role } from '@/lib/authz/roles';
@@ -49,8 +49,9 @@ export interface CreatedInvitation<Status extends LinkClaimStatus = InviteStatus
    */
   invitationId: string | null;
   /**
-   * Renders the email to send, in the brand's colours (`loadEmailBrand`). Call it once the
-   * transaction has committed, next to sending it, so no locks are held while it renders.
+   * Renders the email to send, in the brand (`loadEmailBrand`: its colours and the staff's
+   * name). Call it once the transaction has committed, next to sending it, so no locks are
+   * held while it renders.
    */
   renderEmail: (brand: EmailBrand) => Promise<Email>;
 }
@@ -183,6 +184,11 @@ export async function createInvitationRecord(
   const { target, email, role, invitedBy, baseUrl, locale, timeZone } = input;
   // One request per target and address at a time, until its transaction ends (see above).
   await lockInvitationsOf(tx, target.companyId, email);
+  // The emails name the staff once when the invitation is to the staff itself.
+  const where: { companyName: string; target: InviteTarget } = {
+    companyName: target.name,
+    target: target.companyId === null ? 'staff' : 'company',
+  };
 
   const [existingUser] = await tx
     .select({ id: user.id, platformRole: user.platformRole, locale: user.locale })
@@ -211,15 +217,15 @@ export async function createInvitationRecord(
         /**
          * Renders the "already a member" email, once the transaction has committed.
          *
-         * @param brand - The brand colours to draw the email with.
+         * @param brand - The brand to draw the email with: its colours and the staff's name.
          * @returns The email.
          */
         renderEmail: (brand) =>
           alreadyMemberEmail(email, {
+            ...where,
             appUrl: baseUrl,
             brand,
             locale: inviteeLocale,
-            companyName: target.name,
             url: `${baseUrl}${joinedPath(target.companyId)}`,
           }),
       };
@@ -254,11 +260,11 @@ export async function createInvitationRecord(
          * Renders the "already invited" email, once the transaction has committed, in the
          * language of whoever claimed the link.
          *
-         * @param brand - The brand colours to draw the email with.
+         * @param brand - The brand to draw the email with: its colours and the staff's name.
          * @returns The email.
          */
         renderEmail: (brand) =>
-          alreadyInvitedEmail(email, { appUrl: baseUrl, brand, locale, companyName: target.name }),
+          alreadyInvitedEmail(email, { ...where, appUrl: baseUrl, brand, locale }),
       };
     }
   }
@@ -294,8 +300,8 @@ export async function createInvitationRecord(
   );
 
   const details = {
+    ...where,
     appUrl: baseUrl,
-    companyName: target.name,
     role,
     url: `${baseUrl}/invite/${token}`,
     validDays: INVITATION_VALID_DAYS,

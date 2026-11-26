@@ -5,7 +5,7 @@
 import EmailCode from '@/components/email/email-code';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailNote, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import { EMAIL_CODE_MINUTES } from '@/lib/authz/mfa';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
@@ -33,15 +33,16 @@ export default function TwoFactorCodeEmail({
   brand = undefined,
 }: TwoFactorCodeEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.twoFactorCode');
   return (
     <EmailLayout
-      preview={t('preview', { code })}
+      preview={t('preview', { code, staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
       <EmailParagraph colours={colours}>{t('intro')}</EmailParagraph>
@@ -67,7 +68,7 @@ TwoFactorCodeEmail.PreviewProps = {
 export function twoFactorCodeEmail(to: string, props: TwoFactorCodeEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.twoFactorCode')('subject'),
+    translator(props.locale, 'emails.twoFactorCode')('subject', { staff: emailName(props.brand) }),
     <TwoFactorCodeEmail {...props} />,
   );
 }

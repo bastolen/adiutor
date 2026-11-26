@@ -82,9 +82,7 @@ test('a staff Admin signs in as a Manager, changes nothing, and goes back', asyn
 
   // The Manager was emailed, naming the Admin, and the audit log has the reason.
   const notice = await waitForNewEmail(STEP_UP_MANAGER.email, emailsBefore);
-  expect(notice.subject).toBe(
-    `${PLATFORM_ADMIN.name} from ${STAFF_NAME} signed in to Adiutor as you`,
-  );
+  expect(notice.subject).toBe(`${PLATFORM_ADMIN.name} from ${STAFF_NAME} signed in as you`);
   await page.goto(`/admin/logs?q=${encodeURIComponent(STEP_UP_MANAGER.name)}`);
   await expect(page.getByRole('main')).toContainText('Signed in as a user');
   await expect(page.getByRole('main')).toContainText('Reason: Checking the company settings');

@@ -1,20 +1,21 @@
 /**
  * @file The shared frame of every email: logo, white card and footer, in the
- * recipient's language.
+ * recipient's language and with the staff's name (decision 0050).
  */
 import type { ReactNode } from 'react';
 import { Body, Container, Head, Html, Img, Preview, Section, Text } from 'react-email';
 
 import type { EmailBrand } from '@/emails/base-props';
+import { poweredByShown } from '@/lib/branding';
 import type { Locale } from '@/lib/i18n/locales';
 import translator from '@/lib/i18n/translator';
 
 import { EmailLink } from './email-text';
-import { type EmailColours, emailColours, fontFamily, small } from './theme';
+import { type EmailColours, emailColours, emailName, fontFamily, small } from './theme';
 
 /**
  * The footer's link to the app, for the `<link>` tag of
- * `emails.layout.sentBy` ("Sent by <link>Adiutor</link>").
+ * `emails.layout.sentBy` ("Sent by <link>{staff}</link>").
  *
  * @param href - The app's URL.
  * @param colours - The email's colours.
@@ -43,20 +44,25 @@ interface EmailLayoutProps {
   reason: ReactNode;
   /** Logo image URL. Defaults to `{appUrl}/brand/logo.png`; the template preview overrides it. */
   logoSrc?: string;
-  /** The brand colours to draw the email with; the theme's own without. */
+  /**
+   * The brand to draw the email with: its colours, and the staff's name in
+   * the logo's alt text and the footer; the theme's own and Adiutor's without.
+   */
   brand?: EmailBrand;
   /** The email's content. */
   children: ReactNode;
 }
 
 /**
- * Wraps an email's content in the Adiutor frame: the logo on a soft grey
+ * Wraps an email's content in the frame: the logo on a soft grey
  * background, the content in a white card, and a footer saying why the email
- * was sent, with a link to the app.
+ * was sent, with a link to the app under the staff's name. Once the staff
+ * have a name of their own, a last line says "Powered by Adiutor"
+ * (`poweredByShown`), without a link; it's in the plain text too.
  *
  * The logo is linked, not attached. Clients that block remote images show
- * its alt text instead, styled as the wordmark, and the fixed size keeps the
- * layout in place.
+ * its alt text, the staff's name, instead, styled as the wordmark, and the
+ * fixed size keeps the layout in place.
  */
 export default function EmailLayout({
   preview,
@@ -68,6 +74,7 @@ export default function EmailLayout({
   children,
 }: EmailLayoutProps) {
   const colors = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.layout');
   return (
     <Html lang={locale} dir="ltr">
@@ -80,7 +87,7 @@ export default function EmailLayout({
               src={logoSrc ?? `${appUrl}/brand/logo.png`}
               width="140"
               height="32"
-              alt={t('logoAlt')}
+              alt={t('logoAlt', { staff })}
               style={{
                 color: colors.primary,
                 fontSize: '22px',
@@ -102,8 +109,11 @@ export default function EmailLayout({
           <Section style={{ padding: '24px 8px 0' }}>
             <Text style={{ ...small(colors), marginBottom: '8px' }}>{reason}</Text>
             <Text style={small(colors)}>
-              {t.rich('sentBy', { link: appLinkTag(appUrl, colors) })}
+              {t.rich('sentBy', { staff, link: appLinkTag(appUrl, colors) })}
             </Text>
+            {poweredByShown(staff) && (
+              <Text style={{ ...small(colors), marginTop: '8px' }}>{t('poweredBy')}</Text>
+            )}
           </Section>
         </Container>
       </Body>

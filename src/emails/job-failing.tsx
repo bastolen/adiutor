@@ -6,7 +6,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -48,15 +48,16 @@ export default function JobFailingEmail({
   brand = undefined,
 }: JobFailingEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.jobFailing');
   return (
     <EmailLayout
-      preview={t('subject', { job })}
+      preview={t('subject', { job, staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
       <EmailHeading colours={colours}>{t('heading', { job })}</EmailHeading>
       <EmailParagraph colours={colours}>
@@ -93,7 +94,10 @@ JobFailingEmail.PreviewProps = {
 export function jobFailingEmail(to: string, props: JobFailingEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.jobFailing')('subject', { job: props.job }),
+    translator(props.locale, 'emails.jobFailing')('subject', {
+      job: props.job,
+      staff: emailName(props.brand),
+    }),
     <JobFailingEmail {...props} />,
   );
 }

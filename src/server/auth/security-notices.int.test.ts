@@ -30,7 +30,7 @@ describe('sendAccountDeletedNotice', () => {
     await sendAccountDeletedNotice(inLanguage(ctx, 'en-US'), 'gone@adiutor.test', 'es-ES', null);
 
     expect(sent.map(({ to }) => to)).toEqual(['gone@adiutor.test']);
-    expect(defined(sent[0], 'the notice').subject).toBe('Se ha eliminado tu cuenta de Adiutor');
+    expect(defined(sent[0], 'the notice').subject).toBe('Se ha eliminado tu cuenta en Adiutor');
   });
 
   it('uses Adiutor’s default language for an account on Default, else English (US) before setup', async () => {

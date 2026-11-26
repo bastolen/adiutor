@@ -17,7 +17,6 @@ import { generateToken, hashToken } from '@/lib/sign-in/tokens';
 
 import { loadEmailBrand } from '../../branding';
 import type { ServiceContext } from '../../context';
-import getStaffName from '../../people/staff-name';
 import recipientLocale from '../../recipient-locale';
 import recipientTimeZone from '../../recipient-time-zone';
 import { defineRecurringJob } from '../define';
@@ -167,17 +166,15 @@ type ReminderResult = 'sent' | 'failed' | 'skipped';
  *
  * @param ctx - Service context.
  * @param found - The invitation.
- * @param staffName - The name the staff are shown with, for staff invitations.
- * @param brand - The brand colours to draw the email with.
+ * @param brand - The brand to draw the email with, whose name is the staff's, for staff
+ *   invitations.
  * @returns How it went.
  */
 async function remind(
   ctx: ServiceContext,
   found: DueInvitation,
-  staffName: string,
   brand: EmailBrand,
 ): Promise<ReminderResult> {
-  const targetName = found.companyName ?? staffName;
   const [claimed] = await ctx.db
     .update(invitation)
     .set({ reminderClaimedAt: sql`now()` })
@@ -194,11 +191,12 @@ async function remind(
         brand,
         // Their own language, else the invitation's, each only while it's offered.
         locale: await recipientLocale(ctx, found.recipientLocale, found.locale),
-        // The inviter's account may be gone since; the target's name stands in then.
+        // The inviter's account may be gone since; the email then names nobody as the sender.
         inviterName: found.inviterEmail
           ? displayName({ name: found.inviterName, email: found.inviterEmail })
-          : targetName,
-        companyName: targetName,
+          : null,
+        companyName: found.companyName ?? brand.name,
+        target: found.companyName === null ? 'staff' : 'company',
         role: found.role,
         url: `${ctx.baseUrl}/invite/${token}`,
         expiresAt: found.expiresAt,
@@ -262,11 +260,7 @@ async function sendInvitationReminders(
   ctx: ServiceContext,
   deadline: Date,
 ): Promise<ReminderResults> {
-  const [staffName, due, brand] = await Promise.all([
-    getStaffName(ctx.db),
-    loadDueInvitations(ctx),
-    loadEmailBrand(ctx.db),
-  ]);
+  const [due, brand] = await Promise.all([loadDueInvitations(ctx), loadEmailBrand(ctx.db)]);
   const results: ReminderResult[] = [];
   for (
     let start = 0;
@@ -276,9 +270,7 @@ async function sendInvitationReminders(
     // One group at a time on purpose, so the deadline is checked between them.
     // eslint-disable-next-line no-await-in-loop -- See above.
     const group = await Promise.all(
-      due
-        .slice(start, start + REMINDER_GROUP_SIZE)
-        .map((found) => remind(ctx, found, staffName, brand)),
+      due.slice(start, start + REMINDER_GROUP_SIZE).map((found) => remind(ctx, found, brand)),
     );
     results.push(...group);
   }

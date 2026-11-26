@@ -118,7 +118,7 @@ describe('wrong passwords', () => {
     expect(await subjects()).toEqual([]);
     await failSignIns(1, 'jane@adiutor.test');
 
-    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your account on Adiutor is paused']);
     const [notice] = defined(vi.mocked(sendEmail).mock.calls[0], 'the sent email');
     expect(notice.to).toBe('jane@adiutor.test');
     // Whoever typed them may be someone else: their browser and IP address aren't shared.
@@ -146,7 +146,7 @@ describe('wrong passwords', () => {
     expect(await subjects()).toEqual([]);
     await failSignIns(1, ' jane@adiutor.test');
 
-    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your account on Adiutor is paused']);
     expect((await events()).every(({ targetUserId }) => targetUserId === jane)).toBe(true);
   });
 
@@ -214,7 +214,7 @@ describe('wrong passwords', () => {
     }
     await Promise.all(background);
 
-    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your account on Adiutor is paused']);
   });
 
   it('tells no one without a password: no account, a deactivated one, or one without a password', async () => {
@@ -257,7 +257,7 @@ describe('wrong passwords', () => {
       open();
     }
     await defined(runInBackground.mock.calls[0], 'the background task')[0];
-    expect(await subjects()).toEqual(['Password sign-in to your Adiutor account is paused']);
+    expect(await subjects()).toEqual(['Password sign-in to your account on Adiutor is paused']);
   });
 });
 
@@ -267,7 +267,7 @@ describe('a code at the code step of a password sign-in', () => {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
   /** The lockout email's subject (`two_factor_locked` in `src/emails/security-notice.tsx`). */
-  const LOCKED_SUBJECT = 'Signing in to your Adiutor account with a code is paused';
+  const LOCKED_SUBJECT = 'Signing in to your account on Adiutor with a code is paused';
 
   /**
    * Builds a request that checks a code at the code step of a password

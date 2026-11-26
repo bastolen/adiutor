@@ -12,7 +12,6 @@ import displayName from '@/lib/display-name';
 import { providerLabel } from '@/lib/sign-in/oauth-providers';
 
 import buildSecurityNotice from '../../auth/security-notice-email';
-import getStaffName from '../../people/staff-name';
 import { securityNoticeJob } from '../../queue';
 import { handleQueuedJob } from '../define';
 
@@ -34,7 +33,7 @@ export default handleQueuedJob(
     if (!recipient) {
       return 'skipped';
     }
-    const [[event], [theCompany], [staffMember], staffName] = await Promise.all([
+    const [[event], [theCompany], [staffMember]] = await Promise.all([
       auditEventId
         ? ctx.db
             .select({ at: auditEvent.at, ip: auditEvent.ip, userAgent: auditEvent.userAgent })
@@ -57,7 +56,6 @@ export default handleQueuedJob(
             .from(user)
             .where(eq(user.id, staffUserId))
         : [],
-      getStaffName(ctx.db),
     ]);
     await ctx.sendEmail(
       await buildSecurityNotice(ctx, {
@@ -72,7 +70,6 @@ export default handleQueuedJob(
         role: role ?? undefined,
         company: theCompany?.name,
         staffMember: staffMember ? displayName(staffMember) : undefined,
-        staffName,
       }),
     );
     return 'done';

@@ -4,7 +4,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -30,10 +30,11 @@ export default function ResetPasswordEmail({
   brand = undefined,
 }: ResetPasswordEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.resetPassword');
   return (
     <EmailLayout
-      preview={t('preview')}
+      preview={t('preview', { staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
@@ -41,7 +42,7 @@ export default function ResetPasswordEmail({
       reason={t('reason')}
     >
       <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
-      <EmailParagraph colours={colours}>{t('body')}</EmailParagraph>
+      <EmailParagraph colours={colours}>{t('body', { staff })}</EmailParagraph>
       <EmailButton colours={colours} href={url}>
         {t('button')}
       </EmailButton>
@@ -66,7 +67,7 @@ ResetPasswordEmail.PreviewProps = {
 export function resetPasswordEmail(to: string, props: ResetPasswordEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.resetPassword')('subject'),
+    translator(props.locale, 'emails.resetPassword')('subject', { staff: emailName(props.brand) }),
     <ResetPasswordEmail {...props} />,
   );
 }

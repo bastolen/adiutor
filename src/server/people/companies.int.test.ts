@@ -47,7 +47,7 @@ describe('registerCompany', () => {
     expect(inviteStatus).toBe('sent');
     expect(sent[0]).toMatchObject({ to: 'boss@adiutor.test' });
     expect(defined(sent[0], 'the invitation email').text).toContain(
-      `${manager.name} invited you to join Adiutor Tests on Adiutor as Admin.`,
+      `${manager.name} invited you to join Adiutor Tests on Adiutor Tests as Admin.`,
     );
     expect(defined(sent[0], 'the invitation email').html).toContain('Accept invitation');
 

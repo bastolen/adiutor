@@ -20,6 +20,7 @@ import {
   PLATFORM_ADMIN,
   RESET_CLIENT,
   RETURNING_FINANCE,
+  STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
@@ -67,7 +68,7 @@ test('an Admin registers a user, who chooses a password from the welcome email',
   await signOut(page);
 
   const welcome = await waitForEmail(email);
-  expect(welcome.subject).toBe('Your Adiutor account is ready');
+  expect(welcome.subject).toBe(`Your account on ${STAFF_NAME} is ready`);
   await page.goto(linkIn(welcome));
   await expect(page.getByRole('heading', { name: 'Choose your password' })).toBeVisible();
   await page.getByLabel('Password', { exact: true }).fill('registered-password-1');
@@ -157,7 +158,7 @@ test('an Admin adds a user to a company and gives them staff access from their p
   await staffDialog.getByRole('button', { name: 'Make staff' }).click();
   await expect(staff.getByRole('combobox', { name: /^Role of / })).toHaveText('Support');
   expect((await waitForNewEmail(email, before)).subject).toBe(
-    'You now have staff access to Adiutor',
+    `You now have staff access to ${STAFF_NAME}`,
   );
 
   await staff.getByRole('combobox', { name: /^Role of / }).click();
@@ -169,7 +170,7 @@ test('an Admin adds a user to a company and gives them staff access from their p
   await page.getByRole('alertdialog').getByRole('button', { name: 'Remove staff access' }).click();
   await expect(staff.getByRole('button', { name: 'Make staff' })).toBeVisible();
   expect((await waitForNewEmail(email, before)).subject).toBe(
-    'Your Adiutor staff access was removed',
+    `Your staff access to ${STAFF_NAME} was removed`,
   );
 });
 
@@ -216,7 +217,7 @@ test('an Admin resets two-step verification, deletes a user, and on their own pa
   await chooseUserTab(page, 'Overview');
   await expect(page.getByText('Off', { exact: true })).toBeVisible();
   expect((await waitForNewEmail(RESET_CLIENT.email, before)).subject).toBe(
-    'Your Adiutor two-step verification was reset',
+    `Your two-step verification for ${STAFF_NAME} was reset`,
   );
 
   await registerUser(page, deleted);

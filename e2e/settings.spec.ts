@@ -438,7 +438,7 @@ test('an Admin invites a Manager by email, changes their role, and keeps an Admi
   // They accept with a new account and land on setting up MFA, as Managers must.
   const invited = await (await browser.newContext()).newPage();
   const invitation = await waitForEmail(email);
-  expect(invitation.subject).toBe(`E2E Admin invited you to join ${STAFF_NAME} on Adiutor`);
+  expect(invitation.subject).toBe(`E2E Admin invited you to join ${STAFF_NAME}`);
   await invited.goto(linkIn(invitation));
   await expect(invited.getByRole('heading', { name: `Join ${STAFF_NAME}` })).toBeVisible();
   await createAccountFromInvitation(

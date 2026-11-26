@@ -4,7 +4,7 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph, LinkFallback } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 import { EMAIL_LINK_MINUTES } from '@/lib/sign-in/email-link';
@@ -32,17 +32,18 @@ export default function MagicLinkEmail({
   brand = undefined,
 }: MagicLinkEmailProps) {
   const colours = emailColours(brand);
+  const staff = emailName(brand);
   const t = translator(locale, 'emails.magicLink');
   return (
     <EmailLayout
-      preview={t('preview')}
+      preview={t('preview', { staff })}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
-      reason={t('reason')}
+      reason={t('reason', { staff })}
     >
-      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailHeading colours={colours}>{t('heading', { staff })}</EmailHeading>
       <EmailParagraph colours={colours}>
         {t('body', { minutes: EMAIL_LINK_MINUTES })}
       </EmailParagraph>
@@ -70,7 +71,7 @@ MagicLinkEmail.PreviewProps = {
 export function magicLinkEmail(to: string, props: MagicLinkEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.magicLink')('subject'),
+    translator(props.locale, 'emails.magicLink')('subject', { staff: emailName(props.brand) }),
     <MagicLinkEmail {...props} />,
   );
 }

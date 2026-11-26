@@ -262,6 +262,6 @@ test('an invitation sent in Dutch arrives in Dutch', async ({ page }) => {
   await expect(toasts(page)).toContainText(`Invitation sent to ${email}.`);
 
   const sent = await waitForEmail(email);
-  expect(sent.subject).toMatch(new RegExp(`nodigt je uit voor ${COMPANY_NAME} op Adiutor$`));
+  expect(sent.subject).toMatch(new RegExp(`nodigt je uit voor ${COMPANY_NAME} op ${STAFF_NAME}$`));
   expect(sent.html).toContain('lang="nl-NL"');
 });

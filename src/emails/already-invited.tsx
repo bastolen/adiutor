@@ -6,11 +6,11 @@
 import EmailButton from '@/components/email/email-button';
 import EmailLayout from '@/components/email/email-layout';
 import { EmailHeading, EmailParagraph } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
-import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
+import { type EmailBaseProps, type InviteTarget, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
 /**
@@ -19,6 +19,11 @@ import renderEmail from './render';
 export interface AlreadyInvitedEmailProps extends EmailBaseProps {
   /** Name of the company, or the staff's name when the invitation is for the staff. */
   companyName: string;
+  /**
+   * Whether it's to a company or to the staff, whose name `companyName` then
+   * holds: the email names it once (`InviteTarget`).
+   */
+  target: InviteTarget;
 }
 
 /**
@@ -30,13 +35,14 @@ export interface AlreadyInvitedEmailProps extends EmailBaseProps {
 export default function AlreadyInvitedEmail({
   appUrl,
   companyName,
+  target,
   locale,
   logoSrc = undefined,
   brand = undefined,
 }: AlreadyInvitedEmailProps) {
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.alreadyInvited');
-  const values = { company: companyName };
+  const values = { company: companyName, target, staff: emailName(brand) };
   return (
     <EmailLayout
       preview={t('preview', values)}
@@ -50,7 +56,7 @@ export default function AlreadyInvitedEmail({
       <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
       <EmailParagraph colours={colours}>{t('expired')}</EmailParagraph>
       <EmailButton colours={colours} href={`${appUrl}/auth`}>
-        {t('button')}
+        {t('button', values)}
       </EmailButton>
     </EmailLayout>
   );
@@ -60,6 +66,7 @@ export default function AlreadyInvitedEmail({
 AlreadyInvitedEmail.PreviewProps = {
   ...PREVIEW_BASE,
   companyName: 'Adiutor',
+  target: 'company',
 } satisfies AlreadyInvitedEmailProps;
 
 /**
@@ -72,7 +79,11 @@ AlreadyInvitedEmail.PreviewProps = {
 export function alreadyInvitedEmail(to: string, props: AlreadyInvitedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.alreadyInvited')('subject', { company: props.companyName }),
+    translator(props.locale, 'emails.alreadyInvited')('subject', {
+      company: props.companyName,
+      target: props.target,
+      staff: emailName(props.brand),
+    }),
     <AlreadyInvitedEmail {...props} />,
   );
 }

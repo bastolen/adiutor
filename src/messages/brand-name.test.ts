@@ -17,16 +17,9 @@ import translator, { type Namespace } from '@/lib/i18n/translator';
 const MESSAGES_DIR = import.meta.dirname;
 
 /**
- * Namespaces whose texts still say "Adiutor" where they'll name the staff:
- * the emails, which their own change moves to `{staff}`. That change removes
- * the entry, so both checks cover the emails too.
- */
-const NAMESPACES_STILL_TO_DO: readonly string[] = ['emails'];
-
-/**
  * The messages that keep "Adiutor", with why: they name the software itself
- * (its colours, setting it up before the staff have a name) or are examples
- * of a name to type.
+ * (its colours, setting it up before the staff have a name, the "Powered by
+ * Adiutor" credit) or are examples of a name to type.
  */
 const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'admin.settings.appearance.colours.useAdiutor': 'the software’s own colours',
@@ -38,6 +31,7 @@ const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'auth.setup.heading': 'setting up the software, before the staff have a name',
   'auth.setup.submit': 'setting up the software, before the staff have a name',
   'auth.setup.staffNamePlaceholder': 'the name the staff get unless setup names them',
+  'emails.layout.poweredBy': 'the credit to the software, once the staff have a name of their own',
 };
 
 /** The names a text is read with: Adiutor's own, and a name like a team's. */
@@ -85,8 +79,7 @@ function catalogue(locale: Locale): [string, string][] {
       flatten(
         JSON.parse(readFileSync(path.join(MESSAGES_DIR, locale, file), 'utf8')) as MessageTree,
       ),
-    )
-    .filter(([key]) => !NAMESPACES_STILL_TO_DO.some((ns) => key.startsWith(`${ns}.`)));
+    );
 }
 
 /**

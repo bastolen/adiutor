@@ -25,6 +25,7 @@ import {
   E2E_BASE_URL,
   PAUSED_CLIENT,
   RECENT_MFA_CLIENT,
+  STAFF_NAME,
   STEP_UP_MANAGER,
   STEP_UP_CLIENT,
   SUPPORT_STAFF,
@@ -533,7 +534,7 @@ test('wrong passwords pause password sign-in for an address, and a password rese
 
   // The owner is told, without the browser or IP address of whoever typed them.
   const notice = await waitForNewEmail(email, emailsBefore);
-  expect(notice.subject).toBe('Password sign-in to your Adiutor account is paused');
+  expect(notice.subject).toBe(`Password sign-in to your account on ${STAFF_NAME} is paused`);
   expect(notice.text).not.toContain('From:');
 
   // The sign-in page says what still works.
@@ -579,7 +580,7 @@ test('authenticator-code guessing at sign-in locks the account, across fresh att
   expect(lockedAt).not.toBeNull();
   // The owner is told, without the device or IP address that typed the codes (someone else's).
   const notice = await waitForNewEmail(STEP_UP_CLIENT.email, emailsBefore);
-  expect(notice.subject).toBe('Signing in to your Adiutor account with a code is paused');
+  expect(notice.subject).toBe(`Signing in to your account on ${STAFF_NAME} with a code is paused`);
   expect(notice.text).not.toContain('From:');
   // Even the correct code on a brand-new sign-in stays refused while locked.
   await page.request.post('/api/auth/sign-in/email', {

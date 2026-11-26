@@ -10,7 +10,7 @@ import {
   EmailParagraph,
   LinkFallback,
 } from '@/components/email/email-text';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
@@ -23,8 +23,6 @@ import renderEmail from './render';
 export interface AccountCreatedEmailProps extends EmailBaseProps {
   /** Name (or email) of the staff member who created the account. */
   creatorName: string;
-  /** The name the staff are shown with to users, e.g. "Adiutor". */
-  staffName: string;
   /** Link to choose a password. */
   url: string;
   /** How many days the link stays valid. */
@@ -38,7 +36,6 @@ export interface AccountCreatedEmailProps extends EmailBaseProps {
 export default function AccountCreatedEmail({
   appUrl,
   creatorName,
-  staffName,
   url,
   validDays,
   locale,
@@ -47,17 +44,17 @@ export default function AccountCreatedEmail({
 }: AccountCreatedEmailProps) {
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.accountCreated');
-  const values = { creator: creatorName, staff: staffName };
+  const values = { creator: creatorName, staff: emailName(brand) };
   return (
     <EmailLayout
-      preview={t('subject')}
+      preview={t('subject', values)}
       appUrl={appUrl}
       locale={locale}
       logoSrc={logoSrc}
       brand={brand}
       reason={t('reason', values)}
     >
-      <EmailHeading colours={colours}>{t('heading')}</EmailHeading>
+      <EmailHeading colours={colours}>{t('heading', values)}</EmailHeading>
       <EmailParagraph colours={colours}>{t('body', values)}</EmailParagraph>
       <EmailButton colours={colours} href={url}>
         {t('button')}
@@ -74,7 +71,6 @@ export default function AccountCreatedEmail({
 AccountCreatedEmail.PreviewProps = {
   ...PREVIEW_BASE,
   creatorName: 'Alex Doe',
-  staffName: 'Adiutor',
   url: 'https://adiutor.dev/auth/reset-password?token=example&welcome=1',
   validDays: 7,
 } satisfies AccountCreatedEmailProps;
@@ -89,7 +85,9 @@ AccountCreatedEmail.PreviewProps = {
 export function accountCreatedEmail(to: string, props: AccountCreatedEmailProps): Promise<Email> {
   return renderEmail(
     to,
-    translator(props.locale, 'emails.accountCreated')('subject'),
+    translator(props.locale, 'emails.accountCreated')('subject', {
+      staff: emailName(props.brand),
+    }),
     <AccountCreatedEmail {...props} />,
   );
 }

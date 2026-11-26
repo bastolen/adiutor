@@ -43,13 +43,12 @@ export interface SecurityNoticeContent {
   company?: string | undefined;
   /** The staff member who signed in as the recipient. */
   staffMember?: string | undefined;
-  /** The name the staff are shown with to users. */
-  staffName?: string | undefined;
 }
 
 /**
  * Builds a security notice in the recipient's language and time zone
- * (`recipientLocale`, `recipientTimeZone`).
+ * (`recipientLocale`, `recipientTimeZone`), in the brand (`loadEmailBrand`),
+ * whose name stands for the staff in its text.
  *
  * @param ctx - Service context (database, for Adiutor's default language and zone, and the app URL).
  * @param content - What it says, and to whom.

@@ -27,6 +27,7 @@ import {
   COMPANY_SLUG,
   E2E_BASE_URL,
   PLATFORM_ADMIN,
+  STAFF_NAME,
   STEP_UP_CLIENT,
   STEP_UP_MANAGER,
   SUPPORT_STAFF,
@@ -62,7 +63,7 @@ test('the link in an email about a request signs its reader in and opens the req
 
   const email = await waitForEmailAbout(STEP_UP_CLIENT.email, title);
   expect(email.text).toContain(
-    'The links in this email sign you in to Adiutor for 14 days, so don’t forward it.',
+    `The links in this email sign you in to ${STAFF_NAME} for 14 days, so don’t forward it.`,
   );
   // Signed out, with an authenticator app: the link opens the request at the reply, without the
   // step-up page.

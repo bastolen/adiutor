@@ -288,11 +288,55 @@ describe('invitation-reminders', () => {
 
     await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
     expect(sent).toHaveLength(1);
-    // Without staff settings, the staff go by the fallback name.
+    // Without staff settings, the staff go by the fallback name, which the email names once.
     expect(sent[0]).toMatchObject({
       to: 'new.staff@adiutor.test',
-      subject: 'Reminder: join Adiutor on Adiutor',
+      subject: 'Reminder: join Adiutor',
     });
+    expect(sent[0]?.text).toContain('invited you to join Adiutor as Support.');
+    expect(sent[0]?.text).not.toContain('Powered by Adiutor');
+  });
+
+  it('names the staff once in a staff invitation’s reminder, by the name they have when it’s sent', async () => {
+    const staffAdmin = await staffActor(db, 'platform_admin', 'staff-boss@adiutor.test');
+    await inviteByEmail(ctx, staffAdmin, {
+      companyId: null,
+      email: 'new.staff@adiutor.test',
+      role: 'support',
+    });
+    await age('new.staff@adiutor.test', '1 day');
+    await createStaffSettings(db, 'Adiutor Tests Support');
+    sent.length = 0;
+
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+    const reminder = defined(sent[0], 'the reminder');
+    expect(reminder.subject).toBe('Reminder: join Adiutor Tests Support');
+    expect(reminder.text).toContain(
+      'staff-boss invited you to join Adiutor Tests Support as Support.',
+    );
+    expect(reminder.text).not.toContain('Adiutor Tests Support on Adiutor Tests Support');
+    expect(reminder.text).toContain('Powered by Adiutor');
+  });
+
+  it('names nobody as the sender when their account is gone, never the staff in their place', async () => {
+    const staffAdmin = await staffActor(db, 'platform_admin', 'staff-boss@adiutor.test');
+    await inviteByEmail(ctx, staffAdmin, {
+      companyId: null,
+      email: 'new.staff@adiutor.test',
+      role: 'support',
+    });
+    await age('new.staff@adiutor.test', '1 day');
+    await createStaffSettings(db, 'Adiutor Tests Support');
+    await db.delete(user).where(eq(user.id, staffAdmin.id));
+    sent.length = 0;
+
+    await expect(remind(ctx)).resolves.toEqual({ sent: 1, failed: 0 });
+    const reminder = defined(sent[0], 'the reminder');
+    expect(reminder.text).toContain("You're invited to join Adiutor Tests Support as Support.");
+    expect(reminder.text).toContain(
+      'because this email address was invited to Adiutor Tests Support and',
+    );
+    expect(reminder.text).not.toContain('Adiutor Tests Support invited');
   });
 
   it('skips addresses that joined some other way meanwhile, keeping their invitations', async () => {

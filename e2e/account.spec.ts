@@ -18,6 +18,7 @@ import {
   PLATFORM_ADMIN,
   SEEDED_REQUESTS,
   SESSIONS_CLIENT,
+  STAFF_NAME,
   SUPPORT_STAFF,
   UNVERIFIED_USER,
 } from './support/fixtures';
@@ -108,7 +109,7 @@ test('verify your email from the account page, keeping your password', async ({
   );
 
   const email = await waitForNewEmail(UNVERIFIED_USER.email, before);
-  expect(email.subject).toBe('Verify your Adiutor email address');
+  expect(email.subject).toBe(`Verify your email address for ${STAFF_NAME}`);
   await page.goto(linkIn(email));
 
   // Back on the Email card, which says it worked (the message takes focus).
@@ -158,7 +159,7 @@ test('a user deactivates their account and an Admin reactivates it', async ({ pa
     await expect(other).toHaveURL(/\/auth\?callbackURL=/);
     await other.close();
     expect((await waitForNewEmail(DEACTIVATE_CLIENT.email, before)).subject).toBe(
-      'Your Adiutor account was deactivated',
+      `Your account on ${STAFF_NAME} was deactivated`,
     );
 
     // Signing in is refused (from an address of its own: this is the third sign-in in seconds).

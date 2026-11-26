@@ -352,9 +352,9 @@ describe('granting staff access', () => {
 
     await sendQueuedEmails(ctx);
     expect(sent.map((email) => email.subject)).toEqual([
-      'You now have staff access to Adiutor',
-      'Your Adiutor staff role changed',
-      'Your Adiutor staff access was removed',
+      'You now have staff access to Adiutor Tests',
+      'Your staff role on Adiutor Tests changed',
+      'Your staff access to Adiutor Tests was removed',
     ]);
     const actions = await auditEvents(db, { targetUserId: userId, fields: ['action'] });
     expect(actions.map(({ action }) => action)).toEqual([
@@ -404,7 +404,9 @@ describe('the limit on staff role changes', () => {
     await removeFromStaff(ctx, admin, manager.id);
     expect(await platformRoleOf(manager.id)).toBeNull();
     await sendQueuedEmails(ctx);
-    expect(sent.map((email) => email.subject)).toEqual(['Your Adiutor staff access was removed']);
+    expect(sent.map((email) => email.subject)).toEqual([
+      'Your staff access to Adiutor Tests was removed',
+    ]);
   });
 });
 
@@ -416,7 +418,10 @@ describe('joining the staff by email', () => {
       role: 'support',
     });
     const invitationEmail = defined(sent[0], 'the invitation email');
-    expect(invitationEmail.subject).toBe('admin invited you to join Adiutor Tests on Adiutor');
+    // The staff's name once: the staff are what they're invited to.
+    expect(invitationEmail.subject).toBe('admin invited you to join Adiutor Tests');
+    expect(invitationEmail.text).toContain('admin invited you to join Adiutor Tests as Support.');
+    expect(invitationEmail.text).toContain('Powered by Adiutor');
     const token = tokenFrom(invitationEmail);
     expect(await getInvitationPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
@@ -452,6 +457,10 @@ describe('joining the staff by email', () => {
     });
     expect(status).toBe('already_member');
     expect(await db.select().from(invitation)).toHaveLength(0);
+    // They're told so, naming the staff once.
+    expect(defined(sent[0], 'the email to the manager').subject).toBe(
+      "You're already a member of Adiutor Tests",
+    );
   });
 
   it('lets an existing company user join the staff with their account', async () => {

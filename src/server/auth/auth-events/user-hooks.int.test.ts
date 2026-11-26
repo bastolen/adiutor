@@ -36,7 +36,7 @@ describe('a first password', () => {
       { path: '/reset-password', headers: new Headers(), context: {} },
     );
 
-    expect(await subjects()).toEqual(['A password was added to your Adiutor account']);
+    expect(await subjects()).toEqual(['A password was added to your account on Adiutor']);
   });
 
   it("isn't emailed for the welcome link of a registered account", async () => {

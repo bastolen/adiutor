@@ -176,7 +176,7 @@ async function emailedCode(browser: Browser): Promise<string> {
   expect((await browser.post('two-factor/send-otp')).status).toBe(200);
   const email = await sentEmail(
     'The code email',
-    (sent) => sent.subject === 'Your Adiutor sign-in code',
+    (sent) => sent.subject === 'Your sign-in code for Adiutor',
   );
   const code = email.text.match(/\b\d{6}\b/)?.[0];
   if (!code) {
@@ -228,7 +228,7 @@ const AUTHENTICATOR_SECRET = 'adiutor-tests-authenticator-secret';
 const FIREFOX = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
 /** The lockout email's subject (`two_factor_locked` in `src/emails/security-notice.tsx`). */
-const LOCKED_SUBJECT = 'Signing in to your Adiutor account with a code is paused';
+const LOCKED_SUBJECT = 'Signing in to your account on Adiutor with a code is paused';
 
 /**
  * Sets up an authenticator app for a user, as Better Auth stores it once its

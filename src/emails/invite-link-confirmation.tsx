@@ -10,20 +10,25 @@ import {
   LinkFallback,
 } from '@/components/email/email-text';
 import RoleSummary from '@/components/email/role-summary';
-import { emailColours } from '@/components/email/theme';
+import { emailColours, emailName } from '@/components/email/theme';
 import type { Role } from '@/lib/authz/roles';
 import type { Email } from '@/lib/email';
 import translator from '@/lib/i18n/translator';
 
-import { type EmailBaseProps, PREVIEW_BASE } from './base-props';
+import { type EmailBaseProps, type InviteTarget, PREVIEW_BASE } from './base-props';
 import renderEmail from './render';
 
 /**
  * Props for {@link InviteLinkConfirmationEmail}.
  */
 export interface InviteLinkConfirmationEmailProps extends EmailBaseProps {
-  /** Name of the company. */
+  /** Name of the company, or the staff's for a link to the staff. */
   companyName: string;
+  /**
+   * Whether it's to a company or to the staff, whose name `companyName` then
+   * holds: the email names it once (`InviteTarget`).
+   */
+  target: InviteTarget;
   /** The role they'll get. */
   role: Role;
   /** Link to join. */
@@ -39,6 +44,7 @@ export interface InviteLinkConfirmationEmailProps extends EmailBaseProps {
 export default function InviteLinkConfirmationEmail({
   appUrl,
   companyName,
+  target,
   role,
   url,
   validDays,
@@ -48,7 +54,12 @@ export default function InviteLinkConfirmationEmail({
 }: InviteLinkConfirmationEmailProps) {
   const colours = emailColours(brand);
   const t = translator(locale, 'emails.inviteLinkConfirmation');
-  const values = { company: companyName, role: translator(locale, 'roles')(`${role}.label`) };
+  const values = {
+    company: companyName,
+    target,
+    staff: emailName(brand),
+    role: translator(locale, 'roles')(`${role}.label`),
+  };
   return (
     <EmailLayout
       preview={t('preview', values)}
@@ -74,6 +85,7 @@ export default function InviteLinkConfirmationEmail({
 InviteLinkConfirmationEmail.PreviewProps = {
   ...PREVIEW_BASE,
   companyName: 'Adiutor',
+  target: 'company',
   role: 'watcher',
   url: 'https://adiutor.dev/invite/example',
   validDays: 7,

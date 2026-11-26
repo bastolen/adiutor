@@ -265,8 +265,8 @@ describe('the reset email', () => {
         .map((email) => [email.to, emailLanguage(email), email.subject])
         .sort(([a], [b]) => (a ?? '').localeCompare(b ?? '')),
     ).toEqual([
-      ['jane@adiutor.test', 'nl-NL', 'Stel je Adiutor-wachtwoord opnieuw in'],
-      ['sam@adiutor.test', 'es-ES', 'Restablece tu contraseña de Adiutor'],
+      ['jane@adiutor.test', 'nl-NL', 'Stel je wachtwoord voor Adiutor opnieuw in'],
+      ['sam@adiutor.test', 'es-ES', 'Restablece tu contraseña en Adiutor'],
     ]);
   });
 });

@@ -391,7 +391,9 @@ describe('reactivating an account', () => {
     expect(await deactivatedAt(staffAdmin)).toBeNull();
     await sendQueuedEmails(ctx);
     // Not the actor, who reactivated it; the account itself gets its own security email.
-    const told = sent.filter((email) => email.subject.endsWith('is now a staff Admin on Adiutor'));
+    const told = sent.filter((email) =>
+      email.subject.endsWith('is now a staff Admin on Adiutor Tests'),
+    );
     expect(told.map((email) => email.to)).toEqual(['other.admin@adiutor.test']);
     expect(told[0]?.text).toContain(
       'fresh.admin reactivated the account of returning.admin (returning.admin@adiutor.test)',
@@ -412,7 +414,7 @@ describe('a new staff Admin', () => {
   const toldAdmins = async () => {
     await sendQueuedEmails(ctx);
     return sent
-      .filter((email) => email.subject.endsWith('is now a staff Admin on Adiutor'))
+      .filter((email) => email.subject.endsWith('is now a staff Admin on Adiutor Tests'))
       .map((email) => email.to)
       .sort();
   };

@@ -105,7 +105,7 @@ test('a company user turns on email codes and can trust the device until signing
   let sent = await countEmails(MFA_CLIENT.email);
   await dialog.getByRole('button', { name: 'Send a code to check it works' }).click();
   const setupEmail = await waitForNewEmail(MFA_CLIENT.email, sent);
-  expect(setupEmail.subject).toBe('Your Adiutor sign-in code');
+  expect(setupEmail.subject).toBe(`Your sign-in code for ${STAFF_NAME}`);
   await dialog.getByRole('textbox', { name: 'Code', exact: true }).fill(codeIn(setupEmail));
   await dialog.getByRole('button', { name: 'Turn on' }).click();
   await expect(page.getByText('On', { exact: true })).toBeVisible();

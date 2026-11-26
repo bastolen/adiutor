@@ -510,8 +510,27 @@ describe('adding existing users', () => {
     await sendQueuedEmails(ctx);
     const added = defined(sent.at(-1), 'the email to Jane');
     expect(emailLanguage(added)).toBe('es-ES');
-    expect(added.subject).toBe(`Te han añadido a ${testCompany.name} en Adiutor`);
+    expect(added.subject).toBe(`Te han añadido a ${testCompany.name} en Adiutor Tests`);
     expect(added.text).toContain('como Cliente.');
+  });
+
+  it('names nobody as the adder when their account is gone by the time it’s sent', async () => {
+    const manager = await staffActor(db, 'manager');
+    const jane = await createUser(db, 'jane@adiutor.test');
+    await addMember(ctx, manager, { companyId: testCompany.id, userId: jane, role: 'client' });
+    await db.delete(user).where(eq(user.id, manager.id));
+
+    await sendQueuedEmails(ctx);
+    const added = defined(sent.at(-1), 'the email to Jane');
+    expect(added.text).toContain(
+      `You were added to ${testCompany.name} on Adiutor Tests as Client.`,
+    );
+    expect(added.text).toContain(
+      `You're receiving this because your account was added to ${testCompany.name}.`,
+    );
+    // The staff's name never stands in for a person.
+    expect(added.text).not.toContain('Adiutor Tests added you');
+    expect(added.text).toContain('Powered by Adiutor');
   });
 
   it('lets staff Admins and Managers add themselves, like anyone else', async () => {
@@ -553,7 +572,7 @@ describe('adding existing users', () => {
       await sendQueuedEmails(ctx);
       expect(sent.filter((email) => email.to === staff.email)).toEqual([
         expect.objectContaining({
-          subject: `You were added to ${testCompany.name} on Adiutor`,
+          subject: `You were added to ${testCompany.name} on Adiutor Tests`,
         }),
       ]);
       expect(await listAddableCompanies(ctx, staff, staff.id)).toEqual([]);
@@ -768,13 +787,15 @@ describe('security emails to members', () => {
 
     await sendQueuedEmails(ctx);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      { to: 'erin@adiutor.test', subject: 'Your role in Adiutor Tests on Adiutor changed' },
-      { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor' },
+      { to: 'erin@adiutor.test', subject: 'Your role in Adiutor Tests on Adiutor Tests changed' },
+      { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor Tests' },
     ]);
     const changed = defined(sent[0], 'the role change email');
     const removed = defined(sent[1], 'the removal email');
-    expect(changed.text).toContain('Your role in Adiutor Tests on Adiutor was changed to Watcher.');
-    expect(removed.text).toContain('You were removed from Adiutor Tests on Adiutor');
+    expect(changed.text).toContain(
+      'Your role in Adiutor Tests on Adiutor Tests was changed to Watcher.',
+    );
+    expect(removed.text).toContain('You were removed from Adiutor Tests on Adiutor Tests');
     sent.forEach((email) => {
       expect(email.text).not.toContain('From:');
       expect(email.text).not.toContain('203.0.113.9');
@@ -920,7 +941,7 @@ describe('the limit on role changes', () => {
     await removeMember(ctx, companyAdmin, { companyId: testCompany.id, membershipId: id });
     await sendQueuedEmails(ctx);
     expect(sent.map(({ to, subject }) => ({ to, subject }))).toEqual([
-      { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor' },
+      { to: 'erin@adiutor.test', subject: 'You were removed from Adiutor Tests on Adiutor Tests' },
     ]);
   });
 

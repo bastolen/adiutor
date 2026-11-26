@@ -1,63 +1,64 @@
 {
   "emails": {
     "layout": {
-      "logoAlt": "Adiutor",
-      "sentBy": "Enviado por <link>Adiutor</link>"
+      "logoAlt": "{staff}",
+      "sentBy": "Enviado por <link>{staff}</link>",
+      "poweredBy": "Con la tecnología de Adiutor"
     },
     "linkFallback": "¿No funciona el botón? Copia este enlace en tu navegador: <link>{url}</link>",
     "magicLink": {
-      "subject": "Tu enlace para iniciar sesión en Adiutor",
-      "preview": "Tu enlace para iniciar sesión en Adiutor",
-      "reason": "Recibes esto porque alguien ha pedido iniciar sesión en Adiutor con esta dirección de correo. Si no has sido tú, puedes ignorar este correo: nadie puede iniciar sesión sin este enlace.",
-      "heading": "Inicia sesión en Adiutor",
+      "subject": "Tu enlace para iniciar sesión en {staff}",
+      "preview": "Tu enlace para iniciar sesión en {staff}",
+      "reason": "Recibes esto porque alguien ha pedido iniciar sesión en {staff} con esta dirección de correo. Si no has sido tú, puedes ignorar este correo: nadie puede iniciar sesión sin este enlace.",
+      "heading": "Inicia sesión en {staff}",
       "body": "{minutes, plural, one {Usa el botón de abajo para iniciar sesión. El enlace funciona una vez y caduca en # minuto.} other {Usa el botón de abajo para iniciar sesión. El enlace funciona una vez y caduca en # minutos.}}",
       "button": "Iniciar sesión"
     },
     "resetPassword": {
-      "subject": "Restablece tu contraseña de Adiutor",
-      "preview": "Elige una contraseña nueva para Adiutor",
+      "subject": "Restablece tu contraseña en {staff}",
+      "preview": "Elige una contraseña nueva para {staff}",
       "reason": "Recibes esto porque alguien ha pedido restablecer la contraseña de esta dirección de correo. Si no has sido tú, puedes ignorar este correo: tu contraseña sigue siendo la misma.",
       "heading": "Restablece tu contraseña",
-      "body": "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de Adiutor. Elige una nueva con el botón de abajo. El enlace caduca en 1 hora.",
+      "body": "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en {staff}. Elige una nueva con el botón de abajo. El enlace caduca en 1 hora.",
       "button": "Elegir una contraseña nueva"
     },
     "verifyEmail": {
-      "subject": "Verifica tu dirección de correo de Adiutor",
+      "subject": "Verifica tu dirección de correo para {staff}",
       "preview": "Confirma que esta es tu dirección de correo",
-      "reason": "Recibes esto porque alguien ha pedido verificar esta dirección de correo para una cuenta de Adiutor. Si no has sido tú, puedes ignorar este correo.",
+      "reason": "Recibes esto porque alguien ha pedido verificar esta dirección de correo para una cuenta en {staff}. Si no has sido tú, puedes ignorar este correo.",
       "heading": "Verifica tu dirección de correo",
       "body": "Confirma que esta dirección de correo es tuya. Una vez verificada, las cuentas con la misma dirección en un proveedor con el que puedes iniciar sesión (como GitHub) podrán conectarse a tu cuenta automáticamente. El enlace caduca en 1 hora.",
       "button": "Verificar dirección de correo"
     },
     "twoFactorCode": {
-      "subject": "Tu código para iniciar sesión en Adiutor",
-      "preview": "Tu código de Adiutor es {code}",
-      "reason": "Recibes esto porque alguien ha iniciado sesión en Adiutor con tu contraseña o ha activado los códigos por correo en tu cuenta. Si no has sido tú, cambia tu contraseña enseguida.",
+      "subject": "Tu código para iniciar sesión en {staff}",
+      "preview": "Tu código para {staff} es {code}",
+      "reason": "Recibes esto porque alguien ha iniciado sesión en {staff} con tu contraseña o ha activado los códigos por correo en tu cuenta. Si no has sido tú, cambia tu contraseña enseguida.",
       "heading": "Tu código para iniciar sesión",
-      "intro": "Introduce este código en Adiutor para continuar:",
+      "intro": "Introduce este código para continuar con el inicio de sesión:",
       "note": "{minutes, plural, one {El código caduca en # minuto. No lo compartas nunca con nadie.} other {El código caduca en # minutos. No lo compartas nunca con nadie.}}"
     },
     "invitation": {
-      "subject": "Invitación a {company} en Adiutor de parte de {inviter}",
-      "preview": "Únete a {company} en Adiutor como {role}",
+      "subject": "{target, select, staff {Invitación a {staff} de parte de {inviter}} other {Invitación a {company} en {staff} de parte de {inviter}}}",
+      "preview": "{target, select, staff {Únete a {staff} como {role}} other {Únete a {company} en {staff} como {role}}}",
       "reason": "Recibes esto porque {inviter} ha invitado a esta dirección de correo a {company}. Si no lo esperabas, puedes ignorar este correo.",
       "heading": "Únete a {company}",
-      "body": "{inviter} te ha invitado a unirte a {company} en Adiutor como {role}.",
+      "body": "{target, select, staff {{inviter} te ha invitado a unirte a {staff} como {role}.} other {{inviter} te ha invitado a unirte a {company} en {staff} como {role}.}}",
       "button": "Aceptar invitación",
       "note": "{days, plural, one {El enlace funciona una vez y caduca en # día. Puedes iniciar sesión con una cuenta que ya tengas o crear una.} other {El enlace funciona una vez y caduca en # días. Puedes iniciar sesión con una cuenta que ya tengas o crear una.}}"
     },
     "invitationReminder": {
-      "subject": "Recordatorio: únete a {company} en Adiutor",
+      "subject": "{target, select, staff {Recordatorio: únete a {staff}} other {Recordatorio: únete a {company} en {staff}}}",
       "preview": "Tu invitación a {company} caduca pronto",
-      "reason": "Recibes esto porque {inviter} ha invitado a esta dirección de correo a {company} y la invitación aún no se ha aceptado. Si no lo esperabas, puedes ignorar este correo.",
+      "reason": "{by, select, none {Recibes esto porque se ha invitado a esta dirección de correo a {company} y la invitación aún no se ha aceptado. Si no lo esperabas, puedes ignorar este correo.} other {Recibes esto porque {inviter} ha invitado a esta dirección de correo a {company} y la invitación aún no se ha aceptado. Si no lo esperabas, puedes ignorar este correo.}}",
       "heading": "Tu invitación caduca pronto",
-      "body": "{inviter} te ha invitado a unirte a {company} en Adiutor como {role}. La invitación sigue abierta hasta el {expires}.",
+      "body": "{by, select, none {{target, select, staff {Te han invitado a unirte a {staff} como {role}. La invitación sigue abierta hasta el {expires}.} other {Te han invitado a unirte a {company} en {staff} como {role}. La invitación sigue abierta hasta el {expires}.}}} other {{target, select, staff {{inviter} te ha invitado a unirte a {staff} como {role}. La invitación sigue abierta hasta el {expires}.} other {{inviter} te ha invitado a unirte a {company} en {staff} como {role}. La invitación sigue abierta hasta el {expires}.}}}}",
       "button": "Aceptar invitación",
       "note": "Este enlace sustituye al del correo anterior, que ya no funciona. Funciona una vez."
     },
     "inviteLinkConfirmation": {
       "subject": "Confirma tu correo para unirte a {company}",
-      "preview": "Un paso más para unirte a {company} en Adiutor",
+      "preview": "{target, select, staff {Un paso más para unirte a {staff}} other {Un paso más para unirte a {company} en {staff}}}",
       "reason": "Recibes esto porque alguien ha usado un enlace de invitación a {company} con esta dirección de correo. Si no has sido tú, puedes ignorar este correo.",
       "heading": "Confirma tu dirección de correo",
       "body": "Has abierto un enlace de invitación a {company}. Confirma que esta es tu dirección de correo para unirte como {role}.",
@@ -65,55 +66,55 @@
       "note": "{days, plural, one {El enlace funciona una vez y caduca en # día.} other {El enlace funciona una vez y caduca en # días.}}"
     },
     "alreadyMember": {
-      "subject": "Ya eres miembro de {company} en Adiutor",
+      "subject": "{target, select, staff {Ya eres miembro de {staff}} other {Ya eres miembro de {company} en {staff}}}",
       "preview": "No tienes que hacer nada",
       "reason": "Recibes esto porque alguien ha intentado invitar a esta dirección de correo a {company}.",
       "heading": "Ya eres miembro",
-      "body": "Alguien ha intentado invitarte a {company} en Adiutor, pero ya eres miembro. No tienes que hacer nada.",
+      "body": "{target, select, staff {Alguien ha intentado invitarte a {staff}, pero ya eres miembro. No tienes que hacer nada.} other {Alguien ha intentado invitarte a {company} en {staff}, pero ya eres miembro. No tienes que hacer nada.}}",
       "button": "Abrir {company}"
     },
     "alreadyInvited": {
-      "subject": "Ya tienes una invitación a {company} en Adiutor",
+      "subject": "{target, select, staff {Ya tienes una invitación a {staff}} other {Ya tienes una invitación a {company} en {staff}}}",
       "preview": "Usa tu invitación anterior a {company}",
       "reason": "Recibes esto porque alguien ha usado un enlace de invitación a {company} con esta dirección de correo. Si no has sido tú, puedes ignorar este correo.",
       "heading": "Ya tienes una invitación",
-      "body": "Has abierto un enlace de invitación a {company} en Adiutor, pero esta dirección de correo ya tiene allí una invitación abierta. Usa el correo de invitación que recibiste antes para unirte.",
+      "body": "{target, select, staff {Has abierto un enlace de invitación a {staff}, pero esta dirección de correo ya tiene allí una invitación abierta. Usa el correo de invitación que recibiste antes para unirte.} other {Has abierto un enlace de invitación a {company} en {staff}, pero esta dirección de correo ya tiene allí una invitación abierta. Usa el correo de invitación que recibiste antes para unirte.}}",
       "expired": "Si esa invitación ha caducado, pide a quien te invitó que te envíe una nueva.",
-      "button": "Ir a Adiutor"
+      "button": "Ir a {staff}"
     },
     "addedToCompany": {
-      "subject": "Te han añadido a {company} en Adiutor",
-      "preview": "Ahora tienes acceso a {company} en Adiutor",
-      "reason": "Recibes esto porque {adder} ha añadido tu cuenta a {company}.",
+      "subject": "Te han añadido a {company} en {staff}",
+      "preview": "Ahora tienes acceso a {company} en {staff}",
+      "reason": "{by, select, none {Recibes esto porque se ha añadido tu cuenta a {company}.} other {Recibes esto porque {adder} ha añadido tu cuenta a {company}.}}",
       "heading": "Te han añadido a {company}",
-      "body": "{adder} te ha añadido a {company} en Adiutor como {role}.",
+      "body": "{by, select, none {Te han añadido a {company} en {staff} como {role}.} other {{adder} te ha añadido a {company} en {staff} como {role}.}}",
       "button": "Abrir {company}"
     },
     "accountCreated": {
-      "subject": "Tu cuenta de Adiutor está lista",
-      "reason": "Recibes esto porque {creator}, de {staff}, ha creado una cuenta de Adiutor para esta dirección de correo. Si no lo esperabas, puedes ignorar este correo.",
-      "heading": "Tu cuenta de Adiutor está lista",
-      "body": "{creator}, de {staff}, ha creado una cuenta de Adiutor para ti. Elige una contraseña para iniciar sesión.",
+      "subject": "Tu cuenta en {staff} está lista",
+      "reason": "Recibes esto porque {creator}, de {staff}, ha creado una cuenta para esta dirección de correo. Si no lo esperabas, puedes ignorar este correo.",
+      "heading": "Tu cuenta en {staff} está lista",
+      "body": "{creator}, de {staff}, ha creado una cuenta para ti. Elige una contraseña para iniciar sesión.",
       "button": "Elegir tu contraseña",
       "note": "{days, plural, one {El enlace funciona una vez y caduca en # día. También puedes iniciar sesión con un enlace enviado a esta dirección en {signInUrl}.} other {El enlace funciona una vez y caduca en # días. También puedes iniciar sesión con un enlace enviado a esta dirección en {signInUrl}.}}"
     },
     "staffAdminAdded": {
-      "subject": "{name} ahora es administrador del personal en Adiutor",
-      "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cada vez que alguien pasa a serlo.",
+      "subject": "{name} ahora es administrador del personal en {staff}",
+      "reason": "Recibes esto porque eres administrador del personal en {staff}: los administradores del personal reciben un aviso cada vez que alguien pasa a serlo.",
       "heading": "{name} ahora es administrador del personal",
       "nameWithEmail": "{name} ({email})",
-      "madeBy": "{by} ha hecho a {who} administrador del personal en Adiutor.",
-      "made": "{who} ha pasado a ser administrador del personal en Adiutor.",
-      "acceptedFrom": "{who} ha aceptado la invitación de {by} y ahora es administrador del personal en Adiutor.",
-      "accepted": "{who} ha aceptado una invitación al personal y ahora es administrador del personal en Adiutor.",
-      "reactivatedBy": "{by} ha reactivado la cuenta de {who}, que vuelve a ser administrador del personal en Adiutor.",
-      "reactivated": "Se ha reactivado la cuenta de {who}, que vuelve a ser administrador del personal en Adiutor.",
-      "advice": "Los administradores del personal pueden gestionarlo todo en Adiutor, incluido el personal. Si no reconoces este cambio, quítale el acceso al personal en los ajustes del personal y revisa el registro de auditoría.",
+      "madeBy": "{by} ha hecho a {who} administrador del personal en {staff}.",
+      "made": "{who} ha pasado a ser administrador del personal en {staff}.",
+      "acceptedFrom": "{who} ha aceptado la invitación de {by} y ahora es administrador del personal en {staff}.",
+      "accepted": "{who} ha aceptado una invitación al personal y ahora es administrador del personal en {staff}.",
+      "reactivatedBy": "{by} ha reactivado la cuenta de {who}, que vuelve a ser administrador del personal en {staff}.",
+      "reactivated": "Se ha reactivado la cuenta de {who}, que vuelve a ser administrador del personal en {staff}.",
+      "advice": "Los administradores del personal pueden gestionarlo todo en {staff}, incluido el personal. Si no reconoces este cambio, quítale el acceso al personal en los ajustes del personal y revisa el registro de auditoría.",
       "button": "Abrir los ajustes del personal"
     },
     "jobFailing": {
-      "subject": "La tarea en segundo plano {job} sigue fallando en Adiutor",
-      "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cuando una tarea en segundo plano sigue fallando, como mucho una vez al día por tarea.",
+      "subject": "La tarea en segundo plano {job} sigue fallando en {staff}",
+      "reason": "Recibes esto porque eres administrador del personal en {staff}: los administradores del personal reciben un aviso cuando una tarea en segundo plano sigue fallando, como mucho una vez al día por tarea.",
       "heading": "{job} sigue fallando",
       "recurring": "{count, plural, one {La tarea en segundo plano {job} falló en su última ejecución.} other {La tarea en segundo plano {job} falló en sus últimas # ejecuciones seguidas.}} Las demás tareas siguen funcionando, pero esta no hará su trabajo hasta que se resuelva el problema.",
       "queued": "{count, plural, one {Se abandonó una tarea de {job} tras su último intento, así que no volverá a ejecutarse sola.} other {Se abandonaron # tareas de {job} tras su último intento, así que no volverán a ejecutarse solas.}}",
@@ -131,122 +132,122 @@
       "newRole": "un rol nuevo",
       "yourCompany": "tu empresa",
       "someStaffMember": "Alguien del personal",
-      "reason": "{kind, select, password_sign_in_paused {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos como mucho una vez al día.} account_deleted {Recibes esto porque se ha eliminado tu cuenta de Adiutor. Lo enviamos una sola vez, a la dirección que tenía la cuenta.} two_factor_locked {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta de Adiutor. Lo enviamos una vez cada vez que se pausa el inicio de sesión con código.} impersonation_started {Recibes esto porque alguien del personal ha iniciado sesión como tú en Adiutor. Lo enviamos cada vez, para que siempre lo sepas.} other {Recibes esto porque ha cambiado una configuración de seguridad de tu cuenta de Adiutor. Siempre los enviamos, para que estés al tanto de cada cambio.}}",
+      "reason": "{kind, select, password_sign_in_paused {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta en {staff}. Lo enviamos como mucho una vez al día.} account_deleted {Recibes esto porque se ha eliminado tu cuenta en {staff}. Lo enviamos una sola vez, a la dirección que tenía la cuenta.} two_factor_locked {Recibes esto por intentos fallidos de inicio de sesión en tu cuenta en {staff}. Lo enviamos una vez cada vez que se pausa el inicio de sesión con código.} impersonation_started {Recibes esto porque alguien del personal ha iniciado sesión como tú en {staff}. Lo enviamos cada vez, para que siempre lo sepas.} other {Recibes esto porque ha cambiado una configuración de seguridad de tu cuenta en {staff}. Siempre los enviamos, para que estés al tanto de cada cambio.}}",
       "ifNotYou": "{kind, select, account_deactivated {Si no lo esperabas, ponte en contacto con tu administrador.} company_role_changed {Si no lo esperabas, ponte en contacto con tu administrador.} removed_from_company {Si no lo esperabas, ponte en contacto con tu administrador.} account_deleted {Si no lo esperabas, ponte en contacto con tu administrador.} signed_out_everywhere {Si no lo esperabas, ponte en contacto con tu administrador.} account_reactivated {Si no lo esperabas, ponte en contacto con tu administrador.} staff_role_granted {Si no lo esperabas, ponte en contacto con tu administrador.} staff_role_changed {Si no lo esperabas, ponte en contacto con tu administrador.} staff_role_removed {Si no lo esperabas, ponte en contacto con tu administrador.} mfa_reset {Si no lo has pedido, ponte en contacto con tu administrador enseguida y cambia tu contraseña.} password_sign_in_paused {Si no has sido tú, puede que alguien esté intentando adivinar tu contraseña. Asegúrate de que no la usas en ningún otro sitio, o añade una llave de acceso.} two_factor_locked {Si no has sido tú, puede que alguien conozca tu contraseña. Cámbiala enseguida y asegúrate de que no la usas en ningún otro sitio.} impersonation_started {Si no lo esperabas, ponte en contacto con tu administrador.} other {Si no has sido tú, restablece tu contraseña enseguida y ponte en contacto con tu administrador.}}",
       "password_changed": {
-        "subject": "Se ha cambiado tu contraseña de Adiutor",
+        "subject": "Se ha cambiado tu contraseña en {staff}",
         "heading": "Se ha cambiado tu contraseña",
-        "body": "Se ha cambiado la contraseña de tu cuenta de Adiutor y se ha cerrado tu sesión en tus otros dispositivos."
+        "body": "Se ha cambiado la contraseña de tu cuenta en {staff} y se ha cerrado tu sesión en tus otros dispositivos."
       },
       "password_added": {
-        "subject": "Se ha añadido una contraseña a tu cuenta de Adiutor",
+        "subject": "Se ha añadido una contraseña a tu cuenta en {staff}",
         "heading": "Se ha añadido una contraseña",
-        "body": "Ahora también puedes iniciar sesión en Adiutor con tu dirección de correo y esta contraseña."
+        "body": "Ahora también puedes iniciar sesión en {staff} con tu dirección de correo y esta contraseña."
       },
       "password_reset": {
-        "subject": "Se ha restablecido tu contraseña de Adiutor",
+        "subject": "Se ha restablecido tu contraseña en {staff}",
         "heading": "Se ha restablecido tu contraseña",
-        "body": "Se ha restablecido la contraseña de tu cuenta de Adiutor con un enlace enviado a esta dirección y se ha cerrado tu sesión en todas partes."
+        "body": "Se ha restablecido la contraseña de tu cuenta en {staff} con un enlace enviado a esta dirección y se ha cerrado tu sesión en todas partes."
       },
       "two_factor_enabled": {
-        "subject": "La verificación en dos pasos está activada en tu cuenta de Adiutor",
+        "subject": "La verificación en dos pasos está activada para tu cuenta en {staff}",
         "heading": "La verificación en dos pasos está activada",
-        "body": "Para iniciar sesión en Adiutor con tu contraseña ahora también hace falta un código."
+        "body": "Para iniciar sesión en {staff} con tu contraseña ahora también hace falta un código."
       },
       "two_factor_disabled": {
-        "subject": "Se ha desactivado la verificación en dos pasos en tu cuenta de Adiutor",
+        "subject": "Se ha desactivado la verificación en dos pasos para tu cuenta en {staff}",
         "heading": "Se ha desactivado la verificación en dos pasos",
-        "body": "Para iniciar sesión en Adiutor con tu contraseña ya no hace falta un código."
+        "body": "Para iniciar sesión en {staff} con tu contraseña ya no hace falta un código."
       },
       "backup_codes_regenerated": {
-        "subject": "Nuevos códigos de respaldo para tu cuenta de Adiutor",
+        "subject": "Nuevos códigos de respaldo para tu cuenta en {staff}",
         "heading": "Tienes nuevos códigos de respaldo",
-        "body": "Se han creado nuevos códigos de respaldo para tu cuenta de Adiutor. Tus códigos de respaldo anteriores ya no funcionan."
+        "body": "Se han creado nuevos códigos de respaldo para tu cuenta en {staff}. Tus códigos de respaldo anteriores ya no funcionan."
       },
       "passkey_added": {
-        "subject": "Se ha añadido una llave de acceso a tu cuenta de Adiutor",
+        "subject": "Se ha añadido una llave de acceso a tu cuenta en {staff}",
         "heading": "Se ha añadido una llave de acceso",
-        "body": "Ahora se puede usar una nueva llave de acceso para iniciar sesión en tu cuenta de Adiutor."
+        "body": "Ahora se puede usar una nueva llave de acceso para iniciar sesión en {staff}."
       },
       "passkey_removed": {
-        "subject": "Se ha eliminado una llave de acceso de tu cuenta de Adiutor",
+        "subject": "Se ha eliminado una llave de acceso de tu cuenta en {staff}",
         "heading": "Se ha eliminado una llave de acceso",
-        "body": "Una de tus llaves de acceso ya no se puede usar para iniciar sesión en Adiutor."
+        "body": "Una de tus llaves de acceso ya no se puede usar para iniciar sesión en {staff}."
       },
       "provider_connected": {
-        "subject": "Se ha conectado {provider} a tu cuenta de Adiutor",
+        "subject": "Se ha conectado {provider} a tu cuenta en {staff}",
         "heading": "Se ha conectado {provider}",
-        "body": "Ahora puedes iniciar sesión en Adiutor con tu cuenta de {provider}."
+        "body": "Ahora puedes iniciar sesión en {staff} con tu cuenta de {provider}."
       },
       "provider_disconnected": {
-        "subject": "Se ha desconectado {provider} de tu cuenta de Adiutor",
+        "subject": "Se ha desconectado {provider} de tu cuenta en {staff}",
         "heading": "Se ha desconectado {provider}",
-        "body": "Tu cuenta de {provider} ya no se puede usar para iniciar sesión en Adiutor."
+        "body": "Tu cuenta de {provider} ya no se puede usar para iniciar sesión en {staff}."
       },
       "mfa_reset": {
-        "subject": "Se ha restablecido tu verificación en dos pasos de Adiutor",
+        "subject": "Se ha restablecido la verificación en dos pasos de tu cuenta en {staff}",
         "heading": "Se ha restablecido tu verificación en dos pasos",
-        "body": "Un administrador ha desactivado la verificación en dos pasos en tu cuenta de Adiutor, normalmente porque se ha perdido un teléfono. Las cuentas de GitHub o Google conectadas a tu cuenta de Adiutor se han desconectado y se ha cerrado tu sesión en todas partes. Vuelve a configurar la verificación en dos pasos en tu página de Seguridad."
+        "body": "Un administrador ha desactivado la verificación en dos pasos de tu cuenta en {staff}, normalmente porque se ha perdido un teléfono. Las cuentas de GitHub o Google conectadas a tu cuenta se han desconectado y se ha cerrado tu sesión en todas partes. Vuelve a configurar la verificación en dos pasos en tu página de Seguridad."
       },
       "signed_out_everywhere": {
-        "subject": "Se ha cerrado tu sesión en Adiutor",
+        "subject": "Se ha cerrado tu sesión en {staff}",
         "heading": "Se ha cerrado tu sesión en todas partes",
-        "body": "Un administrador ha cerrado la sesión de tu cuenta de Adiutor en todos los dispositivos. Vuelve a iniciar sesión para continuar."
+        "body": "Un administrador ha cerrado tu sesión en {staff} en todos los dispositivos. Vuelve a iniciar sesión para continuar."
       },
       "account_deactivated": {
-        "subject": "Se ha desactivado tu cuenta de Adiutor",
+        "subject": "Se ha desactivado tu cuenta en {staff}",
         "heading": "Se ha desactivado tu cuenta",
-        "body": "Se ha desactivado tu cuenta de Adiutor y no podrás iniciar sesión hasta que un administrador la reactive."
+        "body": "Se ha desactivado tu cuenta en {staff} y no podrás iniciar sesión hasta que un administrador la reactive."
       },
       "account_reactivated": {
-        "subject": "Se ha reactivado tu cuenta de Adiutor",
+        "subject": "Se ha reactivado tu cuenta en {staff}",
         "heading": "Se ha reactivado tu cuenta",
-        "body": "Un administrador ha reactivado tu cuenta de Adiutor. Ya puedes volver a iniciar sesión."
+        "body": "Un administrador ha reactivado tu cuenta en {staff}. Ya puedes volver a iniciar sesión."
       },
       "staff_role_granted": {
-        "subject": "Ahora tienes acceso al personal de Adiutor",
+        "subject": "Ahora tienes acceso al personal en {staff}",
         "heading": "Ahora tienes acceso al personal",
-        "body": "Un administrador te ha añadido al personal de Adiutor, como {role}. Ahora puedes trabajar con todas las empresas."
+        "body": "Un administrador te ha dado acceso al personal en {staff}, como {role}. Ahora puedes trabajar con todas las empresas."
       },
       "staff_role_changed": {
-        "subject": "Ha cambiado tu rol del personal en Adiutor",
+        "subject": "Ha cambiado tu rol del personal en {staff}",
         "heading": "Ha cambiado tu rol del personal",
-        "body": "Un administrador ha cambiado tu rol del personal en Adiutor a {role}."
+        "body": "Un administrador ha cambiado tu rol del personal en {staff} a {role}."
       },
       "staff_role_removed": {
-        "subject": "Se ha quitado tu acceso al personal de Adiutor",
+        "subject": "Se ha quitado tu acceso al personal en {staff}",
         "heading": "Se ha quitado tu acceso al personal",
-        "body": "Un administrador ha quitado tu acceso al personal en Adiutor. Tu cuenta y tus membresías en empresas se mantienen."
+        "body": "Un administrador ha quitado tu acceso al personal en {staff}. Tu cuenta y tus membresías en empresas se mantienen."
       },
       "password_sign_in_paused": {
-        "subject": "El inicio de sesión con contraseña en tu cuenta de Adiutor está en pausa",
+        "subject": "El inicio de sesión con contraseña de tu cuenta en {staff} está en pausa",
         "heading": "El inicio de sesión con contraseña está en pausa",
-        "body": "Se ha introducido una contraseña incorrecta demasiadas veces en tu cuenta de Adiutor, así que el inicio de sesión con contraseña está en pausa durante un tiempo. Nadie ha iniciado sesión: la contraseña no se ha aceptado. Puedes seguir iniciando sesión con un enlace por correo o una llave de acceso, y si restableces tu contraseña se levanta la pausa."
+        "body": "Se ha introducido una contraseña incorrecta demasiadas veces para tu cuenta en {staff}, así que el inicio de sesión con contraseña está en pausa durante un tiempo. Nadie ha iniciado sesión: la contraseña no se ha aceptado. Puedes seguir iniciando sesión con un enlace por correo o una llave de acceso, y si restableces tu contraseña se levanta la pausa."
       },
       "company_role_changed": {
-        "subject": "Ha cambiado tu rol en {company} en Adiutor",
+        "subject": "Ha cambiado tu rol en {company} en {staff}",
         "heading": "Ha cambiado tu rol en {company}",
-        "body": "Tu rol en {company} en Adiutor ha cambiado a {role}."
+        "body": "Tu rol en {company} en {staff} ha cambiado a {role}."
       },
       "removed_from_company": {
-        "subject": "Te han quitado de {company} en Adiutor",
+        "subject": "Te han quitado de {company} en {staff}",
         "heading": "Te han quitado de {company}",
-        "body": "Te han quitado de {company} en Adiutor, así que ya no puedes abrirla. Tu cuenta y tus otras empresas se mantienen."
+        "body": "Te han quitado de {company} en {staff}, así que ya no puedes abrirla. Tu cuenta y tus otras empresas se mantienen."
       },
       "account_deleted": {
-        "subject": "Se ha eliminado tu cuenta de Adiutor",
+        "subject": "Se ha eliminado tu cuenta en {staff}",
         "heading": "Se ha eliminado tu cuenta",
-        "body": "Un administrador ha eliminado tu cuenta de Adiutor, con sus métodos de inicio de sesión y sus membresías en empresas. Ya no puedes iniciar sesión con ella."
+        "body": "Un administrador ha eliminado tu cuenta en {staff}, con sus métodos de inicio de sesión y sus membresías en empresas. Ya no puedes iniciar sesión con ella."
       },
       "two_factor_locked": {
-        "subject": "El inicio de sesión con código en tu cuenta de Adiutor está en pausa",
+        "subject": "El inicio de sesión con código de tu cuenta en {staff} está en pausa",
         "heading": "El inicio de sesión con código está en pausa",
-        "body": "Se ha introducido un código incorrecto demasiadas veces en la verificación en dos pasos de tu cuenta de Adiutor, así que el inicio de sesión con código está en pausa durante 15 minutos. Nadie ha iniciado sesión: los códigos no se han aceptado."
+        "body": "Se ha introducido un código incorrecto demasiadas veces en la verificación en dos pasos de tu cuenta en {staff}, así que el inicio de sesión con código está en pausa durante 15 minutos. Nadie ha iniciado sesión: los códigos no se han aceptado."
       },
       "impersonation_started": {
-        "subject": "{name}, de {staff}, ha iniciado sesión como tú en Adiutor",
+        "subject": "{name}, de {staff}, ha iniciado sesión como tú",
         "heading": "{name} ha iniciado sesión como tú",
-        "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.} other {{name}, de {staff}, ha iniciado sesión como tú en Adiutor para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.}}"
+        "body": "{minutes, plural, one {{name}, de {staff}, ha iniciado sesión como tú para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minuto. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.} other {{name}, de {staff}, ha iniciado sesión como tú para ver lo que ves y comprobar qué no funciona. Termina como mucho en # minutos. Mientras tanto, nadie puede cambiar tus métodos de inicio de sesión, tu cuenta ni el acceso de nadie. Si prefieres que el personal no inicie sesión como tú, puedes desactivarlo en tu página Seguridad.}}"
       }
     },
     "requestUpdate": {
@@ -268,13 +269,13 @@
       "deny": "Rechazar",
       "answerNote": "Si la apruebas, la solicitud se cierra. Si la rechazas, vuelve al personal y después puedes decirles qué sigue sin funcionar. Estos botones solo funcionan para ti, y solo una vez.",
       "noReply": "Nadie lee las respuestas a este correo. Para responder, abre la solicitud.",
-      "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en Adiutor durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en Adiutor durante # días, así que no lo reenvíes.}}"
+      "signInNote": "{days, plural, one {Los enlaces de este correo inician tu sesión en {staff} durante # día, así que no lo reenvíes.} other {Los enlaces de este correo inician tu sesión en {staff} durante # días, así que no lo reenvíes.}}"
     },
     "webhookTurnedOff": {
-      "subject": "Adiutor desactivó el webhook «{name}»",
-      "reason": "Recibes esto porque eres administrador del personal de Adiutor, que configura los webhooks.",
+      "subject": "Se ha desactivado el webhook «{name}»",
+      "reason": "Recibes esto porque eres administrador del personal en {staff}: los administradores del personal configuran los webhooks.",
       "heading": "El webhook «{name}» está desactivado",
-      "why": "{reason, select, gone {Su receptor respondió que ya no existe (410 Gone), así que Adiutor lo desactivó.} unreadable {Su dirección o su secreto de firma ya no se pueden leer con los secretos de autenticación actuales de Adiutor, así que Adiutor lo desactivó.} other {Todos los envíos han fallado durante {days, plural, one {# día} other {# días}}, así que Adiutor lo desactivó.}}",
+      "why": "{reason, select, gone {Su receptor respondió que ya no existe (410 Gone), así que se desactivó automáticamente.} unreadable {Su dirección o su secreto de firma ya no se pueden leer con los secretos de autenticación actuales, así que se desactivó automáticamente.} other {Todos los envíos han fallado durante {days, plural, one {# día} other {# días}}, así que se desactivó automáticamente.}}",
       "advice": "No se le envía nada mientras está desactivado, y lo que pase mientras tanto no se envía después. Cuando su receptor vuelva a funcionar, actívalo en la configuración, donde sus últimos envíos muestran qué falló.",
       "adviceUnreadable": "No se le envía nada mientras está desactivado. Escribe de nuevo su dirección y renueva su secreto en la configuración, y después actívalo.",
       "button": "Abrir el webhook"
