@@ -1,7 +1,8 @@
 /**
  * @file Tests for the Storage form on the Attachments tab of Settings: the
  * drivers it offers, the fields of the one chosen, what it says about a
- * saved secret (which it never holds), and what it sends.
+ * saved secret (which it never holds), what it sends, and the draft it keeps
+ * when the page is shown again (on the way back from confirming it's you).
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defined } from '@/lib/defined';
 
 import renderInLocale from '../../../../../../tests/i18n/render';
+import Page from '../../../../../../tests/ui/page';
 import { saveStorageAction } from './actions';
 import StorageForm from './storage-form';
 
@@ -137,5 +139,48 @@ describe('StorageForm', () => {
     expect(formData.get('dir')).toBe('/data/attachments');
     expect(formData.has('endpoint')).toBe(false);
     expect(await screen.findByText('Storage saved.')).toBeInTheDocument();
+  });
+
+  it('keeps the storage chosen and what was typed when the page is shown again', async () => {
+    const user = userEvent.setup();
+    renderInLocale(
+      'en-US',
+      <Page>
+        <StorageForm current={null} vercel={false} />
+      </Page>,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Storage' }));
+    await user.click(screen.getByRole('option', { name: /An S3-compatible bucket/ }));
+    await user.type(screen.getByRole('textbox', { name: 'Bucket' }), 'adiutor');
+    // Off to confirm it's you and back: the page was hidden, then shown again.
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(screen.getByRole('combobox', { name: 'Storage' })).toHaveTextContent(
+      'An S3-compatible bucket',
+    );
+    expect(screen.getByRole('textbox', { name: 'Bucket' })).toHaveValue('adiutor');
+  });
+
+  it('keeps another storage than the saved one chosen when the page is shown again', async () => {
+    const user = userEvent.setup();
+    renderInLocale(
+      'en-US',
+      <Page>
+        <StorageForm current={{ driver: 'local', dir: '/data/attachments' }} vercel={false} />
+      </Page>,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Storage' }));
+    await user.click(screen.getByRole('option', { name: /A folder on another server/ }));
+    await user.type(screen.getByRole('textbox', { name: 'Server' }), 'files.adiutor.test');
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(screen.getByRole('button', { name: 'Return' }));
+
+    expect(screen.getByRole('combobox', { name: 'Storage' })).toHaveTextContent(
+      'A folder on another server (SFTP)',
+    );
+    expect(screen.getByRole('textbox', { name: 'Server' })).toHaveValue('files.adiutor.test');
   });
 });
