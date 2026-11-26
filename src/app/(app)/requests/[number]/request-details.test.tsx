@@ -104,6 +104,13 @@ describe('RequestDetails', () => {
     expect(screen.queryByText('Priority')).not.toBeInTheDocument();
   });
 
+  it('names an internal request Internal in the Company row, without a link to a company', async () => {
+    await renderDetails({ detail: detailOf({ company: null, audience: 'staff' }) });
+
+    expect(valueOf('Company')).toHaveTextContent('Internal');
+    expect(within(valueOf('Company')).queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('lists everyone it is assigned to, without the staff label, to everyone on the request', async () => {
     await renderDetails({
       detail: detailOf({

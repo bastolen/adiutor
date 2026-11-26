@@ -164,7 +164,7 @@ describe('getRequest', () => {
       .where(eq(companyTable.id, company.id));
 
     const forStaff = await getRequest(ctx, await staffActor(db, 'finance'), '1');
-    expect(forStaff.company.deactivated).toBe(true);
+    expect(forStaff.company?.deactivated).toBe(true);
     await expect(getRequest(ctx, await actorFor(db, admin.id), '1')).rejects.toMatchObject({
       code: 'not_found',
     });

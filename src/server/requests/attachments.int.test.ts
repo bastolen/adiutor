@@ -9,7 +9,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { requestAttachment } from '@/db/schema';
+import { company as companyTable, requestAttachment } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { UPLOADS_AT_ONCE } from '@/lib/requests';
 
@@ -162,6 +162,14 @@ describe('uploadAttachment', () => {
     await expect(upload(ctx, support, 'a.png', PNG)).resolves.toMatchObject({
       name: 'a.png',
     });
+  });
+
+  it('lets the staff upload for their internal requests without a company to raise one in', async () => {
+    // No company the staff could raise a request in, only their internal requests.
+    await db.update(companyTable).set({ deactivatedAt: new Date() });
+    const support = await staffActor(db, 'support');
+    await expect(upload(ctx, support, 'a.png', PNG)).resolves.toBeTruthy();
+    expect((await refusal(() => upload(ctx, client, 'a.png', PNG))).code).toBe('forbidden');
   });
 
   it('refuses a type off the list, an empty file, one too large and one that isn\u2019t its type', async () => {

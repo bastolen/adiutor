@@ -76,7 +76,7 @@ describe('listRequests: who sees what', () => {
 
     const page = await listRequests(ctx, await actorFor(db, userId));
 
-    expect(page.items.map(({ company }) => company.id).sort()).toEqual([alpha.id, beta.id].sort());
+    expect(page.items.map(({ company }) => company?.id).sort()).toEqual([alpha.id, beta.id].sort());
   });
 
   it('shows nothing to someone in no company, or whose company is deactivated', async () => {

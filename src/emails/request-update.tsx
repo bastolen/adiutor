@@ -104,8 +104,11 @@ export interface RequestUpdateEmailProps extends EmailBaseProps {
   reference: string;
   /** The request's title. */
   title: string;
-  /** The name of the request's company. */
-  companyName: string;
+  /**
+   * The name of the request's company; `null` for an internal request
+   * (decision 0048), which only the staff read.
+   */
+  companyName: string | null;
   /**
    * The reader's link that signs them in to Adiutor and opens the request
    * (`requestLinkPath`, decision 0036).
@@ -235,7 +238,9 @@ function WrittenText({
  * @param props.id - A name no other piece of news in the email has, for its text.
  * @param props.audience - How to word the request's statuses for the reader.
  * @param props.locale - The email's language.
- * @param props.appUrl - Adiutor's own address.
+ * @param props.textAppUrl - Adiutor's own address, for a text the company reads (its links to
+ *   the staff's pages show as their text); `null` for a text only the staff read (an internal
+ *   request's).
  * @param props.colours - The email's colours.
  */
 function UpdateItem({
@@ -243,14 +248,14 @@ function UpdateItem({
   id,
   audience,
   locale,
-  appUrl,
+  textAppUrl,
   colours,
 }: {
   item: RequestUpdateEmailItem;
   id: string;
   audience: RequestAudience;
   locale: Locale;
-  appUrl: string;
+  textAppUrl: string | null;
   colours: EmailColours;
 }) {
   const t = translator(locale, 'emails.requestUpdate');
@@ -260,7 +265,13 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph colours={colours}>{t.rich('reply', who)}</EmailParagraph>
-        <WrittenText colours={colours} text={item.text} id={id} locale={locale} appUrl={appUrl} />
+        <WrittenText
+          colours={colours}
+          text={item.text}
+          id={id}
+          locale={locale}
+          appUrl={textAppUrl}
+        />
       </Section>
     );
   }
@@ -285,7 +296,7 @@ function UpdateItem({
           text={item.text}
           id={id}
           locale={locale}
-          appUrl={item.where === 'note' ? null : appUrl}
+          appUrl={item.where === 'note' ? null : textAppUrl}
         />
         {item.where === 'note' && <EmailNote colours={colours}>{t('noteOnlyStaff')}</EmailNote>}
       </Section>
@@ -295,7 +306,13 @@ function UpdateItem({
     return (
       <Section>
         <EmailParagraph colours={colours}>{t.rich('raised', who)}</EmailParagraph>
-        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} colours={colours} />
+        <WrittenText
+          text={item.text}
+          id={id}
+          locale={locale}
+          appUrl={textAppUrl}
+          colours={colours}
+        />
       </Section>
     );
   }
@@ -323,6 +340,8 @@ function UpdateItem({
  * raised for them are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
+ * Only the staff read an internal request, so its texts keep their links to
+ * the staff's pages, as a note does, and its company reads "Internal".
  * A button opens the request; for someone at the company who may answer a
  * solution the email tells of, Approve and Deny buttons (`answerLinks`, links
  * that work once and only for them) take its place. A note says replies to
@@ -360,7 +379,13 @@ export default function RequestUpdateEmail({
     >
       <EmailHeading colours={colours}>{title}</EmailHeading>
       <EmailNote colours={colours}>
-        {t.rich('where', { reference, company: companyName, link: requestLinkTag(url, colours) })}
+        {companyName === null
+          ? t.rich('whereInternal', { reference, link: requestLinkTag(url, colours) })
+          : t.rich('where', {
+              reference,
+              company: companyName,
+              link: requestLinkTag(url, colours),
+            })}
       </EmailNote>
       {items.map((item, index) => (
         <UpdateItem
@@ -370,7 +395,8 @@ export default function RequestUpdateEmail({
           id={`text-${index}`}
           audience={audience}
           locale={locale}
-          appUrl={appUrl}
+          // Only the staff read an internal request: its links to their pages stay links.
+          textAppUrl={companyName === null ? null : appUrl}
           colours={colours}
         />
       ))}

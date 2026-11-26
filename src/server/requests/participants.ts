@@ -3,9 +3,10 @@
  * its subscribers (`request_participant`), as far as they can still read it.
  * Shared by what changes subscriptions (`subscribers.ts`), what shows a
  * request (`detail.ts`) and what tells the people on it something
- * (`updates.ts`).
+ * (`updates.ts`). An internal request has no company (decision 0048), so
+ * only the staff who read requests count for one.
  */
-import { and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, or, type SQL, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { membership, requestParticipant, user } from '@/db/schema';
@@ -66,6 +67,21 @@ function asSubscribable(row: {
   };
 }
 
+/**
+ * What joins an account with their membership of a request's company, for a
+ * left join of `membership` on `user`. An internal request has no company,
+ * so no membership joins: only the staff who read requests count there.
+ *
+ * @param companyId - The request's company; `null` for an internal request.
+ * @returns The join condition.
+ */
+export function membershipIn(companyId: string | null): SQL | undefined {
+  return and(
+    eq(membership.userId, user.id),
+    companyId === null ? sql`false` : eq(membership.companyId, companyId),
+  );
+}
+
 /** The columns {@link asSubscribable} reads. */
 const SUBSCRIBABLE_COLUMNS = {
   id: user.id,
@@ -76,16 +92,17 @@ const SUBSCRIBABLE_COLUMNS = {
 
 /**
  * Finds who can be subscribed to a company's requests: active accounts that
- * read them, as a staff member or as a member of the company.
+ * read them, as a staff member or as a member of the company. For the
+ * internal requests, the staff who read requests.
  *
  * @param db - Database client, or the change's transaction.
- * @param companyId - The requests' company.
+ * @param companyId - The requests' company; `null` for the internal requests.
  * @param among - Only these users; everyone when left out.
  * @returns The people, in no order.
  */
 export async function subscribable(
   db: DatabaseOrTransaction,
-  companyId: string,
+  companyId: string | null,
   among?: readonly string[],
 ): Promise<Subscribable[]> {
   if (among?.length === 0) {
@@ -94,7 +111,7 @@ export async function subscribable(
   const rows = await db
     .select(SUBSCRIBABLE_COLUMNS)
     .from(user)
-    .leftJoin(membership, and(eq(membership.userId, user.id), eq(membership.companyId, companyId)))
+    .leftJoin(membership, membershipIn(companyId))
     .where(and(READS_REQUESTS, among ? inArray(user.id, [...among]) : undefined));
   return rows.map(asSubscribable);
 }
@@ -110,21 +127,18 @@ export async function subscribable(
  * @param db - Database client.
  * @param found - The request.
  * @param found.id - Its ID.
- * @param found.companyId - Its company.
+ * @param found.companyId - Its company; `null` for an internal request.
  * @returns The subscribers, by name.
  */
 export async function loadSubscribers(
   db: DatabaseOrTransaction,
-  found: { id: string; companyId: string },
+  found: { id: string; companyId: string | null },
 ): Promise<Subscribable[]> {
   const rows = await db
     .select(SUBSCRIBABLE_COLUMNS)
     .from(requestParticipant)
     .innerJoin(user, eq(requestParticipant.userId, user.id))
-    .leftJoin(
-      membership,
-      and(eq(membership.userId, user.id), eq(membership.companyId, found.companyId)),
-    )
+    .leftJoin(membership, membershipIn(found.companyId))
     .where(and(eq(requestParticipant.requestId, found.id), SUBSCRIBED, READS_REQUESTS))
     .orderBy(...orderTerms('asc', textOrder(user.name), user.id));
   return rows.map(asSubscribable);
@@ -138,12 +152,12 @@ export async function loadSubscribers(
  * @param db - Database client, or the change's transaction.
  * @param found - The request.
  * @param found.id - Its ID.
- * @param found.companyId - Its company.
+ * @param found.companyId - Its company; `null` for an internal request.
  * @returns Their user IDs, each once.
  */
 export async function loadPeopleOn(
   db: DatabaseOrTransaction,
-  found: { id: string; companyId: string },
+  found: { id: string; companyId: string | null },
 ): Promise<string[]> {
   const assignees = await db
     .select({ id: user.id })

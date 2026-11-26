@@ -321,7 +321,8 @@ export async function listAssignableStaff(
 
 /**
  * Counts the requests the actor is assigned to that still need something:
- * the ones the Active list shows, so a deactivated company's are left out.
+ * the ones the Active list shows, so a deactivated company's are left out
+ * and the internal ones (without a company, decision 0048) count.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
@@ -332,7 +333,7 @@ export async function countAssignedRequests(ctx: ServiceContext, actor: Actor): 
     .select({ total: count() })
     .from(requestParticipant)
     .innerJoin(request, eq(request.id, requestParticipant.requestId))
-    .innerJoin(company, eq(company.id, request.companyId))
+    .leftJoin(company, eq(company.id, request.companyId))
     .where(
       and(
         eq(requestParticipant.userId, actor.id),

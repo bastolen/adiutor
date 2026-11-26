@@ -48,7 +48,9 @@ import { tellPeopleOnRequest } from './updates';
  *
  * Everyone else on the request is told by email (`tellPeopleOnRequest`).
  * The reply is stored without links to the staff's pages
- * (`withoutStaffPageLinks`): the company reads it.
+ * (`withoutStaffPageLinks`): the company reads it. A reply to an internal
+ * request keeps them, since only the staff read it, and is never sent as a
+ * solution: nobody could approve it (decision 0048).
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `requests:contribute` in the request's company.
@@ -60,7 +62,8 @@ import { tellPeopleOnRequest } from './updates';
  * @returns The request's status after the reply.
  * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
- *   `requests:contribute` or when the status isn't theirs to set, `invalid` when the company is
+ *   `requests:contribute`, when the status isn't theirs to set, or for a solution on an
+ *   internal request, `invalid` when the company is
  *   deactivated, `rate_limited` when the actor has replied too often
  *   (`RATE_LIMITS.requestRepliesPerUser`); `invalid` or `conflict` for files that can't be sent
  *   with it.
@@ -73,15 +76,16 @@ export default async function replyToRequest(
 ): Promise<{ status: RequestStatus }> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const { permissions } = access;
+  const place = access.company === null ? 'internal' : 'company';
   const written = requestReplySchema.parse(input.body);
   const asked = input.status ? requestStatusSchema.parse(input.status) : null;
-  if (asked && !maySetStatus(permissions, asked)) {
+  if (asked && !maySetStatus(permissions, asked, place)) {
     throw forbiddenError();
   }
   await assertReplyLimit(ctx, actor);
   // The company reads it: a link to one of the staff's pages is kept as its text. Past the limit,
-  // as reading the text costs time.
-  const body = withoutStaffPageLinks(written, appUrl);
+  // as reading the text costs time. Only the staff read an internal request, which keeps them.
+  const body = place === 'internal' ? written : withoutStaffPageLinks(written, appUrl);
 
   const side = requestSide(permissions);
   return changeRequest(ctx, actor, access, workingPermission(permissions), async (tx, locked) => {
@@ -116,7 +120,7 @@ export default async function replyToRequest(
     });
     // A status the request can't move to as it is by now is left alone: the reply still counts. A
     // reply sent as the solution makes it wait for the company's approval (decision 0033).
-    const allowed = asked !== null && mayReplyWithStatus(permissions, locked.status, asked);
+    const allowed = asked !== null && mayReplyWithStatus(permissions, locked.status, asked, place);
     const status = asked && allowed ? asked : statusAfterReply(side, locked.status);
     const told = { request: locked, actorId: actor.id };
     if (status === locked.status) {

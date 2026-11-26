@@ -310,6 +310,34 @@ describe('RaiseRequestForm', () => {
     ]);
   });
 
+  it('offers the staff Internal first in the Company select, even with one company, and says only they see it', async () => {
+    const user = userEvent.setup();
+    render(
+      <RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority raisesInternal raisesFor />,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Company' }));
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Internal',
+      'Adiutor Tests Alpha',
+    ]);
+    await user.click(screen.getByRole('option', { name: 'Internal' }));
+
+    expect(screen.getByText('Only the staff see an internal request.')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Raise it for' })).not.toBeInTheDocument();
+  });
+
+  it('keeps only a hidden company field for one company when no internal request can be raised', () => {
+    const { container } = render(
+      <RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />,
+    );
+
+    expect(screen.queryByRole('combobox', { name: 'Company' })).not.toBeInTheDocument();
+    expect(container.querySelector('input[type="hidden"][name="company"]')).toHaveValue(
+      'adiutor-tests-alpha',
+    );
+  });
+
   it('lets nobody else raise it for someone', () => {
     render(<RaiseRequestForm types={TYPES} companies={ALPHA} choosesPriority={false} />);
 

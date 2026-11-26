@@ -822,6 +822,38 @@ const MarkdownPaste = Extension.create({
 });
 
 /**
+ * Adiutor's own address for a text being written, which can change while
+ * it's written (a new request that becomes internal): the editor keeps it
+ * up to date (`set`), and its extensions read it as it is (`get`), since
+ * they can't change after the editor started.
+ *
+ * @param initial - The address to start with; `null` while only the staff read the text.
+ * @returns The address's getter and setter.
+ */
+export function followedAddress(initial: string | null): {
+  get: () => string | null;
+  set: (address: string | null) => void;
+} {
+  let current = initial;
+  return {
+    /**
+     * The address as it is now.
+     *
+     * @returns It, or `null`.
+     */
+    get: () => current,
+    /**
+     * Changes the address.
+     *
+     * @param address - The new one, or `null`.
+     */
+    set: (address) => {
+      current = address;
+    },
+  };
+}
+
+/**
  * Builds the editor's extensions: the formatting Markdown has (headings,
  * emphasis, lists, things to do, quotations, code that's highlighted, tables,
  * links), with the same classes as where a text is read, and Markdown as
@@ -831,20 +863,27 @@ const MarkdownPaste = Extension.create({
  * staff's pages is kept as its text, however it comes in: pasted with its
  * formatting or as Markdown, typed, or pasted over a selection; an image of
  * one is its description. Only a text the staff alone read (an internal
- * note) may link to them, as where the text is saved
+ * note, an internal request's) may link to them, as where the text is saved
  * (`withoutStaffPageLinks`) and shown (`textLinkTarget`).
  *
  * @param labels - The texts the content needs.
  * @param mentions - The list of people at "@", for a text that can mention people.
  * @param appUrl - Adiutor's own address (the page's), for a text the company reads; `null` for a
- *   text only the staff read.
+ *   text only the staff read. A function gives it as it is each time it's needed, for a text
+ *   whose readers can change while it's written (a new request that becomes internal).
  * @returns The extensions.
  */
 export function editorExtensions(
   labels: EditorLabels,
   mentions: MentionList | null = null,
-  appUrl: string | null = null,
+  appUrl: string | null | (() => string | null) = null,
 ): Extensions {
+  /**
+   * Adiutor's own address as it is now: `null` while only the staff read the text.
+   *
+   * @returns The address, or `null`.
+   */
+  const ownAddress = typeof appUrl === 'function' ? appUrl : () => appUrl;
   /**
    * Whether an address may be a link in this text.
    *
@@ -852,7 +891,7 @@ export function editorExtensions(
    * @returns Whether it's a whole `http` or `https` address, and not a page for the staff in a
    *   text the company reads.
    */
-  const mayLink = (address: string) => textLinkTarget(address, appUrl) !== null;
+  const mayLink = (address: string) => textLinkTarget(address, ownAddress()) !== null;
   return [
     StarterKit.configure({
       // These come in their own form below; Markdown has no underline.
@@ -907,7 +946,10 @@ export function editorExtensions(
        * @param address - The image's address.
        * @returns Whether the image is to be its description.
        */
-      toStaffPage: (address) => appUrl !== null && isStaffPage(address, appUrl),
+      toStaffPage: (address) => {
+        const own = ownAddress();
+        return own !== null && isStaffPage(address, own);
+      },
     }),
     WrittenMention,
     MentionTrigger.configure({ list: mentions }),

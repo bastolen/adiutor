@@ -336,7 +336,9 @@ load or mislead in a reader's browser:
   when it's saved (`withoutStaffPageLinks`, which reads the text with the page's own Markdown
   reader, so no way of writing a link slips past), where it's shown or emailed, also in texts
   saved before (`textLinkTarget`), and in the editor while it's written; only an internal note
-  keeps them. A text too costly to read as Markdown, and any text shown as it was written, keeps
+  keeps them, and every text of an internal request, which has no company and which only the
+  staff read (`getInternalRequestPermissions`, never a membership:
+  [decision 0048](decisions/0048-internal-requests-have-no-company.md)). A text too costly to read as Markdown, and any text shown as it was written, keeps
   only such a link's label by a rule that reads no Markdown (`staffLinksAsLabels`), so its
   address never shows; its time grows in proportion to the text's length, since no address is
   judged by more than its first 256 characters. The text a company's reader starts an edit from
@@ -552,7 +554,9 @@ deadlocking:
    member and the user `FOR SHARE` (`startImpersonation` in `src/server/auth/impersonation.ts`, so
    a role change or deactivation of either takes turns with signing in as the user, which then
    decides again with the locked rows).
-3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`), then
+3. `membership` rows: the actor's own in the company `FOR SHARE` (`assertStillManages`; none for
+   an internal request, which has no company and where only the staff role counts:
+   [decision 0048](decisions/0048-internal-requests-have-no-company.md)), then
    the membership of the person a request is raised for `FOR SHARE` (`assertStillRaisableFor`, so
    a change of their role or their removal takes turns with raising it), the company's
    `FOR UPDATE` (`changeMembership`).

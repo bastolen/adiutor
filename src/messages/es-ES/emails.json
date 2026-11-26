@@ -254,6 +254,7 @@
       "preview": "{event, select, reply {{name} ha respondido.} status {{name} ha cambiado el estado.} assigned {{name} te ha asignado esta solicitud.} mentioned {{name} te ha mencionado.} note {{name} ha escrito una nota interna.} raised {{name} ha creado esta solicitud para ti.} other {{name} te ha suscrito a esta solicitud.}}",
       "reason": "{role, select, assignee {Recibes esto porque esta solicitud está asignada a ti. Puedes desactivar los correos sobre solicitudes en <account>tu cuenta</account>.} other {Recibes esto porque tienes una suscripción a esta solicitud. Para dejar de recibirlo, abre la solicitud y elige Cancelar suscripción, o desactiva los correos sobre solicitudes en <account>tu cuenta</account>.}}",
       "where": "<link>{reference}</link> · {company}",
+      "whereInternal": "<link>{reference}</link> · Interna",
       "reply": "<strong>{name}</strong> ha respondido:",
       "note": "<strong>{name}</strong> ha escrito una nota interna:",
       "noteOnlyStaff": "Nota interna: solo la ve el personal.",

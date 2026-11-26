@@ -17,7 +17,7 @@ import TextField from '@/components/ui/text-field';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
-import { REQUEST_PRIORITIES } from '@/lib/requests';
+import { INTERNAL_CHOICE, REQUEST_PRIORITIES } from '@/lib/requests';
 
 import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
@@ -61,9 +61,17 @@ interface RaiseForChoice {
 interface RaiseRequestFormProps {
   /** The types to choose from, in order: the ones that aren't archived. */
   types: readonly RaisableType[];
-  /** The companies the viewer may raise a request in: at least one. */
+  /** The companies the viewer may raise a request in: at least one, unless they raise internal ones. */
   companies: readonly RaisableCompany[];
-  /** The company to start with (its URL name), e.g. the one whose page the viewer came from. */
+  /**
+   * Whether the viewer may raise an internal request (decision 0048): the staff who work on
+   * requests. The company select then always shows, with "Internal" first.
+   */
+  raisesInternal?: boolean;
+  /**
+   * The company to start with (its URL name, or `INTERNAL_CHOICE`), e.g. the one whose page the
+   * viewer came from.
+   */
   company?: string;
   /** Whether the viewer chooses a priority: the staff who work on requests. */
   choosesPriority: boolean;
@@ -79,18 +87,23 @@ interface RaiseRequestFormProps {
  * A form with the request's company (a select only when there's more than
  * one to choose from, naming a company by its URL name too when another has
  * the same name: `companyChoiceLabels`), title, type and description. Each type says what it's
- * for. The staff also choose who it's for, themselves or an Admin or Client
+ * for. The staff who work on requests always get the select, with "Internal"
+ * first: an internal request, which has no company and only the staff read
+ * (decision 0048), also when there's one company to choose from. The staff
+ * also choose who it's for, themselves or an Admin or Client
  * of the company who asked them (the people come with the company chosen
  * already, and are asked for when another is chosen, which puts the choice
- * back to themselves), and get a priority, which the type sets unless they
- * choose one; nobody else sees either. While people can attach files, files
- * go with the description (`AttachmentPicker`), and the request waits for
- * them to upload. A refused request keeps what was typed and attached; a
- * raised one opens its page.
+ * back to themselves; an internal request is their own, so the choice isn't
+ * there), and get a priority, which the type sets unless they choose one;
+ * nobody else sees either. While people can attach files, files go with the
+ * description (`AttachmentPicker`), and the request waits for them to
+ * upload. A refused request keeps what was typed and attached; a raised one
+ * opens its page.
  */
 export default function RaiseRequestForm({
   types,
   companies,
+  raisesInternal = false,
   company = undefined,
   choosesPriority,
   attaching = null,
@@ -104,11 +117,12 @@ export default function RaiseRequestForm({
   // Whether a file is uploading, which the request waits for.
   const [uploading, setUploading] = useState(false);
   const [only] = companies;
+  // With one company and no internal requests to raise, there's nothing to choose.
+  const fixed = !raisesInternal && companies.length === 1 && only ? only : null;
   // The company the request is for, as far as it's chosen: who the description can mention
   // depends on it.
-  const [chosen, setChosen] = useState(
-    companies.length === 1 && only ? only.slug : (company ?? ''),
-  );
+  const [chosen, setChosen] = useState(fixed ? fixed.slug : (company ?? ''));
+  const internal = chosen === INTERNAL_CHOICE;
   const loadMentions = useCallback(
     () => (chosen ? mentionChoicesAction({ company: chosen }) : Promise.resolve([])),
     [chosen],
@@ -121,9 +135,10 @@ export default function RaiseRequestForm({
   const latestCompany = useRef('');
   /**
    * Chooses the company and, for the staff, asks for its people, putting
-   * who it's raised for back to themselves meanwhile.
+   * who it's raised for back to themselves meanwhile. An internal request
+   * has nobody to ask for.
    *
-   * @param slug - The company's URL name.
+   * @param slug - The company's URL name, or `INTERNAL_CHOICE`.
    */
   const chooseCompany = (slug: string) => {
     setChosen(slug);
@@ -133,6 +148,10 @@ export default function RaiseRequestForm({
     latestCompany.current = slug;
     setRaisedFor(FOR_SELF);
     setForChoices([]);
+    if (slug === INTERNAL_CHOICE) {
+      setLoadingFor(false);
+      return;
+    }
     setLoadingFor(true);
     /**
      * Shows the people of the company, unless another was chosen meanwhile.
@@ -151,21 +170,25 @@ export default function RaiseRequestForm({
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-5">
       <ResultAlert result={result} errorsOnly />
-      {companies.length === 1 && only ? (
-        <input type="hidden" name="company" value={only.slug} />
+      {fixed ? (
+        <input type="hidden" name="company" value={fixed.slug} />
       ) : (
         <SelectField
           label={t('new.company')}
           name="company"
-          options={companyChoiceLabels(companies, ({ name, slug }) =>
-            tCommon('companyWithUrlName', { name, urlName: slug }),
-          ).map(({ slug, label }) => ({ value: slug, label }))}
+          options={[
+            ...(raisesInternal ? [{ value: INTERNAL_CHOICE, label: t('internal.label') }] : []),
+            ...companyChoiceLabels(companies, ({ name, slug }) =>
+              tCommon('companyWithUrlName', { name, urlName: slug }),
+            ).map(({ slug, label }) => ({ value: slug, label })),
+          ]}
           defaultValue={company ?? ''}
           onValueChange={chooseCompany}
-          placeholder={t('new.companyPlaceholder')}
+          placeholder={t('new.companyPlaceholder', { internal: raisesInternal ? 'yes' : 'no' })}
+          description={internal ? t('new.internalHint') : undefined}
         />
       )}
-      {raisesFor && (
+      {raisesFor && !internal && (
         <>
           {/* The select can't hold an empty value, so the staff member themself is sent as none. */}
           <input type="hidden" name="raised_for" value={raisedFor === FOR_SELF ? '' : raisedFor} />
@@ -209,6 +232,8 @@ export default function RaiseRequestForm({
         description={t('new.descriptionHint')}
         required
         mentions={loadMentions}
+        // Only the staff read an internal request: its links to their pages stay links.
+        staffOnly={internal}
       />
       {attaching && (
         <AttachmentPicker maxFileMb={attaching.maxFileMb} onUploadingChange={setUploading} />

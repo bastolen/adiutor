@@ -27,7 +27,7 @@ import RequestBoard from './request-board';
 import { companyViewPaths } from './request-view-toggle';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 vi.mock('@/server/requests', () => ({
   getRequestSettings: vi.fn(),
   listAssignableStaff: vi.fn(),
@@ -194,6 +194,16 @@ describe('the board of requests', () => {
     // The card it may move has a Move menu; the one it only follows has none.
     expect(within(waiting).getByRole('button', { name: 'Move AD-1' })).toBeInTheDocument();
     expect(within(waiting).queryByRole('button', { name: 'Move AD-2' })).not.toBeInTheDocument();
+  });
+
+  it('names a card without a company Internal where the company would show', async () => {
+    vi.mocked(getStaffPermissionsInCompanies).mockReturnValue(STAFF_WORK);
+    boardOf([card({ number: 3, title: 'Order new laptops', company: null })]);
+
+    await renderBoard();
+
+    const internal = within(lane('Open')).getByText('Order new laptops').closest('li');
+    expect(internal).toHaveTextContent('Internal');
   });
 
   it('shows the staff each card’s priority and who it’s assigned to', async () => {

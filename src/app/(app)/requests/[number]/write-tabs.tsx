@@ -25,17 +25,21 @@ import ReplyForm from './reply-form';
  * @param props.canWait - Whether the reply form offers "Send and wait for the company".
  * @param props.canPropose - Whether the reply form offers "Send as solution".
  * @param props.attaching - What attaching needs, while people can attach files.
+ * @param props.staffOnly - Whether only the staff read a reply (an internal request's): its
+ *   editor keeps links to the staff's pages.
  */
 export default function WriteTabs({
   request,
   canWait,
   canPropose = false,
   attaching = null,
+  staffOnly = false,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
   attaching?: Attaching | null;
+  staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.note');
   return (
@@ -51,6 +55,7 @@ export default function WriteTabs({
               request={request}
               canWait={canWait}
               canPropose={canPropose}
+              staffOnly={staffOnly}
               attaching={attaching}
             />
           ),

@@ -72,8 +72,8 @@ export type SampleEntry = {
 
 /** An example request. */
 export interface SampleRequest {
-  /** The company it's in. */
-  companyId: string;
+  /** The company it's in; `null` for an internal request, which the staff raise (decision 0048). */
+  companyId: string | null;
   /** Its title. */
   title: string;
   /** What's asked. */

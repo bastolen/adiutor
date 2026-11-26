@@ -43,17 +43,21 @@ type ReplyButton = 'send' | 'sendAndWait' | 'sendAsSolution';
  * @param props.canWait - Whether to offer "Send and wait for the company".
  * @param props.canPropose - Whether to offer "Send as solution".
  * @param props.attaching - What attaching needs, while people can attach files.
+ * @param props.staffOnly - Whether only the staff read the reply (an internal request's): its
+ *   editor keeps links to the staff's pages.
  */
 export default function ReplyForm({
   request,
   canWait,
   canPropose = false,
   attaching = null,
+  staffOnly = false,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
   attaching?: Attaching | null;
+  staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.reply');
   const [result, formAction, pending, onSubmit] = useTransientActionState(replyAction, null);
@@ -114,6 +118,7 @@ export default function ReplyForm({
         maxLength={REQUEST_TEXT_MAX_LENGTH}
         required
         mentions={loadMentions}
+        staffOnly={staffOnly}
       />
       {attaching && (
         <AttachmentPicker maxFileMb={attaching.maxFileMb} onUploadingChange={setUploading} />

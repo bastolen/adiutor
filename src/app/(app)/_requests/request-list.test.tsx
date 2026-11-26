@@ -27,7 +27,7 @@ import RequestList from './request-list';
 
 vi.mock('@/server/app-context', () => ({ default: { name: 'app context' } }));
 // The viewer's staff permissions: none by default, as for someone at a company.
-vi.mock('@/server/authz', () => ({ getStaffPermissionsInCompanies: vi.fn() }));
+vi.mock('@/server/authz', async () => (await import('../../../../tests/authz-mock')).default());
 vi.mock('@/server/requests', () => ({
   getRequestSettings: vi.fn(),
   listAssignableStaff: vi.fn(),
@@ -229,6 +229,27 @@ describe('a request list without requests', () => {
     ).toHaveAttribute('href', '/requests?status=all&company=adiutor-tests-north');
   });
 
+  it('offers a company user no Internal choice in the company menu', async () => {
+    vi.mocked(listRequestCompanies).mockResolvedValue([
+      { id: 'company-1', name: 'Adiutor Tests', slug: 'adiutor-tests', canRaise: true },
+      {
+        id: 'company-2',
+        name: 'Adiutor Tests Paging',
+        slug: 'adiutor-tests-paging',
+        canRaise: true,
+      },
+    ]);
+    await renderList({ status: 'all' });
+
+    await userEvent.click(screen.getByRole('button', { name: /Company/ }));
+
+    expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual([
+      'All',
+      'Adiutor Tests',
+      'Adiutor Tests Paging',
+    ]);
+  });
+
   it.each([
     ['nl-NL', 'Nog geen verzoeken', 'Dien het eerste verzoek in en het staat hier.'],
     ['es-ES', 'Aún no hay solicitudes', 'Crea la primera solicitud y aparecerá aquí.'],
@@ -308,8 +329,9 @@ describe('a request list for the staff', () => {
 
     expect(screen.getByRole('columnheader', { name: 'Assigned to' })).toBeInTheDocument();
     const [shared, nobody] = screen.getAllByRole('row').slice(1);
-    // Request, Status, Priority, then Assigned to.
-    const cell = within(shared ?? document.body).getAllByRole('cell')[3];
+    // Request, Company (the staff choose between it and Internal), Status, Priority, then
+    // Assigned to.
+    const cell = within(shared ?? document.body).getAllByRole('cell')[4];
     // In the column (and under the title for a phone): an avatar per person, its name on hover.
     expect(
       [...(cell?.querySelectorAll('[title]') ?? [])].map((avatar) => avatar.getAttribute('title')),
@@ -336,8 +358,8 @@ describe('a request list for the staff', () => {
     await renderForStaff({ status: 'all' });
 
     const [row] = screen.getAllByRole('row').slice(1);
-    // Request, then Status.
-    const cell = within(row ?? document.body).getAllByRole('cell')[1];
+    // Request, Company (the staff choose between it and Internal), then Status.
+    const cell = within(row ?? document.body).getAllByRole('cell')[2];
     const status = within(cell ?? document.body).getByText('Waiting for the company');
     expect(status).not.toHaveClass('whitespace-nowrap');
     expect(status).toHaveClass('max-w-full');
@@ -376,6 +398,41 @@ describe('a request list for the staff', () => {
       expect(company).toHaveTextContent('Adiutor Tests');
       expect(company).toHaveClass('hidden', '2xl:table-cell');
       expect(within(request ?? document.body).getByText('Adiutor Tests')).toHaveClass('2xl:hidden');
+    });
+
+    it('names a request without a company Internal, in the company column and under the title', async () => {
+      vi.mocked(listRequests).mockResolvedValue({
+        items: [{ ...itemOf('Ours', []), company: null }],
+        total: 1,
+        page: 1,
+        size: 25,
+      });
+      await renderForStaff();
+
+      const [row] = screen.getAllByRole('row').slice(1);
+      const [request, company] = within(row ?? document.body).getAllByRole('cell');
+      expect(company).toHaveTextContent('Internal');
+      expect(
+        within(request ?? document.body)
+          .getByText('Internal')
+          .closest('.\\32xl\\:hidden'),
+      ).not.toBeNull();
+    });
+
+    it('offers Internal in the company menu to the staff, first after All, and not to a company user', async () => {
+      await renderForStaff({ status: 'all' });
+      await userEvent.click(screen.getByRole('button', { name: /Company/ }));
+
+      expect(screen.getAllByRole('menuitemradio').map((option) => option.textContent)).toEqual([
+        'All',
+        'Internal',
+        'Adiutor Tests',
+        'Adiutor Tests Paging',
+      ]);
+      expect(screen.getByRole('menuitemradio', { name: 'Internal' })).toHaveAttribute(
+        'href',
+        '/requests?status=all&company=_internal',
+      );
     });
 
     it("names no company on one company's list", async () => {

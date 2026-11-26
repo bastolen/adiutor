@@ -1452,6 +1452,68 @@ describe('request emails: links to the staff’s pages', () => {
     expect(email.text.match(/Ask Sam Support\./g)).toHaveLength(2);
     expectBasics(email, url);
   });
+
+  it('keeps a link to one in an internal request’s reply, which only the staff read', async () => {
+    const url = `${appUrl}/requests/142`;
+    const userPage = `${appUrl}/admin/users/019a1b2c-3d4e-7f80-9a1b-2c3d4e5f6a7b`;
+    const props = {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [
+        {
+          event: 'reply',
+          by: 'Morgan Manager',
+          text: { text: `Ask [Sam Support](${userPage}).`, format: 'markdown', mentions: {} },
+        },
+      ],
+    } as const;
+
+    const internal = await requestUpdateEmail('jane@adiutor.test', {
+      ...props,
+      companyName: null,
+    });
+    const inCompany = await requestUpdateEmail('jane@adiutor.test', {
+      ...props,
+      companyName: 'Adiutor Tests',
+    });
+
+    expect(internal.html).toContain(`href="${userPage}"`);
+    expect(inCompany.html).not.toContain(`href="${userPage}"`);
+    expectBasics(internal, url);
+  });
+});
+
+describe('request emails: an internal request', () => {
+  it.each([
+    ['en-US', 'AD-142 · Internal'],
+    ['nl-NL', 'AD-142 · Intern'],
+    ['es-ES', 'AD-142 · Interna'],
+  ] as const)('%s: says Internal where the company would be', async (locale, where) => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: null,
+      url,
+      role: 'assignee',
+      audience: 'staff',
+      items: [{ event: 'assigned', by: 'Sam Support' }],
+    });
+
+    // The reference is the link in the HTML, so the label follows its closing tag.
+    expect(email.html).toMatch(new RegExp(`AD-142</a> · ${where.split('· ')[1]}`));
+    // In the plain text the reference is followed by its link.
+    expect(email.text).toMatch(new RegExp(`AD-142 \\S+ · ${where.split('· ')[1]}`));
+    expect(email.text).not.toMatch(/[{}]/);
+    expect(email.text.match(/https?:\/\/\S+/)?.[0]).toBe(url);
+    expectBasics(email, url);
+  });
 });
 
 describe('brand colours', () => {

@@ -24,6 +24,23 @@ export interface SideNames {
 }
 
 /**
+ * The names of a request's two sides, for its page. An internal request
+ * (decision 0048) has no company and nobody on the company's side, so its
+ * company's side is named as the staff.
+ *
+ * @param detail - The request.
+ * @param detail.company - Its company, or `null` for an internal request.
+ * @param detail.staffName - The name the staff are shown with.
+ * @returns The names.
+ */
+export function requestSideNames(detail: {
+  company: { name: string } | null;
+  staffName: string;
+}): SideNames {
+  return { company: detail.company?.name ?? detail.staffName, staff: detail.staffName };
+}
+
+/**
  * The name to show for someone in a request: their own, or their side's
  * (the company's, or the staff's) when they have none or their account is
  * gone.

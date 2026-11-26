@@ -18,11 +18,16 @@ export type RequestValues = Partial<typeof request.$inferInsert>;
  * (`requests.last_number`, so requests raised afterwards continue from it).
  *
  * @param db - Test database.
- * @param companyId - The company it's in.
- * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at the company).
+ * @param companyId - The company it's in, or `null` for an internal request (raised by the staff).
+ * @param values - What to store instead of the defaults (a normal bug, open, raised by nobody at
+ *   the company, or by nobody on the staff for an internal request).
  * @returns The stored request.
  */
-export async function storeRequest(db: Database, companyId: string, values: RequestValues = {}) {
+export async function storeRequest(
+  db: Database,
+  companyId: string | null,
+  values: RequestValues = {},
+) {
   return db.transaction(async (tx) => {
     const { value: number } = await incrementSetting(tx, 'requests.last_number');
     return firstRow(
@@ -35,7 +40,7 @@ export async function storeRequest(db: Database, companyId: string, values: Requ
           description: 'It prints blank pages.',
           type: 'bug',
           priority: 'normal',
-          createdBySide: 'company',
+          createdBySide: companyId === null ? 'staff' : 'company',
           ...values,
         })
         .returning(),

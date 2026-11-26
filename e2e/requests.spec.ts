@@ -418,7 +418,9 @@ test('the staff raise a request for a company and choose its priority', async ({
   await context.addCookies(supportCookies());
   // Without a company it's a field to fill in, not a page that doesn't exist.
   await page.goto('/requests/new');
-  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Choose a company');
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText(
+    'Choose a company, or Internal',
+  );
   await page.getByRole('textbox', { name: 'Title' }).fill('Add a colleague to the mailing list');
   await (await markdownEditor(page, 'Description')).fill('Asked by phone.');
   await page.getByRole('button', { name: 'Raise request' }).click();
@@ -511,6 +513,60 @@ test('the staff raise a request for someone at a company, who reads it as theirs
   await expect(
     page.getByRole('region', { name: 'Details' }).getByRole('button', { name: 'Unsubscribe' }),
   ).toBeVisible();
+});
+
+test('the staff raise an internal request, find it under Internal, and no company finds it', async ({
+  context,
+  page,
+}) => {
+  const title = `Internal ${randomUUID().slice(0, 8)}`;
+  await context.addCookies(supportCookies());
+  // Started for a company, then made internal: the description's editor follows.
+  await page.goto(`/requests/new?company=${COMPANY_SLUG}`);
+  const editor = await markdownEditor(page, 'Description');
+  await page.getByRole('combobox', { name: 'Company' }).click();
+  await page.getByRole('option', { name: 'Internal', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Internal');
+  await expect(main(page)).toContainText('Only the staff see an internal request.');
+  // It's the staff's own, never raised for someone at a company.
+  await expect(page.getByRole('combobox', { name: 'Raise it for' })).toHaveCount(0);
+  await page.getByRole('textbox', { name: 'Title' }).fill(title);
+  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('option', { name: /^Support/ }).click();
+  // A link to one of the staff's pages, which only the staff read here, so it stays a link.
+  const companies = `${new URL(page.url()).origin}/admin/companies`;
+  await editor.click();
+  await editor.evaluate((element, markdown) => {
+    const clipboard = new DataTransfer();
+    clipboard.setData('text/plain', markdown);
+    element.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }),
+    );
+  }, `Check [the companies](${companies}) first.`);
+  await expect(editor.getByRole('link', { name: 'the companies' })).toBeVisible();
+  await page.getByRole('button', { name: 'Raise request' }).click();
+
+  await expect(toasts(page)).toContainText('Request raised.');
+  await expect(page).toHaveURL(/\/requests\/\d+$/);
+  const address = new URL(page.url()).pathname;
+  await expect(detail(page, 'Company')).toHaveText('Internal');
+  await expect(
+    page.getByRole('region', { name: 'Description' }).getByRole('link', { name: 'the companies' }),
+  ).toHaveAttribute('href', companies);
+  // Nobody could approve a solution, so none is offered.
+  await expect(page.getByRole('button', { name: 'Send as solution' })).toHaveCount(0);
+
+  await page.goto(`/requests?status=all&company=_internal&q=${encodeURIComponent(title)}`);
+  await expect(requestRows(page)).toHaveCount(1);
+  await expect(requestRows(page).first()).toContainText(title);
+
+  // Someone at a company finds it nowhere: not at its address, and not as a filter.
+  await context.clearCookies();
+  await context.addCookies(clientCookies());
+  await page.goto(address);
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+  await page.goto(`/requests?status=all&company=_internal&q=${encodeURIComponent(title)}`);
+  await expect(main(page).getByText(title)).toHaveCount(0);
 });
 
 test('a company without requests invites its first one, under All too', async ({

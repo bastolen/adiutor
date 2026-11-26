@@ -27,7 +27,12 @@ import cn from '@/lib/cn';
 
 import Modal from '../modal';
 import { useTransientState } from '../use-transient-state';
-import { editorExtensions, readMarkdown, writeMarkdown } from './editor-extensions';
+import {
+  editorExtensions,
+  followedAddress,
+  readMarkdown,
+  writeMarkdown,
+} from './editor-extensions';
 import { format, formattingOf, hasCode, highlightCode } from './editor-formatting';
 import { useCodeLanguages } from './editor-highlighter';
 import MentionPopover, {
@@ -100,9 +105,11 @@ export interface MarkdownEditorProps {
    */
   mentions?: MentionLoader;
   /**
-   * Whether only the staff read the text (an internal note): it may link to
-   * the staff's pages. In any other text a link to one of them is kept as
-   * its text, as the server does. Settled when the editor starts.
+   * Whether only the staff read the text (an internal note, or an internal
+   * request's): it may link to the staff's pages. In any other text a link to
+   * one of them is kept as its text, as the server does. It may change while
+   * the editor runs (a new request whose company is chosen as Internal): the
+   * rule follows it from then on, and what's written already stays as it is.
    */
   staffOnly?: boolean;
 }
@@ -145,7 +152,13 @@ export default function MarkdownEditor({
   const t = useTranslations('common.markdown');
   // Adiutor's own address, whose staff pages a text the company reads never links to: the page's,
   // which is what a browser makes a copied link's address from. The editor only runs in a browser.
-  const [appUrl] = useState(() => (staffOnly ? null : window.location.origin));
+  const appUrl = staffOnly ? null : window.location.origin;
+  // The extensions can't change after the editor started, so they read it from here as it is by
+  // then, as the list at "@" reads its loader.
+  const [ownAddress] = useState(() => followedAddress(appUrl));
+  useEffect(() => {
+    ownAddress.set(appUrl);
+  }, [ownAddress, appUrl]);
   // The list of people at "@", for a text that can mention people. Made once: the editor's
   // extensions can't change after it started.
   const [mentionList] = useState(() => (mentions ? createMentionList(mentions) : null));
@@ -186,9 +199,9 @@ export default function MarkdownEditor({
           code: t('code'),
         },
         mentionList,
-        appUrl,
+        ownAddress.get,
       ),
-    [t, mentionList, appUrl],
+    [t, mentionList, ownAddress],
   );
   // The editors that hold the text so far. A new editor reports a change while it's still empty
   // (when a page that was kept alive is shown again, the editor is made anew): that isn't

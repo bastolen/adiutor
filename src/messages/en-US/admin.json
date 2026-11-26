@@ -415,7 +415,7 @@
           "allTypesHint": "Every type, also the ones added later.",
           "chosenTypes": "Chosen types",
           "eventsLegend": "Send",
-          "staffOnly": "Internal notes and priorities are only for the staff: send them only to a place that the staff alone read."
+          "staffOnly": "Every webhook gets the internal requests, and the webhooks that choose them get internal notes and priorities. All three are only for the staff: send them only to a place that the staff alone read."
         },
         "add": {
           "button": "Add webhook",

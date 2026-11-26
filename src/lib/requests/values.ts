@@ -2,7 +2,8 @@
  * @file The values a request can have: its statuses, types and priorities,
  * the two sides of a request, the kinds of entry in its history and what an
  * assignment entry records, the formats
- * its text is stored in and the status filters of a request list. Free of
+ * its text is stored in, the status filters of a request list and the
+ * choice that stands for internal requests. Free of
  * dependencies but the input rules (which have none), so the database schema,
  * the services and client components can all import it.
  */
@@ -251,6 +252,15 @@ export type RequestStatusFilter = (typeof REQUEST_STATUS_FILTERS)[number];
  * status.
  */
 export const ONLY_STATUS_PARAM = 'only';
+
+/**
+ * What the new-request form's company select and the request lists' Company
+ * filter send for internal requests, the staff's own without a company
+ * (decision 0048), in place of a company's URL name. No URL name can be it
+ * (`slugSchema` takes lowercase letters, digits and hyphens between them),
+ * and it isn't an ID.
+ */
+export const INTERNAL_CHOICE = '_internal';
 
 /** The filter a request list opens with. */
 export const DEFAULT_REQUEST_STATUS_FILTER: RequestStatusFilter = 'active';

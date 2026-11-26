@@ -14,6 +14,7 @@ import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '@/db';
 import { requestAttachment, requestEntry } from '@/db/schema';
+import { getInternalRequestPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
   attachmentTypeOf,
@@ -170,9 +171,10 @@ async function abandonUpload(ctx: ServiceContext, id: string): Promise<void> {
 
 /**
  * Uploads a file, for a text that will be sent with it. Allowed for whoever
- * may raise a request in some company (each text's service checks its own
- * permission when it claims the file), also while a staff member is signed
- * in as them, which the row records.
+ * may raise a request in some company, or write the staff's internal
+ * requests (each text's service checks its own permission when it claims
+ * the file), also while a staff member is signed in as them, which the row
+ * records.
  *
  * Everything that can be refused cheaply is, before a byte of the file is
  * read: attaching off, someone who can't write requests, a name, type or
@@ -205,8 +207,11 @@ export async function uploadAttachment(
   if (!on) {
     throw new ServiceError('conflict', 'errors.attachments.off');
   }
-  const companies = await listRequestCompanies(ctx, actor);
-  if (!companies.some((company) => company.canRaise)) {
+  // Someone who may write requests somewhere: in a company, or the staff's internal requests.
+  if (
+    !getInternalRequestPermissions(actor).has('requests:contribute') &&
+    !(await listRequestCompanies(ctx, actor)).some((company) => company.canRaise)
+  ) {
     throw forbiddenError();
   }
   const name = cleanAttachmentName(input.name);

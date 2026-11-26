@@ -254,6 +254,7 @@
       "preview": "{event, select, reply {{name} heeft gereageerd.} status {{name} heeft de status gewijzigd.} assigned {{name} heeft dit verzoek aan jou toegewezen.} mentioned {{name} heeft je genoemd.} note {{name} heeft een interne notitie geschreven.} raised {{name} heeft dit verzoek voor jou ingediend.} other {{name} heeft je op dit verzoek geabonneerd.}}",
       "reason": "{role, select, assignee {Je ontvangt dit omdat dit verzoek aan jou is toegewezen. Je kunt e-mails over verzoeken uitzetten in <account>je account</account>.} other {Je ontvangt dit omdat je op dit verzoek bent geabonneerd. Wil je dat niet meer, open dan het verzoek en kies Abonnement opzeggen, of zet e-mails over verzoeken uit in <account>je account</account>.}}",
       "where": "<link>{reference}</link> · {company}",
+      "whereInternal": "<link>{reference}</link> · Intern",
       "reply": "<strong>{name}</strong> heeft gereageerd:",
       "note": "<strong>{name}</strong> heeft een interne notitie geschreven:",
       "noteOnlyStaff": "Interne notitie: alleen medewerkers zien dit.",

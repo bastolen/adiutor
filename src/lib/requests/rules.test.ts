@@ -121,11 +121,17 @@ describe('mayChangeStatus', () => {
 
 describe('maySetStatus', () => {
   it('lets the staff who work on requests set every status', () => {
-    REQUEST_STATUSES.forEach((to) => expect(maySetStatus(support, to)).toBe(true));
+    REQUEST_STATUSES.forEach((to) => expect(maySetStatus(support, to, 'company')).toBe(true));
+  });
+
+  it('never sets Waiting for approval on an internal request, which nobody could approve', () => {
+    expect(REQUEST_STATUSES.filter((to) => !maySetStatus(support, to, 'internal'))).toEqual([
+      'proposed',
+    ]);
   });
 
   it('lets the company close and reopen only, whatever the request’s status', () => {
-    expect(REQUEST_STATUSES.filter((to) => maySetStatus(client, to))).toEqual([
+    expect(REQUEST_STATUSES.filter((to) => maySetStatus(client, to, 'company'))).toEqual([
       'open',
       'done',
       'cancelled',
@@ -134,8 +140,8 @@ describe('maySetStatus', () => {
 
   it('lets those who only read set nothing', () => {
     REQUEST_STATUSES.forEach((to) => {
-      expect(maySetStatus(watcher, to)).toBe(false);
-      expect(maySetStatus(finance, to)).toBe(false);
+      expect(maySetStatus(watcher, to, 'company')).toBe(false);
+      expect(maySetStatus(finance, to, 'company')).toBe(false);
     });
   });
 });
@@ -190,6 +196,11 @@ describe('mayContribute', () => {
     expect(mayContribute(support, deactivated)).toBe(false);
     expect(mayContribute(client, deactivated)).toBe(false);
   });
+
+  it('takes an internal request, which has no company, as active', () => {
+    expect(mayContribute(support, null)).toBe(true);
+    expect(mayContribute(finance, null)).toBe(false);
+  });
 });
 
 describe('mayWaitWithReply', () => {
@@ -210,19 +221,25 @@ describe('mayWaitWithReply', () => {
 
 describe('mayReplyWithStatus', () => {
   it('sends a solution, or waits for the company, only as the page offers it', () => {
-    expect(mayReplyWithStatus(support, 'in_progress', 'proposed')).toBe(true);
-    expect(mayReplyWithStatus(support, 'proposed', 'proposed')).toBe(false);
-    expect(mayReplyWithStatus(support, 'in_progress', 'waiting')).toBe(true);
+    expect(mayReplyWithStatus(support, 'in_progress', 'proposed', 'company')).toBe(true);
+    expect(mayReplyWithStatus(support, 'proposed', 'proposed', 'company')).toBe(false);
+    expect(mayReplyWithStatus(support, 'in_progress', 'waiting', 'company')).toBe(true);
     // A reply never reopens a closed request to wait for the company.
-    expect(mayReplyWithStatus(support, 'done', 'waiting')).toBe(false);
-    expect(mayReplyWithStatus(support, 'cancelled', 'waiting')).toBe(false);
+    expect(mayReplyWithStatus(support, 'done', 'waiting', 'company')).toBe(false);
+    expect(mayReplyWithStatus(support, 'cancelled', 'waiting', 'company')).toBe(false);
+  });
+
+  it('never sends a solution on an internal request, but waits like any other', () => {
+    expect(mayReplyWithStatus(support, 'in_progress', 'proposed', 'internal')).toBe(false);
+    expect(mayReplyWithStatus(support, 'in_progress', 'waiting', 'internal')).toBe(true);
+    expect(mayReplyWithStatus(support, 'open', 'in_progress', 'internal')).toBe(true);
   });
 
   it('allows any other status the person may change it to', () => {
-    expect(mayReplyWithStatus(support, 'open', 'in_progress')).toBe(true);
-    expect(mayReplyWithStatus(client, 'in_progress', 'done')).toBe(true);
-    expect(mayReplyWithStatus(client, 'in_progress', 'in_progress')).toBe(false);
-    expect(mayReplyWithStatus(client, 'in_progress', 'todo')).toBe(false);
+    expect(mayReplyWithStatus(support, 'open', 'in_progress', 'company')).toBe(true);
+    expect(mayReplyWithStatus(client, 'in_progress', 'done', 'company')).toBe(true);
+    expect(mayReplyWithStatus(client, 'in_progress', 'in_progress', 'company')).toBe(false);
+    expect(mayReplyWithStatus(client, 'in_progress', 'todo', 'company')).toBe(false);
   });
 });
 
@@ -313,15 +330,22 @@ describe('subscriberScope', () => {
 
 describe('a solution the company approves', () => {
   it('is proposed by the staff who work on requests, with a reply, while the request is worked on', () => {
-    expect(mayProposeSolution(support, 'in_progress')).toBe(true);
-    expect(mayProposeSolution(support, 'waiting')).toBe(true);
-    expect(mayProposeSolution(support, 'proposed')).toBe(false);
-    expect(mayProposeSolution(support, 'done')).toBe(false);
-    expect(mayProposeSolution(finance, 'in_progress')).toBe(false);
-    expect(mayProposeSolution(client, 'in_progress')).toBe(false);
+    expect(mayProposeSolution(support, 'in_progress', 'company')).toBe(true);
+    expect(mayProposeSolution(support, 'waiting', 'company')).toBe(true);
+    expect(mayProposeSolution(support, 'proposed', 'company')).toBe(false);
+    expect(mayProposeSolution(support, 'done', 'company')).toBe(false);
+    expect(mayProposeSolution(finance, 'in_progress', 'company')).toBe(false);
+    expect(mayProposeSolution(client, 'in_progress', 'company')).toBe(false);
     // Never through an ordinary change of status.
     expect(statusChoices(support, 'in_progress')).not.toContain('proposed');
     expect(mayChangeStatus(support, 'in_progress', 'proposed')).toBe(false);
+  });
+
+  it('is never proposed on an internal request, where nobody could approve it', () => {
+    expect(mayProposeSolution(support, 'in_progress', 'internal')).toBe(false);
+    expect(mayProposeSolution(permissionsOf('platform_admin', null), 'open', 'internal')).toBe(
+      false,
+    );
   });
 
   it('is answered by the company’s Admins and Clients, while it waits for them', () => {

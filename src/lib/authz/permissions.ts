@@ -5,6 +5,9 @@
  * - their platform (staff) role, which applies to every company;
  * - their own role in that company, if they're a member and it's active.
  *
+ * An internal request has no company, so only the staff role counts for it
+ * (`getInternalRequestPermissions`).
+ *
  * Every page and server action checks permissions through this module (via
  * `src/server/authz.ts`); never compare roles directly elsewhere.
  */
@@ -252,6 +255,28 @@ export function getStaffPermissionsInCompanies(subject: {
     companyRole: null,
     company: { deactivated: false },
   });
+}
+
+/**
+ * What someone may do with an internal request, one without a company that
+ * only the staff read (decision 0048): the request permissions their staff
+ * role gives in every company, and nothing else. A company role never
+ * counts, so no membership, invitation or invite link reaches an internal
+ * request. The staff who work on requests work on internal ones too, and
+ * Finance reads them.
+ *
+ * @param subject - The acting user, or anything with their staff role.
+ * @param subject.platformRole - Their staff role, or `null` for none.
+ * @returns The permissions; empty for non-staff.
+ */
+export function getInternalRequestPermissions(subject: {
+  platformRole: PlatformRole | null;
+}): Set<Permission> {
+  return new Set(
+    [...getStaffPermissionsInCompanies(subject)].filter((permission) =>
+      permission.startsWith('requests:'),
+    ),
+  );
 }
 
 /**

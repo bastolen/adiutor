@@ -2,7 +2,7 @@
   "requests": {
     "list": {
       "title": "Requests",
-      "description": "{audience, select, staff {Every company’s requests, with what still needs something first.} other {What your company asked {staff}, and how far along each request is.}}",
+      "description": "{audience, select, staff {Every company’s requests and the staff’s own, with what still needs something first.} other {What your company asked {staff}, and how far along each request is.}}",
       "new": "New request",
       "rows": "requests",
       "searchLabel": "Search requests",
@@ -79,10 +79,11 @@
     },
     "new": {
       "title": "New request",
-      "description": "{audience, select, staff {Raise a request for a company, or for someone there who asked you, for example by phone.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
+      "description": "{audience, select, staff {Raise a request for a company, for someone there who asked you, for example by phone, or an internal one that only the staff see.} other {Tell {staff} what you need. They’ll reply on the request’s page.}}",
       "back": "Requests",
       "company": "Company",
-      "companyPlaceholder": "Choose a company",
+      "companyPlaceholder": "{internal, select, yes {Choose a company, or Internal} other {Choose a company}}",
+      "internalHint": "Only the staff see an internal request.",
       "titleLabel": "Title",
       "titleHint": "One line that says what it’s about.",
       "typeLabel": "Type",
@@ -214,7 +215,7 @@
       "reopen": "Reopen",
       "editDetails": "Edit details",
       "editTitle": "Edit this request’s details",
-      "editDescription": "Each change shows in the request’s history. The company doesn’t see the priority.",
+      "editDescription": "{place, select, internal {Each change shows in the request’s history.} other {Each change shows in the request’s history. The company doesn’t see the priority.}}",
       "titleLabel": "Title",
       "typeLabel": "Type",
       "priorityLabel": "Priority",
@@ -223,7 +224,7 @@
       "assignToMe": "Assign to me",
       "changeAssignees": "Change assignees",
       "assigneesTitle": "Change who’s assigned",
-      "assigneesDescription": "Everyone on the request sees who’s assigned, the company too, and each change shows in its history.",
+      "assigneesDescription": "{place, select, internal {Everyone on the request sees who’s assigned, and each change shows in its history.} other {Everyone on the request sees who’s assigned, the company too, and each change shows in its history.}}",
       "assigneesLabel": "Staff who work on requests",
       "personYou": "{name} (you)",
       "unnamedStaff": "A staff member without a name",
@@ -232,7 +233,7 @@
       "unsubscribe": "Unsubscribe",
       "changeSubscribers": "Change subscribers",
       "subscribersTitle": "Change who’s subscribed",
-      "subscribersDescription": "{scope, select, everyone {Subscribers follow this request, and will get the emails about it once those are sent. The company sees which of its own people are subscribed, not which staff.} other {Subscribers follow this request, and will get the emails about it once those are sent. Everyone at your company sees who’s subscribed.}}",
+      "subscribersDescription": "{scope, select, internal {Subscribers follow this request, and will get the emails about it once those are sent. Only the staff can be subscribed.} everyone {Subscribers follow this request, and will get the emails about it once those are sent. The company sees which of its own people are subscribed, not which staff.} other {Subscribers follow this request, and will get the emails about it once those are sent. Everyone at your company sees who’s subscribed.}}",
       "subscribersCompany": "People at {company}",
       "subscribersStaff": "Staff",
       "saveSubscribers": "Save subscribers"
@@ -259,6 +260,9 @@
       "versionLine": "{name} changed this on {time}.",
       "editNote": "Edit note",
       "noteLabel": "Note"
+    },
+    "internal": {
+      "label": "Internal"
     },
     "raisedFor": {
       "forName": "{staff} raised this for {name}",

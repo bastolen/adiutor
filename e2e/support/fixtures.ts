@@ -422,6 +422,12 @@ export const SEEDED_REQUESTS = {
    * a quotation, links, an image and a footnote.
    */
   formatted: { number: 6, title: 'Move the intranet to the new server' },
+  /**
+   * Internal (decision 0048): the staff's own, without a company, which no company sees. Done,
+   * raised by {@link SUPPORT_STAFF} and assigned to nobody, so it adds to no count of what's
+   * active or assigned.
+   */
+  internal: { number: 7, title: 'Renew the certificate of the mail server' },
 } as const;
 
 /** How many requests the paging company has: more than one page of 25, all open. */

@@ -66,6 +66,17 @@ describe('readWebhookNews', () => {
     });
   });
 
+  it('tells of an internal request, which has no company (decision 0048)', async () => {
+    const raised = await storeRequest(null, { title: 'Renew the certificates', createdBy: sam });
+
+    const news = await readWebhookNews(db, raised.id, [{ event: 'raised', entryId: null }]);
+
+    expect(news?.request.company).toBeNull();
+    expect(news?.events).toEqual([
+      expect.objectContaining({ type: 'raised', by: { name: 'Sam Support', side: 'staff' } }),
+    ]);
+  });
+
   it('tells each event in the order of the history, opening the page at the first', async () => {
     const { id, number } = await storeRequest(company.id);
     const status = await storeEntry(id, {
