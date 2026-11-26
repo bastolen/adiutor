@@ -97,6 +97,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
+  '/admin/settings/appearance',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',

@@ -1,8 +1,6 @@
 /**
  * @file The CSS that gives a page the brand colours, for the root layout.
  */
-import 'server-only';
-
 import { cache } from 'react';
 
 import { db } from '@/db';

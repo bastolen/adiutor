@@ -13,7 +13,7 @@ import { pickMessages } from '@/lib/i18n/messages';
 import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
-import pageBrandCss from '@/server/branding/page-colours';
+import { pageBrandCss } from '@/server/branding';
 
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 

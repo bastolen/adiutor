@@ -356,6 +356,7 @@ const FOLDER_MODULES = [
   'lib/requests',
   'server/auth/auth-events',
   'server/auth/auth-guards',
+  'server/branding',
   'server/jobs',
   'server/people/invitations',
   'server/people/invite-links',

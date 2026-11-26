@@ -258,7 +258,8 @@
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
-        "requests": "Verzoeken"
+        "requests": "Verzoeken",
+        "appearance": "Weergave"
       },
       "general": {
         "name": {
@@ -368,6 +369,46 @@
           "restore": "Terugzetten",
           "restoreLabel": "{name} terugzetten",
           "restored": "{name} teruggezet."
+        }
+      },
+      "appearance": {
+        "title": "Weergave",
+        "colours": {
+          "title": "Huisstijlkleuren",
+          "description": "De kleuren van elke pagina en e-mail, voor gebruikers en medewerkers. Tekst blijft altijd leesbaar: een kleur die daarvoor te licht of te donker is, wordt aangepast, en het voorbeeld laat zien wat er gebruikt wordt.",
+          "accent": {
+            "label": "Accentkleur",
+            "description": "Knoppen, links en focusranden. Laat leeg voor het groenblauw en groen van Adiutor.",
+            "pick": "Kies de accentkleur"
+          },
+          "accentDark": {
+            "label": "Accentkleur in het donkere thema",
+            "description": "Alleen als het donkere thema een andere accentkleur moet hebben. Laat leeg om die uit de accentkleur af te leiden.",
+            "pick": "Kies de accentkleur voor het donkere thema"
+          },
+          "tint": {
+            "label": "Tint",
+            "description": "De kleurtoon van elk grijs, ook van de achtergronden in het donkere thema; een grijze kleur geeft gewoon grijs. Laat leeg voor het marineblauw van Adiutor.",
+            "pick": "Kies de tint"
+          },
+          "useAdiutor": "Kleuren van Adiutor gebruiken",
+          "save": "Kleuren opslaan",
+          "saved": "Kleuren opgeslagen.",
+          "preview": {
+            "title": "Voorbeeld",
+            "light": "Licht thema",
+            "dark": "Donker thema",
+            "heading": "Voorbeeldverzoek",
+            "text": "Secundaire tekst, zoals een datum of een beschrijving.",
+            "link": "Een link",
+            "button": "Hoofdactie",
+            "badge": "Label",
+            "field": "Een veld met focus",
+            "adjusted": {
+              "light": "Donkerder gemaakt zodat tekst erop leesbaar blijft: {colour}.",
+              "dark": "Lichter gemaakt zodat het leesbaar blijft in het donkere thema: {colour}."
+            }
+          }
         }
       }
     },

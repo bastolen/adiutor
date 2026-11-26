@@ -497,8 +497,16 @@ check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). 
 the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
 (`next.config.ts`). One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
-HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script, and e2e tests fail
-on CSP violations that pages report (`e2e/support/test.ts`, console errors and uncaught `EvalError`s).
+HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and the brand colours'
+`<style>`, and e2e tests fail on CSP violations that pages report (`e2e/support/test.ts`, console
+errors and uncaught `EvalError`s).
+
+The brand colours a staff Admin chose reach every page as CSS ([decision
+0047](decisions/0047-brand-colours-from-an-accent-and-a-tint.md)), so nothing typed into them may
+reach it: a colour is six hex digits when it's saved (`brandColourSchema`) and when it's read back
+(the registry gives the fallback for anything else, `loadBrandColours` checks again), the CSS holds
+only colours `derivePalette` worked out and wrote in hex, and `paletteCss` checks every value once
+more before it writes a declaration.
 
 Permission checks (the authorization matrix, and pages protected by default) are described under
 [Roles and permissions](companies-and-roles.md#roles-and-permissions).

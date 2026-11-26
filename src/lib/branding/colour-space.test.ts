@@ -5,7 +5,15 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { hexToOklch, inGamut, isHexColour, maxChroma, oklchToHex } from './colour-space';
+import {
+  hexToOklch,
+  inGamut,
+  isHexColour,
+  maxChroma,
+  oklchToHex,
+  tidyHexColour,
+  typedHexColour,
+} from './colour-space';
 
 describe('isHexColour', () => {
   it('takes # and six lower-case hex digits only', () => {
@@ -15,6 +23,21 @@ describe('isHexColour', () => {
     expect(isHexColour('0e5655')).toBe(false);
     expect(isHexColour('#0e5655;}')).toBe(false);
     expect(isHexColour(null)).toBe(false);
+  });
+});
+
+describe('typedHexColour', () => {
+  it('reads six hex digits with or without #, in any case, with spaces around', () => {
+    expect(typedHexColour(' C2185B ')).toBe('#c2185b');
+    expect(typedHexColour('#2E7D32')).toBe('#2e7d32');
+    expect(tidyHexColour(' C2185B ')).toBe('#c2185b');
+  });
+
+  it('gives null for anything else', () => {
+    expect(typedHexColour('')).toBeNull();
+    expect(typedHexColour('#c2185')).toBeNull();
+    expect(typedHexColour('red')).toBeNull();
+    expect(typedHexColour('#c2185b;}')).toBeNull();
   });
 });
 

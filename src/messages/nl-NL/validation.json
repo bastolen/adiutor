@@ -90,6 +90,12 @@
     "requestPrefix": "Gebruik één tot vijf letters of cijfers voor het voorvoegsel, beginnend met een letter, bijvoorbeeld AD.",
     "locale": "Kies een van de talen.",
     "timeZone": "Kies een van de tijdzones.",
-    "brandColour": "Vul een kleur in als zes hexadecimale tekens, bijvoorbeeld #0e5655."
+    "brandColour": {
+      "invalid": "Vul een kleur in als zes hexadecimale tekens, bijvoorbeeld #0e5655.",
+      "accent": "Vul de accentkleur in als zes hexadecimale tekens, bijvoorbeeld #0e5655.",
+      "accentDark": "Vul de accentkleur voor het donkere thema in als zes hexadecimale tekens, bijvoorbeeld #25dc89.",
+      "tint": "Vul de tint in als zes hexadecimale tekens, bijvoorbeeld #0e0e2d.",
+      "darkNeedsAccent": "Kies eerst een accentkleur, dan pas een accentkleur voor het donkere thema."
+    }
   }
 }

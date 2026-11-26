@@ -32,6 +32,30 @@ export function isHexColour(value: unknown): value is HexColour {
 }
 
 /**
+ * Tidies a colour someone typed the way branding keeps colours: without
+ * spaces, with `#`, in lower case. What comes out may still not be a colour.
+ *
+ * @param typed - What was typed, e.g. ` C2185B `.
+ * @returns E.g. `#c2185b`.
+ */
+export function tidyHexColour(typed: string): string {
+  const trimmed = typed.trim();
+  return (trimmed.startsWith('#') ? trimmed : `#${trimmed}`).toLowerCase();
+}
+
+/**
+ * Reads a colour someone typed: six hex digits, with or without `#`, in any
+ * case.
+ *
+ * @param typed - What was typed.
+ * @returns The colour as branding keeps it, or `null` when it isn't one (or is empty).
+ */
+export function typedHexColour(typed: string): HexColour | null {
+  const tidy = tidyHexColour(typed);
+  return isHexColour(tidy) ? tidy : null;
+}
+
+/**
  * Turns an sRGB channel (0–1) into linear light.
  *
  * @param channel - The channel.

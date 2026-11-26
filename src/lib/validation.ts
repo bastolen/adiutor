@@ -14,7 +14,7 @@ import type { MessageKeys, NestedKeyOf } from 'use-intl/core';
 import { z } from 'zod';
 
 import { COMPANY_ROLES, isRole, PLATFORM_ROLES } from './authz/roles';
-import { isHexColour } from './branding';
+import { isHexColour, tidyHexColour } from './branding';
 import { hasControlCharacter, hasHiddenCharacter, hasVisibleCharacter } from './character-rules';
 import { FOLLOW_DEFAULT, LOCALES } from './i18n/locales';
 import type { Messages } from './i18n/messages';
@@ -146,15 +146,49 @@ export const timeZoneSchema = z
   .refine(isTimeZone, { error: 'validation.timeZone' satisfies ValidationMessageKey });
 
 /**
- * A brand colour (decision 0047), e.g. from the Appearance tab of Settings:
- * six hex digits, with or without `#`, in any case. Stored as `#` and six
- * lower-case digits, the only colour format branding writes into CSS.
+ * A colour in six hex digits, with or without `#`, in any case. It's kept as
+ * `#` and six lower-case digits, the only colour format branding writes into
+ * CSS.
+ *
+ * @param error - The message when it isn't one.
+ * @returns The schema.
  */
-export const brandColourSchema = z
-  .string()
-  .trim()
-  .transform((value) => (value.startsWith('#') ? value : `#${value}`).toLowerCase())
-  .refine(isHexColour, { error: 'validation.brandColour' satisfies ValidationMessageKey });
+function hexColourSchema(error: ValidationMessageKey) {
+  return z.string().transform(tidyHexColour).refine(isHexColour, { error });
+}
+
+/** A brand colour as the `brand.*` settings keep it (decision 0047). */
+export const brandColourSchema = hexColourSchema('validation.brandColour.invalid');
+
+/**
+ * A brand colour from the Appearance tab of Settings: empty for the theme's
+ * own (`null`).
+ *
+ * @param error - The message when it isn't a colour, naming the field.
+ * @returns The schema.
+ */
+function chosenBrandColourSchema(error: ValidationMessageKey) {
+  return z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    hexColourSchema(error).nullable(),
+  );
+}
+
+/**
+ * The brand colours from the Appearance tab of Settings: the accent, the
+ * accent for dark mode (only with an accent) and the tint, each empty for
+ * the theme's own.
+ */
+export const brandColoursSchema = z
+  .object({
+    accent: chosenBrandColourSchema('validation.brandColour.accent'),
+    accentDark: chosenBrandColourSchema('validation.brandColour.accentDark'),
+    tint: chosenBrandColourSchema('validation.brandColour.tint'),
+  })
+  .refine((colours) => colours.accentDark === null || colours.accent !== null, {
+    error: 'validation.brandColour.darkNeedsAccent' satisfies ValidationMessageKey,
+    path: ['accentDark'],
+  });
 
 /** A company role (Admin, Client or Watcher), e.g. from a member's role select. */
 export const companyRoleSchema = z.enum(COMPANY_ROLES, { error: CHOOSE_COMPANY_ROLE_MESSAGE });

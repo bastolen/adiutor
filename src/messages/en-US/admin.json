@@ -258,7 +258,8 @@
       "tabs": {
         "general": "General",
         "staff": "Staff",
-        "requests": "Requests"
+        "requests": "Requests",
+        "appearance": "Appearance"
       },
       "general": {
         "name": {
@@ -368,6 +369,46 @@
           "restore": "Restore",
           "restoreLabel": "Restore {name}",
           "restored": "{name} restored."
+        }
+      },
+      "appearance": {
+        "title": "Appearance",
+        "colours": {
+          "title": "Brand colours",
+          "description": "The colours every page and email shows, to users and staff alike. Text always stays readable: a colour too light or too dark for that is adjusted, and the preview shows what will be used.",
+          "accent": {
+            "label": "Accent",
+            "description": "Buttons, links and focus rings. Leave it empty for Adiutor’s teal and green.",
+            "pick": "Pick the accent"
+          },
+          "accentDark": {
+            "label": "Accent in dark mode",
+            "description": "Only when dark mode should have a different accent. Leave it empty to work it out from the accent.",
+            "pick": "Pick the accent for dark mode"
+          },
+          "tint": {
+            "label": "Tint",
+            "description": "The hue every grey takes, dark mode’s backgrounds too; a grey gives plain greys. Leave it empty for Adiutor’s navy.",
+            "pick": "Pick the tint"
+          },
+          "useAdiutor": "Use Adiutor’s colours",
+          "save": "Save colours",
+          "saved": "Colours saved.",
+          "preview": {
+            "title": "Preview",
+            "light": "Light mode",
+            "dark": "Dark mode",
+            "heading": "Example request",
+            "text": "Secondary text, like a date or a description.",
+            "link": "A link",
+            "button": "Main action",
+            "badge": "Badge",
+            "field": "A field with focus",
+            "adjusted": {
+              "light": "Made darker so text on it stays readable: {colour}.",
+              "dark": "Made lighter so it stays readable in dark mode: {colour}."
+            }
+          }
         }
       }
     },

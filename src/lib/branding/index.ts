@@ -15,6 +15,8 @@ export {
   maxChroma,
   type Oklch,
   oklchToHex,
+  tidyHexColour,
+  typedHexColour,
 } from './colour-space';
 export { contrast, type HexColour, luminance } from './contrast';
 export { paletteCss, paletteVariables } from './css';

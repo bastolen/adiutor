@@ -36,6 +36,8 @@ a WCAG AA promise that tests check.
   a little darker or lighter than chosen; the Settings page shows what will be used.
 - A new colour token goes in `theme.css` and in `THEME_PALETTE`, and in the rules when it stands on
   another. A colour that should follow the brand is a token, never a fixed colour in a component.
+- A colour set back to the theme's own is no row at all: `writeSettings` removes a setting written
+  as `null`, since the table keeps no `null` values.
 - `global-error.tsx` can't reach the database, so it keeps the theme's colours. So do the logo and
   the favicon until they can be uploaded.
 

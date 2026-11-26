@@ -91,7 +91,9 @@ export type SettingsBefore<C extends SettingChange> = {
  * what the other change wrote; a row that doesn't exist yet can't be locked,
  * but the second insert of a key waits for the first at the key's unique
  * index. Then the checks run on the settings as they'd be after the change,
- * and the values are written in one statement.
+ * and the values are written in one statement. `null`, for a setting whose
+ * schema takes it (a brand colour), removes the setting's row, so it reads
+ * as its fallback again: the table keeps no `null` values.
  *
  * @param tx - The change's transaction; the rows stay locked until it ends.
  * @param change - The values to write, by key.
@@ -117,22 +119,30 @@ export async function writeSettings<C extends SettingChange>(
     .orderBy(asc(setting.key))
     .for('update');
 
+  const upserted = written.filter(({ value }) => value !== null);
+  const removed = written.filter(({ value }) => value === null).map(({ key }) => key);
   const after = {
     ...valuesOf(SETTING_KEYS, rows),
-    ...Object.fromEntries(written.map(({ key, value }) => [key, value])),
+    ...Object.fromEntries(upserted.map(({ key, value }) => [key, value])),
+    ...Object.fromEntries(removed.map((key) => [key, storedSettingValue(key, undefined)])),
   };
   const failed = checks.find((check) => !check.holds(after));
   if (failed) {
     throw new Error(`Settings refused: ${failed.problem}.`);
   }
 
-  await tx
-    .insert(setting)
-    .values(written)
-    .onConflictDoUpdate({
-      target: setting.key,
-      set: { value: sql`excluded.value`, updatedAt: sql`now()` },
-    });
+  if (upserted.length > 0) {
+    await tx
+      .insert(setting)
+      .values(upserted)
+      .onConflictDoUpdate({
+        target: setting.key,
+        set: { value: sql`excluded.value`, updatedAt: sql`now()` },
+      });
+  }
+  if (removed.length > 0) {
+    await tx.delete(setting).where(inArray(setting.key, removed));
+  }
   const stored = new Set(rows.map((row) => row.key));
   const before = valuesOf(changed, rows);
   return Object.fromEntries(

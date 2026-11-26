@@ -67,6 +67,7 @@ import {
   startImpersonation,
 } from './auth/impersonation';
 import { revokeOwnSession } from './auth/sessions';
+import { getBrandColours, setBrandColours } from './branding';
 import { ServiceError, type ServiceErrorCode } from './errors';
 import {
   discardFailedJobs,
@@ -497,6 +498,7 @@ function listOperations(): Operation[] {
     ['list staff invitations', (w) => listPendingInvitations(ctx, w.actor, null)],
     ['list staff', (w) => listStaff(ctx, w.actor)],
     ['view staff settings', (w) => getStaffSettings(ctx, w.actor)],
+    ['view brand colours', (w) => getBrandColours(ctx, w.actor)],
     ['choose own language', (w) => setOwnLocale(ctx, w.actor, 'nl-NL')],
     ['save own first time zone', (w) => saveFirstTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
     ['choose own time zone', (w) => setOwnTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
@@ -520,6 +522,10 @@ function listOperations(): Operation[] {
       (w) => setLanguages(ctx, w.actor, { defaultLocale: 'nl-NL', offered: ['en-US', 'nl-NL'] }),
     ],
     ['set default time zone', (w) => setDefaultTimeZone(ctx, w.actor, 'Europe/Amsterdam')],
+    [
+      'set brand colours',
+      (w) => setBrandColours(ctx, w.actor, { accent: '#c2185b', accentDark: '', tint: '' }),
+    ],
     ['set request prefix', (w) => setRequestPrefix(ctx, w.actor, 'HELP')],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
@@ -800,6 +806,7 @@ const READS: ReadonlySet<string> = new Set([
   'list staff invitations',
   'list staff',
   'view staff settings',
+  'view brand colours',
   'list request types',
   'list users',
   'view user',
@@ -967,6 +974,7 @@ const EXPECTED: Record<string, string> = {
   'list staff invitations': 'FFFFFFA',
   'list staff': 'FFFFFFA',
   'view staff settings': 'FFFFFFA',
+  'view brand colours': 'FFFFFFA',
   // Everyone chooses their own language, time zone and picture, and nobody else's.
   'choose own language': 'AAAAAAA',
   'save own first time zone': 'AAAAAAA',
@@ -986,6 +994,7 @@ const EXPECTED: Record<string, string> = {
   'rename staff': 'FFFFFFA',
   'set languages': 'FFFFFFA',
   'set default time zone': 'FFFFFFA',
+  'set brand colours': 'FFFFFFA',
   'set request prefix': 'FFFFFFA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',

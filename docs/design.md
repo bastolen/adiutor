@@ -18,7 +18,8 @@ keyboard support.
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
   or list item, stretched so the whole row is one click target), `DescriptionList` (labels and
-  values), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
+  values), `ColourField` (a colour in hex, with a swatch that opens the browser's colour picker),
+  `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own for a
   view without pages), `SortMenu`, `FilterMenu`, ...). Menus, selects, dialogs and
   sheets are
   built on [Radix UI](https://www.radix-ui.com), and only `src/components/ui/` imports it. Radix
@@ -706,6 +707,18 @@ A grey that would still break a rule is nudged in lightness, away from what it s
 keeps it. The tests (`src/lib/branding/palette.test.ts`) work out palettes for tints and accents of
 every hue, greys, black, white and yellow, and check that each keeps every rule in `PALETTE_RULES`,
 and that the theme's own ink as a tint gives the theme's greys back.
+
+Staff Admins choose them on the **Appearance** tab of Settings (`/admin/settings/appearance`,
+`setBrandColours` in `src/server/branding/`, recorded in the audit log as `brand_colours_changed`):
+three `ColourField`s (`src/components/ui/colour-field.tsx`: a text field for the hex digits, with a
+swatch before it that is the browser's own colour picker, an invisible `<input type="color">` over
+a square of the colour, which shows the focus ring), each empty for the theme's own, and a preview
+of the palette in light and dark mode that follows what's typed (`palette-preview.tsx`: real
+components with the palette's colours set on them as custom properties, `inert`). Under each mode it
+says when the accent had to move, and to which colour. "Use Adiutor's colours" empties the fields,
+which Save then saves like any other change. A dark accent needs an accent, and a colour that isn't
+six hex digits is refused with a message that names its field. It isn't part of setup: setup is one
+narrow form, with no room for a preview.
 
 The root layout reads the settings once per request (`pageBrandCss` in
 `src/server/branding/page-colours.ts`, the theme's colours when the database can't be read) and adds
