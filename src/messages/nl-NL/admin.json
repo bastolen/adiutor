@@ -265,7 +265,7 @@
       "general": {
         "name": {
           "title": "Naam die gebruikers zien",
-          "description": "Gebruikt in uitnodigingen en overal waar gebruikers zien wie hen helpt.",
+          "description": "Staat in plaats van Adiutor op elke pagina, in paginatitels en in e-mails, en overal waar gebruikers zien wie hen helpt. Nieuwe items in authenticator-apps en nieuwe passkeys krijgen hem ook, met Adiutor erachter. Elke naam behalve Adiutor voegt een klein “Mogelijk gemaakt door Adiutor” toe.",
           "label": "Naam",
           "example": "Bijvoorbeeld “Adiutor Support”.",
           "save": "Naam opslaan",

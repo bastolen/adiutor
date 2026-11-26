@@ -10,6 +10,7 @@ import { focusRing } from '@/components/ui/styles';
 
 import BrandPanel from './brand-panel';
 import HomeLink from './home-link';
+import PoweredBy from './powered-by';
 import PreferencesMenu from './preferences-menu';
 import SkipLink from './skip-link';
 
@@ -27,10 +28,11 @@ interface AuthLayoutProps {
  * written for companies (`BrandPanel`). On small screens, only the content
  * column. These pages have no account menu, so the theme and language button
  * is here, last in tab order: floating in the corner from tablet width, and at
- * the end of the content column below that.
+ * the end of the content column below that, next to "Powered by Adiutor" once
+ * the staff have a name of their own (`PoweredBy`).
  *
  * The layout is in each page's static shell, so its text comes from client
- * components that read the root provider (`HomeLink`, `BrandPanel`), never
+ * components that read the root provider (`HomeLink`, `BrandPanel`, `PoweredBy`), never
  * from the request (docs/i18n.md).
  */
 export default function AuthLayout({ children }: AuthLayoutProps) {
@@ -46,8 +48,11 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <main id="main" className="flex flex-1 items-center justify-center py-12 outline-none">
           <div className="w-full max-w-sm">{children}</div>
         </main>
-        {/* Below tablet width at the end of the form column; from there, in the corner. */}
-        <PreferencesMenu className="self-end" />
+        <footer className="flex items-center gap-4">
+          <PoweredBy />
+          {/* Below tablet width at the end of the form column; from there, in the corner. */}
+          <PreferencesMenu className="ml-auto" />
+        </footer>
       </div>
 
       <BrandPanel />

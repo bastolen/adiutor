@@ -26,11 +26,15 @@ const KEEPS_ADIUTOR: Readonly<Record<string, string>> = {
   'admin.settings.appearance.colours.accent.description': 'the software’s own accent',
   'admin.settings.appearance.colours.tint.description': 'the software’s own tint',
   'admin.settings.general.name.example': 'an example of a name for the staff',
+  'admin.settings.general.name.description':
+    'what the name replaces, Adiutor, and the credit it adds',
   'admin.addCompany.form.namePlaceholder': 'an example of a company’s name',
   'auth.setup.title': 'setting up the software, before the staff have a name',
   'auth.setup.heading': 'setting up the software, before the staff have a name',
   'auth.setup.submit': 'setting up the software, before the staff have a name',
   'auth.setup.staffNamePlaceholder': 'the name the staff get unless setup names them',
+  'auth.setup.staffNameHint': 'what the name replaces, Adiutor, before the staff have a name',
+  'common.poweredBy': 'the credit to the software, once the staff have a name of their own',
   'emails.layout.poweredBy': 'the credit to the software, once the staff have a name of their own',
 };
 

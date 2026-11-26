@@ -732,4 +732,19 @@ With nothing chosen there's no `<style>` at all. `global-error.tsx`, which repla
 document and can't reach the database, keeps the theme's colours, and so do the logo and the
 favicon.
 
+### The staff's name and "Powered by Adiutor"
+
+Every text names the staff instead of Adiutor ([decision
+0050](decisions/0050-the-staffs-name-instead-of-adiutor.md)): the staff's name (`staff.name`, set at
+setup and on Settings › General, "Adiutor" until then) reaches client components through
+`StaffNameProvider` / `useStaffName()` (`src/components/brand/staff-name.tsx`, handed down by the
+root layout from `requestStaffName()`), server components and metadata through `requestStaffName()`
+and emails through `emailName(brand)`; how texts are worded around it is under [Translation
+rules](i18n.md#translation-rules). Once the name isn't Adiutor's own (`poweredByShown`, ignoring
+case and spaces), a small "Powered by Adiutor" (`PoweredBy`, `src/components/layout/powered-by.tsx`,
+in `muted-foreground`) shows at the bottom of the signed-out pages (`AuthLayout`'s and
+`CenteredLayout`'s footer, next to the theme and language button), at the bottom of the app's
+sidebar and mobile menu (above the account menu) and in every email's footer. With the name left as
+"Adiutor" it shows nowhere, so the page reads as it always did.
+
 The brand assets aren't covered by the code's MIT License; see [License](../README.md#license) and the list of files in [NOTICE](../NOTICE).

@@ -265,7 +265,7 @@
       "general": {
         "name": {
           "title": "Nombre que ven los usuarios",
-          "description": "Se usa en las invitaciones y en cualquier lugar donde los usuarios ven quién les está ayudando.",
+          "description": "Aparece en lugar de Adiutor en cada página, en los títulos de las páginas y en los correos, y allí donde los usuarios ven quién les ayuda. Las nuevas entradas de apps de autenticación y las nuevas llaves de acceso también lo llevan, con Adiutor detrás. Cualquier nombre que no sea Adiutor añade un pequeño “Con la tecnología de Adiutor”.",
           "label": "Nombre",
           "example": "Por ejemplo, “Adiutor Support”.",
           "save": "Guardar nombre",

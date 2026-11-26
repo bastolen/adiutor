@@ -265,7 +265,7 @@
       "general": {
         "name": {
           "title": "Name shown to users",
-          "description": "Used in invitations and wherever users see who's helping them.",
+          "description": "Shown instead of Adiutor on every page, in page titles and in emails, and wherever users see who's helping them. New authenticator entries and passkeys get it too, with Adiutor’s after it. Any name but Adiutor adds a small “Powered by Adiutor”.",
           "label": "Name",
           "example": "For example “Adiutor Support”.",
           "save": "Save name",

@@ -199,6 +199,7 @@
         "staffPage": "La empresa lee este texto, así que no puede enlazar a una página para el personal."
       }
     },
-    "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo."
+    "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo.",
+    "poweredBy": "Con la tecnología de Adiutor"
   }
 }

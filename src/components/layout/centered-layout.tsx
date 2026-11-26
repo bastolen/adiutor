@@ -9,6 +9,7 @@ import Logo from '@/components/brand/logo';
 import { focusRing } from '@/components/ui/styles';
 
 import HomeLink from './home-link';
+import PoweredBy from './powered-by';
 import PreferencesMenu from './preferences-menu';
 import SkipLink from './skip-link';
 
@@ -44,7 +45,10 @@ export default function CenteredLayout({ children }: CenteredLayoutProps) {
         <div className="w-full max-w-md">{children}</div>
       </main>
       {/* Below tablet width at the end of the page; from there, in the corner. */}
-      <PreferencesMenu className="mr-4 mb-4 self-end" />
+      <footer className="mx-4 mb-4 flex items-center gap-4">
+        <PoweredBy className="px-1.5" />
+        <PreferencesMenu className="ml-auto" />
+      </footer>
     </div>
   );
 }

@@ -199,6 +199,7 @@
         "staffPage": "Het bedrijf leest deze tekst, dus die kan niet naar een pagina voor medewerkers linken."
       }
     },
-    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw."
+    "signOutFailed": "Uitloggen is mislukt. Probeer het opnieuw.",
+    "poweredBy": "Mogelijk gemaakt door Adiutor"
   }
 }

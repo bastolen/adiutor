@@ -199,6 +199,7 @@
         "staffPage": "The company reads this text, so it can't link to a page for the staff."
       }
     },
-    "signOutFailed": "Signing out failed. Please try again."
+    "signOutFailed": "Signing out failed. Please try again.",
+    "poweredBy": "Powered by Adiutor"
   }
 }
