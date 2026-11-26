@@ -46,3 +46,8 @@ export {
 } from './attempts';
 export { holdSignInChangeLock, releaseSignInChangeLockOf } from './change-lock';
 export { beforeAuthRequest } from './before-request';
+export {
+  type AuthRequestChange,
+  SIGN_IN_APP_NAME_PATHS,
+  signInAppNameFor,
+} from './sign-in-app-name';
