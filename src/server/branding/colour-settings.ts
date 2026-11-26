@@ -4,7 +4,7 @@
  * Pages and emails read them with `loadBrandColours` (`colours.ts`), which
  * checks no permission.
  */
-import type { BrandColours } from '@/lib/branding';
+import { type BrandColours, storedBrandColours } from '@/lib/branding';
 import { brandColoursSchema } from '@/lib/validation';
 
 import { assertNotSignedInAs, assertPermission, getGlobalPermissions } from '../access';
@@ -37,14 +37,17 @@ export async function getBrandColours(ctx: ServiceContext, actor: Actor): Promis
 }
 
 /**
- * Saves the brand colours, which every page and email then shows. Everyone
- * sees the change, so it's recorded in the audit log with the colours it
- * replaced, like the name shown to users.
+ * Saves the brand colours, which every page and email then shows. A colour
+ * that's the one used anyway (Adiutor's own, or the accent as the dark
+ * accent) is stored as none (`storedBrandColours`), so the fields can show
+ * Adiutor's colours without saving them. Everyone sees the change, so it's
+ * recorded in the audit log with the colours it replaced, like the name
+ * shown to users.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
  * @param input - The colours, each in six hex digits (with or without `#`) or empty.
- * @returns The colours as they were saved (`#` and lower case).
+ * @returns The colours as they were saved (`#` and lower case, `null` for none).
  * @throws {ZodError} When a colour isn't six hex digits.
  */
 export async function setBrandColours(
@@ -54,7 +57,7 @@ export async function setBrandColours(
 ): Promise<BrandColours> {
   assertNotSignedInAs(actor);
   assertPermission(getGlobalPermissions(actor), 'staff:manage');
-  const colours = brandColoursSchema.parse(input);
+  const colours = storedBrandColours(brandColoursSchema.parse(input));
   await ctx.db.transaction(async (tx) => {
     const before = await writeSettings(tx, {
       'brand.accent': colours.accent,

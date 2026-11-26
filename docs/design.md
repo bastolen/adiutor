@@ -726,9 +726,12 @@ a square of the colour, which shows the focus ring), each empty for the theme's 
 of the palette in light and dark mode that follows what's typed (`palette-preview.tsx`: real
 components with the palette's colours set on them as custom properties, `inert`). Under each mode it
 says when the accent had to move, and to which colour. "Use Adiutor's colours" empties the fields,
-which Save then saves like any other change. A colour that isn't six hex digits is refused with a
-message that names its field. It isn't part of setup: setup is one
-narrow form, with no room for a preview.
+which Save then saves like any other change. A colour that's the one used anyway is stored as none
+(`storedBrandColours` in `src/lib/branding/own-colours.ts`): Adiutor's own accent, dark accent or
+tint (`ADIUTOR_COLOURS`: the theme's two accents and the navy ink its greys take their hue from), or
+a dark accent equal to the accent. So pages keep no colours of their own for it, and a later change
+to the theme still reaches them. A colour that isn't six hex digits is refused with a message that
+names its field. It isn't part of setup: setup is one narrow form, with no room for a preview.
 
 The root layout reads the settings once per request (`pageBrandCss` in
 `src/server/branding/page-colours.ts`, the theme's colours when the database can't be read) and adds
