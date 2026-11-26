@@ -28,11 +28,9 @@ function colourOf(value: string | null): HexColour | null {
  */
 export default async function loadBrandColours(db: DatabaseOrTransaction): Promise<BrandColours> {
   const settings = await readSettings(db, ['brand.accent', 'brand.accent_dark', 'brand.tint']);
-  const accent = colourOf(settings['brand.accent']);
   return {
-    accent,
-    // A dark accent without an accent is refused when it's written; read, it's ignored.
-    accentDark: accent ? colourOf(settings['brand.accent_dark']) : null,
+    accent: colourOf(settings['brand.accent']),
+    accentDark: colourOf(settings['brand.accent_dark']),
     tint: colourOf(settings['brand.tint']),
   };
 }

@@ -32,7 +32,7 @@ import {
 export type BrandColours = Readonly<{
   /** Main actions, links and focus rings, in both modes unless `accentDark` is chosen. */
   accent: HexColour | null;
-  /** The accent in dark mode; only with an `accent`. */
+  /** The accent in dark mode; without it, dark mode starts from `accent`, or keeps the theme's. */
   accentDark: HexColour | null;
   /** The colour whose hue the greys take. */
   tint: HexColour | null;
@@ -329,19 +329,19 @@ function checked(colour: HexColour | null): HexColour | null {
 }
 
 /**
- * Works out the palette for a set of brand colours. A dark accent counts
- * only with an accent, and anything that isn't a colour in six hex digits
- * counts as the theme's own.
+ * Works out the palette for a set of brand colours. A dark accent without
+ * an accent changes dark mode only, light mode keeping the theme's accent,
+ * and anything that isn't a colour in six hex digits counts as the theme's
+ * own.
  *
  * @param chosen - The brand colours; `null` for the theme's own.
  * @returns The palette in both modes, the overlay and the brand panel, and
  *   whether the accent had to move.
  */
 export function derivePalette(chosen: BrandColours): BrandPalette {
-  const accentChosen = checked(chosen.accent);
   const brand: BrandColours = {
-    accent: accentChosen,
-    accentDark: accentChosen ? checked(chosen.accentDark) : null,
+    accent: checked(chosen.accent),
+    accentDark: checked(chosen.accentDark),
     tint: checked(chosen.tint),
   };
   const adjusted: Record<ThemeMode, boolean> = { light: false, dark: false };
@@ -381,7 +381,7 @@ export function derivePalette(chosen: BrandColours): BrandPalette {
     panel: {
       // The light mode's text, which white reads on as well as it reads on white.
       background: brand.tint ? palette.light.foreground : THEME_PANEL.background,
-      glow: brand.accent ? palette.dark.primary : THEME_PANEL.glow,
+      glow: brand.accent || brand.accentDark ? palette.dark.primary : THEME_PANEL.glow,
       glowDeep: brand.accent ? palette.light.primary : THEME_PANEL.glowDeep,
     },
     adjusted,

@@ -707,7 +707,8 @@ equally light in every hue:
   vivid colour stays vivid); its lightness moves a step at a time, darker in light mode and lighter
   in dark mode, until links, focus rings and the text on buttons keep the rules. The text on it is
   white or the darkest grey, whichever reads better, and hover is a step darker (light mode) or
-  lighter (dark mode). Without a dark accent, dark mode starts from the accent. `adjusted` says
+  lighter (dark mode). Without a dark accent, dark mode starts from the accent; a dark accent
+  without an accent changes dark mode only, light mode keeping the theme's. `adjusted` says
   when a mode's accent had to move. With a tint alone, the theme's own accent is moved the same way,
   should a tinted grey ever need it. Anything that isn't six hex digits counts as the theme's own.
 - **Kept:** `danger`, `success`, `warning` and their fills, and the code colours other than comments.
@@ -725,8 +726,8 @@ a square of the colour, which shows the focus ring), each empty for the theme's 
 of the palette in light and dark mode that follows what's typed (`palette-preview.tsx`: real
 components with the palette's colours set on them as custom properties, `inert`). Under each mode it
 says when the accent had to move, and to which colour. "Use Adiutor's colours" empties the fields,
-which Save then saves like any other change. A dark accent needs an accent, and a colour that isn't
-six hex digits is refused with a message that names its field. It isn't part of setup: setup is one
+which Save then saves like any other change. A colour that isn't six hex digits is refused with a
+message that names its field. It isn't part of setup: setup is one
 narrow form, with no room for a preview.
 
 The root layout reads the settings once per request (`pageBrandCss` in

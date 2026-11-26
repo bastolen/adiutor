@@ -142,13 +142,15 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
     await expect(accent).toHaveValue('');
     expect(await shownColour(page, 'primary', 'light')).toBe(rgbOf(THEME_PALETTE.light.primary));
 
-    // A dark accent needs an accent; refused, what was typed stays.
+    // A dark accent on its own changes dark mode only.
+    const darkOnly = derivePalette({ accent: null, accentDark: '#ff80ab', tint: null });
     await accentDark.fill('#ff80ab');
     await page.getByRole('button', { name: 'Save colours' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
-      'Choose an accent before an accent for dark mode.',
-    );
-    await expect(accentDark).toHaveValue('#ff80ab');
+    await expect(toasts(page)).toContainText('Colours saved.');
+    await expect
+      .poll(() => shownColour(page, 'primary', 'dark'))
+      .toBe(rgbOf(darkOnly.palette.dark.primary));
+    expect(await shownColour(page, 'primary', 'light')).toBe(rgbOf(THEME_PALETTE.light.primary));
 
     await accentDark.fill('');
     await accent.fill('C2185B');

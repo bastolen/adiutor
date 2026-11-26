@@ -17,6 +17,7 @@ import {
   WEBHOOK_URL_MAX_LENGTH,
 } from './input-rules';
 import {
+  brandColoursSchema,
   CHOOSE_COMPANY_ROLE_MESSAGE,
   CHOOSE_STAFF_ROLE_MESSAGE,
   companyNameSchema,
@@ -899,5 +900,29 @@ describe('smtpFormSchema', () => {
 
   it('leaves the sender’s address out when the form didn’t send it', () => {
     expect(smtpFormSchema.parse({ ...FORM, fromAddress: null }).fromAddress).toBeUndefined();
+  });
+});
+
+describe('brandColoursSchema', () => {
+  it('reads each colour as # and lower case, and an empty field as none', () => {
+    expect(
+      brandColoursSchema.parse({ accent: ' C2185B ', accentDark: '', tint: '#2E7D32' }),
+    ).toEqual({ accent: '#c2185b', accentDark: null, tint: '#2e7d32' });
+  });
+
+  it('takes an accent for dark mode on its own', () => {
+    expect(brandColoursSchema.parse({ accent: '', accentDark: '#ff80ab', tint: ' ' })).toEqual({
+      accent: null,
+      accentDark: '#ff80ab',
+      tint: null,
+    });
+  });
+
+  it('refuses what isn’t six hex digits, naming the field', () => {
+    expect(
+      brandColoursSchema
+        .safeParse({ accent: '', accentDark: '#ff80a', tint: 'teal' })
+        .error?.issues.map((issue) => issue.message),
+    ).toEqual(['validation.brandColour.accentDark', 'validation.brandColour.tint']);
   });
 });

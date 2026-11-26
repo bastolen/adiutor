@@ -18,7 +18,7 @@ import loadBrandColours from './colours';
 export interface BrandColoursInput {
   /** Main actions, links and focus rings. */
   accent: unknown;
-  /** The accent in dark mode; only with an accent. */
+  /** The accent in dark mode; empty, dark mode starts from the accent. */
   accentDark: unknown;
   /** The colour whose hue the greys take. */
   tint: unknown;
@@ -45,7 +45,7 @@ export async function getBrandColours(ctx: ServiceContext, actor: Actor): Promis
  * @param actor - The acting user; needs `staff:manage`.
  * @param input - The colours, each in six hex digits (with or without `#`) or empty.
  * @returns The colours as they were saved (`#` and lower case).
- * @throws {ZodError} When a colour isn't six hex digits, or a dark accent comes without an accent.
+ * @throws {ZodError} When a colour isn't six hex digits.
  */
 export async function setBrandColours(
   ctx: ServiceContext,
