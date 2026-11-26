@@ -63,8 +63,8 @@ describe('listDeliveries', () => {
       webhookId,
       requestId,
       news: [
-        { event: 'reply', entryId: '019abcde-0000-7000-8000-000000000001' },
-        { event: 'status', entryId: '019abcde-0000-7000-8000-000000000002' },
+        { event: 'reply', entryId: '019abcde-0000-7000-8000-000000000001', typeKey: 'bug' },
+        { event: 'status', entryId: '019abcde-0000-7000-8000-000000000002', typeKey: 'bug' },
       ],
       status: 'failed',
       attempts: 6,
@@ -212,7 +212,7 @@ describe('resendDelivery', () => {
       .values({
         webhookId,
         requestId,
-        news: [{ event: 'raised', entryId: null }],
+        news: [{ event: 'raised', entryId: null, typeKey: 'bug' }],
         status: 'failed',
         attempts: 6,
         ...values,

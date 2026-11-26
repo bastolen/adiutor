@@ -133,11 +133,13 @@ export const webhookDelivery = pgTable(
     test: boolean('test').default(false).notNull(),
     /**
      * What it tells of, in order: each event (`WEBHOOK_EVENTS`) with the
-     * entry of the request's history it's about (`null` for `raised`). IDs
-     * only: the texts and names are read when it's sent.
+     * entry of the request's history it's about (`null` for `raised`) and the
+     * request type that made the webhook hear of it, so every attempt sends
+     * only what the webhook still wants. IDs and keys only: the texts and
+     * names are read when it's sent.
      */
     news: jsonb('news')
-      .$type<{ event: WebhookEvent; entryId: string | null }[]>()
+      .$type<{ event: WebhookEvent; entryId: string | null; typeKey: string }[]>()
       .default(sql`'[]'::jsonb`)
       .notNull(),
     /** Where it stands (`WEBHOOK_DELIVERY_STATUSES`). */

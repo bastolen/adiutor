@@ -80,8 +80,11 @@ a redirect, an address that can't be reached) is tried again, the same delivery 
 `webhook-id`, 5 minutes, 30 minutes, 2 hours, 8 hours and a day after the attempt before
 (`WEBHOOK_RETRY_MINUTES` in `src/lib/webhooks.ts`): six attempts over about a day and a half. Each
 later attempt is a `webhook-delivery` job of its own, queued for when it's due, and every attempt
-reads the news afresh, so a text edited meanwhile goes out as it is by then. After the sixth, the
-delivery is given up (`failed`).
+reads the news afresh, so a text edited meanwhile goes out as it is by then. It also sends only
+what the webhook still wants: each piece of news is stored with the request type it was queued
+for, and an event or a type a staff Admin unticked since is left out (a delivery with nothing left
+is cancelled), so unticking internal notes stops them at once. It goes to the webhook's address as
+it is then. After the sixth, the delivery is given up (`failed`).
 
 These are the delivery's own attempts, not the queue's: the queue retries a job only when it throws,
 on one schedule for every kind, recording an error in the app each time and alerting the staff

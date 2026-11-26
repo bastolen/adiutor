@@ -26,6 +26,7 @@ import { PLATFORM_ROLES } from '@/lib/authz/roles';
 import {
   WEBHOOK_FAILING_DAYS,
   WEBHOOK_RETRY_MINUTES,
+  type WebhookChoices,
   webhookCovers,
   type WebhookEvent,
 } from '@/lib/webhooks';
@@ -56,6 +57,32 @@ export interface QueuedWebhookJob {
   event: WebhookEvent;
   /** The entry it's about; `null` for the request being raised. */
   entryId: string | null;
+}
+
+/**
+ * What a webhook chooses now: its events, and every type or the types it covers.
+ *
+ * @param ctx - Service context.
+ * @param webhookId - The webhook.
+ * @param found - Its events, and whether it covers every type.
+ * @param found.events - Its events.
+ * @param found.allTypes - Whether it covers every type.
+ * @returns What it chooses.
+ */
+async function choicesOf(
+  ctx: ServiceContext,
+  webhookId: string,
+  found: { events: readonly WebhookEvent[]; allTypes: boolean },
+): Promise<WebhookChoices> {
+  const types = found.allTypes
+    ? []
+    : (
+        await ctx.db
+          .select({ key: webhookRequestType.requestTypeKey })
+          .from(webhookRequestType)
+          .where(eq(webhookRequestType.webhookId, webhookId))
+      ).map(({ key }) => key);
+  return { events: found.events, allTypes: found.allTypes, types };
 }
 
 /**
@@ -234,8 +261,9 @@ async function record(
 /**
  * Makes one attempt to deliver: reads the news, sends it, records how it
  * went. Does nothing unless the delivery is pending with exactly the
- * attempts before this one recorded; cancels it when its webhook is off or
- * its news is gone.
+ * attempts before this one recorded; sends only the news the webhook still
+ * wants (its events and types now, as an Admin may have unticked one since),
+ * and cancels it when its webhook is off or none of its news is left.
  *
  * @param ctx - Service context.
  * @param deliveryId - The delivery.
@@ -260,6 +288,8 @@ export async function attemptDelivery(
       secretSealed: webhook.secretSealed,
       format: webhook.format,
       turnedOffAt: webhook.turnedOffAt,
+      events: webhook.events,
+      allTypes: webhook.allTypes,
     })
     .from(webhookDelivery)
     .innerJoin(webhook, eq(webhookDelivery.webhookId, webhook.id))
@@ -271,7 +301,14 @@ export async function attemptDelivery(
     await cancel(ctx, deliveryId, attempt);
     return 'skipped';
   }
-  const news = preloaded ?? (await readWebhookNews(ctx.db, found.requestId, found.news));
+  // Only what the webhook still wants: an Admin may have unticked an event or a type since.
+  const choices = await choicesOf(ctx, found.webhookId, found);
+  const wanted = found.news.filter(({ event, typeKey }) =>
+    webhookCovers(choices, { event, typeKey }),
+  );
+  const news =
+    preloaded ??
+    (wanted.length === 0 ? null : await readWebhookNews(ctx.db, found.requestId, wanted));
   if (news === null) {
     await cancel(ctx, deliveryId, attempt);
     return 'skipped';
@@ -339,20 +376,12 @@ export async function deliverWebhookNews(
   if (!found || found.turnedOffAt !== null) {
     return { skipped: jobs.map(({ jobId }) => jobId) };
   }
-  const types = found.allTypes
-    ? []
-    : (
-        await ctx.db
-          .select({ key: webhookRequestType.requestTypeKey })
-          .from(webhookRequestType)
-          .where(eq(webhookRequestType.webhookId, first.webhookId))
-      ).map(({ key }) => key);
-  const choices = { events: found.events, allTypes: found.allTypes, types };
+  const choices = await choicesOf(ctx, first.webhookId, found);
   const wanted = ours.filter(({ event, typeKey }) => webhookCovers(choices, { event, typeKey }));
-  const news = wanted.flatMap(({ event, entryId }, index) =>
+  const news = wanted.flatMap(({ event, entryId, typeKey }, index) =>
     // The same news queued twice is told once.
     wanted.findIndex((other) => other.event === event && other.entryId === entryId) === index
-      ? [{ event, entryId }]
+      ? [{ event, entryId, typeKey }]
       : [],
   );
   const read = news.length === 0 ? null : await readWebhookNews(ctx.db, first.requestId, news);

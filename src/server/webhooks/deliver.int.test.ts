@@ -12,7 +12,7 @@
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { queuedJob, user, webhook, webhookDelivery } from '@/db/schema';
+import { queuedJob, user, webhook, webhookDelivery, webhookRequestType } from '@/db/schema';
 
 import { startWebhookReceiver, type WebhookReceiver } from '../../../tests/http/webhook-receiver';
 import {
@@ -372,6 +372,48 @@ describe('delivering news to a webhook', () => {
     ]);
   });
 
+  it('sends a later attempt with only the news the webhook still wants', async () => {
+    receiver.answerWith({ status: 500 });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+    // An Admin unticks status changes before the next attempt.
+    await db
+      .update(webhook)
+      .set({ events: ['reply'] })
+      .where(eq(webhook.id, webhookId));
+    receiver.answerWith({ status: 200 });
+
+    await runDueAttempts();
+
+    const {
+      data: { events },
+    } = JSON.parse(receiver.received[1]?.body ?? '{}') as {
+      data: { events: { type: string }[] };
+    };
+    expect(events.map(({ type }) => type)).toEqual(['reply']);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'delivered', attempts: 2 }),
+    ]);
+  });
+
+  it('cancels a later attempt when none of its news is wanted any more, also a type it no longer covers', async () => {
+    receiver.answerWith({ status: 500 });
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+    // Now only for hotfixes: the request is a bug.
+    await db.update(webhook).set({ allTypes: false }).where(eq(webhook.id, webhookId));
+    await db.insert(webhookRequestType).values({ webhookId, requestTypeKey: 'hotfix' });
+
+    await runDueAttempts();
+
+    expect(receiver.received).toHaveLength(1);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'cancelled', attempts: 1 }),
+    ]);
+  });
+
   it('queues the first attempt too, which does nothing once the first attempt recorded', async () => {
     await storeWebhook(db, { url: receiver.url });
     await replyThatMovesTheStatus();
@@ -397,7 +439,7 @@ describe('delivering news to a webhook', () => {
     // As the batch leaves it when the database failed after it stored the delivery.
     const [orphan] = await db
       .insert(webhookDelivery)
-      .values({ webhookId, requestId, news: [{ event: 'raised', entryId: null }] })
+      .values({ webhookId, requestId, news: [{ event: 'raised', entryId: null, typeKey: 'bug' }] })
       .returning({ id: webhookDelivery.id });
     await queueJobs(db, webhookDeliveryJob, [{ deliveryId: orphan?.id ?? '', attempt: 1 }]);
 

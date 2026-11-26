@@ -221,8 +221,9 @@ export async function sendTestEvent(
 /**
  * Sends a delivery again, at the next tick: one more attempt, whatever it
  * had before (no further attempts follow by themselves once its own ran
- * out). Only for a delivery that's over (delivered, failed or cancelled), of
- * a webhook that's on; never a test, which the Admin sends anew.
+ * out), with only the news the webhook still wants (`attemptDelivery`).
+ * Only for a delivery that's over (delivered, failed or cancelled), of a
+ * webhook that's on; never a test, which the Admin sends anew.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
