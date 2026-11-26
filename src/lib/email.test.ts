@@ -20,7 +20,7 @@ const { sendMail, createTransport, transportOptions } = vi.hoisted(() => {
     transportOptions: options,
     createTransport: vi.fn((created: unknown) => {
       options.push(created);
-      return { sendMail: send };
+      return { sendMail: send, close: vi.fn() };
     }),
   };
 });

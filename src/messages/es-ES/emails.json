@@ -111,6 +111,22 @@
       "advice": "Los administradores del personal pueden gestionarlo todo en Adiutor, incluido el personal. Si no reconoces este cambio, quítale el acceso al personal en los ajustes del personal y revisa el registro de auditoría.",
       "button": "Abrir los ajustes del personal"
     },
+    "smtpChanged": {
+      "subject": "Adiutor envía el correo a través de otro servidor",
+      "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cada vez que cambia el servidor de correo.",
+      "heading": "Ha cambiado el servidor de correo",
+      "changedBy": "{by} ha cambiado el servidor de correo de Adiutor a {server}.",
+      "changed": "Se ha cambiado el servidor de correo de Adiutor a {server}.",
+      "advice": "Quien controla el servidor de correo puede leer los enlaces de inicio de sesión y los códigos que envía Adiutor. Si no reconoces este cambio, revisa los ajustes de correo y el registro de auditoría.",
+      "button": "Abrir los ajustes de correo"
+    },
+    "smtpTest": {
+      "subject": "Adiutor puede enviar correo a través de este servidor",
+      "reason": "Recibes esto porque estás guardando un servidor de correo en la pestaña Correo de los ajustes de Adiutor.",
+      "heading": "Este servidor de correo funciona",
+      "body": "Adiutor ha enviado este correo de prueba a través de {server} antes de guardarlo como servidor de correo. Te ha llegado, así que los correos pueden salir por él.",
+      "button": "Abrir los ajustes de correo"
+    },
     "jobFailing": {
       "subject": "La tarea en segundo plano {job} sigue fallando en Adiutor",
       "reason": "Recibes esto porque eres administrador del personal en Adiutor: los administradores del personal reciben un aviso cuando una tarea en segundo plano sigue fallando, como mucho una vez al día por tarea.",

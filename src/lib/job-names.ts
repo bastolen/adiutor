@@ -28,6 +28,7 @@ export const QUEUED_JOB_NAMES = [
   'security-notice',
   'added-to-company',
   'staff-admin-added',
+  'smtp-changed',
   'request-update',
   'webhook-delivery',
   'webhook-turned-off',

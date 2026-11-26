@@ -1,8 +1,8 @@
 /**
  * @file Layout of the Settings pages (General, Staff, Requests, Attachments,
- * Webhooks and Appearance): the heading and tabs, then the page. Layouts stay mounted while the pages under
- * them change, so choosing a tab keeps focus on it and the header doesn't
- * reload. Only staff Admins (`staff:manage`) get here, and each page checks
+ * Email, Webhooks and Appearance): the heading and tabs, then the page.
+ * Layouts stay mounted while the pages under them change, so choosing a tab
+ * keeps focus on it and the header doesn't reload. Only staff Admins (`staff:manage`) get here, and each page checks
  * the permission again for itself. On a wide screen every tab is wide
  * (`WidePage`), so the staff table gets the room, and the header and tabs
  * stay in one place from tab to tab.

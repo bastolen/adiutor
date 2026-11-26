@@ -25,6 +25,8 @@ import { magicLinkEmail } from './magic-link';
 import { requestUpdateEmail } from './request-update';
 import { resetPasswordEmail } from './reset-password';
 import { securityNoticeEmail } from './security-notice';
+import { smtpChangedEmail } from './smtp-changed';
+import { smtpTestEmail } from './smtp-test';
 import { staffAdminAddedEmail } from './staff-admin-added';
 import { twoFactorCodeEmail } from './two-factor-code';
 import { verifyEmailEmail } from './verify-email';
@@ -589,6 +591,46 @@ describe('staff-made changes', () => {
       'Jane Admin reactivated the account of Sam Tester (sam@adiutor.test), which is a staff Admin',
     );
     expectBasics(reactivated, url);
+  });
+
+  it('tries a mail server with a test email to the staff Admin saving it', async () => {
+    const url = `${appUrl}/admin/settings/email`;
+    const test = await smtpTestEmail('jane@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      url,
+    });
+    expect(test.subject).toBe('Adiutor can send email through this mail server');
+    expect(test.text).toContain('Adiutor sent this test email through smtp.adiutor.test:587');
+    expect(test.text).toContain('saving a mail server on the Email tab');
+    expectBasics(test, url);
+  });
+
+  it('tells the other staff Admins who changed the mail server, and why it matters', async () => {
+    const url = `${appUrl}/admin/settings/email`;
+    const changed = await smtpChangedEmail('alex@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      byName: 'Jane Admin',
+      url,
+    });
+    expect(changed.subject).toBe('Adiutor sends email through another mail server');
+    expect(changed.text).toContain(
+      'Jane Admin changed the mail server Adiutor sends email through to smtp.adiutor.test:587.',
+    );
+    expect(changed.text).toContain('can read the sign-in links and codes Adiutor sends');
+    expect(changed.text).not.toMatch(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+    expectBasics(changed, url);
+
+    const byNobody = await smtpChangedEmail('alex@adiutor.test', {
+      ...english,
+      server: 'smtp.adiutor.test:587',
+      byName: null,
+      url,
+    });
+    expect(byNobody.text).toContain(
+      'The mail server Adiutor sends email through was changed to smtp.adiutor.test:587.',
+    );
   });
 });
 
@@ -1217,6 +1259,39 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
       locale,
       name: 'Procurement',
       reason: 'failing',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The mail server's test email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'mail server test': async (locale) => {
+    const url = `${appUrl}/admin/settings/email`;
+    const email = await smtpTestEmail('jane@adiutor.test', {
+      appUrl,
+      locale,
+      server: 'smtp.adiutor.test:587',
+      url,
+    });
+    return { email, url };
+  },
+  /**
+   * The "the mail server changed" email.
+   *
+   * @param locale - The language.
+   * @returns The email and its main link.
+   */
+  'mail server changed': async (locale) => {
+    const url = `${appUrl}/admin/settings/email`;
+    const email = await smtpChangedEmail('alex@adiutor.test', {
+      appUrl,
+      locale,
+      server: 'smtp.adiutor.test:587',
+      byName: 'Jane Admin',
       url,
     });
     return { email, url };

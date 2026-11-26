@@ -47,6 +47,7 @@
       "brand_colours_changed": "Huisstijlkleuren gewijzigd",
       "attachment_storage_changed": "Gewijzigd waar bijlagen worden bewaard",
       "attachment_storage_set_up": "Ingesteld waar bijlagen worden bewaard",
+      "smtp_settings_changed": "Mailserver gewijzigd",
       "request_type_added": "Verzoektype toegevoegd",
       "request_type_changed": "Verzoektype gewijzigd",
       "request_type_archived": "Verzoektype gearchiveerd",

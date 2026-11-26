@@ -188,6 +188,7 @@ import {
   removeAttachment,
   uploadAttachment,
 } from './requests';
+import { getSmtpSettings, saveSmtpSettings } from './smtp';
 import {
   getAttachmentSettings,
   saveAttachmentLimit,
@@ -645,6 +646,27 @@ function listOperations(): Operation[] {
           attachment: w.attachments.removable,
         }),
     ],
+    // Settings decide (`{}`), and the test email goes nowhere: what's checked is who may.
+    ['view email settings', (w) => getSmtpSettings(ctx, w.actor, {})],
+    [
+      'choose the mail server',
+      (w) =>
+        saveSmtpSettings(
+          ctx,
+          w.actor,
+          {
+            host: 'localhost',
+            port: '1025',
+            security: 'none',
+            username: '',
+            password: '',
+            fromName: '',
+            fromAddress: 'no-reply@adiutor.test',
+          },
+          {},
+          async () => {},
+        ),
+    ],
     ['list request types', (w) => listRequestTypes(ctx, w.actor)],
     [
       'add request type',
@@ -1085,6 +1107,7 @@ const READS: ReadonlySet<string> = new Set([
   "download a description's file (other)",
   "download an internal note's file (own)",
   'view brand colours',
+  'view email settings',
   'list request types',
   'list users',
   'view user',
@@ -1316,6 +1339,9 @@ const EXPECTED: Record<string, string> = {
   "download a description's file (own)": 'AAAAAAA',
   "download a description's file (other)": 'NNNAAAA',
   "download an internal note's file (own)": 'NNNAAAA',
+  // Where every email goes, and who sends it: staff Admins only, like the other settings.
+  'view email settings': 'FFFFFFA',
+  'choose the mail server': 'FFFFFFA',
   // Everyone who reads requests sees the types; only staff Admins change them.
   'list request types': 'AAAAAAA',
   'add request type': 'FFFFFFA',

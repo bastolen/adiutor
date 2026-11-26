@@ -107,8 +107,9 @@ security.
 - **Data:** PostgreSQL 18 with [Drizzle ORM](https://orm.drizzle.team), and Zod for validation
 - **Files:** a folder on disk, any S3-compatible bucket (signed with
   [aws4fetch](https://github.com/mhart/aws4fetch)) or SFTP (with [ssh2](https://github.com/mscdex/ssh2))
-- **Email:** [React Email](https://react.email) templates sent over SMTP, with
-  [Mailpit](https://mailpit.axllent.org) catching them in development
+- **Email:** [React Email](https://react.email) templates sent over SMTP, through a mail server
+  set up in Settings or the environment, with [Mailpit](https://mailpit.axllent.org) catching them in
+  development
 - **Tests:** Vitest with Testing Library, and Playwright with axe
 - **Tooling:** pnpm, Docker Compose, ESLint (Airbnb style), Prettier, Stylelint, Husky and
   commitlint

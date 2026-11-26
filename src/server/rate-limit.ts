@@ -117,6 +117,11 @@ export const RATE_LIMITS = {
    * each makes the server connect to an address.
    */
   webhookSendsPerUser: { limit: 20, windowSeconds: 60 * 60 },
+  /**
+   * Mail servers tried on the Email tab of Settings, per staff Admin: each try
+   * connects to a server they choose and sends a test email to them.
+   */
+  smtpTestsPerUser: { limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

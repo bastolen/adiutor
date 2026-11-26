@@ -111,6 +111,22 @@
       "advice": "Staff Admins can manage everything on Adiutor, the staff included. If you don't recognise this, remove their staff access in the staff settings and check the audit log.",
       "button": "Open the staff settings"
     },
+    "smtpChanged": {
+      "subject": "Adiutor sends email through another mail server",
+      "reason": "You're receiving this because you're a staff Admin on Adiutor: staff Admins are told whenever the mail server changes.",
+      "heading": "The mail server changed",
+      "changedBy": "{by} changed the mail server Adiutor sends email through to {server}.",
+      "changed": "The mail server Adiutor sends email through was changed to {server}.",
+      "advice": "Whoever controls the mail server can read the sign-in links and codes Adiutor sends. If you don't recognise this, check the Email settings and the audit log.",
+      "button": "Open the Email settings"
+    },
+    "smtpTest": {
+      "subject": "Adiutor can send email through this mail server",
+      "reason": "You're receiving this because you're saving a mail server on the Email tab of Adiutor's Settings.",
+      "heading": "This mail server works",
+      "body": "Adiutor sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
+      "button": "Open the Email settings"
+    },
     "jobFailing": {
       "subject": "Background job {job} keeps failing on Adiutor",
       "reason": "You're receiving this because you're a staff Admin on Adiutor: staff Admins are told when a background job keeps failing, at most once a day per job.",

@@ -45,6 +45,7 @@ import {
   staffNameSchema,
   staffRoleSchema,
   maxFileMbSchema,
+  smtpFormSchema,
   storageFormSchema,
   webhookEventsSchema,
   webhookFormatSchema,
@@ -841,5 +842,62 @@ describe('the webhook schemas', () => {
     expect(messagesFor(webhookTypesSchema, ['Not a key'])).toEqual([
       'validation.webhookTypes.unknown',
     ]);
+  });
+});
+
+describe('smtpFormSchema', () => {
+  /** The Email tab's form, as a browser sends it. */
+  const FORM = {
+    host: ' smtp.adiutor.test ',
+    port: '',
+    security: 'starttls',
+    username: '',
+    password: '',
+    fromName: ' Adiutor Tests ',
+    fromAddress: 'No-Reply@Adiutor.test',
+  };
+
+  it('fills in the usual port, and reads empty fields as none typed', () => {
+    expect(smtpFormSchema.parse(FORM)).toEqual({
+      host: 'smtp.adiutor.test',
+      port: 587,
+      security: 'starttls',
+      username: null,
+      password: undefined,
+      fromName: 'Adiutor Tests',
+      fromAddress: 'no-reply@adiutor.test',
+    });
+    expect(smtpFormSchema.parse({ ...FORM, security: 'tls' }).port).toBe(465);
+    expect(smtpFormSchema.parse({ ...FORM, port: '2525' }).port).toBe(2525);
+  });
+
+  it('keeps a password as it was typed, spaces included', () => {
+    expect(smtpFormSchema.parse({ ...FORM, password: ' pass word ' }).password).toBe(' pass word ');
+  });
+
+  it('takes an IP address as the host, and refuses what isn’t a host', () => {
+    expect(smtpFormSchema.parse({ ...FORM, host: '192.0.2.10' }).host).toBe('192.0.2.10');
+    expect(
+      smtpFormSchema.safeParse({ ...FORM, host: 'smtp adiutor' }).error?.issues[0]?.message,
+    ).toBe('validation.smtp.host');
+  });
+
+  it('refuses a port out of range, an unknown security and a sender that isn’t an address', () => {
+    /**
+     * The messages of the form's issues, with some fields changed.
+     *
+     * @param input - The fields to change.
+     * @returns The messages.
+     */
+    const issues = (input: Record<string, unknown>) =>
+      smtpFormSchema.safeParse({ ...FORM, ...input }).error?.issues.map((issue) => issue.message);
+
+    expect(issues({ port: '70000' })).toEqual(['validation.smtp.port']);
+    expect(issues({ security: 'ssl' })).toEqual(['validation.smtp.security']);
+    expect(issues({ fromAddress: 'no-reply' })).toEqual(['validation.email']);
+  });
+
+  it('leaves the sender’s address out when the form didn’t send it', () => {
+    expect(smtpFormSchema.parse({ ...FORM, fromAddress: null }).fromAddress).toBeUndefined();
   });
 });

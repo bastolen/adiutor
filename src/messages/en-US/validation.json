@@ -140,6 +140,14 @@
         "whole": "Give a whole number of megabytes, at least 1.",
         "tooBig": "Choose at most {maximum, number} megabytes."
       }
+    },
+    "smtp": {
+      "host": "Give the mail server's host name or address.",
+      "port": "Give a port from 1 to 65535.",
+      "security": "Choose how the connection is secured.",
+      "username": "That username is too long.",
+      "password": "That password is too long.",
+      "fromName": "That name is too long."
     }
   }
 }

@@ -32,6 +32,7 @@ const FALLBACKS: SettingValues = {
   'attachments.storage': null,
   'attachments.max_file_mb': 10,
   'attachments.enabled': false,
+  'email.smtp': null,
 };
 
 describe('the settings', () => {

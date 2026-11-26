@@ -42,6 +42,7 @@ import {
   REQUEST_STATUSES,
   REQUEST_TYPE_KEY_PATTERN,
 } from './requests';
+import { DEFAULT_SMTP_PORTS, SMTP_FIELD_MAX_LENGTH, SMTP_SECURITIES } from './smtp';
 import {
   DEFAULT_S3_REGION,
   DEFAULT_SFTP_PORT,
@@ -862,3 +863,95 @@ export const webhookTypesSchema = z
   )
   .max(200, { error: 'validation.webhookTypes.unknown' satisfies ValidationMessageKey })
   .transform((keys) => [...new Set(keys)]);
+
+/**
+ * A mail server's host: a host name or an IP address, trimmed, at most
+ * `SMTP_FIELD_MAX_LENGTH` characters.
+ */
+const smtpHostSchema = z
+  .string({ error: 'validation.smtp.host' satisfies ValidationMessageKey })
+  .trim()
+  .max(SMTP_FIELD_MAX_LENGTH, { error: 'validation.smtp.host' satisfies ValidationMessageKey })
+  .refine(
+    (value) =>
+      z.regexes.hostname.test(value) || z.regexes.ipv4.test(value) || z.regexes.ipv6.test(value),
+    { error: 'validation.smtp.host' satisfies ValidationMessageKey },
+  );
+
+/**
+ * An optional text field of a mail server's form: trimmed, at most
+ * `SMTP_FIELD_MAX_LENGTH` characters, and `null` when it's left empty.
+ *
+ * @param message - What to say when it's too long.
+ * @returns The schema.
+ */
+function optionalSmtpText(message: ValidationMessageKey) {
+  return z
+    .string({ error: message })
+    .trim()
+    .max(SMTP_FIELD_MAX_LENGTH, { error: message })
+    .transform((value) => value || null);
+}
+
+/**
+ * The mail server's form on the Email tab of Settings. The port defaults to
+ * the usual one for its security; the password is `undefined` when it was
+ * left empty (to keep the saved one, `secretToSave`), and the sender's
+ * address `undefined` when the form didn't send it (while `EMAIL_FROM`
+ * chooses the sender, the service decides).
+ */
+export const smtpFormSchema = z
+  .object({
+    host: smtpHostSchema,
+    port: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.coerce
+        .number({ error: 'validation.smtp.port' satisfies ValidationMessageKey })
+        .int({ error: 'validation.smtp.port' satisfies ValidationMessageKey })
+        .min(1, { error: 'validation.smtp.port' satisfies ValidationMessageKey })
+        .max(65535, { error: 'validation.smtp.port' satisfies ValidationMessageKey })
+        .optional(),
+    ),
+    security: z.enum(SMTP_SECURITIES, {
+      error: 'validation.smtp.security' satisfies ValidationMessageKey,
+    }),
+    username: optionalSmtpText('validation.smtp.username'),
+    password: z
+      .string()
+      .max(SMTP_FIELD_MAX_LENGTH, {
+        error: 'validation.smtp.password' satisfies ValidationMessageKey,
+      })
+      .transform((value) => (value === '' ? undefined : value)),
+    fromName: optionalSmtpText('validation.smtp.fromName'),
+    fromAddress: z.preprocess(
+      (value) => (value === '' || value === null ? undefined : value),
+      emailSchema.optional(),
+    ),
+  })
+  .transform(({ port, ...rest }) => ({ ...rest, port: port ?? DEFAULT_SMTP_PORTS[rest.security] }));
+
+/** The mail server's form as it's sent, before the service fills in the saved password. */
+export type SmtpFormInput = z.output<typeof smtpFormSchema>;
+
+/**
+ * A mail server as Settings keeps it (`email.smtp`), its password encrypted
+ * (`sealSecret` in `src/server/`), so that field holds the encrypted text and
+ * may be longer.
+ */
+export const storedSmtpSchema = z
+  .object({
+    host: smtpHostSchema,
+    port: z.number().int().min(1).max(65535),
+    security: z.enum(SMTP_SECURITIES),
+    username: z.string().min(1).max(SMTP_FIELD_MAX_LENGTH).nullable(),
+    password: z
+      .string()
+      .min(1)
+      .max(4 * SMTP_FIELD_MAX_LENGTH)
+      .nullable(),
+    from: z.object({
+      name: z.string().min(1).max(SMTP_FIELD_MAX_LENGTH).nullable(),
+      address: emailSchema,
+    }),
+  })
+  .nullable();
