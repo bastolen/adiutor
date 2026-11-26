@@ -1,9 +1,10 @@
 /**
  * @file End-to-end tests for Settings: the staff's name, the brand colours,
  * the logo and the icon made from it, the request number prefix, request
- * types, where attached files are kept, inviting staff, staff roles and the
- * last-Admin guard, and confirming it's you before giving a staff role or a
- * company's Admin role. A test that changes a setting puts it back.
+ * types, where attached files are kept (and the storage chosen kept through
+ * confirming it's you), inviting staff, staff roles and the last-Admin
+ * guard, and confirming it's you before giving a staff role or a company's
+ * Admin role. A test that changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -449,6 +450,52 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
   } finally {
     await restoreAttachmentSettings(before);
     await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('an Admin who confirmed long ago chooses a storage, confirms it’s them, and comes back to what they chose', async ({
+  page,
+}) => {
+  const before = await attachmentSettingRows();
+  try {
+    await restoreAttachmentSettings([]);
+    await signIn(page, PLATFORM_ADMIN);
+    // Signed in 20 minutes ago, as far as the confirmation window goes.
+    await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
+    await page.goto('/admin/settings/attachments');
+
+    const storage = page.getByRole('combobox', { name: 'Storage' });
+    await storage.click();
+    await page.getByRole('option', { name: /An S3-compatible bucket/ }).click();
+    const endpoint = page.getByRole('textbox', { name: 'Service address' });
+    const bucket = page.getByRole('textbox', { name: 'Bucket' });
+    const accessKeyId = page.getByRole('textbox', { name: 'Access key ID' });
+    await endpoint.fill('https://files.adiutor.test');
+    await bucket.fill('adiutor-tests');
+    await accessKeyId.fill('e2e-key-id');
+
+    // Saving needs a recent confirmation: the step-up page comes back to the storage's card.
+    const save = page.getByRole('button', { name: 'Test and save' });
+    await expect(save).toHaveCount(0);
+    const confirm = page
+      .getByRole('region', { name: 'Where files are kept' })
+      .getByRole('link', { name: /^Confirm it.s you$/ });
+    await expect(confirm).toHaveAttribute(
+      'href',
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fattachments%23storage&for=change',
+    );
+    await confirm.click();
+    await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
+
+    // Back with the bucket chosen and everything typed, ready to save.
+    await expect(page).toHaveURL('/admin/settings/attachments#storage', { timeout: 15_000 });
+    await expect(save).toBeEnabled();
+    await expect(storage).toHaveText(/An S3-compatible bucket/);
+    await expect(endpoint).toHaveValue('https://files.adiutor.test');
+    await expect(bucket).toHaveValue('adiutor-tests');
+    await expect(accessKeyId).toHaveValue('e2e-key-id');
+  } finally {
+    await restoreAttachmentSettings(before);
   }
 });
 
