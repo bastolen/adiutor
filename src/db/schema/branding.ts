@@ -1,5 +1,5 @@
 /**
- * @file Drizzle schema for the brand's images (decision 0051): the logo and
+ * @file Drizzle schema for the brand's images (decision 0052): the logo and
  * the own browser tab icon a staff Admin uploaded, as the PNG Adiutor drew
  * from the upload. They're kept in the database, so every install has them
  * whatever storage it has for attachments, and backups hold them. Only

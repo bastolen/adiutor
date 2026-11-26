@@ -20,9 +20,11 @@ function signedOut(path: string) {
 }
 
 describe('isPublicPath', () => {
-  it('allows the sign-in, invitation, join, answer and setup pages, the auth API and the health check', () => {
+  it('allows the sign-in, invitation, join, answer and setup pages, the brand images, the auth API and the health check', () => {
     [
       '/answer/abc',
+      '/branding/logo',
+      '/branding/icon',
       '/answer/abc/approve',
       '/auth',
       '/auth/forgot-password',
@@ -45,6 +47,7 @@ describe('isPublicPath', () => {
       '/authors',
       '/setups',
       '/answers',
+      '/brandings',
       '/api/other',
       '/api/healthy',
       '/api/jobsite',
@@ -73,7 +76,7 @@ describe('proxy', () => {
     expect(signedOut('/invite/abc').headers.get('location')).toBeNull();
   });
 
-  it('gives an attached file a fixed policy that runs nothing, and a page its own with a nonce', () => {
+  it('gives a file a fixed policy that runs nothing, and a page its own with a nonce', () => {
     /**
      * Runs the proxy for a signed-in request.
      *
@@ -90,6 +93,7 @@ describe('proxy', () => {
     expect(policyFor('/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a')).toBe(
       "default-src 'none'; sandbox",
     );
+    expect(policyFor('/branding/logo')).toBe("default-src 'none'; sandbox");
     expect(policyFor('/requests/1')).toMatch(/script-src 'self' 'nonce-/);
   });
 });
@@ -99,13 +103,9 @@ describe('the matcher', () => {
   const runsOn = new RegExp(`^${defined(config.matcher[0], 'the matcher')}$`);
 
   it('leaves out Next.js\u2019s files, the static files and the attachments\u2019 upload', () => {
-    [
-      '/_next/static/chunk.js',
-      '/favicon.ico',
-      '/icon.svg',
-      '/brand/logo.svg',
-      '/api/attachments',
-    ].forEach((path) => expect(runsOn.test(path), path).toBe(false));
+    ['/_next/static/chunk.js', '/favicon.ico', '/brand/logo.svg', '/api/attachments'].forEach(
+      (path) => expect(runsOn.test(path), path).toBe(false),
+    );
   });
 
   it('runs on everything else, the paths next to the upload included', () => {
@@ -116,6 +116,8 @@ describe('the matcher', () => {
       '/api/attachments/x',
       '/api/attachmentsx',
       '/api/jobs',
+      '/branding/icon',
+      '/icon.svg',
       '/companies/x.png',
     ].forEach((path) => expect(runsOn.test(path), path).toBe(true));
   });

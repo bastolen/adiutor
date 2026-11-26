@@ -6,14 +6,13 @@ but other products and projects may not use them to represent themselves without
 
 The brand files are:
 
+- public/brand/favicon.ico
 - public/brand/icon-white.svg
 - public/brand/icon.svg
 - public/brand/logo-on-dark.svg
 - public/brand/logo-white.svg
 - public/brand/logo.png
 - public/brand/logo.svg
-- src/app/favicon.ico
-- src/app/icon.svg
 - src/emails/static/logo.png
 
 The fonts Adiutor ships are licensed separately (see LICENSES/).

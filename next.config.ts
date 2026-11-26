@@ -60,12 +60,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // The static files the proxy doesn't handle: nothing in them may run.
-      ...['/brand/:path*', '/icon.svg', '/favicon.ico'].map((source) => ({
+      // The files the proxy doesn't handle: nothing in them may run.
+      ...['/brand/:path*', '/favicon.ico'].map((source) => ({
         source,
         headers: [{ key: 'Content-Security-Policy', value: STATIC_FILE_POLICY }],
       })),
     ];
+  },
+
+  /**
+   * Sends `/favicon.ico` to the brand's icon (`src/app/branding/favicon/`),
+   * which is Adiutor's own until a staff Admin uploads a logo or an icon
+   * (decision 0052). The proxy skips the path, so tools that ask for it
+   * without reading the page get the icon, signed in or not.
+   *
+   * @returns The rewrite rules.
+   */
+  async rewrites() {
+    return [{ source: '/favicon.ico', destination: '/branding/favicon' }];
   },
 
   /** Enables Cache Components (part of the create-next-app defaults). */

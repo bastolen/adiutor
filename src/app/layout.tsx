@@ -15,7 +15,7 @@ import { pickMessages } from '@/lib/i18n/messages';
 import { requestLanguageSettings } from '@/lib/i18n/request-locale';
 import { NONCE_HEADER } from '@/lib/request/csp';
 import { themeScript } from '@/lib/theme';
-import { pageBrandCss, requestStaffName } from '@/server/branding';
+import { pageBrandCss, pageIcons, requestBrandImages, requestStaffName } from '@/server/branding';
 
 import ReloadWhenActingAsChanges from './reload-when-acting-as-changes';
 
@@ -25,15 +25,22 @@ import './globals.css';
  * Default page metadata, in the request's language. Pages set their own
  * title, which the template ends with the staff's name ("Users · Adiutor",
  * or "Users · Adiutor Support" once setup named the staff so; decision 0050).
+ * The icons are the one made from the brand once a staff Admin uploaded a
+ * logo or an icon, Adiutor's until then (decision 0052).
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const [t, staff] = await Promise.all([getTranslations('common'), requestStaffName()]);
+  const [t, staff, images] = await Promise.all([
+    getTranslations('common'),
+    requestStaffName(),
+    requestBrandImages(),
+  ]);
   return {
     title: {
       template: t('documentTitle', { page: '%s', staff: forTitleTemplate(staff) }),
       default: staff,
     },
     description: t('app.description'),
+    icons: pageIcons(images.iconVersion),
   };
 }
 

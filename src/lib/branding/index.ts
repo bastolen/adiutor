@@ -23,6 +23,16 @@ export {
 export { contrast, type HexColour, luminance } from './contrast';
 export { paletteCss, paletteVariables } from './css';
 export {
+  BRAND_ICON_SIZES,
+  brandIconPath,
+  type BrandIconSize,
+  type BrandIconSource,
+  brandIconSize,
+  brandIconSource,
+  BRANDING_PATH,
+  brandLogoPath,
+} from './icon';
+export {
   ABOUT_SQUARE_RATIO,
   BRAND_IMAGE_KINDS,
   type BrandImageKind,

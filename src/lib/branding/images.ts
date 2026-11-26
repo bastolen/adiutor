@@ -1,5 +1,5 @@
 /**
- * @file The images a staff Admin uploads for the brand (decision 0051): the
+ * @file The images a staff Admin uploads for the brand (decision 0052): the
  * logo and an own browser tab icon. What kind of image a file is and how
  * large, read from its first bytes before anything decodes it, the shapes
  * and sizes each may have, and the sizes Adiutor stores them at. Free of zod
@@ -218,17 +218,25 @@ export function brandImageProblem(kind: BrandImageKind, size: ImageSize): BrandI
 }
 
 /**
- * The size an image takes in a box, keeping its shape and never growing:
- * shrunk until it fits, in whole pixels (at least one).
+ * The size an image takes in a box, keeping its shape: shrunk until it
+ * fits, and grown to fill it only when asked (a stored image never grows;
+ * a browser tab icon fills its square), in whole pixels (at least one).
  *
  * @param size - The image's size.
  * @param box - The room.
+ * @param options - How to fit it.
+ * @param options.grow - Whether a smaller image grows to the box.
  * @returns The size it's drawn at.
  */
-export function fitInto(size: ImageSize, box: ImageSize): ImageSize {
-  const scale = Math.min(1, box.width / size.width, box.height / size.height);
+export function fitInto(
+  size: ImageSize,
+  box: ImageSize,
+  { grow = false }: { grow?: boolean } = {},
+): ImageSize {
+  const scale = Math.min(box.width / size.width, box.height / size.height);
+  const used = grow ? scale : Math.min(1, scale);
   return {
-    width: Math.max(1, Math.round(size.width * scale)),
-    height: Math.max(1, Math.round(size.height * scale)),
+    width: Math.max(1, Math.round(size.width * used)),
+    height: Math.max(1, Math.round(size.height * used)),
   };
 }

@@ -198,6 +198,12 @@ describe('fitInto', () => {
     });
   });
 
+  it('grows an image to fill its box when asked', () => {
+    expect(fitInto({ width: 64, height: 48 }, { width: 160, height: 160 }, { grow: true })).toEqual(
+      { width: 160, height: 120 },
+    );
+  });
+
   it('keeps at least one pixel on each side', () => {
     expect(fitInto({ width: 4096, height: 1 }, { width: 512, height: 512 })).toEqual({
       width: 512,

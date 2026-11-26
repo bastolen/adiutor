@@ -13,14 +13,31 @@
 
 /**
  * The policy of a file served from `/attachments/` (an attached file, always
- * a download): nothing in it may load or run, and it's sandboxed, should a
- * browser ever show one instead of saving it. Fixed: a file has no scripts
- * to give a nonce to.
+ * a download) or `/branding/` (an image Adiutor drew): nothing in it may load
+ * or run, and it's sandboxed, should a browser ever show one as a page.
+ * Fixed: a file has no scripts to give a nonce to.
  */
 export const FILE_POLICY = "default-src 'none'; sandbox";
 
-/** Where attached files are served from: the paths that get {@link FILE_POLICY}. */
+/** Where attached files are served from: one of the {@link FILE_PATHS}. */
 export const ATTACHMENTS_PATH = '/attachments/';
+
+/**
+ * The paths that serve files, which get {@link FILE_POLICY}: attached files,
+ * and the brand's images (the uploaded logo and the icon made from the
+ * brand, decision 0052).
+ */
+export const FILE_PATHS: readonly string[] = [ATTACHMENTS_PATH, '/branding/'];
+
+/**
+ * Whether a path serves a file, and so gets {@link FILE_POLICY}.
+ *
+ * @param pathname - The request's path.
+ * @returns Whether it's below one of the {@link FILE_PATHS}.
+ */
+export function servesFile(pathname: string): boolean {
+  return FILE_PATHS.some((prefix) => pathname.startsWith(prefix));
+}
 
 /** Request header the proxy passes the nonce in, for the root layout. */
 export const NONCE_HEADER = 'x-nonce';

@@ -1,5 +1,5 @@
 /**
- * @file Drawing the brand's images as PNGs (decision 0051), with the
+ * @file Drawing the brand's images as PNGs (decision 0052), with the
  * `ImageResponse` Next.js ships (Satori and Resvg; no image library of its
  * own). An uploaded logo or icon is drawn again before it's stored, so
  * Adiutor only ever serves a PNG it made itself: whatever else the file held
