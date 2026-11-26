@@ -8,7 +8,7 @@ import type { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getActor } from '@/server/authz';
-import { loadAttachment } from '@/server/requests';
+import { type AttachmentToServe, loadAttachment } from '@/server/requests';
 import { StorageError } from '@/server/storage';
 
 import { GET } from './route';
@@ -30,18 +30,28 @@ function download() {
   return GET({} as NextRequest, { params: Promise.resolve({ id: ID }) });
 }
 
+/**
+ * A file the reader may download, as `loadAttachment` gives it.
+ *
+ * @param readFile - What reading it from the storage gives.
+ * @returns The file.
+ */
+function servable(readFile: AttachmentToServe['readFile']): AttachmentToServe {
+  return { name: 'Café menu.pdf', contentType: 'application/pdf', readFile };
+}
+
 beforeEach(() => {
   vi.mocked(loadAttachment).mockReset();
 });
 
 describe('GET /attachments/[id]', () => {
   it('serves the file as a download under its name, never kept or sniffed', async () => {
-    vi.mocked(loadAttachment).mockResolvedValue({
-      name: 'Café menu.pdf',
-      contentType: 'application/pdf',
-      body: new Response('%PDF-1.7').body ?? new ReadableStream(),
-      size: 8,
-    });
+    vi.mocked(loadAttachment).mockResolvedValue(
+      servable(async () => ({
+        body: new Response('%PDF-1.7').body ?? new ReadableStream(),
+        size: 8,
+      })),
+    );
 
     const response = await download();
 
@@ -72,9 +82,20 @@ describe('GET /attachments/[id]', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
+  it('answers 404 for a file the storage doesn’t have', async () => {
+    vi.mocked(loadAttachment).mockResolvedValue(servable(async () => null));
+    const response = await download();
+    expect(response.status).toBe(404);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
   it('answers 503 when the storage fails, logging only its kind', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(loadAttachment).mockRejectedValue(new StorageError('timed_out'));
+    vi.mocked(loadAttachment).mockResolvedValue(
+      servable(async () => {
+        throw new StorageError('timed_out');
+      }),
+    );
     expect((await download()).status).toBe(503);
     expect(error).toHaveBeenCalledWith(
       'An attachment could not be read from the storage:',

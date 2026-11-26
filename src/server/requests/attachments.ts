@@ -32,7 +32,13 @@ import { forbiddenError, notFoundError, ServiceError } from '../errors';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { readSettings } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
-import { attachmentKey, attachmentLimitMb, type FileStorage, StorageError } from '../storage';
+import {
+  attachmentKey,
+  attachmentLimitMb,
+  type FileStorage,
+  StorageError,
+  type StoredFile,
+} from '../storage';
 import { getRequestAccess } from './access';
 import matchesAttachmentKind from './attachment-checks';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
@@ -272,16 +278,20 @@ export async function uploadAttachment(
   }
 }
 
-/** A file to download, as its route serves it. */
+/** A file a reader may download, as its route serves it. */
 export interface AttachmentToServe {
   /** Its name, for the download. */
   name: string;
   /** The type it's served as. */
   contentType: string;
-  /** Its bytes, as they arrive from the storage. */
-  body: ReadableStream<Uint8Array>;
-  /** Its size in bytes, when the storage says. */
-  size: number | null;
+  /**
+   * Reads its bytes from the storage, only once they're needed: a browser
+   * whose copy is still the file needs only the checks.
+   *
+   * @returns The file, or `null` when the storage has none under its key.
+   * @throws {StorageError} When the storage fails (not when the file is merely missing).
+   */
+  readFile(): Promise<StoredFile | null>;
 }
 
 /**
@@ -290,13 +300,13 @@ export interface AttachmentToServe {
  * it's active, and the staff), and for an internal note's file, the readers
  * of notes (`requests:view-internal`). An unsent file is nobody's to
  * download, a removed one is gone, and anything the reader may not read is
- * missing too, so nothing says it exists.
+ * missing too, so nothing says it exists. The checks come first, and the
+ * storage is read only when the file's bytes are (`readFile`).
  *
  * @param ctx - Service context.
  * @param actor - The reader.
  * @param id - The attachment's ID, as the address gave it.
  * @returns The file, or `null` when there's none for this reader.
- * @throws {StorageError} When the storage fails (not when the file is merely missing).
  */
 export async function loadAttachment(
   ctx: ServiceContext,
@@ -338,15 +348,26 @@ export async function loadAttachment(
   if (!access || (staffOnly && !access.permissions.has('requests:view-internal'))) {
     return null;
   }
-  const storage = ctx.storage ? await ctx.storage() : null;
-  const file = storage ? await storage.get(attachmentKey(parsed.data)) : null;
-  if (!file) {
-    // A row without its file: a storage that changed, or files not backed up with the database.
-    // eslint-disable-next-line no-console -- The ID only: it names no one.
-    console.warn('An attachment has no file in the storage:', parsed.data);
-    return null;
-  }
-  return { name: row.name, contentType: row.contentType, body: file.body, size: file.size };
+  return {
+    name: row.name,
+    contentType: row.contentType,
+    /**
+     * Reads the file's bytes from the storage.
+     *
+     * @returns The file, or `null` when the storage has none (or none is chosen).
+     */
+    readFile: async () => {
+      const storage = ctx.storage ? await ctx.storage() : null;
+      const file = storage ? await storage.get(attachmentKey(parsed.data)) : null;
+      if (!file) {
+        // A row without its file: a storage that changed, or files not backed up with the
+        // database.
+        // eslint-disable-next-line no-console -- The ID only: it names no one.
+        console.warn('An attachment has no file in the storage:', parsed.data);
+      }
+      return file;
+    },
+  };
 }
 
 /**

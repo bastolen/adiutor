@@ -32,9 +32,14 @@ export async function GET(
 ): Promise<Response> {
   // Sends someone whose session must be confirmed (or who needs MFA) where a page would.
   const actor = await getActor();
-  let file;
+  const notFound = new Response(null, { status: 404, headers: { 'Cache-Control': NO_STORE } });
+  const file = await loadAttachment(appContext, actor, (await context.params).id);
+  if (!file) {
+    return notFound;
+  }
+  let stored;
   try {
-    file = await loadAttachment(appContext, actor, (await context.params).id);
+    stored = await file.readFile();
   } catch (error) {
     if (error instanceof StorageError) {
       // eslint-disable-next-line no-console -- The kind only: the storage's reply may say more.
@@ -43,14 +48,14 @@ export async function GET(
     }
     throw error;
   }
-  if (!file) {
-    return new Response(null, { status: 404, headers: { 'Cache-Control': NO_STORE } });
+  if (!stored) {
+    return notFound;
   }
-  return new Response(file.body, {
+  return new Response(stored.body, {
     headers: {
       'Content-Type': file.contentType,
       // So the browser shows how far a large download is.
-      ...(file.size !== null && { 'Content-Length': String(file.size) }),
+      ...(stored.size !== null && { 'Content-Length': String(stored.size) }),
       'Content-Disposition': attachmentDisposition(file.name),
       'X-Content-Type-Options': 'nosniff',
       'Cross-Origin-Resource-Policy': 'same-origin',
