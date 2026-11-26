@@ -172,4 +172,37 @@ describe('ColoursForm', () => {
     expect(field('Accent')).toHaveValue('#1d63dc');
     expect(field('Accent in dark mode')).toHaveValue('#1d63dc');
   });
+
+  describe('while a staff Admin keeps every page in one mode', () => {
+    it('in light mode, hides the dark accent but still sends it as saved, and previews light only', async () => {
+      const user = userEvent.setup();
+      render(
+        <ColoursForm
+          saved={{ accent: '#c2185b', accentDark: '#ff80ab', tint: null }}
+          forced="light"
+        />,
+      );
+
+      expect(
+        screen.queryByRole('textbox', { name: 'Accent in dark mode' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('preview-light')).toBeInTheDocument();
+      expect(screen.queryByTestId('preview-dark')).not.toBeInTheDocument();
+
+      await user.clear(field('Accent'));
+      await user.type(field('Accent'), '#2e7d32');
+      expect(await saveAndRead(user)).toEqual(['#2e7d32', '#ff80ab', ADIUTOR_COLOURS.tint]);
+    });
+
+    it('in dark mode, keeps both accents, says the accent is for emails and the icon, and previews dark only', () => {
+      render(<ColoursForm saved={NO_BRAND_COLOURS} forced="dark" />);
+
+      expect(field('Accent in dark mode')).toBeInTheDocument();
+      expect(
+        screen.getByText('The emails and the browser tab icon, which stay light.'),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('preview-dark')).toBeInTheDocument();
+      expect(screen.queryByTestId('preview-light')).not.toBeInTheDocument();
+    });
+  });
 });

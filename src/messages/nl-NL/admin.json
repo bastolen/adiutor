@@ -562,13 +562,33 @@
           "removeDescription": "Het tabblad toont weer het icoon dat van het logo is gemaakt, of dat van Adiutor zonder logo.",
           "removed": "Geüpload icoon verwijderd."
         },
+        "theme": {
+          "title": "Lichte en donkere modus",
+          "description": "Of iedereen zelf de lichte of donkere modus kiest, of dat elke pagina er één toont. E-mails zijn altijd licht.",
+          "legend": "Pagina’s tonen in",
+          "both": {
+            "label": "Lichte en donkere modus",
+            "description": "Iedereen kiest zelf in het accountmenu of met de knop in de hoek; tot dan volgen de pagina’s het apparaat."
+          },
+          "light": {
+            "label": "Alleen lichte modus",
+            "description": "Elke pagina is licht, wat het apparaat ook wil, en er valt niets te kiezen."
+          },
+          "dark": {
+            "label": "Alleen donkere modus",
+            "description": "Elke pagina is donker, wat het apparaat ook wil, en er valt niets te kiezen."
+          },
+          "save": "Opslaan",
+          "saved": "Lichte en donkere modus opgeslagen."
+        },
         "colours": {
           "title": "Huisstijlkleuren",
           "description": "De kleuren van elke pagina en e-mail, voor gebruikers en medewerkers. Tekst blijft altijd leesbaar: een kleur die daarvoor te licht of te donker is, wordt aangepast, en het voorbeeld laat zien wat er gebruikt wordt.",
           "accent": {
             "label": "Accentkleur",
             "description": "Knoppen, links en focusranden, ook in het donkere thema als dat geen eigen accentkleur heeft.",
-            "pick": "Kies de accentkleur"
+            "pick": "Kies de accentkleur",
+            "descriptionDarkOnly": "De e-mails en het tabbladicoon, die licht blijven."
           },
           "accentDark": {
             "label": "Accentkleur in het donkere thema",

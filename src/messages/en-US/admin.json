@@ -562,13 +562,33 @@
           "removeDescription": "The browser tab shows the icon made from the logo again, or Adiutor’s without a logo.",
           "removed": "Uploaded icon removed."
         },
+        "theme": {
+          "title": "Light and dark mode",
+          "description": "Whether each person chooses light or dark mode, or every page shows one of them. Emails are always light.",
+          "legend": "Show pages in",
+          "both": {
+            "label": "Light and dark mode",
+            "description": "Each person chooses in the account menu or with the corner button; until then, pages follow their device."
+          },
+          "light": {
+            "label": "Light mode only",
+            "description": "Every page is light, whatever the device prefers, and there’s nothing to choose."
+          },
+          "dark": {
+            "label": "Dark mode only",
+            "description": "Every page is dark, whatever the device prefers, and there’s nothing to choose."
+          },
+          "save": "Save",
+          "saved": "Light and dark mode saved."
+        },
         "colours": {
           "title": "Brand colours",
           "description": "The colours every page and email shows, to users and staff alike. Text always stays readable: a colour too light or too dark for that is adjusted, and the preview shows what will be used.",
           "accent": {
             "label": "Accent",
             "description": "Buttons, links and focus rings, in dark mode too unless it has an accent of its own.",
-            "pick": "Pick the accent"
+            "pick": "Pick the accent",
+            "descriptionDarkOnly": "The emails and the browser tab icon, which stay light."
           },
           "accentDark": {
             "label": "Accent in dark mode",
