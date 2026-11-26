@@ -98,6 +98,26 @@ function choose(chooser: HTMLInputElement, files: File[]): void {
 }
 
 /**
+ * Ends an upload, and waits until the picker has taken it in, effects and
+ * all. The picker hears of the end in a promise callback, after the code
+ * that ended it, so it has to happen inside an `act()` that's awaited:
+ * otherwise React renders it on its own time, and on a slow machine a
+ * `findBy…` can see the new text before the effects that follow it have run
+ * (`onUploadingChange`).
+ *
+ * @param upload - The upload.
+ * @param outcome - How it ends.
+ */
+async function finishUpload(
+  upload: PendingUpload | undefined,
+  outcome: UploadOutcome,
+): Promise<void> {
+  await act(async () => {
+    defined(upload, 'the upload').finish(outcome);
+  });
+}
+
+/**
  * What a paste or a drop holds, as the browser gives it.
  *
  * @param files - The files.
@@ -135,13 +155,11 @@ describe('AttachmentPicker', () => {
     expect(screen.getByText('Wait until the files are uploaded to send.')).toBeInTheDocument();
     expect(onUploadingChange).toHaveBeenLastCalledWith(true);
 
-    act(() =>
-      defined(upload, 'the upload').finish({
-        ok: true,
-        file: { id: 'attachment-1', name: 'printer.log', size: 15 },
-      }),
-    );
-    expect(await within(waiting).findByText('15 bytes')).toBeInTheDocument();
+    await finishUpload(upload, {
+      ok: true,
+      file: { id: 'attachment-1', name: 'printer.log', size: 15 },
+    });
+    expect(within(waiting).getByText('15 bytes')).toBeInTheDocument();
     expect(new FormData(form as HTMLFormElement).getAll('attachment')).toEqual(['attachment-1']);
     expect(screen.getByText('printer.log is ready to send.')).toBeInTheDocument();
     expect(onUploadingChange).toHaveBeenLastCalledWith(false);
@@ -187,12 +205,10 @@ describe('AttachmentPicker', () => {
     expect(uploads.map(({ file }) => file.name)).toEqual(['one.log', 'two.log', 'three.log']);
     expect(within(waiting).getByText('Waiting to upload')).toBeInTheDocument();
 
-    act(() =>
-      defined(uploads[0], 'the first upload').finish({
-        ok: true,
-        file: { id: 'attachment-1', name: 'one.log', size: 15 },
-      }),
-    );
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-1', name: 'one.log', size: 15 },
+    });
     await waitFor(() => expect(uploads).toHaveLength(4));
     expect(uploads[3]?.file.name).toBe('four.log');
     expect(within(waiting).queryByText('Waiting to upload')).not.toBeInTheDocument();
@@ -208,9 +224,7 @@ describe('AttachmentPicker', () => {
     const waiting = await screen.findByRole('list', { name: '4 files to send' });
     await user.click(within(waiting).getByRole('button', { name: 'Remove four.log' }));
 
-    act(() =>
-      defined(uploads[0], 'the first upload').finish({ ok: false, reason: null, stopped: true }),
-    );
+    await finishUpload(uploads[0], { ok: false, reason: null, stopped: true });
     await waitFor(() => expect(uploadAttachment).toHaveBeenCalledTimes(3));
     expect(uploads.map(({ file }) => file.name)).not.toContain('four.log');
   });
@@ -220,13 +234,11 @@ describe('AttachmentPicker', () => {
     choose(chooser, [textFile('printer.log')]);
     await screen.findByRole('list', { name: '1 file to send' });
 
-    act(() =>
-      defined(uploads[0], 'the upload').finish({
-        ok: false,
-        reason: 'That file isn’t what its name says it is, so it can’t be attached.',
-        stopped: false,
-      }),
-    );
+    await finishUpload(uploads[0], {
+      ok: false,
+      reason: 'That file isn’t what its name says it is, so it can’t be attached.',
+      stopped: false,
+    });
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'That file isn’t what its name says it is, so it can’t be attached.',
     );
@@ -235,9 +247,7 @@ describe('AttachmentPicker', () => {
     // Without a reason it didn't reach Adiutor, which the picker words itself.
     choose(chooser, [textFile('driver.log')]);
     await screen.findByRole('list', { name: '1 file to send' });
-    act(() =>
-      defined(uploads[1], 'the upload').finish({ ok: false, reason: null, stopped: false }),
-    );
+    await finishUpload(uploads[1], { ok: false, reason: null, stopped: false });
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'driver.log couldn’t be uploaded. Try again.',
     );
@@ -249,9 +259,7 @@ describe('AttachmentPicker', () => {
     const waiting = await screen.findByRole('list', { name: '1 file to send' });
     within(waiting).getByRole('button', { name: 'Remove printer.log' }).focus();
 
-    act(() =>
-      defined(uploads[0], 'the upload').finish({ ok: false, reason: null, stopped: false }),
-    );
+    await finishUpload(uploads[0], { ok: false, reason: null, stopped: false });
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Attach files' })).toHaveFocus());
   });
@@ -302,12 +310,10 @@ describe('AttachmentPicker', () => {
     const { chooser } = renderPicker();
     choose(chooser, [textFile('printer.log')]);
     await screen.findByRole('list', { name: '1 file to send' });
-    act(() =>
-      defined(uploads[0], 'the upload').finish({
-        ok: true,
-        file: { id: 'attachment-1', name: 'printer.log', size: 15 },
-      }),
-    );
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-1', name: 'printer.log', size: 15 },
+    });
 
     await user.click(screen.getByRole('button', { name: 'Reset' }));
 
