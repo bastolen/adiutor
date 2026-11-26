@@ -40,7 +40,7 @@
       "pictureProvider": "{hasAccount, select, yes {{provider} · {account}} other {{provider}}}",
       "pictureNotYet": "Log één keer in met {provider} om de foto daarvan te gebruiken.",
       "pictureInitials": "Initialen",
-      "pictureDefault": "{shown, select, initials {Zolang je niets kiest, staan je initialen er.} other {Zolang je niets kiest, staat de foto van het account dat je als eerste hebt gekoppeld er.}}",
+      "pictureDefault": "{shown, select, initials {Zolang je niets kiest, staan je initialen er.} other {Zolang je niets kiest, staat er de foto van het eerste account dat je hebt gekoppeld en dat een foto heeft.}}",
       "pictureConnect": "Koppel GitHub of Google op de <link>pagina Beveiliging</link> om de foto daarvan te gebruiken.",
       "savePicture": "Foto opslaan",
       "pictureSaved": "Foto opgeslagen.",

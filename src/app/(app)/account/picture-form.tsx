@@ -23,7 +23,11 @@ import { savePictureAction } from './actions';
 export interface PictureOption {
   /** Its provider. */
   providerId: OAuthProvider;
-  /** Its name at the provider (a GitHub username), when it's known. */
+  /**
+   * Its name at the provider (a GitHub username), when it's known and the
+   * reader gets it: not a staff member signed in as the user who doesn't see
+   * it on the user's page. Without it, the option names only the provider.
+   */
   accountName: string | null;
   /**
    * Whether it has a picture to choose: not yet when it was connected before

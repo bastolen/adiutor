@@ -62,10 +62,12 @@ test('a user shows the picture of an account they connected, or their initials',
     const choice = page.getByRole('group', { name: 'Show' });
     const google = choice.getByRole('radio', { name: `Google · ${SUPPORT_STAFF.email}` });
 
-    // Until they choose: the picture of the account they connected first, from Adiutor's address.
+    // Until they choose: the first connected account with a picture, from Adiutor's address.
     await expect(google).toBeChecked();
     await expect(
-      page.getByText('Until you choose, the picture of the account you connected first is shown.'),
+      page.getByText(
+        'Until you choose, the picture of the first account you connected that has one is shown.',
+      ),
     ).toBeVisible();
     await expect(accountMenu.locator('img')).toHaveAttribute(
       'src',

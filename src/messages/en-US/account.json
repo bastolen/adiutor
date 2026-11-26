@@ -40,7 +40,7 @@
       "pictureProvider": "{hasAccount, select, yes {{provider} · {account}} other {{provider}}}",
       "pictureNotYet": "Sign in with {provider} once to use its picture.",
       "pictureInitials": "Initials",
-      "pictureDefault": "{shown, select, initials {Until you choose, your initials are shown.} other {Until you choose, the picture of the account you connected first is shown.}}",
+      "pictureDefault": "{shown, select, initials {Until you choose, your initials are shown.} other {Until you choose, the picture of the first account you connected that has one is shown.}}",
       "pictureConnect": "Connect GitHub or Google on the <link>Security page</link> to use its picture.",
       "savePicture": "Save picture",
       "pictureSaved": "Picture saved.",

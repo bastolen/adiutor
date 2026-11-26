@@ -74,7 +74,7 @@ describe('PictureForm', () => {
     expect(google).toHaveAccessibleDescription('Sign in with Google once to use its picture.');
     expect(
       screen.getByText(
-        'Until you choose, the picture of the account you connected first is shown.',
+        'Until you choose, the picture of the first account you connected that has one is shown.',
       ),
     ).toBeInTheDocument();
   });

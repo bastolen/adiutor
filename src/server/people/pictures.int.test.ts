@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { account, user } from '@/db/schema';
-import type { Permission } from '@/lib/authz/permissions';
+import { getGlobalPermissions, type Permission } from '@/lib/authz/permissions';
 
 import {
   connectProvider,
@@ -262,6 +262,38 @@ describe('choosing a picture', () => {
     await db.update(user).set({ avatarSource: 'initials' }).where(eq(user.id, userId));
     const initials = await ownPictureChoices(ctx, staff);
     expect(initials.choices.map(({ picture }) => picture)).toEqual([null, null]);
+  });
+
+  it('names the accounts only for the user and the staff who see the names', async () => {
+    const { userId } = await personWithTwoPictures();
+    const own = await actorFor(db, userId);
+    /**
+     * The name each choice carries for a reader.
+     *
+     * @param actor - The reader.
+     * @returns Each choice's provider and account name.
+     */
+    const names = async (actor: Actor) =>
+      (await ownPictureChoices(ctx, actor)).choices.map(({ providerId, accountName }) => [
+        providerId,
+        accountName,
+      ]);
+
+    expect(await names(own)).toEqual([
+      ['github', 'adiutor-tests'],
+      ['google', 'person@adiutor.test'],
+    ]);
+    // Support doesn't see the accounts' names on the user's page, so not here either.
+    const support = signedInAsBy(own, [...getGlobalPermissions({ platformRole: 'support' })]);
+    expect(await names(support)).toEqual([
+      ['github', null],
+      ['google', null],
+    ]);
+    const admin = signedInAsBy(own, [...getGlobalPermissions({ platformRole: 'platform_admin' })]);
+    expect(await names(admin)).toEqual([
+      ['github', 'adiutor-tests'],
+      ['google', 'person@adiutor.test'],
+    ]);
   });
 
   it('offers an account without a picture yet, which can’t be chosen', async () => {

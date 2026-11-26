@@ -177,8 +177,9 @@ export function mayImpersonate(
  * all of them to the user, and to a staff member signed in as them only what
  * that staff member sees on the user's page (see `getUserDetail`). The
  * services that load them for the actor leave the rest out
- * (`listOwnActivity`, `getSecurityOverview`, `listOwnSessions`); the pages
- * use it only for the note that says what's left out:
+ * (`listOwnActivity`, `getSecurityOverview`, `listOwnSessions`,
+ * `ownPictureChoices`); the pages use it only for the note that says what's
+ * left out:
  * - `devices`: the signed-in devices and the passkeys' names, for staff
  *   Admins (`users:manage`);
  * - `accountNames`: the provider accounts' names (a GitHub username, a Google
