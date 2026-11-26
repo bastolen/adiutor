@@ -537,9 +537,10 @@ those emails' footers link to; `setOwnRequestEmails` in `src/server/people/reque
   but only an `https` address on the provider's own picture hosts (`isProviderImageUrl`). Someone
   shows the picture of the confirmed account they connected first, or the one they choose on the
   account page, or their initials (`pictureAccount` in `src/lib/sign-in/pictures.ts`,
-  `user.avatarSource`). The picture is served from Adiutor's own address, never the provider's
-  (see [decision 0022](decisions/0022-profile-pictures-from-providers.md)). Accounts connected
-  before pictures were kept get one at their next sign-in.
+  `user.avatarSource`). The picture is served from Adiutor's own address, never the provider's,
+  and the account page previews each picture they can choose, which only they get (see
+  [decision 0051](decisions/0051-profile-pictures-each-choice-for-its-owner.md)). Accounts
+  connected before pictures were kept get one at their next sign-in.
   Connecting and disconnecting need a recent
   confirmation (or, without a second step, a sign-in from the last hour), and an email link
   always remains as a way to sign in. Connecting returns to this tab. A connection
