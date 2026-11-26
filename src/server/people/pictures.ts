@@ -206,14 +206,25 @@ export interface PictureChoice {
   providerId: OAuthProvider;
   /** The account's name at the provider (a GitHub username), when it's known. */
   accountName: string | null;
-  /** The picture's address in Adiutor, or `null` while the account has none yet. */
+  /**
+   * Whether the account has a picture to choose: not yet when it was
+   * connected before pictures were kept.
+   */
+  hasPicture: boolean;
+  /**
+   * The picture's address in Adiutor, or `null` when the reader doesn't get
+   * it: while the account has none yet, or for a staff member signed in as
+   * the user, a picture the user doesn't show (`getsOtherChoices`).
+   */
   picture: string | null;
 }
 
 /**
  * The pictures someone can choose from, for the account page's Picture
  * card: each provider's first connected confirmed account, with its picture
- * (or none yet), what they chose, and what they show by that.
+ * (or none yet), what they chose, and what they show by that. A staff member
+ * signed in as them gets the address of the picture in use only, as the
+ * route serves them (`loadPicture`).
  *
  * @param ctx - Service context.
  * @param actor - The signed-in user.
@@ -229,12 +240,17 @@ export async function ownPictureChoices(
 }> {
   const { rows, sources } = await accountsOf(ctx.db, [actor.id]);
   const source = sources.get(actor.id) ?? null;
+  const shownAccount = pictureAccount(source, rows);
+  const getsOthers = getsOtherChoices(actor, actor.id);
   const choices = choiceAccounts(rows).map(({ providerId, row }) => ({
     providerId,
     accountName: row.accountName,
-    picture: row.image ? picturePath({ id: row.id, image: row.image }) : null,
+    hasPicture: row.image !== null,
+    picture:
+      row.image && (getsOthers || row.id === shownAccount?.id)
+        ? picturePath({ id: row.id, image: row.image })
+        : null,
   }));
-  const shownAccount = pictureAccount(source, rows);
   const shownProvider = shownAccount?.providerId;
   return {
     choices,
@@ -268,7 +284,7 @@ export async function setOwnPicture(
   }
   if (choice !== 'initials') {
     const { choices } = await ownPictureChoices(ctx, actor);
-    if (!choices.some(({ providerId, picture }) => providerId === choice && picture !== null)) {
+    if (!choices.some(({ providerId, hasPicture }) => providerId === choice && hasPicture)) {
       throw new ServiceError('invalid', 'errors.account.pictureUnavailable');
     }
   }

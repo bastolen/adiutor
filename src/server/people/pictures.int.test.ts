@@ -211,14 +211,37 @@ describe('choosing a picture', () => {
       {
         providerId: 'github',
         accountName: 'adiutor-tests',
+        hasPicture: true,
         picture: expect.stringMatching(servedFrom(github)),
       },
       {
         providerId: 'google',
         accountName: 'person@adiutor.test',
+        hasPicture: true,
         picture: expect.stringMatching(servedFrom(google)),
       },
     ]);
+  });
+
+  it('gives a staff member signed in as the user the address of the picture in use only', async () => {
+    const { userId, google } = await personWithTwoPictures();
+    await db.update(user).set({ avatarSource: 'google' }).where(eq(user.id, userId));
+    // Even a staff Admin, who sees the accounts' names: the route wouldn't serve them the other.
+    const staff = signedInAsBy(await actorFor(db, userId), ['users:manage', 'audit:view']);
+
+    const { choices, shown } = await ownPictureChoices(ctx, staff);
+
+    expect(shown).toBe('google');
+    expect(
+      choices.map(({ providerId, hasPicture, picture }) => [providerId, hasPicture, picture]),
+    ).toEqual([
+      ['github', true, null],
+      ['google', true, expect.stringMatching(servedFrom(google))],
+    ]);
+    // With initials shown, no address at all.
+    await db.update(user).set({ avatarSource: 'initials' }).where(eq(user.id, userId));
+    const initials = await ownPictureChoices(ctx, staff);
+    expect(initials.choices.map(({ picture }) => picture)).toEqual([null, null]);
   });
 
   it('offers an account without a picture yet, which can’t be chosen', async () => {
@@ -227,7 +250,7 @@ describe('choosing a picture', () => {
     const actor = await actorFor(db, userId);
 
     expect((await ownPictureChoices(ctx, actor)).choices).toEqual([
-      { providerId: 'github', accountName: 'adiutor-tests', picture: null },
+      { providerId: 'github', accountName: 'adiutor-tests', hasPicture: false, picture: null },
     ]);
     await expect(setOwnPicture(ctx, actor, 'github')).rejects.toMatchObject({
       code: 'invalid',
@@ -242,7 +265,13 @@ describe('choosing a picture', () => {
     expect(await setOwnPicture(ctx, actor, 'google')).toBe('google');
     expect((await ownPictureChoices(ctx, actor)).shown).toBe('google');
     expect(await setOwnPicture(ctx, actor, 'initials')).toBe('initials');
-    expect((await ownPictureChoices(ctx, actor)).shown).toBe('initials');
+    const afterInitials = await ownPictureChoices(ctx, actor);
+    expect(afterInitials.shown).toBe('initials');
+    // They still see each picture they can choose.
+    expect(afterInitials.choices.map(({ picture }) => picture)).toEqual([
+      expect.stringMatching(/^\/avatars\//),
+      expect.stringMatching(/^\/avatars\//),
+    ]);
 
     await expect(setOwnPicture(ctx, actor, 'gitlab')).rejects.toMatchObject({ code: 'invalid' });
     const nobody = await actorFor(db, await createUser(db, 'nothing@adiutor.test'));

@@ -23,7 +23,8 @@ Everything in 0022 holds except who gets which picture:
   `choiceAccounts` in `src/server/people/pictures.ts`) are served to their owner alone, whichever
   picture they show, so the account page previews each choice (`loadPicture` takes the viewer).
 - **A staff member signed in as them** gets only the picture in use, as the user's page shows the
-  staff.
+  staff. The account page gives them no address for the others (`ownPictureChoices`), and shows
+  initials in those previews.
 
 Anything else is "not found". Details:
 [Security measures](../security-measures.md#pictures-from-providers).
