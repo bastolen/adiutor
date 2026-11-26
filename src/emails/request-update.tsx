@@ -78,6 +78,14 @@ export type RequestUpdateEmailItem =
       event: 'subscribed';
       /** Who. */
       by: string;
+    }
+  | {
+      /** A staff member raised the request for the reader. */
+      event: 'raised';
+      /** Who. */
+      by: string;
+      /** Its description, with the people it mentions by name. */
+      text: EmailText;
     };
 
 /**
@@ -248,6 +256,14 @@ function UpdateItem({
       </Section>
     );
   }
+  if (item.event === 'raised') {
+    return (
+      <Section>
+        <EmailParagraph>{t.rich('raised', who)}</EmailParagraph>
+        <WrittenText text={item.text} id={id} locale={locale} appUrl={appUrl} />
+      </Section>
+    );
+  }
   if (item.event === 'status') {
     return (
       <EmailParagraph>
@@ -268,7 +284,8 @@ function UpdateItem({
  * Tells the reader what happened to a request they're on: its title and
  * number (a link to it), then each piece of news in the order it happened.
  * A reply, an internal note (only ever in an email to the staff, marked as
- * one) and a text that mentions the reader are shown in full, formatted as
+ * one), a text that mentions the reader and the description of a request
+ * raised for them are shown in full, formatted as
  * on the request's page (`EmailMarkdown`); a status change, an assignment
  * and a subscription in a sentence, with the statuses worded for the reader.
  * A button opens the request; for someone at the company who may answer a

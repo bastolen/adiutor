@@ -291,9 +291,11 @@ written and sent is in [Email](email.md), and the jobs that send them in
 [Background jobs](jobs.md#queued-jobs).
 
 - **What is told:** a reply, an internal note (to the staff only), a change of status (also the
-  one a reply brings, and done, cancelled and reopened), and being put on the request: assigned to it, mentioned in one of its texts, or
-  subscribed by someone else. A new request emails nobody but the people its description
-  mentions: it shows in the list and on the dashboard. A changed title, type or priority, an
+  one a reply brings, and done, cancelled and reopened), and being put on the request: assigned to it, mentioned in one of its texts,
+  subscribed by someone else, or having it raised for them by a staff member (`raised`, with its
+  description; see [Raising a request for someone](#raising-a-request-for-someone)). A new
+  request emails nobody but whoever it was raised for and the people its description mentions: it
+  shows in the list and on the dashboard. A changed title, type or priority, an
   edited text (unless the edit adds a mention) and being taken off a request email nobody.
 - **Who is told** (`src/server/requests/updates.ts`, the one place that decides it): a reply and
   a status change go to everyone on the request, its assignees and its subscribers
@@ -744,6 +746,10 @@ them ([decision 0047](decisions/0047-staff-raise-a-request-for-someone.md)).
   is about the staff member who raised it for the person, the one who did the work: they and the
   staff who see the audit log read it, not the person it was raised for.
 - **Following it:** both the person and the staff member are subscribed.
+- **Told by email** (`tellRaisedFor`): the person gets an email that the staff member raised the
+  request for them, with its description as it is when the email is sent, opening the request at
+  its description. A mention of them in the description isn't told again; the staff member, who
+  raised it, isn't told.
 - **Rate limits** count against the staff member (`actingUserId`), who is acting.
 
 ## Signed in as a user

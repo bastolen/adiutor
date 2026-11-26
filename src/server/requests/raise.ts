@@ -28,7 +28,7 @@ import { assertStillRaisableFor, personToRaiseFor, raisedForSchema } from './rai
 import withoutStaffPageLinks from './staff-links';
 import { subscribeAutomatically } from './subscribers';
 import { typeToGive } from './types';
-import { tellMentioned } from './updates';
+import { tellMentioned, tellRaisedFor } from './updates';
 
 /**
  * Takes the next request number: one more than the last (the
@@ -62,8 +62,8 @@ async function nextRequestNumber(
  * The staff who work on requests can raise it for someone at the company
  * who asked them (`raisedFor`, their key: decision 0047). That person is
  * then who raised it, on the company's side, and the staff member is kept
- * with it (`createdOnBehalfBy`); both follow it. Someone else can't name
- * anyone.
+ * with it (`createdOnBehalfBy`); both follow it, and the person is told by
+ * email. Someone else can't name anyone.
  *
  * The transaction first checks the actor's right and the company again as
  * they are by then (`assertStillMayChange`), so someone who lost the right
@@ -180,8 +180,16 @@ export default async function raiseRequest(
       entryId: null,
       written: description,
     });
-    // A new request emails nobody but the people its description mentions.
-    await tellMentioned(tx, { requestId: raised.id, entryId: null, actorId: actor.id }, mentioned);
+    // A new request emails nobody but whoever it's raised for and the people its description
+    // mentions. Whoever it's raised for reads the description in their own email.
+    await tellMentioned(
+      tx,
+      { requestId: raised.id, entryId: null, actorId: actor.id },
+      mentioned.filter((userId) => userId !== raisedFor),
+    );
+    if (raisedFor) {
+      await tellRaisedFor(tx, { requestId: raised.id, actorId: actor.id, raisedFor });
+    }
     return raised;
   });
 }
