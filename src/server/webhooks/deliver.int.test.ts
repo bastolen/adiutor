@@ -30,7 +30,7 @@ import {
   TEST_WEBHOOK_SECRET,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
-import { queueJobs, webhookTurnedOffJob } from '../queue';
+import { queueJobs, webhookDeliveryJob, webhookTurnedOffJob } from '../queue';
 import { replyToRequest } from '../requests';
 import { attemptDelivery } from './deliver';
 import { signWebhook } from './signing';
@@ -72,7 +72,8 @@ async function deliveries() {
 }
 
 /**
- * The later attempts waiting in the queue.
+ * The later attempts waiting in the queue, beyond the first attempt every
+ * delivery has queued as a safety net.
  *
  * @returns Each one's payload.
  */
@@ -81,7 +82,9 @@ async function laterAttempts() {
     .select({ payload: queuedJob.payload })
     .from(queuedJob)
     .where(and(eq(queuedJob.kind, 'webhook-delivery'), eq(queuedJob.status, 'queued')));
-  return jobs.map(({ payload }) => payload);
+  return jobs
+    .map(({ payload }) => payload as { deliveryId: string; attempt: number })
+    .filter(({ attempt }) => attempt > 1);
 }
 
 /** Makes every waiting job due now and runs the queue, as the tick when they're due would. */
@@ -366,6 +369,44 @@ describe('delivering news to a webhook', () => {
     expect(receiver.received).toHaveLength(1);
     expect(await deliveries()).toEqual([
       expect.objectContaining({ status: 'cancelled', attempts: 1 }),
+    ]);
+  });
+
+  it('queues the first attempt too, which does nothing once the first attempt recorded', async () => {
+    await storeWebhook(db, { url: receiver.url });
+    await replyThatMovesTheStatus();
+    await runNews();
+    const [delivery] = await deliveries();
+    const [safetyNet] = await db
+      .select({ payload: queuedJob.payload, runAt: queuedJob.runAt })
+      .from(queuedJob)
+      .where(and(eq(queuedJob.kind, 'webhook-delivery'), eq(queuedJob.status, 'queued')));
+    expect(safetyNet?.payload).toEqual({ deliveryId: delivery?.id, attempt: 1 });
+
+    await runDueAttempts();
+
+    expect(receiver.received).toHaveLength(1);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'delivered', attempts: 1 }),
+    ]);
+  });
+
+  it('makes a first attempt that never recorded later, under the same ID', async () => {
+    const webhookId = await storeWebhook(db, { url: receiver.url });
+    const { id: requestId } = await storeRequest(db, company.id);
+    // As the batch leaves it when the database failed after it stored the delivery.
+    const [orphan] = await db
+      .insert(webhookDelivery)
+      .values({ webhookId, requestId, news: [{ event: 'raised', entryId: null }] })
+      .returning({ id: webhookDelivery.id });
+    await queueJobs(db, webhookDeliveryJob, [{ deliveryId: orphan?.id ?? '', attempt: 1 }]);
+
+    await runDueAttempts();
+
+    expect(receiver.received).toHaveLength(1);
+    expect(receiver.received[0]?.headers['webhook-id']).toBe(orphan?.id);
+    expect(await deliveries()).toEqual([
+      expect.objectContaining({ status: 'delivered', attempts: 1 }),
     ]);
   });
 

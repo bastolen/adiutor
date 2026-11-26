@@ -2,8 +2,8 @@
  * @file Delivering news to webhooks (decision 0046). The `request-update`
  * batch hands over a webhook's jobs about one request ({@link deliverWebhookNews}):
  * the news its webhook still wants is stored as one delivery, with the IDs of
- * what it tells of, and its first attempt is made straight away
- * ({@link attemptDelivery}).
+ * what it tells of and a queued first attempt as a safety net, and that
+ * first attempt is made straight away ({@link attemptDelivery}).
  *
  * An attempt reads the news when it's sent (`readWebhookNews`), opens the
  * webhook's address and secret, sends outside any transaction and then
@@ -303,9 +303,14 @@ export async function attemptDelivery(
 
 /**
  * Stores the news one tick has for a webhook about a request as one
- * delivery, and makes its first attempt. News the webhook no longer wants
- * (it's off or gone, it no longer chooses the event or covers the type the
- * news was queued for) and news that's no longer there are skipped.
+ * delivery, with its first attempt queued for later as a safety net in the
+ * same transaction, and makes that first attempt straight away. News the
+ * webhook no longer wants (it's off or gone, it no longer chooses the event
+ * or covers the type the news was queued for) and news that's no longer
+ * there are skipped. Once the delivery is stored, nothing here throws: a
+ * first attempt that fails on Adiutor's side is made again by the queued
+ * one, under the same `webhook-id`, rather than by running the batch again,
+ * which would make a second delivery of the same news.
  *
  * @param ctx - Service context.
  * @param jobs - The webhook's jobs about one request, in the order they were queued.
@@ -355,12 +360,33 @@ export async function deliverWebhookNews(
     return { skipped: jobs.map(({ jobId }) => jobId) };
   }
   const wantedIds = new Set(wanted.map(({ jobId }) => jobId));
-  const [delivery] = await ctx.db
-    .insert(webhookDelivery)
-    .values({ webhookId: first.webhookId, requestId: first.requestId, news })
-    .returning({ id: webhookDelivery.id });
-  if (delivery) {
-    await attemptDelivery(ctx, delivery.id, 1, read);
+  // The delivery and a later first attempt are stored together: once they are, the batch is
+  // done, and the delivery is sent even if the attempt below never records (the database failed,
+  // the process died). That later attempt does nothing once this one recorded.
+  const deliveryId = await ctx.db.transaction(async (tx) => {
+    const [stored] = await tx
+      .insert(webhookDelivery)
+      .values({ webhookId: first.webhookId, requestId: first.requestId, news })
+      .returning({ id: webhookDelivery.id });
+    if (stored) {
+      await queueJob(
+        tx,
+        webhookDeliveryJob,
+        { deliveryId: stored.id, attempt: 1 },
+        { runAt: new Date(Date.now() + (WEBHOOK_RETRY_MINUTES[0] ?? 5) * 60_000) },
+      );
+    }
+    return stored?.id;
+  });
+  if (deliveryId) {
+    try {
+      await attemptDelivery(ctx, deliveryId, 1, read);
+    } catch {
+      // A fault of Adiutor's own: the queued first attempt makes it again, under the same ID, so
+      // running the batch again (a second delivery the receiver couldn't tell apart) isn't needed.
+      // eslint-disable-next-line no-console -- The delivery's ID only: the queued attempt shows up in the history.
+      console.warn(`Webhook delivery ${deliveryId}: its first attempt failed and is made later.`);
+    }
   }
   return { skipped: jobs.filter(({ jobId }) => !wantedIds.has(jobId)).map(({ jobId }) => jobId) };
 }
