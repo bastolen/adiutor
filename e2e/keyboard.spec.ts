@@ -34,6 +34,7 @@ import {
   REQUESTS_CLIENT,
   ROLE_KEYS_WATCHER,
   SEEDED_REQUESTS,
+  STAFF_NAME,
   SUPPORT_STAFF,
 } from './support/fixtures';
 import {
@@ -868,10 +869,10 @@ test.describe('signed in', () => {
     // The title changes with the tab too: it's what the route announcer reads.
     await chooseTab(page, 'Company sections', 'Members', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}/members`);
-    await expect(page).toHaveTitle(`Members · ${COMPANY_NAME} · Adiutor`);
+    await expect(page).toHaveTitle(`Members · ${COMPANY_NAME} · ${STAFF_NAME}`);
     await chooseTab(page, 'Company sections', 'Requests', COMPANY_NAME);
     await expect(page).toHaveURL(`/companies/${COMPANY_SLUG}`);
-    await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · Adiutor`);
+    await expect(page).toHaveTitle(`Requests · ${COMPANY_NAME} · ${STAFF_NAME}`);
     // Both pages are in the document now (Next keeps the one before alive), sharing no id.
     expect(await duplicateIds(page)).toEqual([]);
 
@@ -884,10 +885,10 @@ test.describe('signed in', () => {
     await expect(page).toHaveURL('/account/security');
     await chooseTab(page, 'Account sections', 'Preferences', 'Account');
     await expect(page).toHaveURL('/account/preferences');
-    await expect(page).toHaveTitle('Preferences · Account · Adiutor');
+    await expect(page).toHaveTitle(`Preferences · Account · ${STAFF_NAME}`);
     await chooseTab(page, 'Account sections', 'Activity', 'Account');
     await expect(page).toHaveURL('/account/activity');
-    await expect(page).toHaveTitle('Activity · Account · Adiutor');
+    await expect(page).toHaveTitle(`Activity · Account · ${STAFF_NAME}`);
 
     // The Settings tabs, reached from the menu: each one's title is its own.
     const settingsLink = page
@@ -898,13 +899,13 @@ test.describe('signed in', () => {
     await expect(page).toHaveURL('/admin/settings');
     await chooseTab(page, 'Settings sections', 'Staff', 'Settings');
     await expect(page).toHaveURL('/admin/settings/staff');
-    await expect(page).toHaveTitle('Staff · Settings · Adiutor');
+    await expect(page).toHaveTitle(`Staff · Settings · ${STAFF_NAME}`);
     await chooseTab(page, 'Settings sections', 'Requests', 'Settings');
     await expect(page).toHaveURL('/admin/settings/requests');
-    await expect(page).toHaveTitle('Requests · Settings · Adiutor');
+    await expect(page).toHaveTitle(`Requests · Settings · ${STAFF_NAME}`);
     await chooseTab(page, 'Settings sections', 'General', 'Settings');
     await expect(page).toHaveURL('/admin/settings');
-    await expect(page).toHaveTitle('Settings · Adiutor');
+    await expect(page).toHaveTitle(`Settings · ${STAFF_NAME}`);
   });
 
   test('choosing a tab of a user’s page keeps focus on it, now the current one', async ({
@@ -918,16 +919,16 @@ test.describe('signed in', () => {
 
     await chooseTab(page, 'User sections', 'Companies', CLIENT_WATCHER.name);
     await expect(page).toHaveURL(`${base}/companies`);
-    await expect(page).toHaveTitle('Companies · User · Adiutor');
+    await expect(page).toHaveTitle(`Companies · User · ${STAFF_NAME}`);
     await chooseTab(page, 'User sections', 'Activity', CLIENT_WATCHER.name);
     await expect(page).toHaveURL(`${base}/activity`);
-    await expect(page).toHaveTitle('Activity · User · Adiutor');
+    await expect(page).toHaveTitle(`Activity · User · ${STAFF_NAME}`);
     await chooseTab(page, 'User sections', 'Manage', CLIENT_WATCHER.name);
     await expect(page).toHaveURL(`${base}/manage`);
-    await expect(page).toHaveTitle('Manage · User · Adiutor');
+    await expect(page).toHaveTitle(`Manage · User · ${STAFF_NAME}`);
     await chooseTab(page, 'User sections', 'Overview', CLIENT_WATCHER.name);
     await expect(page).toHaveURL(base);
-    await expect(page).toHaveTitle('User · Adiutor');
+    await expect(page).toHaveTitle(`User · ${STAFF_NAME}`);
     // Every tab's page is kept alive now, and none shares an id with another.
     expect(await duplicateIds(page)).toEqual([]);
   });

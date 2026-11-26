@@ -18,8 +18,10 @@ import SetUpMfaFirst from './set-up-mfa-first';
  * Props for {@link InvitationView}.
  */
 interface InvitationViewProps {
-  /** What the link offers: the company (or the staff's name) and the role. */
-  preview: { companyName: string; role: Role };
+  /** What the link offers: the company (or the staff's name), whether it's the staff, and the role. */
+  preview: { companyName: string; target: 'staff' | 'company'; role: Role };
+  /** The staff's name (`requestStaffName`), for the offer's sentence. */
+  staffName: string;
   /** The signed-in user, or `null` for a visitor. */
   actor:
     | (Pick<ActorMfa, 'mfaRequired' | 'mfaEnabled' | 'canConfirmSessions'> & {
@@ -39,6 +41,7 @@ interface InvitationViewProps {
  */
 export default function InvitationView({
   preview,
+  staffName,
   actor,
   linkBased,
   children,
@@ -51,7 +54,12 @@ export default function InvitationView({
   }
   return (
     <div className="flex flex-col gap-8">
-      <InvitationHeading companyName={preview.companyName} roleId={preview.role} />
+      <InvitationHeading
+        companyName={preview.companyName}
+        target={preview.target}
+        staffName={staffName}
+        roleId={preview.role}
+      />
       {step}
     </div>
   );

@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useId, useSyncExternalStore } from 'react';
 
 import PROVIDER_ICONS from '@/components/brand/provider-icons';
+import { useStaffName } from '@/components/brand/staff-name';
 import Alert from '@/components/ui/alert';
 import AuthDivider from '@/components/ui/auth-divider';
 import AuthHeading from '@/components/ui/auth-heading';
@@ -117,6 +118,7 @@ function LastUsedBadge({ show, onPrimary = false }: { show: boolean; onPrimary?:
  */
 export default function SignInForm({ providers }: SignInFormProps) {
   const t = useTranslations('auth');
+  const staff = useStaffName();
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackURL = getSafeRedirectPath(searchParams.get('callbackURL'));
@@ -282,7 +284,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      <AuthHeading title={t('signIn.heading')} description={t('signIn.description')} />
+      <AuthHeading title={t('signIn.heading', { staff })} description={t('signIn.description')} />
 
       <Alert tone="error" focusOnShow>
         {error}

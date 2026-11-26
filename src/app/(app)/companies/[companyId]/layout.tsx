@@ -3,10 +3,10 @@
  * company's header and tabs, then the page. Layouts stay mounted while the
  * pages under them change, so choosing a tab keeps focus on it and the
  * header doesn't reload. Each page still checks the permission it needs.
- * The pages' titles name the company too ("Members · Adiutor Tests ·
- * Adiutor"). On a wide screen every tab is wide (`WidePage`), so the
- * company's list and board get the room, and the header and tabs stay in
- * one place from tab to tab.
+ * The pages' titles name the company too, then the staff ("Members ·
+ * Adiutor Tests · Adiutor"). On a wide screen every tab is wide
+ * (`WidePage`), so the company's list and board get the room, and the
+ * header and tabs stay in one place from tab to tab.
  */
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -16,6 +16,7 @@ import WidePage from '@/components/layout/wide-page';
 import { PageHeaderSkeleton } from '@/components/ui/skeleton';
 import notFoundMetadata from '@/lib/not-found-metadata';
 import { findCompanyAccess, requireCompanyAccess } from '@/server/authz';
+import { requestStaffName } from '@/server/branding';
 
 import CompanyHeader from './company-header';
 
@@ -30,7 +31,8 @@ import CompanyHeader from './company-header';
  * would leave the page without a title). Pages that require a permission
  * check it for their own title too (`companyPermissionMetadata`). The
  * template is a message (`companies.titleTemplate`, with `%s` for the page's
- * own title), so each language orders its parts.
+ * own title and the staff's name at the end, as the root layout's template
+ * ends), so each language orders its parts.
  *
  * @param props - Layout props from Next.js.
  * @param props.params - Route parameters.
@@ -46,9 +48,12 @@ export async function generateMetadata({
     return notFoundMetadata();
   }
   const { company } = access;
-  const t = await getTranslations('companies');
+  const [t, staff] = await Promise.all([getTranslations('companies'), requestStaffName()]);
   return {
-    title: { template: t('titleTemplate', { company: company.name }), default: company.name },
+    title: {
+      template: t('titleTemplate', { company: company.name, staff }),
+      default: company.name,
+    },
   };
 }
 

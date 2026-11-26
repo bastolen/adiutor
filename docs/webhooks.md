@@ -120,7 +120,8 @@ the last attempt failed, and when the next one is due (`listDeliveries` in
 `src/server/webhooks/history.ts`), never what was sent or what the receiver answered.
 
 - **A test** (`sendTestEvent`) is sent while the Admin waits, at most 10 seconds, and the page says
-  how it went: `webhook.test` with the webhook's name, or a chat message saying it works. A
+  how it went: `webhook.test` with the webhook's name, or a chat message from the staff, by their
+  name (`staff.name`), saying it works. A
   webhook that's off can be tested, to check it before turning it on. It's recorded among the
   deliveries, and never counts towards turning the webhook off. It's sent from the request rather
   than queued, an exception to [decision 0018](decisions/0018-background-jobs-in-postgres-with-one-tick.md)

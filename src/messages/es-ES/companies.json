@@ -46,7 +46,7 @@
       "saved": "Guardado.",
       "details": {
         "title": "Datos",
-        "description": "El nombre que se muestra en Adiutor y la dirección de sus páginas."
+        "description": "El nombre que ve todo el mundo y la dirección de sus páginas."
       },
       "form": {
         "name": "Nombre",
@@ -73,7 +73,7 @@
         }
       }
     },
-    "titleTemplate": "%s · {company} · Adiutor",
+    "titleTemplate": "%s · {company} · {staff}",
     "header": {
       "requests": "Solicitudes",
       "newRequest": "Nueva solicitud",
@@ -83,7 +83,7 @@
     },
     "requests": {
       "title": "Solicitudes · {company}",
-      "deactivated": "Esta empresa está desactivada. Su gente no puede usar Adiutor hasta que se reactive, y sus solicitudes solo se pueden leer."
+      "deactivated": "Esta empresa está desactivada. Su gente no tiene acceso hasta que se reactive, y sus solicitudes solo se pueden leer."
     }
   }
 }

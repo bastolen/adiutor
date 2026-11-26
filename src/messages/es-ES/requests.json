@@ -179,10 +179,10 @@
       "unavailableHeading": "Ya no puedes responder aquí",
       "unavailableDescription": "Tu acceso a {reference} ha cambiado desde que se envió el correo.",
       "unknownHeading": "Este enlace no funciona",
-      "unknownDescription": "Comprueba que has abierto el enlace completo del correo. También puedes responder en la página de la solicitud en Adiutor.",
+      "unknownDescription": "Comprueba que has abierto el enlace completo del correo. También puedes responder en la página de la solicitud.",
       "problemHeading": "Este enlace no se puede usar ahora",
       "openRequest": "Abrir solicitud",
-      "goToAdiutor": "Ir a Adiutor"
+      "goHome": "Ir a {staff}"
     },
     "reply": {
       "sendAsSolution": "Enviar como solución",

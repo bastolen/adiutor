@@ -50,9 +50,7 @@ describe('LanguageForm', () => {
     expect(select).toHaveTextContent('Nederlands');
     await user.click(select);
     const options = screen.getAllByRole('option');
-    expect(options[0]).toHaveAccessibleName(
-      'Standaard Volgt de standaardtaal van Adiutor, nu English (US).',
-    );
+    expect(options[0]).toHaveAccessibleName('Standaard Volgt de standaardtaal, nu English (US).');
     expect(screen.getByRole('option', { name: 'English (US)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Español' })).toBeInTheDocument();
   });
@@ -112,7 +110,7 @@ describe('LanguageForm', () => {
     const select = screen.getByRole('combobox', { name: 'Language' });
     expect(select).toHaveTextContent('Default');
     expect(select).toHaveAccessibleDescription(
-      "You chose Nederlands, which isn't offered right now, so Adiutor uses the default language until it is.",
+      "You chose Nederlands, which isn't offered right now, so you get the default language until it is.",
     );
   });
 });

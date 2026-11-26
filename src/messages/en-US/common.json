@@ -3,10 +3,10 @@
     "app": {
       "description": "Get help without chasing emails. Report a problem or ask for something new, follow its progress, and approve the work, all in one place."
     },
-    "documentTitle": "{page} · Adiutor",
+    "documentTitle": "{page} · {staff}",
     "loading": "Loading…",
     "skipToContent": "Skip to main content",
-    "homeLink": "Adiutor home",
+    "homeLink": "{staff} home",
     "companyWithUrlName": "{name} ({urlName})",
     "actions": {
       "cancel": "Cancel",
@@ -85,8 +85,8 @@
     "providerLinked": {
       "region": "{provider} connected",
       "dismiss": "Dismiss the {provider} notice",
-      "named": "Your {provider} account <name>{account}</name> is now connected to your Adiutor account, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>.",
-      "unnamed": "Your {provider} account is now connected to your Adiutor account, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>."
+      "named": "Your {provider} account <name>{account}</name> is now connected to your account on {staff}, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>.",
+      "unnamed": "Your {provider} account is now connected to your account on {staff}, because you signed in with it. Not you? <link>Disconnect it on the Security page</link>."
     },
     "accessNotice": {
       "dismiss": "Dismiss this note",
@@ -105,7 +105,6 @@
         "status": "Waiting for your approval",
         "title": "Update the opening hours on the website",
         "you": "You",
-        "staff": "Adiutor Support",
         "question": "Our opening hours change next month. Can you update them on the website?",
         "answer": "Done on the test site. Please check it and approve, and we'll publish it.",
         "reply": "Reply",
@@ -141,7 +140,7 @@
       "defaultLabel": "Default language",
       "defaultHint": "For everyone who hasn't chosen a language. You can change it later.",
       "followDefault": "Default",
-      "followDefaultDescription": "Follows Adiutor's default language, now {language}."
+      "followDefaultDescription": "Follows the default language, now {language}."
     },
     "timeZoneRegion": "{region, select, Africa {Africa} America {Americas} Antarctica {Antarctica} Arctic {Arctic} Asia {Asia} Atlantic {Atlantic Ocean} Australia {Australia} Europe {Europe} Indian {Indian Ocean} Pacific {Pacific Ocean} other {Other zones}}",
     "preferences": {

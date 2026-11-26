@@ -1,8 +1,8 @@
 {
   "people": {
     "inviteResults": {
-      "status": "{status, select, sent_existing_user {Uitnodiging verstuurd naar {email}. Diegene heeft al een Adiutor-account.} already_member {{email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Uitnodiging verstuurd naar {email}.}}",
-      "companyAdded": "{status, select, sent_existing_user {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}. Diegene heeft al een Adiutor-account.} already_member {Bedrijf toegevoegd. {email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}.}}",
+      "status": "{status, select, sent_existing_user {Uitnodiging verstuurd naar {email}. Diegene heeft al een account.} already_member {{email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Uitnodiging verstuurd naar {email}.}}",
+      "companyAdded": "{status, select, sent_existing_user {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}. Diegene heeft al een account.} already_member {Bedrijf toegevoegd. {email} is al lid. We hebben diegene een e-mail gestuurd om dat te laten weten.} other {Bedrijf toegevoegd. Uitnodiging verstuurd naar {email}.}}",
       "sentAll": "{sent, plural, one {# uitnodiging verstuurd.} other {# uitnodigingen verstuurd.}}",
       "sentSome": "{sent, plural, one {Van de {total, number} uitnodigingen is er # verstuurd. Controleer de adressen hieronder.} other {Van de {total, number} uitnodigingen zijn er # verstuurd. Controleer de adressen hieronder.}}"
     },

@@ -23,7 +23,7 @@
       "ended": "Your sign-in as this user has ended, so nothing was changed."
     },
     "setup": {
-      "alreadySetUp": "Adiutor is already set up. Sign in instead.",
+      "alreadySetUp": "Setup is already done. Sign in instead.",
       "accountDeactivated": "That account is deactivated, so it could not sign in. Use another address."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "This job is already paused.",
       "notPaused": "This job isn't paused.",
-      "notPausable": "This job keeps Adiutor secure, so it can't be paused.",
+      "notPausable": "This job is needed for security, so it can't be paused.",
       "running": "This job is running right now. Try again once it has finished.",
       "noFailedJobs": "There's nothing left to retry or discard here: someone may have done it already."
     },

@@ -10,6 +10,7 @@ import { FormSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
+import { requestStaffName } from '@/server/branding';
 import { getInviteLinkPreview } from '@/server/people/invite-links';
 
 import JoinForm from './join-form';
@@ -22,16 +23,17 @@ import JoinForm from './join-form';
  */
 async function Join({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const [preview, actor] = await Promise.all([
+  const [preview, actor, staffName] = await Promise.all([
     getInviteLinkPreview(appContext, token),
     getOptionalActor(),
+    requestStaffName(),
   ]);
   if (!preview) {
     return <UnusableLink />;
   }
 
   return (
-    <InvitationView preview={preview} actor={actor} linkBased>
+    <InvitationView preview={preview} staffName={staffName} actor={actor} linkBased>
       <JoinForm token={token} signedInEmail={actor?.email ?? null} />
     </InvitationView>
   );

@@ -11,6 +11,7 @@ import { FormSkeleton } from '@/components/ui/skeleton';
 import ClientMessages from '@/lib/i18n/client-messages';
 import appContext from '@/server/app-context';
 import { getOptionalActor } from '@/server/authz';
+import { requestStaffName } from '@/server/branding';
 import { getInvitationPreview } from '@/server/people/invitations';
 
 import AcceptInvitation from './accept-invitation';
@@ -24,16 +25,22 @@ import AcceptInvitation from './accept-invitation';
  */
 async function Invitation({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const [preview, actor] = await Promise.all([
+  const [preview, actor, staffName] = await Promise.all([
     getInvitationPreview(appContext, token),
     getOptionalActor(),
+    requestStaffName(),
   ]);
   if (!preview) {
     return <UnusableLink />;
   }
 
   return (
-    <InvitationView preview={preview} actor={actor} linkBased={preview.fromInviteLink}>
+    <InvitationView
+      preview={preview}
+      staffName={staffName}
+      actor={actor}
+      linkBased={preview.fromInviteLink}
+    >
       <AcceptInvitation token={token} signedInEmail={actor?.email ?? null} />
     </InvitationView>
   );

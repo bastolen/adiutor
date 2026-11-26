@@ -265,15 +265,19 @@ export function chatBody(news: WebhookNews, options: { baseUrl: string; locale: 
 }
 
 /**
- * The chat message of a test.
+ * The chat message of a test, which names the staff as the sender.
  *
- * @param options - What, and in which language.
+ * @param options - What, from whom, and in which language.
  * @param options.name - The webhook's name.
+ * @param options.staff - The staff's name (`staff.name`).
  * @param options.locale - Adiutor's default language.
  * @returns The body.
  */
-export function testChatBody(options: { name: string; locale: Locale }): string {
+export function testChatBody(options: { name: string; staff: string; locale: Locale }): string {
   return JSON.stringify({
-    text: translator(options.locale, 'webhooks.chat')('test', { name: chatSafe(options.name) }),
+    text: translator(options.locale, 'webhooks.chat')('test', {
+      name: chatSafe(options.name),
+      staff: chatSafe(options.staff),
+    }),
   });
 }

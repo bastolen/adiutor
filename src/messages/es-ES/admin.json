@@ -222,11 +222,11 @@
       },
       "signInAs": {
         "title": "Iniciar sesión como usuario",
-        "description": "{minutes, plural, one {Ve Adiutor como lo ve {name} durante # minuto como máximo, para comprobar qué no le funciona.} other {Ve Adiutor como lo ve {name} durante # minutos como máximo, para comprobar qué no le funciona.}}",
+        "description": "{minutes, plural, one {Ve lo que ve {name} durante # minuto como máximo, para comprobar qué no le funciona.} other {Ve lo que ve {name} durante # minutos como máximo, para comprobar qué no le funciona.}}",
         "allowed": "Los cambios están desactivados mientras has iniciado sesión como {name}, y recibirá un correo indicando que lo hiciste.",
         "label": "Iniciar sesión como usuario",
         "dialogTitle": "¿Iniciar sesión como {name}?",
-        "dialogDescription": "{minutes, plural, one {Verás Adiutor como lo ve {name} durante # minuto como máximo y después volverás a tu propia cuenta. Puedes trabajar en sus solicitudes, y verá que fuiste tú; no se puede cambiar nada más. Recibirá un correo con tu nombre.} other {Verás Adiutor como lo ve {name} durante # minutos como máximo y después volverás a tu propia cuenta. Puedes trabajar en sus solicitudes, y verá que fuiste tú; no se puede cambiar nada más. Recibirá un correo con tu nombre.}}",
+        "dialogDescription": "{minutes, plural, one {Verás lo que ve {name} durante # minuto como máximo y después volverás a tu propia cuenta. Puedes trabajar en sus solicitudes, y verá que fuiste tú; no se puede cambiar nada más. Recibirá un correo con tu nombre.} other {Verás lo que ve {name} durante # minutos como máximo y después volverás a tu propia cuenta. Puedes trabajar en sus solicitudes, y verá que fuiste tú; no se puede cambiar nada más. Recibirá un correo con tu nombre.}}",
         "confirmLabel": "Iniciar sesión como {name}",
         "reasonLabel": "Motivo (opcional)",
         "reasonHint": "Por ejemplo, la solicitud que estás revisando. Solo el personal que ve el registro de auditoría puede leerlo.",
@@ -273,7 +273,7 @@
         },
         "languages": {
           "title": "Idiomas",
-          "description": "Elige qué idiomas ofrece Adiutor y su idioma predeterminado para quien aún no haya elegido el suyo. Quien haya elegido un idioma que desactives recibe el predeterminado hasta que vuelva a estar activo.",
+          "description": "Elige qué idiomas ofrece {staff} y el idioma predeterminado para quien aún no haya elegido el suyo. Quien haya elegido un idioma que desactives recibe el predeterminado hasta que vuelva a estar activo.",
           "offeredLabel": "Idiomas ofrecidos",
           "alwaysOn": "Siempre activo: es el idioma predeterminado.",
           "defaultHint": "Solo un idioma que se ofrece puede ser el predeterminado.",
@@ -282,7 +282,7 @@
         },
         "timeZone": {
           "title": "Zona horaria predeterminada",
-          "description": "Adiutor usa esta zona en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",
+          "description": "Esta zona se usa en las páginas para quien no ha iniciado sesión, en los correos a quien no tiene zona, y para todos hasta que su navegador fije la suya.",
           "label": "Zona horaria predeterminada",
           "save": "Guardar zona horaria predeterminada",
           "saved": "Zona horaria predeterminada guardada."
@@ -405,11 +405,11 @@
           "nameLabel": "Nombre",
           "nameHint": "Cómo lo llama el personal, por ejemplo Compras o Chat del personal.",
           "urlLabel": "Dirección",
-          "urlHint": "Adónde enviarlo: una dirección https://. Puede contener un token, así que Adiutor la guarda en secreto y solo muestra su host.",
-          "urlKeepHint": "Déjala vacía para conservar la dirección guardada, que Adiutor nunca vuelve a mostrar.",
+          "urlHint": "Adónde enviarlo: una dirección https://. Puede contener un token, así que se guarda en secreto y solo se muestra su host.",
+          "urlKeepHint": "Déjala vacía para conservar la dirección guardada, que nunca se vuelve a mostrar.",
           "formatLabel": "Formato",
           "formatJsonHint": "Firmado como describe Standard Webhooks, con todos los detalles, para un sistema tuyo.",
-          "formatChatHint": "Un mensaje breve que Slack, Google Chat, Mattermost y Discord muestran tal cual, en el idioma predeterminado de Adiutor.",
+          "formatChatHint": "Un mensaje breve que Slack, Google Chat, Mattermost y Discord muestran tal cual, en el idioma predeterminado.",
           "typesLegend": "Tipos de solicitud",
           "allTypesHint": "Todos los tipos, también los que se añadan más adelante.",
           "chosenTypes": "Tipos elegidos",
@@ -425,7 +425,7 @@
         },
         "secret": {
           "title": "Copia el secreto de firma",
-          "description": "Adiutor no lo volverá a mostrar. El receptor comprueba con él la firma de cada envío.",
+          "description": "No se volverá a mostrar. El receptor comprueba con él la firma de cada envío.",
           "label": "Secreto de firma",
           "copy": "Copiar secreto",
           "done": "Listo"
@@ -444,7 +444,7 @@
           "secretRenewed": "Secreto renovado",
           "failingSince": "Falla desde",
           "never": "Nunca",
-          "offNote": "{reason, select, failing {Adiutor lo desactivó porque todos los envíos fallaron durante 3 días. Cuando su receptor funcione, vuelve a activarlo.} gone {Adiutor lo desactivó porque su receptor respondió que ya no existe (410 Gone).} unreadable {Adiutor lo desactivó porque su dirección o su secreto ya no se pueden leer. Escribe de nuevo su dirección y renueva su secreto, y después actívalo.} other {Está desactivado: no se le envía nada, y lo que pase mientras tanto no se envía después.}}"
+          "offNote": "{reason, select, failing {Se desactivó automáticamente porque todos los envíos fallaron durante 3 días. Cuando su receptor funcione, vuelve a activarlo.} gone {Se desactivó automáticamente porque su receptor respondió que ya no existe (410 Gone).} unreadable {Se desactivó automáticamente porque su dirección o su secreto ya no se pueden leer. Escribe de nuevo su dirección y renueva su secreto, y después actívalo.} other {Está desactivado: no se le envía nada, y lo que pase mientras tanto no se envía después.}}"
         },
         "edit": {
           "button": "Editar",
@@ -507,10 +507,10 @@
         "outcome": {
           "timeout": "Sin respuesta en 10 segundos.",
           "dns": "No se encuentra su nombre de host.",
-          "refused_address": "Su dirección está dentro de la propia red de Adiutor.",
+          "refused_address": "Su dirección está dentro de la propia red de este servidor.",
           "connection": "La conexión se rechazó o se cortó.",
           "tls": "No se puede confiar en su certificado o su cifrado.",
-          "redirect": "Respondió con una redirección ({status, number}), que Adiutor nunca sigue.",
+          "redirect": "Respondió con una redirección ({status, number}), que los webhooks nunca siguen.",
           "http": "Respondió {status, number}.",
           "unreadable": "Su dirección o su secreto ya no se pueden leer.",
           "answered": "Respondió {status, number}."
@@ -716,7 +716,7 @@
       },
       "queued": {
         "title": "Tareas en cola",
-        "description": "Trabajo que Adiutor deja para después, como correos que pueden esperar unos minutos. Cada tarea se ejecuta en el próximo tic y se reintenta si falla.",
+        "description": "Trabajo que se deja para después, como correos que pueden esperar unos minutos. Cada tarea se ejecuta en el próximo tic y se reintenta si falla.",
         "caption": "Tipos de tarea en cola",
         "kind": "Tipo",
         "waiting": "En espera",

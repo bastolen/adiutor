@@ -23,7 +23,7 @@
       "ended": "Je bent niet meer als deze gebruiker ingelogd, dus er is niets gewijzigd."
     },
     "setup": {
-      "alreadySetUp": "Adiutor is al ingesteld. Log gewoon in.",
+      "alreadySetUp": "Alles is al ingesteld. Log gewoon in.",
       "accountDeactivated": "Dat account is gedeactiveerd, dus het kon niet inloggen. Gebruik een ander adres."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "Deze taak is al gepauzeerd.",
       "notPaused": "Deze taak is niet gepauzeerd.",
-      "notPausable": "Deze taak houdt Adiutor veilig en kan daarom niet worden gepauzeerd.",
+      "notPausable": "Deze taak is nodig voor de beveiliging en kan daarom niet worden gepauzeerd.",
       "running": "Deze taak wordt nu uitgevoerd. Probeer het opnieuw als hij klaar is.",
       "noFailedJobs": "Hier valt niets meer opnieuw te proberen of weg te gooien: misschien heeft iemand het al gedaan."
     },

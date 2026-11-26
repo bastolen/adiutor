@@ -23,7 +23,7 @@
       "ended": "Tu sesión como este usuario ha terminado, así que no se ha cambiado nada."
     },
     "setup": {
-      "alreadySetUp": "Adiutor ya está configurado. Inicia sesión.",
+      "alreadySetUp": "La configuración ya está hecha. Inicia sesión.",
       "accountDeactivated": "Esa cuenta está desactivada, así que no ha podido iniciar sesión. Usa otra dirección."
     },
     "signIn": {
@@ -83,7 +83,7 @@
     "jobs": {
       "alreadyPaused": "Esta tarea ya está pausada.",
       "notPaused": "Esta tarea no está pausada.",
-      "notPausable": "Esta tarea mantiene Adiutor seguro, así que no se puede pausar.",
+      "notPausable": "Esta tarea es necesaria para la seguridad, así que no se puede pausar.",
       "running": "Esta tarea se está ejecutando ahora mismo. Vuelve a intentarlo cuando termine.",
       "noFailedJobs": "Aquí ya no queda nada que reintentar ni descartar: puede que alguien ya lo haya hecho."
     },

@@ -6,6 +6,7 @@
 import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { useStaffName } from '@/components/brand/staff-name';
 import Button from '@/components/ui/button';
 import CopyButton from '@/components/ui/copy-button';
 
@@ -19,11 +20,14 @@ import CopyButton from '@/components/ui/copy-button';
  */
 export default function BackupCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
   const t = useTranslations('account');
+  const staff = useStaffName();
   const text = codes.join('\n');
 
-  /** Saves the codes as a text file, under a heading. */
+  /** Saves the codes as a text file, under a heading that names the staff ("Backup codes for …"). */
   const download = () => {
-    const url = URL.createObjectURL(new Blob([t('security.backupCodes.file', { codes: text })]));
+    const url = URL.createObjectURL(
+      new Blob([t('security.backupCodes.file', { codes: text, staff })]),
+    );
     const link = document.createElement('a');
     link.href = url;
     link.download = 'adiutor-backup-codes.txt';

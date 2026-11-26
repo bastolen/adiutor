@@ -210,7 +210,7 @@ test('signed in as a company Admin who must set up MFA, the Admin sees what they
   await signInAsUser(page, COMPANY_OWNER.name, { landsOn: '/account/security?setup=required' });
 
   await expect(page.getByRole('main')).toContainText(
-    `${COMPANY_OWNER.name} has to set up MFA before they can use Adiutor, so this Security page is what they see now.`,
+    `${COMPANY_OWNER.name} has to set up MFA before they can see anything else, so this Security page is what they see now.`,
   );
   await page.getByRole('button', { name: 'Back to my account' }).click();
   await expect(page.getByRole('region', { name: 'Signed in as someone else' })).toHaveCount(0);

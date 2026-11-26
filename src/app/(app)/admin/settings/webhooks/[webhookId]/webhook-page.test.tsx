@@ -101,7 +101,7 @@ describe('WebhookDetailsCard', () => {
     expect(within(card).queryByRole('button', { name: 'Turn on' })).not.toBeInTheDocument();
   });
 
-  it('says why Adiutor turned a webhook off, and offers to turn it on', () => {
+  it('says why a webhook was turned off by itself, and offers to turn it on', () => {
     render(
       <WebhookDetailsCard
         webhook={webhookWith({
@@ -116,7 +116,7 @@ describe('WebhookDetailsCard', () => {
     const card = screen.getByRole('region', { name: 'Procurement' });
     expect(card).toHaveTextContent('Off: kept failing');
     expect(within(card).getByRole('status')).toHaveTextContent(
-      'Adiutor turned it off because every delivery failed for 3 days.',
+      'It was turned off automatically because every delivery failed for 3 days.',
     );
     expect(card).toHaveTextContent('Failing since');
     expect(within(card).getByRole('button', { name: 'Turn on' })).toBeInTheDocument();

@@ -17,6 +17,7 @@ import AccountSummary, {
   sameName,
   type SignedInAccount,
 } from '@/components/auth/account-summary';
+import { useStaffName } from '@/components/brand/staff-name';
 import Alert from '@/components/ui/alert';
 import AuthHeading from '@/components/ui/auth-heading';
 import Button from '@/components/ui/button';
@@ -60,6 +61,7 @@ interface EmailLinkFormProps {
  */
 export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps) {
   const t = useTranslations('auth');
+  const staff = useStaffName();
   const searchParams = useSearchParams();
   const [pending, setPending] = useTransientState(false);
   const inBrowser = useInBrowser();
@@ -108,7 +110,10 @@ export default function EmailLinkForm({ account, signedIn }: EmailLinkFormProps)
   return (
     <div className="flex flex-col gap-6">
       {icon}
-      <AuthHeading title={t('emailLink.heading')} description={t('emailLink.description')} />
+      <AuthHeading
+        title={t('emailLink.heading')}
+        description={t('emailLink.description', { staff })}
+      />
       <AccountSummary {...account} />
       {signedIn && (
         <Alert tone="info">

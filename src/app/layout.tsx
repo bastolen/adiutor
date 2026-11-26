@@ -22,12 +22,13 @@ import './globals.css';
 
 /**
  * Default page metadata, in the request's language. Pages set their own
- * title, which the template ends with the product name ("Users · Adiutor").
+ * title, which the template ends with the staff's name ("Users · Adiutor",
+ * or "Users · Adiutor Support" once setup named the staff so; decision 0050).
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('common');
+  const [t, staff] = await Promise.all([getTranslations('common'), requestStaffName()]);
   return {
-    title: { template: t('documentTitle', { page: '%s' }), default: 'Adiutor' },
+    title: { template: t('documentTitle', { page: '%s', staff }), default: staff },
     description: t('app.description'),
   };
 }

@@ -24,13 +24,13 @@ describe('signInErrorMessage', () => {
   it('explains cancelled sign-ins and accounts that could not be connected', () => {
     expect(signInErrorMessage(t, 'access_denied')).toMatch(/cancelled at the provider/);
     expect(signInErrorMessage(t, 'account_already_linked_to_different_user')).toMatch(
-      /already connected to another Adiutor account/,
+      /already connected to another user/,
     );
     expect(signInErrorMessage(t, "email_doesn't_match")).toMatch(/doesn't match yours/);
   });
 
   it("uses the sign-in page's messages for the codes it knows", () => {
-    expect(signInErrorMessage(t, 'signup_disabled')).toMatch(/no Adiutor account for that email/);
+    expect(signInErrorMessage(t, 'signup_disabled')).toMatch(/no account for that email/);
   });
 
   it('explains a link the auth guards refused for where it would go', () => {

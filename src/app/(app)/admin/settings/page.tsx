@@ -29,8 +29,9 @@ export const generateMetadata = globalPermissionMetadata('staff:manage', 'admin.
 
 /**
  * Loads and shows the general settings. Its text comes from
- * `admin.settings.general`, which the forms (`StaffNameForm`, `LanguagesForm`
- * and `DefaultTimeZoneForm`) also get through `ClientMessages`.
+ * `admin.settings.general` (the Languages card names the staff by their
+ * saved name), which the forms (`StaffNameForm`, `LanguagesForm` and
+ * `DefaultTimeZoneForm`) also get through `ClientMessages`.
  */
 async function GeneralSettings() {
   const t = await getTranslations('admin.settings.general');
@@ -42,7 +43,10 @@ async function GeneralSettings() {
         <StaffNameForm name={settings.name} />
       </Card>
 
-      <Card title={t('languages.title')} description={t('languages.description')}>
+      <Card
+        title={t('languages.title')}
+        description={t('languages.description', { staff: settings.name })}
+      >
         <LanguagesForm defaultLocale={settings.defaultLocale} offered={settings.offeredLocales} />
       </Card>
 

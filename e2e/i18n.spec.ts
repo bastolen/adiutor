@@ -12,7 +12,13 @@ import { type Page } from '@playwright/test';
 
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { setDefaultLocale } from './support/db';
-import { COMPANY_NAME, COMPANY_SLUG, E2E_BASE_URL, PLATFORM_ADMIN } from './support/fixtures';
+import {
+  COMPANY_NAME,
+  COMPANY_SLUG,
+  E2E_BASE_URL,
+  PLATFORM_ADMIN,
+  STAFF_NAME,
+} from './support/fixtures';
 import {
   freshAddress,
   signIn,
@@ -69,7 +75,7 @@ test.describe('a browser that asks for Dutch', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
 
     await chooseLanguage(page, 'Theme and language: System, English (US)', 'Nederlands', 'nl-NL');
-    await expect(page.getByRole('heading', { name: 'Inloggen bij Adiutor' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: `Inloggen bij ${STAFF_NAME}` })).toBeVisible();
   });
 });
 
@@ -78,16 +84,16 @@ test('the theme and language menu on the sign-in page remembers the choice', asy
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
 
   await chooseLanguage(page, 'Theme and language: System, English (US)', 'Español', 'es-ES');
-  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Inicia sesión en ${STAFF_NAME}` })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Inicia sesión en ${STAFF_NAME}` })).toBeVisible();
   const cookies = await page.context().cookies();
   expect(cookies.find(({ name }) => name === LOCALE_COOKIE)?.value).toBe('es-ES');
 
   // Default forgets the choice: the page follows Adiutor's default language again.
   await chooseLanguage(page, 'Tema e idioma: Sistema, Español', 'Predeterminado', 'en-US');
-  await expect(page.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
   const after = await page.context().cookies();
   expect(after.find(({ name }) => name === LOCALE_COOKIE)).toBeUndefined();
 });
@@ -120,7 +126,7 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await expect(toasts(page)).toContainText('Idioma guardado.');
   await expect(page.getByRole('button', { name: 'Guardar idioma' })).toBeEnabled();
   // Pages visited before the change are in Spanish too.
-  await page.getByRole('link', { name: 'Panel de Adiutor' }).first().click();
+  await page.getByRole('link', { name: 'Ir al panel' }).first().click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'es-ES');
 
@@ -128,7 +134,7 @@ test("an account's language: saved on the account page, kept at sign-out, winnin
   await page.getByRole('button', { name: /^Menú de la cuenta/ }).click();
   await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/auth/);
-  await expect(page.getByRole('heading', { name: 'Inicia sesión en Adiutor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Inicia sesión en ${STAFF_NAME}` })).toBeVisible();
 
   // On a browser that chose English, the account's Spanish wins once signed in.
   const english = await browser.newContext();

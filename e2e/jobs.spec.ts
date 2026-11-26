@@ -16,7 +16,7 @@ import {
   resumeJob,
   storeFailedQueuedJob,
 } from './support/db';
-import { E2E_BASE_URL, PLATFORM_ADMIN, STEP_UP_MANAGER } from './support/fixtures';
+import { E2E_BASE_URL, PLATFORM_ADMIN, STAFF_NAME, STEP_UP_MANAGER } from './support/fixtures';
 import { signIn, toasts } from './support/helpers';
 import { runJobs } from './support/outbox';
 import { signedInOnce } from './support/stored-sign-in';
@@ -58,7 +58,7 @@ test('a staff Admin finds the jobs under Logs, with how the tick ran them', asyn
     .getByRole('link', { name: 'Jobs' })
     .click();
   await expect(page).toHaveURL('/admin/logs/jobs');
-  await expect(page).toHaveTitle('Jobs · Adiutor');
+  await expect(page).toHaveTitle(`Jobs · ${STAFF_NAME}`);
   await expectJobs(page);
 });
 

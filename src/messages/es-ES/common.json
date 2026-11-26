@@ -3,10 +3,10 @@
     "app": {
       "description": "Consigue ayuda sin perseguir correos. Informa de un problema o pide algo nuevo, sigue su progreso y aprueba el trabajo, todo en un mismo lugar."
     },
-    "documentTitle": "{page} · Adiutor",
+    "documentTitle": "{page} · {staff}",
     "loading": "Cargando…",
     "skipToContent": "Saltar al contenido principal",
-    "homeLink": "Inicio de Adiutor",
+    "homeLink": "Inicio de {staff}",
     "companyWithUrlName": "{name} ({urlName})",
     "actions": {
       "cancel": "Cancelar",
@@ -85,8 +85,8 @@
     "providerLinked": {
       "region": "{provider} conectado",
       "dismiss": "Descartar el aviso de {provider}",
-      "named": "Tu cuenta de {provider} <name>{account}</name> ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>.",
-      "unnamed": "Tu cuenta de {provider} ya está conectada a tu cuenta de Adiutor, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>."
+      "named": "Tu cuenta de {provider} <name>{account}</name> ya está conectada a tu cuenta en {staff}, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>.",
+      "unnamed": "Tu cuenta de {provider} ya está conectada a tu cuenta en {staff}, porque has iniciado sesión con ella. ¿No has sido tú? <link>Desconéctala en la página Seguridad</link>."
     },
     "accessNotice": {
       "dismiss": "Descartar este aviso",
@@ -105,7 +105,6 @@
         "status": "Esperando tu aprobación",
         "title": "Actualizar el horario en la web",
         "you": "Tú",
-        "staff": "Soporte Adiutor",
         "question": "Nuestro horario cambia el mes que viene. ¿Podéis actualizarlo en la web?",
         "answer": "Hecho en la web de pruebas. Revísalo y apruébalo, y lo publicaremos.",
         "reply": "Responder",
@@ -141,7 +140,7 @@
       "defaultLabel": "Idioma predeterminado",
       "defaultHint": "Para quien aún no haya elegido un idioma. Puedes cambiarlo más adelante.",
       "followDefault": "Predeterminado",
-      "followDefaultDescription": "Sigue el idioma predeterminado de Adiutor, ahora {language}."
+      "followDefaultDescription": "Sigue el idioma predeterminado, ahora {language}."
     },
     "timeZoneRegion": "{region, select, Africa {África} America {América} Antarctica {Antártida} Arctic {Ártico} Asia {Asia} Atlantic {Océano Atlántico} Australia {Australia} Europe {Europa} Indian {Océano Índico} Pacific {Océano Pacífico} other {Otras zonas}}",
     "preferences": {

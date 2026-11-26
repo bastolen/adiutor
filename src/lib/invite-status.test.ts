@@ -11,7 +11,7 @@ describe('inviteStatusMessage', () => {
       'Invitation sent to a@adiutor.test.',
     );
     expect(inviteStatusMessage('a@adiutor.test', 'sent_existing_user', 'en-US')).toBe(
-      'Invitation sent to a@adiutor.test. They already have an Adiutor account.',
+      'Invitation sent to a@adiutor.test. They already have an account.',
     );
     expect(inviteStatusMessage('a@adiutor.test', 'already_member', 'en-US')).toBe(
       "a@adiutor.test is already a member. We've emailed them to let them know.",
@@ -24,9 +24,7 @@ describe('inviteStatusMessage', () => {
     );
     expect(
       inviteStatusMessage('a@adiutor.test', 'sent_existing_user', 'en-US', 'companyAdded'),
-    ).toBe(
-      'Company added. Invitation sent to a@adiutor.test. They already have an Adiutor account.',
-    );
+    ).toBe('Company added. Invitation sent to a@adiutor.test. They already have an account.');
   });
 
   it('speaks Dutch and Spanish, with the address where each language puts it', () => {

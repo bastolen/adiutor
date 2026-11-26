@@ -565,9 +565,11 @@ keyboard support.
   them. Field text is 16px on every device (`fieldControl` in `src/components/ui/styles.ts`),
   never smaller, because iOS Safari zooms the page in when a field with smaller text gets focus.
   Don't work around that with `maximum-scale` in the viewport: it also blocks pinch-zoom.
-- **Page titles:** "Page · Adiutor", most specific part first. Next's route announcer reads the
-  title after each client-side navigation (only when it changed), so pages that differ get
-  different titles: a company's pages add the company ("Members · Adiutor Tests · Adiutor"), from
+- **Page titles:** "Page · Adiutor", most specific part first, ending with the staff's name
+  ("Page · Adiutor Support" once setup named them so; `{staff}`, decision 0050). Next's route
+  announcer reads the title after each client-side navigation (only when it changed), so pages
+  that differ get different titles: a company's pages add the company ("Members · Adiutor Tests ·
+  Adiutor"), from
   the company layout's `generateMetadata`, after the same access check as the pages. Next doesn't
   apply a layout's title template to the page in the layout's own route segment, so the company's
   first page names the company itself ("Requests · Adiutor Tests · Adiutor",
@@ -581,7 +583,7 @@ keyboard support.
   (with `requireGlobalPermission`, plus an `exists` check for a page about one record, like a
   user's) or `companyPermissionMetadata` (with `requireCompanyAccess` and a permission). Both take
   the title as a message key (`'admin.users.title'`), translated in the request's language; the
-  company layout's template ("%s · {company} · Adiutor") is the message `companies.titleTemplate`.
+  company layout's template ("%s · {company} · {staff}") is the message `companies.titleTemplate`.
   A page that decides with a check of its own (a request's, which everyone who may see the request
   may open) uses `checkedPageMetadata` with that check.
   `src/app/permission-titles.test.ts` fails when one of them has a static title instead.

@@ -18,7 +18,7 @@ describe('EmailLanguageField', () => {
     expect(select).toHaveTextContent('Standaard');
     await user.click(select);
     expect(screen.getAllByRole('option')[0]).toHaveAccessibleName(
-      'Standaard Volgt de standaardtaal van Adiutor, nu Español.',
+      'Standaard Volgt de standaardtaal, nu Español.',
     );
   });
 

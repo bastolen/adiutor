@@ -16,6 +16,7 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { ADIUTOR_NAME } from '@/lib/branding';
 import fontVariables from '@/lib/fonts';
 import IntlClientProvider from '@/lib/i18n/intl-client-provider';
 import {
@@ -85,13 +86,16 @@ function savedTimeZone(): string {
 }
 
 /**
- * The document's title, inside the provider.
+ * The document's title, inside the provider. It names Adiutor, not the
+ * staff's name every other title ends with: this page replaces the root
+ * layout, which reads that name, and can't reach the database itself (it
+ * may well be what failed).
  *
  * @returns The `<title>` element.
  */
 function ErrorTitle() {
   const t = useTranslations('common');
-  return <title>{t('documentTitle', { page: t('error.title') })}</title>;
+  return <title>{t('documentTitle', { page: t('error.title'), staff: ADIUTOR_NAME })}</title>;
 }
 
 /**

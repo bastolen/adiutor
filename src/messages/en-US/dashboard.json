@@ -2,7 +2,7 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {name}",
-    "staffDescription": "Work on requests, open a company, or see everyone who uses Adiutor.",
+    "staffDescription": "Work on requests, open a company, or see all users.",
     "companyDescription": "{canRaise, select, yes {Raise a request, or see how the open ones are coming along.} other {See how the open requests are coming along.}}",
     "mfaRecommendation": {
       "label": "Account security",

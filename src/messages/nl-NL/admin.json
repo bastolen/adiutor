@@ -222,11 +222,11 @@
       },
       "signInAs": {
         "title": "Inloggen als gebruiker",
-        "description": "{minutes, plural, one {Bekijk Adiutor hooguit # minuut zoals {name} het ziet, om te controleren wat er voor die persoon niet werkt.} other {Bekijk Adiutor hooguit # minuten zoals {name} het ziet, om te controleren wat er voor die persoon niet werkt.}}",
+        "description": "{minutes, plural, one {Bekijk hooguit # minuut wat {name} ziet, om te controleren wat er voor die persoon niet werkt.} other {Bekijk hooguit # minuten wat {name} ziet, om te controleren wat er voor die persoon niet werkt.}}",
         "allowed": "Wijzigen staat uit terwijl je als {name} bent ingelogd, en die persoon krijgt een e-mail dat je dat deed.",
         "label": "Inloggen als gebruiker",
         "dialogTitle": "Inloggen als {name}?",
-        "dialogDescription": "{minutes, plural, one {Je ziet Adiutor hooguit # minuut zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.} other {Je ziet Adiutor hooguit # minuten zoals {name} het ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.}}",
+        "dialogDescription": "{minutes, plural, one {Je ziet hooguit # minuut wat {name} ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.} other {Je ziet hooguit # minuten wat {name} ziet, daarna ben je terug in je eigen account. Je kunt aan de verzoeken van die persoon werken, en die ziet dat jij het was; verder kun je niets wijzigen. Die persoon krijgt een e-mail met jouw naam.}}",
         "confirmLabel": "Inloggen als {name}",
         "reasonLabel": "Reden (optioneel)",
         "reasonHint": "Bijvoorbeeld het verzoek waar je naar kijkt. Alleen medewerkers die de auditlog zien, kunnen het lezen.",
@@ -273,7 +273,7 @@
         },
         "languages": {
           "title": "Talen",
-          "description": "Kies welke talen Adiutor aanbiedt, en de standaardtaal voor iedereen die nog geen eigen taal heeft gekozen. Wie een taal heeft gekozen die je uitzet, krijgt de standaardtaal tot die weer aan staat.",
+          "description": "Kies welke talen {staff} aanbiedt, en de standaardtaal voor iedereen die nog geen eigen taal heeft gekozen. Wie een taal heeft gekozen die je uitzet, krijgt de standaardtaal tot die weer aan staat.",
           "offeredLabel": "Aangeboden talen",
           "alwaysOn": "Staat altijd aan: dit is de standaardtaal.",
           "defaultHint": "Alleen een taal die wordt aangeboden kan de standaardtaal zijn.",
@@ -282,7 +282,7 @@
         },
         "timeZone": {
           "title": "Standaardtijdzone",
-          "description": "Adiutor gebruikt deze zone op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
+          "description": "Deze zone wordt gebruikt op pagina’s voor wie niet is ingelogd, in e-mails aan mensen zonder zone, en voor iedereen tot hun browser hun eigen zone instelt.",
           "label": "Standaardtijdzone",
           "save": "Standaardtijdzone opslaan",
           "saved": "Standaardtijdzone opgeslagen."
@@ -405,11 +405,11 @@
           "nameLabel": "Naam",
           "nameHint": "Hoe de medewerkers hem noemen, bijvoorbeeld Inkoop of Chat van de medewerkers.",
           "urlLabel": "Adres",
-          "urlHint": "Waar het naartoe gaat: een https://-adres. Er kan een token in staan, dus Adiutor houdt het geheim en laat alleen de host zien.",
-          "urlKeepHint": "Laat het leeg om het opgeslagen adres te houden, dat Adiutor nooit meer laat zien.",
+          "urlHint": "Waar het naartoe gaat: een https://-adres. Er kan een token in staan, dus het wordt geheim gehouden en alleen de host wordt getoond.",
+          "urlKeepHint": "Laat het leeg om het opgeslagen adres te houden, dat nooit meer wordt getoond.",
           "formatLabel": "Vorm",
           "formatJsonHint": "Ondertekend zoals Standard Webhooks het beschrijft, met alle details, voor een systeem van je.",
-          "formatChatHint": "Een kort bericht dat Slack, Google Chat, Mattermost en Discord laten zien zoals het is, in de standaardtaal van Adiutor.",
+          "formatChatHint": "Een kort bericht dat Slack, Google Chat, Mattermost en Discord laten zien zoals het is, in de standaardtaal.",
           "typesLegend": "Verzoektypen",
           "allTypesHint": "Elk type, ook de typen die later worden toegevoegd.",
           "chosenTypes": "Gekozen typen",
@@ -425,7 +425,7 @@
         },
         "secret": {
           "title": "Kopieer het ondertekeningsgeheim",
-          "description": "Adiutor laat het niet meer zien. De ontvanger controleert er de handtekening van elke levering mee.",
+          "description": "Het wordt niet meer getoond. De ontvanger controleert er de handtekening van elke levering mee.",
           "label": "Ondertekeningsgeheim",
           "copy": "Geheim kopiëren",
           "done": "Klaar"
@@ -444,7 +444,7 @@
           "secretRenewed": "Geheim vernieuwd",
           "failingSince": "Mislukt sinds",
           "never": "Nooit",
-          "offNote": "{reason, select, failing {Adiutor heeft hem uitgezet omdat elke levering 3 dagen lang mislukte. Zet hem weer aan zodra de ontvanger werkt.} gone {Adiutor heeft hem uitgezet omdat de ontvanger antwoordde dat hij voorgoed weg is (410 Gone).} unreadable {Adiutor heeft hem uitgezet omdat het adres of geheim niet meer te lezen is. Vul het adres opnieuw in en vernieuw het geheim, en zet hem daarna aan.} other {Hij staat uit: er wordt niets naartoe gestuurd, en wat er intussen gebeurt wordt later niet verstuurd.}}"
+          "offNote": "{reason, select, failing {Hij is automatisch uitgezet omdat elke levering 3 dagen lang mislukte. Zet hem weer aan zodra de ontvanger werkt.} gone {Hij is automatisch uitgezet omdat de ontvanger antwoordde dat hij voorgoed weg is (410 Gone).} unreadable {Hij is automatisch uitgezet omdat het adres of geheim niet meer te lezen is. Vul het adres opnieuw in en vernieuw het geheim, en zet hem daarna aan.} other {Hij staat uit: er wordt niets naartoe gestuurd, en wat er intussen gebeurt wordt later niet verstuurd.}}"
         },
         "edit": {
           "button": "Bewerken",
@@ -507,10 +507,10 @@
         "outcome": {
           "timeout": "Geen antwoord binnen 10 seconden.",
           "dns": "De hostnaam is niet te vinden.",
-          "refused_address": "Het adres ligt in het eigen netwerk van Adiutor.",
+          "refused_address": "Het adres ligt in het eigen netwerk van deze server.",
           "connection": "De verbinding werd geweigerd of verbroken.",
           "tls": "Het certificaat of de versleuteling is niet te vertrouwen.",
-          "redirect": "Hij antwoordde met een doorverwijzing ({status, number}), die Adiutor nooit volgt.",
+          "redirect": "Hij antwoordde met een doorverwijzing ({status, number}), die webhooks nooit volgen.",
           "http": "Hij antwoordde {status, number}.",
           "unreadable": "Het adres of geheim is niet meer te lezen.",
           "answered": "Antwoordde {status, number}."
@@ -716,7 +716,7 @@
       },
       "queued": {
         "title": "Taken in de wachtrij",
-        "description": "Werk dat Adiutor voor later klaarzet, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
+        "description": "Werk dat voor later is klaargezet, zoals e-mails die een paar minuten kunnen wachten. Elke taak draait bij de volgende tik en wordt opnieuw geprobeerd als hij mislukt.",
         "caption": "Soorten taken in de wachtrij",
         "kind": "Soort",
         "waiting": "Wachtend",

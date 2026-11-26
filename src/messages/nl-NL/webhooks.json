@@ -12,7 +12,7 @@
       "type": "{name} heeft het type gewijzigd van {from} naar {to}.",
       "priority": "{name} heeft de prioriteit gewijzigd van {from} naar {to}.",
       "more": "{count, plural, one {En nog # wijziging.} other {En nog # wijzigingen.}}",
-      "test": "Dit is een testbericht van Adiutor voor de webhook ‘{name}’. Het werkt."
+      "test": "Dit is een testbericht van {staff} voor de webhook ‘{name}’. Het werkt."
     }
   }
 }

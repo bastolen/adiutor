@@ -21,6 +21,7 @@ import { REQUEST_LINK_DAYS, REQUEST_LINK_RETRY_PARAM } from '@/lib/sign-in/reque
 import appContext from '@/server/app-context';
 import { getRequestLinkView, type RequestLinkView } from '@/server/auth/request-links';
 import { getOptionalActor } from '@/server/authz';
+import { requestStaffName } from '@/server/branding';
 import { ServiceError, serviceErrorMessage } from '@/server/errors';
 
 import RequestLinkForm from './request-link-form';
@@ -29,8 +30,11 @@ import RequestLinkForm from './request-link-form';
  * Says that a staff member signed in as someone must go back to their own
  * account before a link signs anyone in: switching here would end that
  * sign-in without recording its end.
+ *
+ * @param props - Component props.
+ * @param props.staff - The staff's name, for the link to the dashboard ("Go to …").
  */
-function SignedInAsSomeone() {
+function SignedInAsSomeone({ staff }: { staff: string }) {
   const t = useTranslations('auth');
   return (
     <div className="flex flex-col gap-6">
@@ -40,7 +44,7 @@ function SignedInAsSomeone() {
         description={t('requestLink.signedInAsDescription')}
       />
       <Button variant="secondary" fullWidth asChild>
-        <Link href="/dashboard">{t('requestLink.openAdiutor')}</Link>
+        <Link href="/dashboard">{t('requestLink.goHome', { staff })}</Link>
       </Button>
     </div>
   );
@@ -112,7 +116,7 @@ export default async function RequestLinkStep({
 
   const actor = await getOptionalActor();
   if (actor?.signedInAs) {
-    return <SignedInAsSomeone />;
+    return <SignedInAsSomeone staff={await requestStaffName()} />;
   }
   return (
     <RequestLinkForm

@@ -420,6 +420,7 @@ describe('joining the staff by email', () => {
     const token = tokenFrom(invitationEmail);
     expect(await getInvitationPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'staff',
       role: 'support',
       fromInviteLink: false,
     });
@@ -485,6 +486,7 @@ describe('joining the staff by invite link', () => {
     const token = defined(url.split('/').at(-1), 'the link token');
     expect(await getInviteLinkPreview(ctx, token)).toEqual({
       companyName: 'Adiutor Tests',
+      target: 'staff',
       role: 'support',
     });
 

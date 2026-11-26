@@ -12,7 +12,7 @@ import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import { LAST_USED_LOGIN_METHOD_COOKIE } from '../src/lib/sign-in/auth-cookies';
 import { PROVIDER_LINKED_COOKIE } from '../src/lib/sign-in/oauth-providers';
 import { storeSignInLink } from './support/db';
-import { CLIENT_WATCHER, SESSIONS_CLIENT, SUPPORT_STAFF } from './support/fixtures';
+import { CLIENT_WATCHER, SESSIONS_CLIENT, STAFF_NAME, SUPPORT_STAFF } from './support/fixtures';
 import {
   fillAndSubmitSignIn,
   openAccountSettings,
@@ -29,7 +29,7 @@ test('a signed-out visitor of the dashboard is sent to sign in', async ({ page }
   await page.goto('/dashboard');
 
   await expect(page).toHaveURL('/auth?callbackURL=%2Fdashboard');
-  await expect(page.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
 });
 
 test('signing in goes on to the card the address named', async ({ page }) => {
@@ -115,7 +115,7 @@ test("signing in or out in one tab loads the browser's other tabs afresh", async
   // A second tab of the same browser is on the sign-in page too.
   const other = await context.newPage();
   await other.goto('/auth');
-  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(other.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
 
   // Signing in in the first tab takes the other one on without a click, signed in.
   await signIn(page, CLIENT_WATCHER);
@@ -129,7 +129,7 @@ test("signing in or out in one tab loads the browser's other tabs afresh", async
   // Signing out in the first tab sends the other one to the sign-in page, which comes back there.
   await signOut(page);
   await expect(other).toHaveURL('/auth?callbackURL=%2Faccount');
-  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(other.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
   await expect(otherName).toHaveCount(0);
 });
 
@@ -137,7 +137,7 @@ test("an email-link sign-in loads the browser's other tabs afresh", async ({ pag
   // A second tab of the same browser is on the sign-in page.
   const other = await context.newPage();
   await other.goto('/auth');
-  await expect(other.getByRole('heading', { name: 'Sign in to Adiutor' })).toBeVisible();
+  await expect(other.getByRole('heading', { name: `Sign in to ${STAFF_NAME}` })).toBeVisible();
 
   // The link comes back through a redirect, so the page it lands on tells the other tab, which goes
   // on without a click, signed in.
