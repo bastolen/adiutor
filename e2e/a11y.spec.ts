@@ -30,13 +30,14 @@ import {
   storeWebhookToLookAt,
   findCompanyId,
   findUserId,
+  storeAnswerLink,
+  storeAttachment,
   storeAuditEvent,
   storeInvitation,
-  storeAnswerLink,
   storeInviteLink,
+  storeOwnRequest,
   storeRequestLink,
   storeSignInLink,
-  storeOwnRequest,
 } from './support/db';
 import {
   CLIENT_WATCHER,
@@ -100,6 +101,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
+  '/admin/settings/attachments',
   '/admin/settings/webhooks',
   '/admin/settings/appearance',
   '/admin/logs',
@@ -923,6 +925,60 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('region', { name: 'Conversation' })).toContainText(
           'Internal note',
         );
+        await expectAccessible(page);
+      });
+
+      test('a request with attachments, an image among them', async ({ page }) => {
+        const number = await storeOwnRequest({ title: 'Attachments for the scan' });
+        await storeAttachment(number, {
+          name: 'error.png',
+          contentType: 'image/png',
+          bytes: Uint8Array.from(
+            atob(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            ),
+            (character) => character.charCodeAt(0),
+          ),
+        });
+        await storeAttachment(number, {
+          name: 'printer.log',
+          contentType: 'text/plain',
+          bytes: new TextEncoder().encode('printer offline'),
+        });
+        await page.goto(`/requests/${number}`);
+        await expect(page.getByRole('list', { name: '2 attachments' })).toBeVisible();
+        await expectAccessible(page);
+      });
+
+      test('a reply with files waiting to be sent, an image among them', async ({ page }) => {
+        const number = await storeOwnRequest({ title: 'Files waiting for the scan' });
+        await page.goto(`/requests/${number}`);
+        const chooser = page.waitForEvent('filechooser');
+        await page.getByRole('button', { name: 'Attach files' }).click();
+        await (
+          await chooser
+        ).setFiles([
+          {
+            name: 'error.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+              'base64',
+            ),
+          },
+          { name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printer offline') },
+        ]);
+        await expect(page.getByRole('list', { name: '2 files to send' })).toBeVisible();
+        await expect(page.getByText('Wait until the files are uploaded to send.')).toBeHidden();
+        await expectAccessible(page);
+      });
+
+      test('the fields of an SFTP server on the Attachments tab of Settings', async ({ page }) => {
+        // Only chosen in the select: nothing is saved.
+        await page.goto('/admin/settings/attachments');
+        await page.getByRole('combobox', { name: 'Storage' }).click();
+        await page.getByRole('option', { name: /A folder on another server/ }).click();
+        await expect(page.getByRole('textbox', { name: 'Host key fingerprint' })).toBeVisible();
         await expectAccessible(page);
       });
 

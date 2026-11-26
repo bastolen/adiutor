@@ -146,6 +146,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
+  - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
+    it's saved and with the staff Admin's second step from the last 15 minutes, whether people can
+    attach files (only once there's a storage), and the largest file anyone may attach; each only
+    shown when the server's environment chooses it (see
+    [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
   - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
     the staff's own systems and chat channels, each with whether it's on, its format, the host it
     sends to, its types and events, and adding one; each webhook's page has its controls and its

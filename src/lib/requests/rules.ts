@@ -384,6 +384,19 @@ export function mayWriteNote(permissions: ReadonlySet<Permission>): boolean {
 }
 
 /**
+ * Whether someone may remove a file attached to a request's text: only the
+ * staff who work on requests (`requests:manage`), whoever attached it and
+ * whatever the request's status (decision 0044). Its file is deleted then,
+ * and its place in the text says who removed it.
+ *
+ * @param permissions - Their permissions in the request's company.
+ * @returns Whether they may.
+ */
+export function mayRemoveAttachment(permissions: ReadonlySet<Permission>): boolean {
+  return permissions.has('requests:manage');
+}
+
+/**
  * Whether someone may edit an internal note: only the one who wrote it,
  * while the request is open, and only while they still work on requests.
  *

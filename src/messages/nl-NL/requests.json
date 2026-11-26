@@ -245,7 +245,7 @@
       "assignedYou": "Dit verzoek is aan je toegewezen.",
       "subscribers": "{changed, plural, =0 {Er is niets gewijzigd.} other {Abonnees opgeslagen.}}",
       "subscription": "{change, select, subscribed {Je bent geabonneerd op dit verzoek.} other {Je bent niet meer geabonneerd op dit verzoek.}}",
-      "text": "{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}"
+      "text": "{files, plural, =0 {{changed, select, yes {Wijzigingen opgeslagen.} other {Er is niets gewijzigd.}}} one {Opgeslagen, met # bestand erbij.} other {Opgeslagen, met # bestanden erbij.}}"
     },
     "edit": {
       "editDescription": "Beschrijving bewerken",
@@ -296,6 +296,32 @@
         "name": "Nieuwe functie",
         "description": "Iets nieuws, of een wijziging in hoe iets werkt."
       }
+    },
+    "attachments": {
+      "label": "{count, plural, one {# bijlage} other {# bijlagen}}",
+      "download": "{name} downloaden, {size}",
+      "attach": "Bestanden toevoegen",
+      "hint": "Je kunt bestanden ook neerzetten of plakken: tot {count, number} van hoogstens {maximum, number} MB per stuk.",
+      "dropHere": "Laat de bestanden los om ze toe te voegen.",
+      "waiting": "{count, plural, one {# bestand om te versturen} other {# bestanden om te versturen}}",
+      "queued": "Wacht op uploaden",
+      "uploading": "Bezig met uploaden, {progress, number, percent}",
+      "uploadingLabel": "{name} wordt geüpload",
+      "remove": "{name} verwijderen",
+      "ready": "{name} is klaar om te versturen.",
+      "removed": "{name} wordt niet verstuurd.",
+      "waitForUploads": "Wacht tot de bestanden zijn geüpload om te versturen.",
+      "tooLarge": "{name} is te groot: voeg bestanden van hoogstens {maximum, number} MB toe.",
+      "typeNotAllowed": "{name} kun je niet toevoegen. Voeg afbeeldingen, pdf’s, tekst, Office- of OpenDocument-bestanden, archieven of schermopnames toe.",
+      "empty": "{name} is leeg.",
+      "tooMany": "Voeg hoogstens {maximum, number} bestanden aan één tekst toe.",
+      "failed": "{name} kon niet worden geüpload. Probeer het opnieuw.",
+      "removeShort": "Verwijderen",
+      "removeTitle": "{name} verwijderen?",
+      "removeDescription": "Het wordt voor iedereen verwijderd en kan niet worden teruggehaald. Op zijn plek in de tekst staat wie het heeft verwijderd.",
+      "removeConfirm": "Bestand verwijderen",
+      "removedDone": "{name} verwijderd.",
+      "removedBy": "Verwijderd door {name}"
     }
   }
 }

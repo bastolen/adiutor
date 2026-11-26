@@ -1,8 +1,9 @@
 # Deploying and running Adiutor
 
 What to set up on a server, and how to run and look after it: installing and upgrading, deploying
-on Vercel, the Docker image and health check, the client IP address, background jobs, logs, looking up the reference of
-an error, rotating the auth secret, and what to do after a suspected leak. Back to the
+on Vercel, the Docker image and health check, the client IP address, background jobs, where
+attached files are kept, logs, looking up the reference of an error, rotating the auth secret, and
+what to do after a suspected leak. Back to the
 [documentation](README.md).
 
 ## Installing and upgrading
@@ -140,7 +141,8 @@ docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 adiutor
 
 The image sets `NODE_ENV=production` and runs as the unprivileged `node` user on port 3000 (`PORT`
 changes it). The application's files belong to root and only `.next`, where Next.js keeps its
-caches, is writable by that user, so a flaw that lets the server write files can't change the
+caches, is writable by that user (and `/data/attachments`, for a volume of attached files: see
+[Attachments](#attachments)), so a flaw that lets the server write files can't change the
 application's own code. The settings are the same as without Docker (see the checklist below,
 including `EMAIL_FROM`, and finish setup right after the first start: until then whoever opens
 `/setup` first becomes the staff Admin); when the
@@ -243,6 +245,8 @@ What to set up on a server before sharing its address:
   a random `CRON_SECRET` of at least 32 characters too.
 - **Jobs:** run `pnpm jobs:run` every 5 minutes with `NODE_ENV=production` (see
   [Background jobs](#background-jobs)).
+- **Attachments:** choose where files are kept, or leave them off, and back them up with the
+  database (see [Attachments](#attachments)).
 - **Logs:** successful requests log nothing that identifies anyone, but errors can: an email
   address an email failed for, a user's name, and so on (database values are left out, see
   [Logs](#logs)). Treat the app's output and the jobs log as personal data:
@@ -340,6 +344,91 @@ one does no harm. It exits with 1 when a job failed (after the others ran), so c
 monitoring notices, for example when the mail setup is broken and reminders can't be sent; the next
 run tries again. `pnpm jobs:list` shows every job with its last and next run, and
 `pnpm jobs:run <name>` runs one job now.
+
+## Attachments
+
+Files people attach to requests are kept in a storage a staff Admin chooses on the **Attachments**
+tab of Settings, unless the server's environment chooses it
+([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
+a folder on another server over SFTP. Without one, attachments are off. Once there's a storage, a
+staff Admin turns on **People can attach files** on the same tab; while it's off, nobody can attach
+files, and the files already attached can still be downloaded.
+
+- **In Settings,** a storage is tried before it's saved: Adiutor writes a small file there, reads
+  it back and deletes it, and says what went wrong if any step fails (unreachable, keys refused,
+  folder missing, and so on, never the server's own reply). Saving needs the staff Admin's second
+  step from the last 15 minutes, and is in the audit log. Its secrets (the S3 secret key, the SFTP
+  password or private key) are encrypted with the auth secret, like authenticator secrets, so
+  [Rotating the auth secret](#rotating-the-auth-secret) holds for them: keep the old version until
+  the storage has been saved again. A saved secret is never shown again, and is kept only for the
+  place it was saved for: another S3 service or key, or another SFTP server, port, user or host key, must be
+  given it again.
+- **In the environment,** `ATTACHMENTS_STORAGE` and the variables below win over Settings, which
+  then only shows the storage, without its secrets. `ATTACHMENTS_STORAGE=off` turns attachments
+  off and keeps staff Admins from choosing a storage: a storage in Settings lets them make the
+  server connect to any address it reaches (which a server of your own on the local network needs),
+  so set the storage yourself, or `off`, if that's not what you want.
+
+The storages, with the variables each one takes when the environment chooses it (Settings asks for
+the same):
+
+- **`local`: a folder on the server's disk** (`ATTACHMENTS_DIR`, an absolute path to a folder that
+  exists and the app can write to). It serves one server only, and never Vercel, whose disk doesn't
+  keep files. A marker file in it (`.adiutor-attachments`) says it's Adiutor's: without it, Adiutor
+  refuses to store, read or delete files there, so a server started without its folder (or a
+  container without its volume) fails instead of keeping files on a disk that goes away or taking
+  every file for gone. Only setting the folder up writes the marker, never an upload: saving the
+  storage on the Attachments tab (its test before saving), or, for a folder the environment
+  chooses, **Set up this folder** on that tab, which a staff Admin presses once the folder is the
+  right one (the tab says when a folder isn't set up). Keep the marker with the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
+  the app's container and on every container that runs the jobs:
+
+  ```bash
+  docker run -d --name adiutor --env-file .env -p 127.0.0.1:3000:3000 \
+    -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor
+  docker run --rm --env-file .env -e ATTACHMENTS_STORAGE=local -e ATTACHMENTS_DIR=/data/attachments \
+    -v adiutor-attachments:/data/attachments adiutor pnpm jobs:run
+  ```
+
+- **`s3`: a bucket of an S3-compatible service** (`ATTACHMENTS_S3_ENDPOINT`, `ATTACHMENTS_S3_REGION`,
+  `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID`, `ATTACHMENTS_S3_SECRET_ACCESS_KEY`, and
+  `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` for a path-style address). This is the way for Vercel, and
+  works anywhere. The endpoint must be `https` in production (a server on this computer aside):
+
+  | Service                        | Endpoint                                        | Region                              | Notes                                      |
+  | ------------------------------ | ----------------------------------------------- | ----------------------------------- | ------------------------------------------ |
+  | Cloudflare R2                  | `https://<account ID>.r2.cloudflarestorage.com` | `auto`                              | 10 GB free, and downloads cost nothing     |
+  | Backblaze B2                   | `https://s3.<region>.backblazeb2.com`           | the bucket's, e.g. `eu-central-003` | 10 GB free                                 |
+  | AWS S3                         | `https://s3.<region>.amazonaws.com`             | the bucket's                        | paid once its free plan ends               |
+  | Garage or SeaweedFS (your own) | your server's address                           | yours, or `us-east-1`               | set `ATTACHMENTS_S3_FORCE_PATH_STYLE=true` |
+
+  Keep the bucket private: Adiutor serves every file itself, after checking who may read it. Its key
+  only needs to read, write and delete objects in that bucket.
+
+- **`sftp`: a folder on another server, over SFTP** (`ATTACHMENTS_SFTP_HOST`, `ATTACHMENTS_SFTP_PORT`
+  (22 when unset), `ATTACHMENTS_SFTP_USERNAME`, `ATTACHMENTS_SFTP_PASSWORD` or
+  `ATTACHMENTS_SFTP_PRIVATE_KEY`, `ATTACHMENTS_SFTP_HOST_KEY` and `ATTACHMENTS_SFTP_DIR`). Any server
+  with SSH will do, a storage box or a NAS included, and it works from Vercel too. The private key
+  is the PEM file in base64 (`base64 < key`), so it fits on one line (Settings takes the PEM text
+  as it is). The host key is required: Adiutor connects only to the server whose key has that
+  fingerprint, as `ssh-keyscan <host> | ssh-keygen -lf -` prints it (`SHA256:…`). A server has a
+  key per type, and Adiutor is given its ED25519 key when it has one (else ECDSA, then RSA); check
+  the fingerprint against the server's own `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`,
+  since a scan can't tell an impostor. The
+  folder must exist, with an absolute path, and like the local disk it's set up with the marker file.
+  Each upload or download opens its own connection, so it's slower than the others.
+
+**Back up the files with the database.** A file is found by its row in the database, and a row
+whose file is gone can't be downloaded. Files are kept at the same paths in every storage
+(`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
+`attachments/` there as it is (with `rclone copy`, say), then switching.
+
+**The largest file** anyone may attach is chosen on the Attachments tab too (10 MB until it's
+changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
+Vercel, which refuses a larger request body. Behind a reverse proxy, let it pass request bodies that
+large to `/api/attachments` (with nginx, `client_max_body_size 51m;`, which defaults to 1 MB), or
+it refuses larger uploads itself.
 
 ## Webhooks
 

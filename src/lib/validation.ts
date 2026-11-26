@@ -43,6 +43,14 @@ import {
   REQUEST_TYPE_KEY_PATTERN,
 } from './requests';
 import {
+  DEFAULT_S3_REGION,
+  DEFAULT_SFTP_PORT,
+  HOST_KEY_PATTERN,
+  S3_BUCKET_PATTERN,
+  PRIVATE_KEY_MAX_LENGTH,
+  STORAGE_FIELD_MAX_LENGTH,
+} from './storage';
+import {
   WEBHOOK_EVENTS,
   WEBHOOK_FORMATS,
   type WebhookUrlProblem,
@@ -613,6 +621,164 @@ export const requestPrefixSchema = z
   .regex(REQUEST_PREFIX_PATTERN, {
     error: 'validation.requestPrefix' satisfies ValidationMessageKey,
   });
+
+/**
+ * A text field of a storage's settings: trimmed, 1 to
+ * `STORAGE_FIELD_MAX_LENGTH` characters.
+ *
+ * @param message - What to say when it's empty or too long.
+ * @returns The schema.
+ */
+function storageText(message: ValidationMessageKey) {
+  return z
+    .string({ error: message })
+    .trim()
+    .min(1, { error: message })
+    .max(STORAGE_FIELD_MAX_LENGTH, { error: message });
+}
+
+/** An S3 bucket's name, by S3's own rules (`S3_BUCKET_PATTERN`). */
+const storageBucketSchema = storageText('validation.storage.bucket').regex(S3_BUCKET_PATTERN, {
+  error: 'validation.storage.bucketName' satisfies ValidationMessageKey,
+});
+
+/** A storage's folder, on the server or over SFTP: an absolute path (`storageProblems` checks it). */
+const storageFolderSchema = storageText('validation.storage.folder');
+
+/** An S3-compatible service's address: `http` or `https` (production asks for `https`, `storageProblems`). */
+const storageEndpointSchema = z
+  .url({
+    protocol: /^https?$/,
+    hostname: z.regexes.hostname,
+    error: 'validation.storage.endpoint' satisfies ValidationMessageKey,
+  })
+  .max(STORAGE_FIELD_MAX_LENGTH, {
+    error: 'validation.storage.endpoint' satisfies ValidationMessageKey,
+  });
+
+/** An SFTP server's port. */
+const storagePortSchema = z.coerce
+  .number({ error: 'validation.storage.port' satisfies ValidationMessageKey })
+  .int({ error: 'validation.storage.port' satisfies ValidationMessageKey })
+  .min(1, { error: 'validation.storage.port' satisfies ValidationMessageKey })
+  .max(65535, { error: 'validation.storage.port' satisfies ValidationMessageKey });
+
+/** An SFTP server's host key fingerprint, as `ssh-keygen -lf` prints it. */
+const storageHostKeySchema = z
+  .string({ error: 'validation.storage.hostKey' satisfies ValidationMessageKey })
+  .trim()
+  .regex(HOST_KEY_PATTERN, { error: 'validation.storage.hostKey' satisfies ValidationMessageKey });
+
+/**
+ * A storage's settings as Settings keeps them (decision 0044): the shape of
+ * `StorageConfig`, with the S3 secret key and the SFTP password or private
+ * key encrypted (`sealStorage` in `src/server/storage/`), so those fields
+ * hold the encrypted text and may be longer.
+ */
+export const storedStorageSchema = z.discriminatedUnion('driver', [
+  z.object({ driver: z.literal('local'), dir: storageFolderSchema }),
+  z.object({
+    driver: z.literal('s3'),
+    endpoint: storageEndpointSchema,
+    region: storageText('validation.storage.region'),
+    bucket: storageBucketSchema,
+    accessKeyId: storageText('validation.storage.accessKeyId'),
+    secretAccessKey: z
+      .string()
+      .min(1)
+      .max(4 * PRIVATE_KEY_MAX_LENGTH),
+    forcePathStyle: z.boolean(),
+  }),
+  z.object({
+    driver: z.literal('sftp'),
+    host: storageText('validation.storage.host'),
+    port: storagePortSchema,
+    username: storageText('validation.storage.username'),
+    password: z
+      .string()
+      .min(1)
+      .max(4 * PRIVATE_KEY_MAX_LENGTH)
+      .optional(),
+    privateKey: z
+      .string()
+      .min(1)
+      .max(4 * PRIVATE_KEY_MAX_LENGTH)
+      .optional(),
+    hostKey: storageHostKeySchema,
+    dir: storageFolderSchema,
+  }),
+]);
+
+/**
+ * A secret a storage's form sent: empty means "keep the saved one", which
+ * the service decides it may (`saveAttachmentStorage`).
+ *
+ * @param max - The longest it may be.
+ * @returns The schema: the secret, or `undefined` when it's empty.
+ */
+function storageSecret(max: number) {
+  return z
+    .string()
+    .max(max, { error: 'validation.storage.secret' satisfies ValidationMessageKey })
+    .transform((value) => (value.trim() === '' ? undefined : value));
+}
+
+/**
+ * The storage's form on the Attachments tab of Settings: a driver and its
+ * fields, the secrets left empty to keep the saved ones. Only the chosen
+ * driver's fields are sent.
+ */
+export const storageFormSchema = z.discriminatedUnion(
+  'driver',
+  [
+    z.object({ driver: z.literal('local'), dir: storageFolderSchema }),
+    z.object({
+      driver: z.literal('s3'),
+      endpoint: storageEndpointSchema,
+      region: z
+        .string()
+        .trim()
+        .max(STORAGE_FIELD_MAX_LENGTH, {
+          error: 'validation.storage.region' satisfies ValidationMessageKey,
+        })
+        .transform((value) => value || DEFAULT_S3_REGION),
+      bucket: storageBucketSchema,
+      accessKeyId: storageText('validation.storage.accessKeyId'),
+      secretAccessKey: storageSecret(STORAGE_FIELD_MAX_LENGTH),
+      forcePathStyle: z.boolean(),
+    }),
+    z.object({
+      driver: z.literal('sftp'),
+      host: storageText('validation.storage.host'),
+      port: z.preprocess((value) => (value === '' ? DEFAULT_SFTP_PORT : value), storagePortSchema),
+      username: storageText('validation.storage.username'),
+      password: storageSecret(STORAGE_FIELD_MAX_LENGTH),
+      privateKey: storageSecret(PRIVATE_KEY_MAX_LENGTH),
+      hostKey: storageHostKeySchema,
+      dir: storageFolderSchema,
+    }),
+  ],
+  { error: 'validation.storage.driver' satisfies ValidationMessageKey },
+);
+
+/** The storage's form as it's sent, before the service fills in the saved secrets. */
+export type StorageFormInput = z.output<typeof storageFormSchema>;
+
+/**
+ * The largest file anyone may attach, in megabytes: a whole number from 1
+ * to the ceiling where it runs (`maxFileMbCeiling`: 50, or 4 on Vercel).
+ *
+ * @param ceiling - The most it may be.
+ * @returns The schema.
+ */
+export function maxFileMbSchema(ceiling: number) {
+  const error = 'validation.storage.maxFileMb.whole' satisfies ValidationMessageKey;
+  return z.coerce
+    .number({ error })
+    .int({ error })
+    .min(1, { error })
+    .max(ceiling, { error: 'validation.storage.maxFileMb.tooBig' satisfies ValidationMessageKey });
+}
 
 /** A webhook's name, as the staff call it: a name, since the email that it was turned off quotes it. */
 export const webhookNameSchema = withNameSafety(

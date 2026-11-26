@@ -1,10 +1,14 @@
 /**
  * @file End-to-end tests for Settings: the staff's name, the request number
- * prefix, request types, inviting staff, staff roles and the last-Admin
- * guard, and confirming it's you before giving a staff role or a company's
- * Admin role. A test that changes a setting puts it back.
+ * prefix, request types, where attached files are kept, inviting staff,
+ * staff roles and the last-Admin guard, and confirming it's you before
+ * giving a staff role or a company's Admin role. A test that changes a
+ * setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { type Page } from '@playwright/test';
 
@@ -12,7 +16,9 @@ import { derivePalette, type HexColour, THEME_PALETTE } from '../src/lib/brandin
 import { LOCALE_COOKIE } from '../src/lib/i18n/locales';
 import expectAccessible from './support/axe';
 import {
+  attachmentSettingRows,
   backdateMfaConfirmation,
+  restoreAttachmentSettings,
   setBrandColours,
   setDefaultLocale,
   setDefaultTimeZone,
@@ -222,6 +228,64 @@ test('an Admin chooses the prefix request numbers are shown with', async ({ page
     await expect(prefix).toHaveValue('AD');
   } finally {
     await setRequestPrefix('AD');
+  }
+});
+
+test('an Admin chooses a folder for attached files, which is tried first, turns attaching on and chooses the largest file', async ({
+  page,
+}) => {
+  const before = await attachmentSettingRows();
+  const folder = await mkdtemp(join(tmpdir(), 'adiutor-e2e-files-'));
+  try {
+    await restoreAttachmentSettings([]);
+    await signIn(page, PLATFORM_ADMIN);
+    await page.goto('/admin/settings/attachments');
+    await expect(
+      page.getByText('No storage is chosen yet, so nobody can attach files.'),
+    ).toBeVisible();
+    // Attaching can only be turned on once there's a storage.
+    const attaching = page.getByRole('checkbox', { name: 'People can attach files' });
+    await expect(attaching).toBeDisabled();
+    await expect(attaching).toHaveAccessibleDescription('Choose where files are kept first.');
+
+    await page.getByRole('combobox', { name: 'Storage' }).click();
+    await page.getByRole('option', { name: /A folder on this server/ }).click();
+    const dir = page.getByRole('textbox', { name: 'Folder' });
+
+    // A folder that isn't there fails its test, and what was typed stays.
+    await dir.fill(join(folder, 'missing'));
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      "The bucket or the folder doesn't exist. Create it first.",
+    );
+    await expect(dir).toHaveValue(join(folder, 'missing'));
+
+    await dir.fill(folder);
+    await page.getByRole('button', { name: 'Test and save' }).click();
+    await expect(toasts(page)).toContainText('Storage saved.');
+    await expect(page.getByText('No storage is chosen yet')).toBeHidden();
+    await expect(dir).toHaveValue(folder);
+    // The test file is gone; the marker stays.
+    expect(await readdir(folder)).toContain('.adiutor-attachments');
+
+    await attaching.check();
+    await page
+      .getByRole('region', { name: 'Attaching files' })
+      .getByRole('button', { name: 'Save' })
+      .click();
+    await expect(toasts(page)).toContainText('People can attach files now.');
+
+    const megabytes = page.getByRole('spinbutton', { name: 'Megabytes' });
+    await expect(megabytes).toHaveAccessibleDescription('From 1 to 50.');
+    await megabytes.fill('20');
+    await page.getByRole('button', { name: 'Save size' }).click();
+    await expect(toasts(page)).toContainText('Largest file saved.');
+    await page.reload();
+    await expect(megabytes).toHaveValue('20');
+    await expect(attaching).toBeChecked();
+  } finally {
+    await restoreAttachmentSettings(before);
+    await rm(folder, { recursive: true, force: true });
   }
 });
 

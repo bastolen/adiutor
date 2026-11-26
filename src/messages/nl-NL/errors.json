@@ -108,6 +108,49 @@
       "unreadable": "Het adres of geheim van deze webhook is niet meer te lezen. Vul het adres opnieuw in en vernieuw daarna het geheim.",
       "off": "Zet de webhook eerst aan: naar een webhook die uitstaat wordt niets verstuurd.",
       "stillSending": "Deze levering wordt nog verstuurd. Wacht tot de pogingen voorbij zijn."
+    },
+    "attachments": {
+      "storageFromEnvironment": "De omgeving van de server bepaalt waar bestanden worden bewaard, dus dat kun je hier niet wijzigen.",
+      "limitFromEnvironment": "De omgeving van de server bepaalt het grootste bestand, dus dat kun je hier niet wijzigen.",
+      "confirmationRequired": "Bevestig met je tweede stap dat jij het bent, voordat je kiest waar bestanden worden bewaard.",
+      "secretNeeded": {
+        "s3": "Geef de geheime sleutel opnieuw: een opgeslagen sleutel blijft alleen bewaard voor dezelfde dienst en toegangssleutel.",
+        "sftp": "Geef het wachtwoord of de privésleutel opnieuw: een opgeslagen geheim blijft alleen bewaard voor dezelfde server, gebruiker en hostsleutel."
+      },
+      "storageProblem": {
+        "local_on_vercel": "De schijf van Vercel bewaart geen bestanden. Kies een S3-compatibele bucket of een SFTP-server.",
+        "relative_folder": "Geef de map als absoluut pad, beginnend met /.",
+        "insecure_endpoint": "Gebruik een https://-adres, anders gaan de bestanden en de sleutels onversleuteld over het netwerk."
+      },
+      "storageCheck": {
+        "unreachable": "Adiutor kon de opslag niet bereiken. Controleer het adres en de poort.",
+        "refused": "De opslag weigerde de sleutels of het wachtwoord. Controleer ze.",
+        "host_key": "De hostsleutel van de server past niet bij de vingerafdruk. Controleer hem op de server zelf voordat je het opnieuw probeert.",
+        "not_found": "De bucket of de map bestaat niet. Maak die eerst aan.",
+        "not_writable": "Adiutor kan daar niet schrijven. Controleer de rechten van de map en de vrije ruimte.",
+        "not_set_up": "Die map is niet van Adiutor. Controleer het pad.",
+        "timed_out": "De opslag deed er te lang over om te antwoorden. Probeer het opnieuw, of controleer het adres.",
+        "failed": "Adiutor kon daar geen testbestand opslaan, teruglezen en verwijderen. Controleer de instellingen."
+      },
+      "off": "Bestanden toevoegen staat uit.",
+      "typeNotAllowed": "Dat soort bestand kun je niet toevoegen. Voeg afbeeldingen, pdf’s, tekst, Office- of OpenDocument-bestanden, archieven of schermopnames toe.",
+      "empty": "Dat bestand is leeg.",
+      "tooLarge": "Dat bestand is te groot: voeg bestanden van hoogstens {maximum, number} MB toe.",
+      "notItsType": "Dat bestand is niet wat de naam zegt, dus je kunt het niet toevoegen.",
+      "dailyTotal": "Je hebt vandaag al veel toegevoegd. Probeer het morgen opnieuw.",
+      "unavailable": "{name} is niet meer beschikbaar. Voeg het opnieuw toe.",
+      "storageFailed": "Het bestand kon nu niet worden opgeslagen. Probeer het zo opnieuw.",
+      "noLength": "Je browser stuurde het bestand zonder de grootte. Probeer een andere browser.",
+      "incomplete": "Het bestand kwam onvolledig aan. Probeer het opnieuw.",
+      "badName": "De naam van het bestand kon niet worden gelezen. Geef het een andere naam en probeer het opnieuw.",
+      "signedOut": "Log opnieuw in om bestanden toe te voegen.",
+      "confirmFirst": "Bevestig dat jij het bent voordat je bestanden toevoegt.",
+      "offByEnvironment": "De omgeving van de server heeft bestanden toevoegen uitgezet, dus je kunt het hier niet aanzetten.",
+      "storageFirst": "Kies waar bestanden worden bewaard voordat mensen ze kunnen toevoegen.",
+      "tooMany": "Voeg hoogstens {maximum, number} bestanden aan één tekst toe.",
+      "someUnavailable": "Een van de bestanden is niet meer beschikbaar. Voeg het opnieuw toe.",
+      "tooManyAtOnce": "Je uploadt al {maximum, number} bestanden. Wacht tot er een klaar is.",
+      "notSetUp": "Bestanden toevoegen is nog niet ingesteld. Vraag een beheerder om in te stellen waar bestanden worden bewaard."
     }
   }
 }

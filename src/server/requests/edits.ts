@@ -15,6 +15,10 @@
  * (`withoutStaffPageLinks`), as when it was written: the company reads it.
  * An internal note keeps them, and so does every text of an internal request,
  * which only the staff read (decision 0048).
+ *
+ * An edit can also add files to the text (decision 0044): its writer's own
+ * uploads, claimed like a new text's (`claimAttachments`). An edit that only
+ * adds files keeps no version and doesn't mark the text edited.
  */
 import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -42,6 +46,7 @@ import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError } from '../errors';
 import getStaffName from '../people/staff-name';
 import { signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import {
   assertChangeLimit,
   CHANGE_MOMENT,
@@ -115,6 +120,14 @@ export function editableText(
   });
 }
 
+/** What an edit did. */
+export interface EditResult {
+  /** Whether the text or its files changed. */
+  changed: boolean;
+  /** How many files it added. */
+  attached: number;
+}
+
 /** What an edit is about: the description (no entry), or a reply. */
 interface EditedText {
   /** The request. */
@@ -131,10 +144,11 @@ interface EditedText {
  * Makes an edit inside its change's transaction: refuses an edit the rules
  * don't allow on the request as it's locked (by then that can only be a
  * closed request: the rest was checked before), and a text someone edited
- * meanwhile, saves nothing for an unchanged text,
- * and otherwise keeps the stored text as a version, stores the new one with
- * its mentions afresh, and notes when it was edited. An edit doesn't move
- * the request's last activity: it corrects what's there.
+ * meanwhile. Then it adds the files that came with the edit, and for a
+ * changed text keeps the stored text as a version, stores the new one with
+ * its mentions afresh, and notes when it was edited; an unchanged text
+ * stays as it was. An edit doesn't move the request's last activity, and
+ * files added to a text tell nobody: it corrects and completes what's there.
  *
  * @param tx - The change's transaction, with the request locked.
  * @param actor - The editor.
@@ -148,9 +162,11 @@ interface EditedText {
  * @param edit.names - The names of the two sides.
  * @param edit.staffOnly - Whether only the staff read the text (an internal note): then only the
  *   staff it mentions are subscribed and told.
- * @returns Whether the text changed.
+ * @param edit.attachments - Files the editor uploaded to add to the text.
+ * @returns Whether the text or its files changed, and how many files were added.
  * @throws {ServiceError} `invalid` for a closed request (`errors.requests.closedNoEdit`),
- *   `conflict` when someone edited the text meanwhile (`errors.requests.textChanged`).
+ *   `conflict` when someone edited the text meanwhile (`errors.requests.textChanged`); `invalid`
+ *   or `conflict` for files that can't be added (`claimAttachments`).
  */
 async function applyEdit(
   tx: DatabaseTransaction,
@@ -164,8 +180,9 @@ async function applyEdit(
     side: RequestSide;
     names: SideNames;
     staffOnly: boolean;
+    attachments: readonly string[];
   },
-): Promise<{ changed: boolean }> {
+): Promise<EditResult> {
   const { text, written, companyId, names } = edit;
   if (!edit.allowed) {
     throw new ServiceError('invalid', 'errors.requests.closedNoEdit');
@@ -183,6 +200,12 @@ async function applyEdit(
   if (edits !== edit.edits) {
     throw new ServiceError('conflict', 'errors.requests.textChanged');
   }
+  const attached = await claimAttachments(
+    tx,
+    actor,
+    { requestId: text.requestId, entryId: text.entryId },
+    edit.attachments,
+  );
   const mentionsOfText = and(
     eq(requestMention.requestId, text.requestId),
     text.entryId === null
@@ -199,7 +222,7 @@ async function applyEdit(
     .leftJoin(user, eq(requestMention.userId, user.id))
     .where(mentionsOfText);
   if (editableText(text.stored, mentions, companyId, names) === written) {
-    return { changed: false };
+    return { changed: attached > 0, attached };
   }
   // The version keeps its mentions as names: their rows go with the text as it was.
   const byId = new Map(mentions.map((mention) => [mention.id, mention]));
@@ -253,7 +276,7 @@ async function applyEdit(
     { requestId: text.requestId, entryId: text.entryId, actorId: actor.id },
     edit.staffOnly ? await staffWhoReadNotes(tx, newlyMentioned) : newlyMentioned,
   );
-  return { changed: true };
+  return { changed: true, attached };
 }
 
 /**
@@ -267,19 +290,20 @@ async function applyEdit(
  * @param input.request - The request's number or ID.
  * @param input.text - The new description.
  * @param input.edits - How many times it had been edited when the editor started (the form's).
- * @returns Whether it changed.
+ * @param input.attachments - Files the actor uploaded to add to it (`claimAttachments`).
+ * @returns Whether it changed, and how many files were added.
  * @throws {ServiceError} `signed_in_as` when the sign-in as the actor ended meanwhile,
  *   `not_found` when the actor may not see the request, `forbidden` without
  *   `requests:contribute`, `invalid` when the company is deactivated or the request is closed,
  *   `rate_limited` past `RATE_LIMITS.requestChangesPerUser`, `conflict` when someone edited it
- *   meanwhile.
+ *   meanwhile; `invalid` or `conflict` for files that can't be added.
  * @throws {ZodError} When the description isn't valid.
  */
 export async function editRequestDescription(
   ctx: ServiceContext,
   actor: Actor,
-  input: { request: string; text: string; edits: number },
-): Promise<{ changed: boolean }> {
+  input: { request: string; text: string; edits: number; attachments?: readonly string[] },
+): Promise<EditResult> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const typed = requestDescriptionSchema.parse(input.text);
   await assertChangeLimit(ctx, actor);
@@ -304,6 +328,7 @@ export async function editRequestDescription(
       // An internal request has nobody on the company's side to name.
       names: { company: company?.name ?? staff, staff },
       staffOnly: false,
+      attachments: input.attachments ?? [],
     }),
   );
 }
@@ -322,18 +347,25 @@ export async function editRequestDescription(
  * @param input.entry - The reply's ID.
  * @param input.text - The new reply.
  * @param input.edits - How many times it had been edited when the editor started (the form's).
- * @returns Whether it changed.
+ * @param input.attachments - Files the actor uploaded to add to it (`claimAttachments`).
+ * @returns Whether it changed, and how many files were added.
  * @throws {ServiceError} `signed_in_as`, `not_found` when the actor may not see the request or
  *   the reply isn't theirs, `forbidden` without `requests:contribute`, `invalid` when the
  *   company is deactivated or the request is closed, `rate_limited`, `conflict` when they edited
- *   it meanwhile elsewhere.
+ *   it meanwhile elsewhere; `invalid` or `conflict` for files that can't be added.
  * @throws {ZodError} When the reply isn't valid.
  */
 export async function editReply(
   ctx: ServiceContext,
   actor: Actor,
-  input: { request: string; entry: string; text: string; edits: number },
-): Promise<{ changed: boolean }> {
+  input: {
+    request: string;
+    entry: string;
+    text: string;
+    edits: number;
+    attachments?: readonly string[];
+  },
+): Promise<EditResult> {
   const access = await requestToChange(ctx, actor, input.request, 'requests:contribute');
   const entryId = idSchema.safeParse(input.entry);
   if (!entryId.success) {
@@ -386,6 +418,7 @@ export async function editReply(
       side: requestSide(permissions),
       names: { company: company?.name ?? staff, staff },
       staffOnly: reply.kind === 'note',
+      attachments: input.attachments ?? [],
     });
   });
 }

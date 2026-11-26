@@ -1276,6 +1276,32 @@ test.describe('requests', () => {
       await expect(page.getByRole('button', { name: 'Type: Hotfix' })).toBeFocused();
     });
 
+    test('a file is attached and taken off again with the keyboard, focus going back to Attach', async ({
+      page,
+    }) => {
+      const number = await storeOwnRequest({ title: 'A file attached with the keyboard' });
+      await page.goto(`/requests/${number}`);
+      // The editor loads once the page's scripts run, so the button answers by then.
+      await markdownEditor(page, 'Your reply');
+      const attach = page.getByRole('button', { name: 'Attach files' });
+      expect(await cursorOf(attach)).toBe('pointer');
+
+      // Enter on the button opens the file chooser.
+      await attach.focus();
+      const chooser = page.waitForEvent('filechooser');
+      await page.keyboard.press('Enter');
+      await (
+        await chooser
+      ).setFiles({ name: 'printer.log', mimeType: 'text/plain', buffer: Buffer.from('printed') });
+
+      // Tab reaches the file's Remove button, and removing it gives focus back to Attach.
+      const remove = page.getByRole('button', { name: 'Remove printer.log' });
+      await pressUntilFocused(page, 'Tab', remove);
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('list', { name: /to send$/ })).toBeHidden();
+      await expect(attach).toBeFocused();
+    });
+
     test('code and a table in a request’s text are reached and scrolled with the keyboard', async ({
       page,
       context,
@@ -1535,9 +1561,13 @@ test.describe('requests', () => {
       await page.keyboard.press('Delete');
       await expect(reply).toHaveText('');
 
-      // The field, then its buttons. Sending keeps focus on the button, which stays.
+      // The field, then Attach files (people can attach files), then its buttons. Sending keeps
+      // focus on the button, which stays.
+      const attach = page.getByRole('button', { name: 'Attach files' });
       await reply.focus();
       await page.keyboard.type('We are looking into it.');
+      await page.keyboard.press('Tab');
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(send).toBeFocused();
       await page.keyboard.press('Enter');
@@ -1552,7 +1582,7 @@ test.describe('requests', () => {
       await page.keyboard.type('two');
       await expect(reply.getByRole('listitem')).toHaveCount(2);
       await page.keyboard.press('Tab');
-      await expect(send).toBeFocused();
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Shift+Tab');
       await expect(reply).toBeFocused();
       // The item nests with its own shortcut, and the text is cleared for the next step.
@@ -1566,6 +1596,7 @@ test.describe('requests', () => {
       // conversation's heading, not to nowhere.
       await reply.focus();
       await page.keyboard.type('Which printer is it?');
+      await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
       await expect(sendAndWait).toBeFocused();
@@ -1604,7 +1635,10 @@ test.describe('requests', () => {
       await expect(note).toBeFocused();
       await page.keyboard.type('Checked the cable.');
 
-      // Adding the note keeps focus on the button, which stays.
+      // Past Attach files (people can attach files), adding the note keeps focus on the button,
+      // which stays.
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('button', { name: 'Attach files' })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(add).toBeFocused();
       await page.keyboard.press('Enter');
@@ -1713,15 +1747,19 @@ test.describe('requests', () => {
       const description = page.getByRole('region', { name: 'Description' });
       const edit = description.getByRole('button', { name: 'Edit description' });
       const editor = description.getByRole('textbox', { name: 'Description' });
+      const attach = description.getByRole('button', { name: 'Attach files' });
       const save = description.getByRole('button', { name: 'Save' });
       const cancel = description.getByRole('button', { name: 'Cancel' });
 
-      // Edit opens the editor with focus in the text; Tab goes on to Save, then Cancel.
+      // Edit opens the editor with focus in the text; Tab goes on to Attach files (people can
+      // attach files), then Save, then Cancel.
       await edit.focus();
       await page.keyboard.press('Enter');
       await expect(editor).toHaveAttribute('contenteditable', 'true');
       await expect(editor).toBeFocused();
       await page.keyboard.type(' Not kept.');
+      await page.keyboard.press('Tab');
+      await expect(attach).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(save).toBeFocused();
       await page.keyboard.press('Tab');
@@ -1738,6 +1776,8 @@ test.describe('requests', () => {
       await expect(editor).toBeFocused();
       await page.keyboard.type(' Kept.');
       await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await expect(save).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(toasts(page)).toContainText('Changes saved.');
       await expect(description).toContainText('Kept.');

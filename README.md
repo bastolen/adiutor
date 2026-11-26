@@ -45,6 +45,11 @@ solution the company approves. Your staff see every company's requests; each com
   and both sides work each one through in one conversation, with replies written in Markdown,
   mentions, and internal notes and priorities only the staff see. See
   [Requests](docs/requests.md).
+- **Attachments.** Screenshots, logs, PDFs, Office files and screen recordings go with a request,
+  a reply or a note: by a button, dropped on the form or pasted. Images show as thumbnails, and
+  files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
+  Settings. See [Attachments](docs/requests.md#attachments) and
+  [Deploying](docs/deploying.md#attachments).
 - **Internal requests.** Your staff keep their own work next to the companies': an internal
   request has no company, and no company ever sees it. See
   [Internal requests](docs/requests.md#internal-requests).
@@ -87,9 +92,9 @@ solution the company approves. Your staff see every company's requests; each com
 
 ## Status
 
-Adiutor is in early development. Requests, with assignees, subscribers, emails and solutions the
-company approves, are built, and so are companies, roles, invitations and sign-in security.
-Attachments come next.
+Adiutor is in early development. Requests, with assignees, subscribers, attachments, emails and
+solutions the company approves, are built, and so are companies, roles, invitations and sign-in
+security.
 
 ## Tech stack
 
@@ -100,6 +105,8 @@ Attachments come next.
 - **Sign-in:** [Better Auth](https://www.better-auth.com), with passkeys, two-factor
   authentication, email links and GitHub and Google sign-in
 - **Data:** PostgreSQL 18 with [Drizzle ORM](https://orm.drizzle.team), and Zod for validation
+- **Files:** a folder on disk, any S3-compatible bucket (signed with
+  [aws4fetch](https://github.com/mhart/aws4fetch)) or SFTP (with [ssh2](https://github.com/mscdex/ssh2))
 - **Email:** [React Email](https://react.email) templates sent over SMTP, with
   [Mailpit](https://mailpit.axllent.org) catching them in development
 - **Tests:** Vitest with Testing Library, and Playwright with axe
@@ -116,7 +123,7 @@ the local database and mail viewer).
 ```bash
 pnpm install
 cp .env.example .env    # then set BETTER_AUTH_SECRET and CRON_SECRET (openssl rand -base64 32 each)
-pnpm services:up        # start PostgreSQL and Mailpit in Docker
+pnpm services:up        # start PostgreSQL, Mailpit and test storage servers in Docker
 pnpm db:migrate         # create the tables
 pnpm dev
 ```

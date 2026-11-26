@@ -200,6 +200,7 @@
         "staffPage": "The company reads this text, so it can't link to a page for the staff."
       }
     },
+    "setByEnvironment": "Chosen in the server's environment ({variable}), so it can't be changed here.",
     "signOutFailed": "Signing out failed. Please try again."
   }
 }

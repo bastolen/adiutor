@@ -10,10 +10,9 @@ text in [decision 0021](decisions/0021-markdown-for-request-text.md), and for th
 request in [decision 0025](decisions/0025-people-on-a-request-one-table-with-roles.md), for
 the emails about it in [decision 0031](decisions/0031-emails-about-requests.md), for the
 board in [decision 0037](decisions/0037-a-board-of-requests.md), for raising one for someone
-in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md), and for internal
-requests in [decision 0048](decisions/0048-internal-requests-have-no-company.md).
-
-Not built yet, for a later change: attachments.
+in [decision 0047](decisions/0047-staff-raise-a-request-for-someone.md), for internal requests
+in [decision 0048](decisions/0048-internal-requests-have-no-company.md), and for its attachments
+in [decision 0044](decisions/0044-attachments.md).
 
 ## Words
 
@@ -325,7 +324,9 @@ written and sent is in [Email](email.md), and the jobs that send them in
 - **What the email shows** is read when it's sent (`readRequestUpdate`): the request's title, its
   number as a link, its company (or "Internal", `whereInternal`), who did what, and each reply (and a text that mentions the
   reader) in full, formatted as on the page
-  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)). People are
+  (`EmailMarkdown`; see [Text people write](security-measures.md#text-people-write)), with the
+  names and sizes of its files under it (as they are by then: a removed one is left out), never
+  the files themselves or a link to one: the request's page downloads them. People are
   named as the request's page names them, their own name or their side's, never by an address or
   an ID, and the people a reply mentions by name. The statuses are worded for the reader
   ("Waiting for your reply" for someone at the company who takes part, "Waiting for the company"
@@ -604,6 +605,10 @@ Why it works this way is in [decision 0024](decisions/0024-edit-replies-and-desc
 - **No edit is lost:** the editor sends how many times the text was edited when they started; an
   edit made meanwhile is refused (`errors.requests.textChanged`) and the page shows the text as it
   is. An unchanged text saves nothing.
+- **Files:** while people can attach files, the editor can add files to the text too (see
+  [Attachments](#attachments)), up to the 10 a text may have. The version check comes first, then
+  the files are claimed, then the text is saved; an edit that only adds files keeps no version
+  and doesn't mark the text edited, and the toast says how many were added.
 - **Not activity:** an edit doesn't move the request's last activity, and it adds nothing to the
   conversation.
 - **In the code:** `editRequestDescription` and `editReply`, through `changeRequest` like every
@@ -734,6 +739,53 @@ A description, a reply or a note can mention people. Why it's built this way is 
   readers who may open that page (`users:view`, which every staff role has; `RequestPerson.userId`
   from `requestPerson`), so it never reaches a company user's browser. A side's name is never a
   link.
+
+## Attachments
+
+Files attached to a request's texts: its description, its replies and its internal notes. Why
+they're built this way is in [decision 0044](decisions/0044-attachments.md); where they're kept is
+in [Attachments](deploying.md#attachments).
+
+- **A file belongs to a text** (`request_attachment`, with the request and the reply or note, or
+  none for the description), so it's read by whoever reads that text: a note's files only by the
+  staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
+  filtered like its mentions; `loadAttachment` checks the same for a download).
+- **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
+  files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
+  request, reply and write a note, and a text's editor (see [Editing a text](#editing-a-text)),
+  have an "Attach files" button, take files dropped on the form,
+  and take files or a screenshot pasted into it (a paste that also holds text, such as a copy from
+  a document, stays a paste of the text). The browser checks each file's kind, its size and how
+  many (at most `MAX_ATTACHMENTS_PER_TEXT`, 10, per text), uploads it, three at a time (`UPLOADS_AT_ONCE`; the rest say they're waiting), with its progress
+  shown (`upload-attachment.ts`, to `POST /api/attachments`), and the form sends its ID as an
+  `attachment` field; the file never rides along with the form. While a file uploads, the send
+  buttons wait, still focusable, and say why. A text still needs its words: files don't replace
+  them.
+- **Sending** (`claimAttachments`, in the transaction that stores or edits the text, after the
+  text's row):
+  only the writer's own finished uploads that no text has claimed yet, from the last 24 hours, and
+  with the same staff member signed in as them if one was, so a file uploaded while signed in as
+  someone isn't theirs alone to send. A file that can't be sent, or more than 10 on the text,
+  refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
+  is no longer available. Attach it again."), anyone else's isn't.
+- **On a request's page,** each text shows its files under it (`AttachmentList` in
+  `src/app/(app)/_requests/`, a `FileTile` each): a thumbnail for a PNG, JPEG, GIF or WebP image,
+  loaded from Adiutor itself, or an icon for the file's kind, with its name and size. A tile is a
+  link that downloads the file ("Download error.png, 240 kB" to screen readers); nothing opens in
+  the page.
+- **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
+  kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
+  Someone signed out is sent to sign in and back; a file they may not read is "not found".
+- **In emails** about a request, a reply, a note or a text that mentions the reader names its
+  files and their sizes under it, as they are when the email is sent; nothing is attached or
+  linked (see [Emails](#emails)). Adding files in an edit, and removing one, emails nobody.
+- **Removing** (`removeAttachment`, `mayRemoveAttachment` in `rules.ts`): only the staff who work
+  on requests, on any of a request's texts, whatever its status, and whether attaching is on or
+  not; a Remove button on each file's tile asks first (`RowAction`), and focus then goes to the
+  card's heading. The row stays, so the file's place says "Removed by Sam" (with the staff member
+  signed in as the remover, for the readers told about that work), and its file is deleted once
+  the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
+  told, the request's last activity doesn't move, and a removed file is "not found" from then on.
 
 ## Internal requests
 
@@ -1075,7 +1127,9 @@ no Move menu.
   `request_participant` (who's assigned and who's subscribed), `request_entry`
   (the conversation, its internal notes and the history in one table, ordered by ID) and
   `request_mention` (who a text mentions). The counter is the `requests.last_number` setting.
-- `src/server/requests/` (a folder module): `listRequestCompanies`, `listRequests` (built from
+- `src/server/requests/` (a folder module): `attachmentsOn`, `uploadAttachment`,
+  `loadAttachment` and `removeAttachment` (attached files, which the services that store a text claim with
+  `claimAttachments`), `listRequestCompanies`, `listRequests` (built from
   `requestListCondition`, the WHERE every view of the requests shares, `requestListOrder`, its
   sort, and `loadRequestListItems`, which turns selected `requestListColumns` rows into
   `RequestListItem`s), `listBoard` (the board's lanes, see [The board](#the-board)), `findRequest`,

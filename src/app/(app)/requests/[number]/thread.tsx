@@ -26,6 +26,11 @@ import {
 } from '@/lib/requests';
 import type { RequestDetail, RequestEntryView, RequestPerson } from '@/server/requests';
 
+import AttachmentList, {
+  attachedCount,
+  type AttachmentRemoval,
+} from '../../_requests/attachment-list';
+import type { Attaching } from '../../_requests/attachment-picker';
 import PersonLine, {
   PersonAvatar,
   personName,
@@ -174,16 +179,23 @@ function ChangeText({ entry, audience }: { entry: RequestEntryView; audience: Re
  * @param props.detail - The request, as its reader gets it.
  * @param props.address - The whole address of the request's page, for the note above code copied from a reply.
  * @param props.earlierHref - The page with earlier entries, or `null` when all are shown.
+ * @param props.attaching - What attaching needs, while people can attach files: an edited text
+ *   can then get files too.
+ * @param props.removal - What removing a file needs, for a reader who may.
  * @returns The list of entries, or a line saying there are none.
  */
 export default function Thread({
   detail,
   address,
   earlierHref,
+  attaching = null,
+  removal = null,
 }: {
   detail: RequestDetail;
   address: string;
   earlierHref: string | null;
+  attaching?: Attaching | null;
+  removal?: AttachmentRemoval | null;
 }) {
   const t = useTranslations('requests.detail');
   const tNote = useTranslations('requests.note');
@@ -276,12 +288,19 @@ export default function Thread({
                   note={note}
                   staffOnly={staffOnly}
                   edit={entry.body.edit}
+                  attaching={attaching}
+                  attached={attachedCount(entry.body.attachments)}
                 >
                   {text}
                 </EditableText>
               ) : (
                 text
               )}
+              <AttachmentList
+                attachments={entry.body?.attachments}
+                names={names}
+                removal={removal}
+              />
             </Entry>
           );
         }

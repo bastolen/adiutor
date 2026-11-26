@@ -19,6 +19,7 @@ import { companyChoiceLabels } from '@/lib/company-choices';
 import { REQUEST_TEXT_MAX_LENGTH, REQUEST_TITLE_MAX_LENGTH } from '@/lib/input-rules';
 import { INTERNAL_CHOICE, REQUEST_PRIORITIES } from '@/lib/requests';
 
+import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import raiseRequestAction, { raiseForChoicesAction } from './actions';
 
@@ -74,6 +75,8 @@ interface RaiseRequestFormProps {
   company?: string;
   /** Whether the viewer chooses a priority: the staff who work on requests. */
   choosesPriority: boolean;
+  /** What attaching needs, while people can attach files to the description. */
+  attaching?: Attaching | null;
   /** Whether the viewer can raise it for someone at the company: the staff who work on requests. */
   raisesFor?: boolean;
   /** Who it can be raised for in the company chosen already, if one is; by name. */
@@ -91,9 +94,11 @@ interface RaiseRequestFormProps {
  * of the company who asked them (the people come with the company chosen
  * already, and are asked for when another is chosen, which puts the choice
  * back to themselves; an internal request is their own, so the choice isn't
- * there), and get a priority, which the type sets unless they
- * choose one; nobody else sees either. A refused request keeps what was
- * typed; a raised one opens its page.
+ * there), and get a priority, which the type sets unless they choose one;
+ * nobody else sees either. While people can attach files, files go with the
+ * description (`AttachmentPicker`), and the request waits for them to
+ * upload. A refused request keeps what was typed and attached; a raised one
+ * opens its page.
  */
 export default function RaiseRequestForm({
   types,
@@ -101,6 +106,7 @@ export default function RaiseRequestForm({
   raisesInternal = false,
   company = undefined,
   choosesPriority,
+  attaching = null,
   raisesFor = false,
   raiseForChoices = [],
 }: RaiseRequestFormProps) {
@@ -108,6 +114,8 @@ export default function RaiseRequestForm({
   const tCommon = useTranslations('common');
   const [result, formAction, pending, onSubmit] = useTransientActionState(raiseRequestAction, null);
   const [priority, setPriority] = useState(FROM_TYPE);
+  // Whether a file is uploading, which the request waits for.
+  const [uploading, setUploading] = useState(false);
   const [only] = companies;
   // With one company and no internal requests to raise, there's nothing to choose.
   const fixed = !raisesInternal && companies.length === 1 && only ? only : null;
@@ -227,6 +235,9 @@ export default function RaiseRequestForm({
         // Only the staff read an internal request: its links to their pages stay links.
         staffOnly={internal}
       />
+      {attaching && (
+        <AttachmentPicker maxFileMb={attaching.maxFileMb} onUploadingChange={setUploading} />
+      )}
       {choosesPriority && (
         <>
           {/* The select can't hold an empty value, so "set by the type" is sent as none. */}
@@ -247,7 +258,12 @@ export default function RaiseRequestForm({
         </>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" loading={pending}>
+        <Button
+          type="submit"
+          loading={pending}
+          disabled={uploading}
+          focusableWhenDisabled={uploading}
+        >
           {t('new.submit')}
         </Button>
         <Button asChild variant="secondary">

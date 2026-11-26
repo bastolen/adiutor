@@ -24,6 +24,7 @@ export type { ListRequestsOptions, RequestCompany, RequestListItem } from './lis
 export { findRequest, findRequestNumber, getRequest, MAX_EARLIER_CHUNKS } from './detail';
 export type {
   MentionedPerson,
+  RequestAttachmentView,
   RequestDetail,
   RequestEntryView,
   RequestText,
@@ -77,3 +78,13 @@ export {
   updateRequestType,
 } from './types';
 export type { RequestTypeView } from './types';
+export {
+  type AttachmentsOn,
+  attachmentsOn,
+  type AttachmentToServe,
+  DAILY_UPLOAD_BYTES,
+  loadAttachment,
+  removeAttachment,
+  type UploadedAttachment,
+  uploadAttachment,
+} from './attachments';

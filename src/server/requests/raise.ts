@@ -24,6 +24,7 @@ import { companyDeactivatedError, forbiddenError, notFoundError } from '../error
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { incrementSetting } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
+import claimAttachments from './attachment-claims';
 import { assertStillMayChange } from './change';
 import { storeMentions } from './mentions';
 import { assertStillRaisableFor, personToRaiseFor, raisedForSchema } from './raise-for';
@@ -119,6 +120,7 @@ async function placeToRaise(
  * @param input.type - What kind of request it is: a type's key, which must exist and not be
  *   archived.
  * @param input.priority - A priority, from the staff (`REQUEST_PRIORITIES`); empty for the type's.
+ * @param input.attachments - Files the actor uploaded for the description (`claimAttachments`).
  * @param input.raisedFor - The key of the person at the company it's raised for
  *   (`listRaisableFor`), from the staff; empty when the actor raises it.
  * @returns The new request's ID and number.
@@ -129,7 +131,7 @@ async function placeToRaise(
  *   (`errors.requestTypes.unavailable`) or `raisedFor` stands for nobody the request can be
  *   raised for, by then too (`errors.requests.notRaisableFor`), `rate_limited` when whoever acts has raised
  *   too many requests (`RATE_LIMITS.requestsPerUser`), `signed_in_as` when the sign-in as the
- *   actor ended meanwhile.
+ *   actor ended meanwhile; `invalid` or `conflict` for files that can't be sent with it.
  * @throws {ZodError} When no company was chosen (asked first, like the form does), or the
  *   title, description, type, priority or `raisedFor` isn't valid.
  */
@@ -143,6 +145,7 @@ export default async function raiseRequest(
     type: string;
     priority?: string;
     raisedFor?: string;
+    attachments?: readonly string[];
   },
 ): Promise<{ id: string; number: number }> {
   // A company that wasn't chosen is a field to fill in, not a page that doesn't exist.
@@ -214,6 +217,13 @@ export default async function raiseRequest(
         })
         .returning({ id: request.id, number: request.number }),
       'the new request',
+    );
+    // The files the actor uploaded for the description: theirs, when they raise it for someone.
+    await claimAttachments(
+      tx,
+      actor,
+      { requestId: raised.id, entryId: null },
+      input.attachments ?? [],
     );
     // Whoever raises a request follows it, and so do whoever it's raised for and the people its
     // description mentions.

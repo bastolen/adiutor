@@ -243,3 +243,41 @@ export function formatList(items: readonly string[], locale: Locale): string {
   listFormats.set(locale, format);
   return format.format(items);
 }
+
+/** The units a file's size is shown in, with how many bytes each holds (decimal, as file managers show sizes). */
+const SIZE_UNITS = [
+  { unit: 'byte', bytes: 1 },
+  { unit: 'kilobyte', bytes: 1000 },
+  { unit: 'megabyte', bytes: 1000 ** 2 },
+  { unit: 'gigabyte', bytes: 1000 ** 3 },
+] as const;
+
+/** Size formats by locale, unit and precision, made once each. */
+const sizeFormats = new Map<string, Intl.NumberFormat>();
+
+/**
+ * Formats a file's size in the largest unit it fills, the way the reader's
+ * language writes it: one decimal below 10 of a unit, none above. Bytes are
+ * written out, since their short form drops the plural ("14 byte").
+ *
+ * @param bytes - The size.
+ * @param locale - The reader's language.
+ * @returns E.g. "512 bytes", "240 kB", "1.2 MB".
+ */
+export function formatFileSize(bytes: number, locale: Locale): string {
+  const { unit, bytes: per } =
+    SIZE_UNITS.findLast((candidate) => bytes >= candidate.bytes) ?? SIZE_UNITS[0];
+  const value = bytes / per;
+  const decimals = unit !== 'byte' && value < 10 ? 1 : 0;
+  const key = `${locale}:${unit}:${decimals}`;
+  const format =
+    sizeFormats.get(key) ??
+    new Intl.NumberFormat(locale, {
+      style: 'unit',
+      unit,
+      unitDisplay: unit === 'byte' ? 'long' : 'short',
+      maximumFractionDigits: decimals,
+    });
+  sizeFormats.set(key, format);
+  return format.format(value);
+}

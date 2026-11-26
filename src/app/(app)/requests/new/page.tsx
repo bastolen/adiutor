@@ -24,6 +24,7 @@ import {
 } from '@/server/authz';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
+  attachmentsOn,
   getRequestSettings,
   listRaisableFor,
   listRequestCompanies,
@@ -73,11 +74,12 @@ export const generateMetadata = checkedPageMetadata('requests.new.title', async 
 async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const t = await getTranslations('requests.new');
   const actor = await getActor();
-  const [params, { companies, internal }, settings, types] = await Promise.all([
+  const [params, { companies, internal }, settings, types, attaching] = await Promise.all([
     searchParams,
     placesToRaise(actor),
     getRequestSettings(appContext),
     listRequestTypes(appContext, actor),
+    attachmentsOn(appContext),
   ]);
   if (companies.length === 0 && !internal) {
     notFound();
@@ -116,6 +118,7 @@ async function NewRequest({ searchParams }: { searchParams: Promise<SearchParams
             raisesInternal={internal}
             company={startsInternal ? INTERNAL_CHOICE : chosen?.slug}
             choosesPriority={staff}
+            attaching={attaching && { maxFileMb: attaching.maxFileMb }}
             raisesFor={staff}
             raiseForChoices={raiseForChoices}
           />

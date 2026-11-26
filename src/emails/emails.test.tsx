@@ -388,6 +388,41 @@ describe('staff-made changes', () => {
     expectBasics(email, url);
   });
 
+  it('names the files of a reply under it, with their sizes and without a link', async () => {
+    const url = `${appUrl}/requests/142`;
+    const email = await requestUpdateEmail('jane@adiutor.test', {
+      ...english,
+      reference: 'AD-142',
+      title: 'The printer is broken',
+      companyName: 'Adiutor Tests',
+      url,
+      role: 'subscriber',
+      audience: 'contributor',
+      items: [
+        {
+          event: 'reply',
+          by: 'Sam Support',
+          text: {
+            text: 'The test page is attached.',
+            format: 'plain',
+            mentions: {},
+            attachments: [
+              { name: 'test-page.pdf', size: 184_000 },
+              { name: 'printer.log', size: 15 },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(email.text).toContain('2 files attached, to download from the request:');
+    expect(email.text).toContain('test-page.pdf (184 kB)');
+    expect(email.text).toContain('printer.log (15 bytes)');
+    // Named only: nothing links to a file, and nothing is attached.
+    expect(email.html).not.toContain('/attachments/');
+    expectBasics(email, url);
+  });
+
   it('tells someone a request was raised for, with its description in full', async () => {
     const url = `${appUrl}/requests/142#request-description`;
     const email = await requestUpdateEmail('jane@adiutor.test', {
@@ -1068,7 +1103,12 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale) => Promise<BuiltEmail>> = 
         {
           event: 'reply',
           by: 'Sam Support',
-          text: { text: 'https://adiutor.test/manual', format: 'markdown', mentions: {} },
+          text: {
+            text: 'https://adiutor.test/manual',
+            format: 'markdown',
+            mentions: {},
+            attachments: [{ name: 'Adiutor Tests.pdf', size: 184_000 }],
+          },
         },
         { event: 'status', by: 'Sam Support', bySide: 'staff', from: 'open', to: 'waiting' },
         {

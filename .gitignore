@@ -44,6 +44,9 @@ next-env.d.ts
 # end-to-end test emails
 /e2e/.outbox/
 
+# end-to-end test attachments
+/e2e/.attachments/
+
 
 # Personal notes or local files
 /.personal/

@@ -48,6 +48,7 @@ import {
   mayChangeStatus,
   mayContribute,
   mayProposeSolution,
+  mayRemoveAttachment,
   mayWaitWithReply,
   mayWriteNote,
   offeredActivityGroups,
@@ -63,6 +64,7 @@ import { getActor } from '@/server/authz';
 import { ServiceError } from '@/server/errors';
 import { checkedPageMetadata } from '@/server/page-metadata';
 import {
+  attachmentsOn,
   findRequest,
   findRequestNumber,
   getRequest,
@@ -73,6 +75,7 @@ import {
   type RequestDetail,
 } from '@/server/requests';
 
+import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
 import InternalLabel from '../../_requests/internal-label';
 import RaisedForNote from '../../_requests/raised-for-note';
 import PersonLine, {
@@ -82,7 +85,12 @@ import PersonLine, {
 } from '../../_requests/request-person';
 import RequestText from '../../_requests/request-text';
 import SignedInAsMark from '../../_requests/signed-in-as-mark';
-import { changeAssigneesAction, changeStatusAction, changeSubscriptionAction } from './actions';
+import {
+  changeAssigneesAction,
+  changeStatusAction,
+  changeSubscriptionAction,
+  removeAttachmentAction,
+} from './actions';
 import { ActivityControls, ActivityError, ActivityViewProvider } from './activity-view';
 import ChangeAssignees, { type AssigneeChoice } from './change-assignees';
 import ChangeSubscribers from './change-subscribers';
@@ -223,6 +231,14 @@ async function RequestContent({
   const scope = detail.company?.deactivated ? 'self' : subscriberScope(detail.permissions);
   const subscriberChoices =
     scope === 'self' ? [] : await listSubscribable(appContext, actor, String(detail.number));
+  // Files go with what the reader writes, while people can attach files.
+  const on = contributes ? await attachmentsOn(appContext) : null;
+  const attaching = on && { maxFileMb: on.maxFileMb };
+  // The staff who work on requests remove files, whatever the switch says.
+  const removal =
+    contributes && mayRemoveAttachment(detail.permissions)
+      ? { request: detail.number, action: removeAttachmentAction }
+      : null;
 
   const names = requestSideNames(detail);
   // The request's whole address, for the note above code copied from its texts.
@@ -233,7 +249,14 @@ async function RequestContent({
   // the reply form again: a reply that's half written stays.
   const newestFirst = detail.activity.order === 'newest';
   const thread = (
-    <Thread key="thread" detail={detail} address={address} earlierHref={earlierHref} />
+    <Thread
+      key="thread"
+      detail={detail}
+      address={address}
+      earlierHref={earlierHref}
+      attaching={attaching}
+      removal={removal}
+    />
   );
   const writing = contributes && (
     <div
@@ -253,6 +276,7 @@ async function RequestContent({
           canWait={canWait}
           canPropose={canPropose}
           staffOnly={internal}
+          attaching={attaching}
         />
       ) : (
         <ReplyForm
@@ -260,6 +284,7 @@ async function RequestContent({
           canWait={canWait}
           canPropose={canPropose}
           staffOnly={internal}
+          attaching={attaching}
         />
       )}
     </div>
@@ -352,12 +377,19 @@ async function RequestContent({
                   entry={null}
                   edit={detail.description.edit}
                   staffOnly={internal}
+                  attaching={attaching}
+                  attached={attachedCount(detail.description.attachments)}
                 >
                   {descriptionText}
                 </EditableText>
               ) : (
                 descriptionText
               )}
+              <AttachmentList
+                attachments={detail.description.attachments}
+                names={names}
+                removal={removal}
+              />
             </div>
           </Card>
         </div>

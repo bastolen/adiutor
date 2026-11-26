@@ -29,10 +29,12 @@ import {
   hashToken,
 } from '../../src/lib/sign-in/tokens';
 import { readSettings, writeSettings } from '../../src/server/settings';
+import { attachmentKey, storageFor } from '../../src/server/storage';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
 import {
+  ATTACHMENTS_DIR,
   COMPANY_SLUG,
   E2E_AUTH_SECRET,
   INVITE_LINK_LIFETIME_MS,
@@ -460,6 +462,41 @@ export async function defaultTimeZoneNow(): Promise<string> {
 export async function setRequestPrefix(prefix: string): Promise<void> {
   await withTestDatabase(async (db) => {
     await db.transaction((tx) => writeSettings(tx, { 'requests.prefix': prefix }));
+  });
+}
+
+/** The attachment settings as their rows hold them, to put back after a test changes them. */
+export type AttachmentSettingRows = { key: string; value: unknown }[];
+
+/**
+ * Reads the attachment settings' rows (`attachments.*`), for a test that
+ * changes them on the Attachments tab to put them back afterwards.
+ *
+ * @returns The rows, whatever they hold.
+ */
+export async function attachmentSettingRows(): Promise<AttachmentSettingRows> {
+  return withTestDatabase((db) =>
+    db
+      .select({ key: schema.setting.key, value: schema.setting.value })
+      .from(schema.setting)
+      .where(like(schema.setting.key, 'attachments.%')),
+  );
+}
+
+/**
+ * Puts the attachment settings back as {@link attachmentSettingRows} read
+ * them: the rows there were, and none of the others.
+ *
+ * @param rows - The rows to put back.
+ */
+export async function restoreAttachmentSettings(rows: AttachmentSettingRows): Promise<void> {
+  await withTestDatabase(async (db) => {
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.setting).where(like(schema.setting.key, 'attachments.%'));
+      if (rows.length > 0) {
+        await tx.insert(schema.setting).values(rows);
+      }
+    });
   });
 }
 
@@ -1069,6 +1106,49 @@ export async function resetActivityView(email: string): Promise<void> {
       .set({ activityOrder: null, activityGroups: null })
       .where(eq(schema.user.email, email));
   });
+}
+
+/**
+ * Attaches a file to a test's own request directly, row and file, as a sent
+ * upload: to its description, or to one of its entries (a reply or a note),
+ * found by its text. The file goes to the test server's storage folder.
+ *
+ * @param number - The request's number.
+ * @param file - The file.
+ * @param file.name - Its name.
+ * @param file.contentType - Its type, from the allow-list.
+ * @param file.bytes - Its bytes.
+ * @param file.entryText - The whole text of the entry it's attached to; the description without one.
+ * @returns The attachment's ID.
+ */
+export async function storeAttachment(
+  number: number,
+  file: { name: string; contentType: string; bytes: Uint8Array<ArrayBuffer>; entryText?: string },
+): Promise<string> {
+  const entryId = file.entryText === undefined ? null : await findEntryId(number, file.entryText);
+  const id = await withTestDatabase(
+    async (db) =>
+      firstRow(
+        await db
+          .insert(schema.requestAttachment)
+          .values({
+            requestId: await requestIdOf(db, number),
+            entryId,
+            name: file.name,
+            contentType: file.contentType,
+            size: file.bytes.byteLength,
+            uploadedAt: new Date(),
+          })
+          .returning({ id: schema.requestAttachment.id }),
+        'the attachment',
+      ).id,
+  );
+  await storageFor({ driver: 'local', dir: ATTACHMENTS_DIR }).put(
+    attachmentKey(id),
+    file.bytes,
+    file.contentType,
+  );
+  return id;
 }
 
 /**

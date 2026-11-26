@@ -28,6 +28,7 @@ import {
   company,
   membership,
   request,
+  requestAttachment,
   requestEntry,
   requestMention,
   requestParticipant,
@@ -347,7 +348,7 @@ export interface QueuedRequestNews {
   byUserId: string | null;
 }
 
-/** A text in an email about a request, with the people it mentions by name. */
+/** A text in an email about a request, with the people it mentions by name and its files. */
 export interface RequestUpdateText {
   /** The text, as it's stored. */
   text: string;
@@ -355,6 +356,12 @@ export interface RequestUpdateText {
   format: RequestTextFormat;
   /** The names of the people it mentions, by the ID its markers name. */
   mentions: Record<string, string>;
+  /**
+   * The files attached to it, oldest first: their names and sizes only, as
+   * they are when the email is sent (a removed one is left out). The email
+   * names them; the request's page downloads them (decision 0044).
+   */
+  attachments: { name: string; size: number }[];
 }
 
 /** One thing an email about a request tells its reader. Each names who did it, as the request's page names them. */
@@ -677,6 +684,38 @@ function loadNewsMentions(db: Database, requestId: string, entryIds: readonly st
     );
 }
 
+/**
+ * Loads the files of the texts news is about that are still there: the
+ * description's, which have no entry, and those of the entries.
+ *
+ * @param db - Database client.
+ * @param requestId - The request.
+ * @param entryIds - The entries.
+ * @returns Their text, name and size, oldest first.
+ */
+function loadNewsAttachments(db: Database, requestId: string, entryIds: readonly string[]) {
+  return db
+    .select({
+      entryId: requestAttachment.entryId,
+      name: requestAttachment.name,
+      size: requestAttachment.size,
+    })
+    .from(requestAttachment)
+    .where(
+      and(
+        eq(requestAttachment.requestId, requestId),
+        isNull(requestAttachment.removedAt),
+        entryIds.length === 0
+          ? isNull(requestAttachment.entryId)
+          : or(
+              isNull(requestAttachment.entryId),
+              inArray(requestAttachment.entryId, [...entryIds]),
+            ),
+      ),
+    )
+    .orderBy(requestAttachment.id);
+}
+
 /** What the items of one person's email about a request are read from. */
 interface NewsContext {
   /** The request. */
@@ -687,6 +726,8 @@ interface NewsContext {
   entries: Map<string, Awaited<ReturnType<typeof loadNewsEntries>>[number]>;
   /** The mentions of the texts the news is about. */
   mentions: Awaited<ReturnType<typeof loadNewsMentions>>;
+  /** The files of the texts the news is about. */
+  attachments: Awaited<ReturnType<typeof loadNewsAttachments>>;
   /** The names that stand in for someone without one: the company's, and the staff's. */
   sideNames: Record<RequestSide, string>;
 }
@@ -720,7 +761,7 @@ function pageNameById(context: NewsContext, userId: string | null): string {
 }
 
 /**
- * A text of the request with the people it mentions by name.
+ * A text of the request with the people it mentions by name, and its files.
  *
  * @param context - What the email is read from.
  * @param text - The text, as it's stored.
@@ -742,6 +783,9 @@ function updateText(
         .filter((mention) => mention.entryId === entryId)
         .map((mention) => [mention.id, pageName(context, mention.name, mention.side)]),
     ),
+    attachments: context.attachments
+      .filter((attachment) => attachment.entryId === entryId)
+      .map(({ name, size }) => ({ name, size })),
   };
 }
 
@@ -943,9 +987,10 @@ export async function readRequestUpdate(
     return null;
   }
   const entryIds = [...new Set(news.flatMap(({ entryId }) => (entryId ? [entryId] : [])))];
-  const [entries, mentions, staffName, prefix] = await Promise.all([
+  const [entries, mentions, attachments, staffName, prefix] = await Promise.all([
     loadNewsEntries(db, about.requestId, entryIds),
     loadNewsMentions(db, about.requestId, entryIds),
+    loadNewsAttachments(db, about.requestId, entryIds),
     getStaffName(db),
     getRequestPrefix(db),
   ]);
@@ -955,6 +1000,7 @@ export async function readRequestUpdate(
       told,
       entries: new Map(entries.map((entry) => [entry.id, entry])),
       mentions,
+      attachments,
       // An internal request has nobody on the company's side to name.
       sideNames: { company: found.companyName ?? staffName, staff: staffName },
     },

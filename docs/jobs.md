@@ -36,13 +36,21 @@ A tick runs every recurring job that's due, one after another, then the queued j
 
 ## The jobs
 
-| Job                          | Schedule (UTC)  | What it does                                                                                                                                                          |
-| ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                                                   |
-| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                                             |
-| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                                              |
-| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                                                      |
-| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days |
+| Job                          | Schedule (UTC)  | What it does                                                                                                                                                                           |
+| ---------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `leftover-provider-tokens`   | every 5 minutes | Clears OAuth tokens a failed GitHub or Google sign-in left behind, after 10 minutes                                                                                                    |
+| `finished-sign-ins-as-users` | every 5 minutes | Ends and records staff sign-ins as a user whose time is up or whose staff session is gone                                                                                              |
+| `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                                                               |
+| `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                                                                       |
+| `attachment-files`           | hourly, at :25  | Purges attached files never sent with a text (after 25 hours, or once the uploader's account is gone) and uploads unfinished after an hour, and deletes removed files the storage kept |
+| `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days                  |
+
+`attachment-files` works on one storage connection a run, deletes each file before its row (or,
+for a removed file, before noting that it's deleted: its row stays as the mark of who removed it),
+so a run that stops halfway leaves nothing behind that the next one can't find, and does nothing
+while no storage is chosen, or while its folder isn't set up as Adiutor's (see
+[Attachments](deploying.md#attachments)). It also runs from a jobs
+container, which therefore needs the storage too: the same volume, for local disk.
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.

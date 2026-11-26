@@ -258,6 +258,8 @@
       "reply": "<strong>{name}</strong> heeft gereageerd:",
       "note": "<strong>{name}</strong> heeft een interne notitie geschreven:",
       "noteOnlyStaff": "Interne notitie: alleen medewerkers zien dit.",
+      "files": "{count, plural, one {# bestand toegevoegd, te downloaden vanuit het verzoek:} other {# bestanden toegevoegd, te downloaden vanuit het verzoek:}}",
+      "file": "{name} ({size})",
       "status": "{change, select, reopened {<strong>{name}</strong> heeft dit verzoek heropend.} done {<strong>{name}</strong> heeft dit verzoek als afgerond gemarkeerd.} cancelled {<strong>{name}</strong> heeft dit verzoek geannuleerd.} proposed {<strong>{name}</strong> heeft een oplossing voorgesteld.} approved {<strong>{name}</strong> heeft de oplossing goedgekeurd.} denied {<strong>{name}</strong> heeft de oplossing niet goedgekeurd.} other {<strong>{name}</strong> heeft de status gewijzigd van {from} naar {to}.}}",
       "assigned": "<strong>{name}</strong> heeft dit verzoek aan jou toegewezen.",
       "mentioned": "{where, select, description {<strong>{name}</strong> heeft je genoemd in de beschrijving:} note {<strong>{name}</strong> heeft je genoemd in een interne notitie:} other {<strong>{name}</strong> heeft je genoemd in een reactie:}}",

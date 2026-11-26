@@ -122,6 +122,24 @@
       "accentDark": "Enter the accent for dark mode as six hex digits, e.g. #25dc89.",
       "tint": "Enter the tint as six hex digits, e.g. #0e0e2d.",
       "darkNeedsAccent": "Choose an accent before an accent for dark mode."
+    },
+    "storage": {
+      "driver": "Choose where files are kept.",
+      "folder": "Give the folder's absolute path, e.g. /data/attachments.",
+      "endpoint": "Give the service's address, starting with https://.",
+      "region": "Check the region.",
+      "bucket": "Give the bucket's name.",
+      "bucketName": "Use 3 to 63 lowercase letters, digits, dots and dashes, starting and ending with a letter or digit.",
+      "accessKeyId": "Give the access key's ID.",
+      "secret": "That secret is too long.",
+      "host": "Give the server's host name or address.",
+      "port": "Give a port from 1 to 65535.",
+      "username": "Give the user to sign in as.",
+      "hostKey": "Give the host key's fingerprint as ssh-keygen -lf prints it, starting with SHA256:.",
+      "maxFileMb": {
+        "whole": "Give a whole number of megabytes, at least 1.",
+        "tooBig": "Choose at most {maximum, number} megabytes."
+      }
     }
   }
 }

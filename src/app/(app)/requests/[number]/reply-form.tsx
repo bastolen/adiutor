@@ -15,6 +15,7 @@ import ResultAlert from '@/components/ui/result-alert';
 import { useTransientActionState } from '@/components/ui/use-transient-state';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
 
+import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import { replyAction } from './actions';
 
@@ -33,12 +34,15 @@ type ReplyButton = 'send' | 'sendAndWait' | 'sendAsSolution';
  * one keeps what was typed. A button that goes once the request waits takes
  * focus with it: if it had focus, focus moves to the conversation's heading
  * instead of being lost. While a reply is sent, only the button that sent it
- * is busy, and the others are disabled (`whileRunning`).
+ * is busy, and the others are disabled (`whileRunning`). While people can
+ * attach files, files go with the reply (`AttachmentPicker`), and the
+ * buttons wait, still focusable, while one uploads.
  *
  * @param props - Form props.
  * @param props.request - The request's number.
  * @param props.canWait - Whether to offer "Send and wait for the company".
  * @param props.canPropose - Whether to offer "Send as solution".
+ * @param props.attaching - What attaching needs, while people can attach files.
  * @param props.staffOnly - Whether only the staff read the reply (an internal request's): its
  *   editor keeps links to the staff's pages.
  */
@@ -46,11 +50,13 @@ export default function ReplyForm({
   request,
   canWait,
   canPropose = false,
+  attaching = null,
   staffOnly = false,
 }: {
   request: number;
   canWait: boolean;
   canPropose?: boolean;
+  attaching?: Attaching | null;
   staffOnly?: boolean;
 }) {
   const t = useTranslations('requests.reply');
@@ -62,6 +68,8 @@ export default function ReplyForm({
   const sendAndWait = whileRunning<ReplyButton>(running, 'sendAndWait');
   const sendAsSolution = whileRunning<ReplyButton>(running, 'sendAsSolution');
   const formRef = useRef<HTMLFormElement>(null);
+  // Whether a file is uploading, which the reply waits for.
+  const [uploading, setUploading] = useState(false);
   // Who the reply can mention: asked for when someone types "@".
   const loadMentions = useCallback(
     () => mentionChoicesAction({ request: String(request) }),
@@ -112,8 +120,16 @@ export default function ReplyForm({
         mentions={loadMentions}
         staffOnly={staffOnly}
       />
+      {attaching && (
+        <AttachmentPicker maxFileMb={attaching.maxFileMb} onUploadingChange={setUploading} />
+      )}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" loading={send.loading} disabled={send.disabled}>
+        <Button
+          type="submit"
+          loading={send.loading}
+          disabled={send.disabled || uploading}
+          focusableWhenDisabled={uploading}
+        >
           {t('send')}
         </Button>
         {canWait && (
@@ -123,7 +139,8 @@ export default function ReplyForm({
             name="status"
             value="waiting"
             loading={sendAndWait.loading}
-            disabled={sendAndWait.disabled}
+            disabled={sendAndWait.disabled || uploading}
+            focusableWhenDisabled={uploading}
           >
             {t('sendAndWait')}
           </Button>
@@ -135,7 +152,8 @@ export default function ReplyForm({
             name="status"
             value="proposed"
             loading={sendAsSolution.loading}
-            disabled={sendAsSolution.disabled}
+            disabled={sendAsSolution.disabled || uploading}
+            focusableWhenDisabled={uploading}
           >
             {t('sendAsSolution')}
           </Button>

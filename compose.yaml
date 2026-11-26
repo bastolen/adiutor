@@ -35,3 +35,48 @@ services:
       interval: 2s
       timeout: 5s
       retries: 15
+
+  # An S3-compatible server (SeaweedFS) for the S3 driver's integration tests and for trying it in
+  # development: endpoint http://localhost:8333, path style, buckets adiutor and adiutor-test,
+  # and the test-only keys below. Its files are gone when the container is.
+  s3:
+    image: chrislusf/seaweedfs:4.55@sha256:7ca46aeae2f223b37e5d91593c17ab37738eec6df6ab69b48a0487f7643342b9
+    # Buckets aren't made on the fly, as on a hosted service; no statistics are sent to SeaweedFS.
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=adiutor,adiutor-test
+      - -s3.autoCreateBucket=false
+      - -master.telemetry=false
+    environment:
+      AWS_ACCESS_KEY_ID: adiutor
+      AWS_SECRET_ACCESS_KEY: adiutor-test-secret
+    # Only reachable from this computer.
+    ports:
+      - '127.0.0.1:8333:8333'
+    healthcheck:
+      # Any answer from the S3 port (an unsigned request is refused, which is fine).
+      test: ['CMD-SHELL', 'curl -s -o /dev/null http://127.0.0.1:8333/']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # An SFTP server (OpenSSH) for the SFTP driver's integration tests and for trying it in
+  # development: host localhost, port 2222, user adiutor with the test-only password below, folder
+  # /config (the user's home). It makes its host key when it first starts: read its fingerprint
+  # with `ssh-keyscan -p 2222 localhost 2>/dev/null | ssh-keygen -lf -`.
+  sftp:
+    image: lscr.io/linuxserver/openssh-server:10.3_p1-r2-ls244@sha256:c8431b8982e7eb3935ebf9c46607d19c6417e39c12ce884cc66945df2e9334e8
+    environment:
+      USER_NAME: adiutor
+      USER_PASSWORD: adiutor-test-secret
+      PASSWORD_ACCESS: 'true'
+      TZ: Etc/UTC
+    # Only reachable from this computer.
+    ports:
+      - '127.0.0.1:2222:2222'
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 2222']
+      interval: 2s
+      timeout: 5s
+      retries: 30

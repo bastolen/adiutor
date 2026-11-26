@@ -200,6 +200,7 @@
         "staffPage": "La empresa lee este texto, así que no puede enlazar a una página para el personal."
       }
     },
+    "setByEnvironment": "Elegido en el entorno del servidor ({variable}), así que no puedes cambiarlo aquí.",
     "signOutFailed": "No se ha podido cerrar sesión. Vuelve a intentarlo."
   }
 }

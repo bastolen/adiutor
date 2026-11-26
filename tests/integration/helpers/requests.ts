@@ -5,9 +5,10 @@
 import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '@/db';
-import { request, requestEntry, requestParticipant } from '@/db/schema';
+import { request, requestAttachment, requestEntry, requestParticipant } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { incrementSetting } from '@/server/settings';
+import { attachmentKey, type FileStorage } from '@/server/storage';
 
 /** What a stored request may be given; everything else gets a default. */
 export type RequestValues = Partial<typeof request.$inferInsert>;
@@ -101,4 +102,65 @@ export async function assignmentsOf(db: Database, requestId: string) {
     .where(and(eq(requestEntry.requestId, requestId), eq(requestEntry.kind, 'assignee')))
     .orderBy(requestEntry.id);
   return entries.map(({ toValue, subjectUserId, authorId }) => [toValue, subjectUserId, authorId]);
+}
+
+/**
+ * Stores an attached file directly, row and file, as an upload (and a text
+ * that claimed it) would have: unsent unless a request is given, stored
+ * unless `uploadedAt` is `null`.
+ *
+ * @param db - Database client.
+ * @param storage - Where its file goes.
+ * @param values - What differs from a small text file uploaded just now.
+ * @param values.requestId - The request it was sent with; unsent without one.
+ * @param values.entryId - The reply or note it belongs to; the description without one.
+ * @param values.uploadedBy - Who uploaded it.
+ * @param values.name - Its name.
+ * @param values.contentType - Its type.
+ * @param values.bytes - The file.
+ * @param values.createdAt - When the upload started.
+ * @param values.uploadedAt - When it was stored; `null` for an upload that never finished.
+ * @param values.signedInAsStaffId - The staff member signed in as the uploader, if any.
+ * @returns Its ID.
+ */
+export async function storeAttachment(
+  db: Database,
+  storage: FileStorage,
+  values: {
+    requestId?: string | null;
+    entryId?: string | null;
+    uploadedBy?: string | null;
+    name?: string;
+    contentType?: string;
+    bytes?: Uint8Array<ArrayBuffer>;
+    createdAt?: Date;
+    uploadedAt?: Date | null;
+    signedInAsStaffId?: string;
+  } = {},
+): Promise<string> {
+  const bytes = values.bytes ?? new TextEncoder().encode('printer offline');
+  const createdAt = values.createdAt ?? new Date();
+  const uploadedAt = values.uploadedAt === undefined ? createdAt : values.uploadedAt;
+  const stored = firstRow(
+    await db
+      .insert(requestAttachment)
+      .values({
+        requestId: values.requestId ?? null,
+        entryId: values.entryId ?? null,
+        uploadedBy: values.uploadedBy ?? null,
+        signedInAs: values.signedInAsStaffId !== undefined,
+        signedInAsStaffId: values.signedInAsStaffId ?? null,
+        name: values.name ?? 'printer.log',
+        contentType: values.contentType ?? 'text/plain',
+        size: bytes.byteLength,
+        createdAt,
+        uploadedAt,
+      })
+      .returning({ id: requestAttachment.id }),
+    'the attachment',
+  );
+  if (uploadedAt !== null) {
+    await storage.put(attachmentKey(stored.id), bytes, values.contentType ?? 'text/plain');
+  }
+  return stored.id;
 }

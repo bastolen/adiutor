@@ -108,6 +108,49 @@
       "unreadable": "This webhook’s address or secret can’t be read any more. Enter its address again, then renew its secret.",
       "off": "Turn the webhook on first: nothing is sent to a webhook that’s off.",
       "stillSending": "This delivery is still being sent. Wait for its attempts to end."
+    },
+    "attachments": {
+      "storageFromEnvironment": "The server's environment chooses where files are kept, so it can't be changed here.",
+      "limitFromEnvironment": "The server's environment chooses the largest file, so it can't be changed here.",
+      "confirmationRequired": "Confirm it’s you with your second step before choosing where files are kept.",
+      "secretNeeded": {
+        "s3": "Give the secret key again: a saved one is only kept for the same service and access key.",
+        "sftp": "Give the password or the private key again: a saved one is only kept for the same server, user and host key."
+      },
+      "storageProblem": {
+        "local_on_vercel": "Vercel's disk doesn't keep files. Choose an S3-compatible bucket or an SFTP server.",
+        "relative_folder": "Give the folder as an absolute path, starting with /.",
+        "insecure_endpoint": "Use an https:// address, or the files and the keys would travel unencrypted."
+      },
+      "storageCheck": {
+        "unreachable": "Adiutor couldn't reach the storage. Check its address and port.",
+        "refused": "The storage refused the keys or the password. Check them.",
+        "host_key": "The server's host key doesn't match the fingerprint. Check it on the server itself before trying again.",
+        "not_found": "The bucket or the folder doesn't exist. Create it first.",
+        "not_writable": "Adiutor can't write there. Check the folder's permissions and the free space.",
+        "not_set_up": "That folder isn't Adiutor's. Check its path.",
+        "timed_out": "The storage took too long to answer. Try again, or check its address.",
+        "failed": "Adiutor couldn't store, read back and delete a test file there. Check the settings."
+      },
+      "off": "Attaching files is turned off.",
+      "typeNotAllowed": "That kind of file can't be attached. Attach images, PDFs, text, Office or OpenDocument files, archives or screen recordings.",
+      "empty": "That file is empty.",
+      "tooLarge": "That file is too large: attach files of at most {maximum, number} MB.",
+      "notItsType": "That file isn't what its name says it is, so it can't be attached.",
+      "dailyTotal": "You've attached a lot today. Try again tomorrow.",
+      "unavailable": "{name} is no longer available. Attach it again.",
+      "storageFailed": "The file couldn't be stored right now. Try again in a moment.",
+      "noLength": "Your browser sent the file without its size. Try another browser.",
+      "incomplete": "The file arrived incomplete. Try again.",
+      "badName": "The file's name couldn't be read. Rename it and try again.",
+      "signedOut": "Sign in again to attach files.",
+      "confirmFirst": "Confirm it’s you before you attach files.",
+      "offByEnvironment": "The server’s environment turned attaching files off, so it can’t be turned on here.",
+      "storageFirst": "Choose where files are kept before people can attach them.",
+      "tooMany": "Attach at most {maximum, number} files to one text.",
+      "someUnavailable": "One of the files is no longer available. Attach it again.",
+      "tooManyAtOnce": "You’re uploading {maximum, number} files already. Wait for one to finish.",
+      "notSetUp": "Attaching files isn’t set up yet. Ask a staff Admin to set up where files are kept."
     }
   }
 }

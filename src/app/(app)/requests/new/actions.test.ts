@@ -48,8 +48,12 @@ beforeEach(() => {
 describe('raiseRequestAction', () => {
   it('refreshes, then goes to the new request, which confirms it', async () => {
     vi.mocked(raiseRequest).mockResolvedValue({ id: 'request-1', number: 142 });
+    const sent = form(FIELDS);
+    // The files uploaded for the description, by their IDs.
+    sent.append('attachment', 'attachment-1');
+    sent.append('attachment', 'attachment-2');
 
-    await expect(raiseRequestAction(null, form(FIELDS))).rejects.toThrow('NEXT_REDIRECT');
+    await expect(raiseRequestAction(null, sent)).rejects.toThrow('NEXT_REDIRECT');
 
     expect(raiseRequest).toHaveBeenCalledWith({ name: 'app context' }, client, {
       companyId: 'adiutor-tests',
@@ -57,6 +61,7 @@ describe('raiseRequestAction', () => {
       type: 'bug',
       description: 'It prints blank pages.',
       priority: '',
+      attachments: ['attachment-1', 'attachment-2'],
       raisedFor: 'casey-key',
     });
     expect(redirect).toHaveBeenCalledExactlyOnceWith('/requests/142?raised=1');

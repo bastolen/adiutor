@@ -68,6 +68,8 @@ code is the source if they ever differ.
 | Requests raised (`requestsPerUser`)                             | 60    | 1 hour      | user                  |
 | Replies and internal notes (`requestRepliesPerUser`)            | 200   | 1 hour      | user                  |
 | Other changes to requests (`requestChangesPerUser`)             | 300   | 1 hour      | user                  |
+| Storages tried in Settings (`storageChecksPerUser`)             | 20    | 1 hour      | user                  |
+| Files uploaded to attach (`attachmentUploadsPerUser`)           | 100   | 1 hour      | user                  |
 | Changes to webhooks (`webhookChangesPerUser`)                   | 30    | 1 hour      | user                  |
 | Webhook tests and deliveries sent again (`webhookSendsPerUser`) | 20    | 1 hour      | user                  |
 | Sign-in errors stored (`signInErrorsPerIp`)                     | 20    | 1 hour      | IP address            |
@@ -389,6 +391,100 @@ keeps images to `img-src 'self'` and viewers never contact GitHub or Google.
   checked against a guess. The route doesn't read it: it's only there for browsers' caches, so a
   new secret only means each picture is fetched once more.
 
+## Files people attach
+
+A file attached to a request is uploaded on its own first, then sent with its text (see
+[decision 0044](decisions/0044-attachments.md)):
+
+- **The upload skips the proxy** (`POST /api/attachments`, the one path left out of the matcher in
+  `src/proxy.ts`): the proxy holds every request's body in memory, whoever sends it, and cuts one
+  over 10 MB short without a word. The route checks what the proxy would and more: only a page of
+  this site may send (`isOwnPageFetch`: `Sec-Fetch-Site: same-origin`, or else an `Origin` that's
+  exactly the site's), the session must count as `getActor` asks (answered in JSON, never a
+  redirect), the size must be given (`Content-Length`, else 411), be within the limit (else 413,
+  before the body is read) and match the body read, a piece at a time, and the name must decode.
+- **Only the allow-list** (`ATTACHMENT_TYPES` in `src/lib/requests/attachments.ts`), by extension:
+  images, PDF, text, Office and OpenDocument files, archives and screen recordings; never HTML,
+  SVG, scripts or programs. **A file's bytes must be what its extension says**
+  (`matchesAttachmentKind` in `src/server/requests/attachment-checks.ts`): each kind's signature,
+  and for text, valid UTF-8 or UTF-16 throughout without a NUL character, so an HTML page named
+  `.png`, or a compiled program named `.txt`, is refused. Text is text whatever it says: a script
+  or a page named `.txt` is kept, as `text/plain`, and like every file is only ever served as a
+  download under a policy that runs nothing.
+- **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
+  text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
+  extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its
+  name.
+- **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
+  the person may write requests anywhere, the name and type, the announced size and the hourly
+  limit come first, and the body is read only after them, so a refused upload costs no memory. A
+  body that sends nothing for 30 seconds counts as incomplete.
+- **Limits per person who really acts** (`actingUserId`): 100 uploads an hour, counting every
+  attempt that gets past the checks above (one refused for its bytes too), at most 3 under way at
+  once (`UPLOADS_AT_ONCE`, as each holds its file in memory; the picker sends no more), and 1 GB in
+  any 24 hours, sent or not (`DAILY_UPLOAD_BYTES`), counted under a lock on the person so uploads
+  side by side can't pass it together. The largest file is chosen per install (at most 50 MB, and
+  4 on Vercel).
+- **Row first, then the file:** a row is stored before its file is written and marked uploaded
+  after, so a file never sits in storage without a row. A file refused for its bytes, or that came
+  short, takes its row back (nothing was stored); one the storage failed to store keeps its row
+  unfinished, since the storage may have kept it all the same (a timeout after it did), and the
+  `attachment-files` job deletes both after an hour. An unsent upload is only its uploader's to send, for 24 hours (`claimAttachments`: their
+  own finished upload, unclaimed, with the same staff member signed in as them if one was), and
+  the `attachment-files` job purges it after 25, or once the uploader's account is gone. A text
+  with a file that isn't the writer's to send is refused whole, and names only a file of their
+  own, so nobody learns another person's file name by guessing its ID.
+- **A file is read by whoever reads its text** (`loadAttachment` in
+  `src/server/requests/attachments.ts`): the request's own access (`getRequestAccess`: the
+  company's people while it's active, and the staff), and for an internal note's file the readers
+  of notes (`requests:view-internal`, by `STAFF_ONLY_ENTRY_KINDS`). `getRequest` gives each text
+  only the files its reader may see, the same way, so a company never learns that a note has a
+  file. An unsent or removed file, or one the reader may not read, is "not found", by its address
+  too.
+- **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
+  have attached (a password in a screenshot), and its bytes are deleted from the storage once
+  that's saved, or by the `attachment-files` job if the storage fails then. The row stays as the
+  mark of who removed it, with no name of whoever uploaded it.
+- **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
+  name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
+  quotes or backslashes), its type from the allow-list with `nosniff`,
+  `Cross-Origin-Resource-Policy: same-origin`, and `Cache-Control: no-store`, so a shared
+  computer keeps no file after sign-out. The proxy gives these paths a fixed policy that runs
+  nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
+  over a route's own. Thumbnails load from the same address: an image element shows an image
+  whatever its `Content-Disposition` says, and `img-src 'self'` stays.
+
+## Where attached files are kept
+
+A staff Admin chooses the storage on the Attachments tab of Settings, unless the server's
+environment does (see [Attachments](deploying.md#attachments) and
+[decision 0044](decisions/0044-attachments.md)):
+
+- **Secrets are encrypted** (the S3 secret key, the SFTP password or private key) with Better
+  Auth's `symmetricEncrypt` and the versioned auth secrets (`sealSecret` in
+  `src/server/sealed-secrets.ts`, which any setting with a secret uses), never sent back to a
+  browser, and kept only for the place they were saved for (`secretToSave`): another S3 service or
+  access key, or another SFTP server, port, user or host key, must be given them again, so a staff Admin
+  can't point a saved password at a host of their own. A bucket's name must follow S3's own rules
+  (`S3_BUCKET_PATTERN`), since it becomes part of the host name a bucket is reached at.
+- **A storage is tried before it's saved** (`checkStorage`, through `checkBeforeSaving` in
+  `src/server/check-before-save.ts`), with the staff Admin's second step from the last 15 minutes
+  (`needsRecentConfirmation`), at most 20 times an hour, and in the audit log
+  (`attachment_storage_changed`, with the driver and its place, never a secret). A failure is told
+  and logged by its kind only (`StorageError`): unreachable, refused, host key, not found and so
+  on, never what the server replied.
+- **A folder is Adiutor's only on purpose** (`setUp` on `FileStorage`): the marker file that every
+  store, read and delete needs is written only by the test before saving, or by a staff Admin's
+  **Set up this folder** for a folder the environment chooses (`setUpStorage`: the same
+  confirmation, limit and test, in the audit log as `attachment_storage_set_up`), never by an
+  upload. A server started without its volume refuses files instead of keeping them on a disk that
+  goes away, and the `attachment-files` job leaves such a folder alone instead of marking files
+  deleted.
+- **SFTP checks the host key** against the fingerprint given, on every connection.
+- **Saving a storage connects to whatever address it names**, from the server: a server of your own
+  on the local network needs this. An operator who doesn't want staff Admins to choose sets the
+  storage in the environment, or `ATTACHMENTS_STORAGE=off`.
+
 ## Webhooks' addresses
 
 A webhook's address is typed by a staff Admin and the server connects to it, so without a check it
@@ -537,7 +633,7 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
 the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
-(`next.config.ts`). One known gap: Next.js's built-in page for errors outside rendering is
+(`next.config.ts`); the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
 HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and the brand colours'
 `<style>`, and e2e tests fail on CSP violations that pages report (`e2e/support/test.ts`, console

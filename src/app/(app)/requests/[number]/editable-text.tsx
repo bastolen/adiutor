@@ -8,7 +8,7 @@
 
 import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/ui/button';
 import MarkdownField from '@/components/ui/markdown/markdown-field';
@@ -17,7 +17,9 @@ import { useToast } from '@/components/ui/toast';
 import { useTransientActionState, useTransientState } from '@/components/ui/use-transient-state';
 import type { ActionResult } from '@/lib/action-result';
 import { REQUEST_TEXT_MAX_LENGTH } from '@/lib/input-rules';
+import { MAX_ATTACHMENTS_PER_TEXT } from '@/lib/requests';
 
+import AttachmentPicker, { type Attaching } from '../../_requests/attachment-picker';
 import { mentionChoicesAction } from '../../_requests/mention-actions';
 import { editTextAction } from './actions';
 
@@ -38,6 +40,10 @@ interface EditableTextProps {
   edit: { markdown: string; edits: number };
   /** The text as it reads, rendered on the server. */
   children: ReactNode;
+  /** What attaching needs, while people can attach files: files can then be added to the text. */
+  attaching?: Attaching | null;
+  /** How many files the text has, which count towards the most it may have. */
+  attached?: number;
 }
 
 /**
@@ -47,7 +53,10 @@ interface EditableTextProps {
  * saved; a success is a toast, a refusal shows above the editor and as a
  * toast, and the editor stays open with what was typed. Cancel, and a save,
  * put the text back and focus on the Edit button again. A staff member
- * signed in as the user may edit it too (decision 0028).
+ * signed in as the user may edit it too (decision 0028). While people can
+ * attach files, the editor can add files to the text too (`AttachmentPicker`,
+ * while the text has room for more), and Save waits, still focusable, while
+ * one uploads.
  *
  * Whether the reader may edit the text is decided on the server: the page
  * only renders this for a text they may edit.
@@ -61,11 +70,15 @@ export default function EditableText({
   staffOnly = note,
   edit,
   children,
+  attaching = null,
+  attached = 0,
 }: EditableTextProps) {
   const t = useTranslations('requests.edit');
   const tCommon = useTranslations('common');
   const showToast = useToast();
   const [editing, setEditing] = useTransientState(false);
+  // Whether a file is uploading, which Save waits for.
+  const [uploading, setUploading] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   // Set when the editor closes, so the Edit button takes focus once it's back.
   const backToButton = useRef(false);
@@ -125,8 +138,20 @@ export default function EditableText({
           mentions={loadMentions}
           staffOnly={staffOnly}
         />
+        {attaching && attached < MAX_ATTACHMENTS_PER_TEXT && (
+          <AttachmentPicker
+            maxFileMb={attaching.maxFileMb}
+            attached={attached}
+            onUploadingChange={setUploading}
+          />
+        )}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={pending}>
+          <Button
+            type="submit"
+            loading={pending}
+            disabled={uploading}
+            focusableWhenDisabled={uploading}
+          >
             {t('save')}
           </Button>
           <Button

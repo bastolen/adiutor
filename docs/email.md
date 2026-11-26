@@ -33,7 +33,8 @@ One file per email in `src/emails/`:
   anyone at the company), and for someone who is put on one (assigned, mentioned, subscribed
   by someone else, or having it raised for them by a staff member, with its description): one
   email per person and request with everything that happened, each reply in full
-  (`EmailMarkdown`), the statuses in the reader's words, the request's number as its first link
+  (`EmailMarkdown`) with the names and sizes of its files (never attached or linked), the statuses
+  in the reader's words, the request's number as its first link
   (opening the request at the first news the email tells of, with its `#entry-<ID>` anchor)
   and a subject without words of its own, the request's number and title, and a footer that links
   to the account's setting that turns them off (the `request-update` jobs, batched; see

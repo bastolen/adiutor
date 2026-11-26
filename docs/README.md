@@ -44,7 +44,8 @@ detail, one topic each.
 
 - [Deploying and running Adiutor](deploying.md): installing and upgrading, deploying on Vercel, the
   Docker image and health check, what to set up on a server, the client IP address, background jobs,
-  webhooks, logs, rotating the auth secret, and what to do after a suspected leak.
+  where attached files are kept, webhooks, logs, rotating the auth secret, and what to do after a
+  suspected leak.
 
 ## The project
 

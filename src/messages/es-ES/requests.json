@@ -245,7 +245,7 @@
       "assignedYou": "Ahora tienes asignada esta solicitud.",
       "subscribers": "{changed, plural, =0 {No ha cambiado nada.} other {Suscriptores guardados.}}",
       "subscription": "{change, select, subscribed {Te has suscrito a esta solicitud.} other {Has cancelado tu suscripción a esta solicitud.}}",
-      "text": "{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}"
+      "text": "{files, plural, =0 {{changed, select, yes {Cambios guardados.} other {No ha cambiado nada.}}} one {Guardado, con # archivo más.} other {Guardado, con # archivos más.}}"
     },
     "edit": {
       "editDescription": "Editar descripción",
@@ -296,6 +296,32 @@
         "name": "Nueva función",
         "description": "Algo nuevo o un cambio en cómo funciona algo."
       }
+    },
+    "attachments": {
+      "label": "{count, plural, one {# archivo adjunto} other {# archivos adjuntos}}",
+      "download": "Descargar {name}, {size}",
+      "attach": "Adjuntar archivos",
+      "hint": "También puedes soltar o pegar archivos: hasta {count, number} de como máximo {maximum, number} MB cada uno.",
+      "dropHere": "Suelta los archivos para adjuntarlos.",
+      "waiting": "{count, plural, one {# archivo para enviar} other {# archivos para enviar}}",
+      "queued": "Esperando para subir",
+      "uploading": "Subiendo, {progress, number, percent}",
+      "uploadingLabel": "Subiendo {name}",
+      "remove": "Quitar {name}",
+      "ready": "{name} está listo para enviar.",
+      "removed": "{name} no se enviará.",
+      "waitForUploads": "Espera a que se suban los archivos para enviar.",
+      "tooLarge": "{name} es demasiado grande: adjunta archivos de como máximo {maximum, number} MB.",
+      "typeNotAllowed": "{name} no se puede adjuntar. Adjunta imágenes, PDF, texto, archivos de Office u OpenDocument, archivos comprimidos o grabaciones de pantalla.",
+      "empty": "{name} está vacío.",
+      "tooMany": "Adjunta como máximo {maximum, number} archivos a un texto.",
+      "failed": "No se ha podido subir {name}. Vuelve a intentarlo.",
+      "removeShort": "Quitar",
+      "removeTitle": "¿Quitar {name}?",
+      "removeDescription": "Se elimina para todos y no se puede recuperar. En su lugar en el texto se indica quién lo quitó.",
+      "removeConfirm": "Quitar archivo",
+      "removedDone": "Se ha quitado {name}.",
+      "removedBy": "Quitado por {name}"
     }
   }
 }

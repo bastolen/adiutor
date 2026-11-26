@@ -97,6 +97,16 @@ export const RATE_LIMITS = {
   /** Changes one user makes to requests: their status, and their title, type and priority. */
   requestChangesPerUser: { limit: 300, windowSeconds: 60 * 60 },
   /**
+   * Storages a staff Admin saves on the Attachments tab of Settings: each one
+   * is tried first, which connects to whatever server the settings name.
+   */
+  storageChecksPerUser: { limit: 20, windowSeconds: 60 * 60 },
+  /**
+   * Files one person uploads to attach (and the 24 hours' total in bytes,
+   * `DAILY_UPLOAD_BYTES`): far more than anyone attaches by hand.
+   */
+  attachmentUploadsPerUser: { limit: 100, windowSeconds: 60 * 60 },
+  /**
    * Changes one staff Admin makes to webhooks: adding, changing, renewing a
    * secret, turning on or off and removing. Each change can look an address
    * up, and points request texts somewhere new.

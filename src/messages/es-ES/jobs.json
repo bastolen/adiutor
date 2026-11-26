@@ -5,6 +5,7 @@
       "finished-sign-ins-as-users": "Termina los inicios de sesión como usuario cuyo tiempo se ha acabado, y lo registra en el registro de auditoría.",
       "expired-sign-in-data": "Elimina los enlaces, códigos y sesiones de inicio de sesión caducados, los enlaces de correos sobre solicitudes que terminaron y los límites de intentos vencidos.",
       "invitation-reminders": "Recuerda una vez a las personas las invitaciones que aún no han aceptado, dos días antes de que caduquen.",
+      "attachment-files": "Elimina los archivos que se subieron para adjuntar pero nunca se enviaron, al cabo de un día, y las subidas que nunca terminaron.",
       "retention": "Elimina los eventos de auditoría al cabo de un año, los errores a los 7 días y el historial de tareas y los envíos a webhooks a los 30 días.",
       "security-notice": "Avisa a las personas de los cambios en la seguridad de su cuenta.",
       "added-to-company": "Avisa a las personas de que el personal las ha añadido a una empresa.",
@@ -30,7 +31,9 @@
       "signInErrors": "{count, plural, one {# error de inicio de sesión eliminado} other {# errores de inicio de sesión eliminados}}",
       "jobRuns": "{count, plural, one {# ejecución eliminada} other {# ejecuciones eliminadas}}",
       "queuedJobs": "{count, plural, one {# tarea en cola eliminada} other {# tareas en cola eliminadas}}",
-      "webhookDeliveries": "{count, plural, one {# envío a un webhook eliminado} other {# envíos a webhooks eliminados}}"
+      "webhookDeliveries": "{count, plural, one {# envío a un webhook eliminado} other {# envíos a webhooks eliminados}}",
+      "unsentFiles": "{count, plural, one {# archivo no enviado eliminado} other {# archivos no enviados eliminados}}",
+      "removedFiles": "{count, plural, one {# archivo quitado eliminado} other {# archivos quitados eliminados}}"
     }
   }
 }
