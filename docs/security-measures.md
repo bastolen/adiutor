@@ -466,6 +466,28 @@ A file attached to a request is uploaded on its own first, then sent with its te
   over a route's own. Thumbnails load from the same address: an image element shows an image
   whatever its `Content-Disposition` says, and `img-src 'self'` stays.
 
+## The logo and the browser tab icon
+
+The logo and an own icon a staff Admin uploads ([decision
+0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)) are shown to anyone, signed in
+or not, so only what Adiutor made itself is ever served:
+
+- **Who:** uploading and removing need `staff:manage` and aren't allowed while signed in as a user;
+  each is audited (`brand_logo_changed`, `brand_logo_removed`, `brand_icon_changed`,
+  `brand_icon_removed`) and rate-limited (`brandImagesPerUser`: drawing takes the server's time).
+- **What's taken:** at most 1 MB (checked in the browser first, and again by the service), then a
+  PNG or JPEG by its first bytes, whose header says it's at most 4096 pixels wide and high, before
+  anything decodes it: a file can't claim one size and make the server decode a far larger one.
+  SVG, which can hold scripts, is never taken. Server actions take bodies of up to 2 MB for it
+  (`serverActions.bodySizeLimit`); the proxy already reads up to 10 MB.
+- **What's kept and served:** the image drawn again as a PNG with `ImageResponse`, never the
+  uploaded file, so a JPEG's location or a PNG's text never leaves the server, and an image that
+  doesn't decode (drawn empty, `isBlankPng`) is refused.
+- **How it's served:** `/branding/logo` and `/branding/icon` are public paths (`PUBLIC_PATHS`)
+  under the fixed file policy (`FILE_POLICY`, set by the proxy for `FILE_PATHS`), with `nosniff`.
+  A request never draws: each version of the icon is drawn once per process and kept, so asking
+  with any `?v=` or `?size=` costs a read of the database at most.
+
 ## Where email goes
 
 A staff Admin sets the mail server on the Email tab of Settings, unless the server's environment
@@ -673,8 +695,9 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
-the proxy skips (`/brand/`, `/icon.svg`, `/favicon.ico`) get a fixed policy that runs nothing
-(`next.config.ts`); the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
+the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
+(`next.config.ts`), as do the files it serves (attachments and the brand's images, `FILE_POLICY`);
+the attachments' upload, which the proxy also skips, answers JSON only. One known gap: Next.js's built-in page for errors outside rendering is
 prerendered, so its scripts carry no nonce; it still shows its message and Reload button. Raw
 HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and the brand colours'
 `<style>`, and e2e tests fail on CSP violations that pages report (`e2e/support/test.ts`, console

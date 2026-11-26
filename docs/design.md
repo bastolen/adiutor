@@ -661,7 +661,8 @@ has a palette icon, apart from the options.
   such as `bg-surface text-foreground` instead of fixed colours like `bg-white` or `text-ink`; they
   switch with the mode. For anything else, use the `dark:` variant (e.g. `dark:hidden`).
 - **Logo:** use the `Logo` component (`src/components/brand/logo.tsx`), which shows `logo.svg` in
-  light mode and `logo-on-dark.svg` in dark mode.
+  light mode and `logo-on-dark.svg` in dark mode, or the logo a staff Admin uploaded in both (see
+  [The logo and the browser tab icon](#the-logo-and-the-browser-tab-icon)).
 
 ## Brand
 
@@ -673,11 +674,11 @@ Logos and icons live in `public/brand/`, cropped to their content with no backgr
 | `logo-on-dark.svg`                 | Dark backgrounds (ink)              |
 | `logo-white.svg`, `icon-white.svg` | The brand gradient or accent colour |
 
-The icon in a browser's tab is `src/app/icon.svg` (the same picture as `public/brand/icon.svg`),
-and, for browsers and tools that ask for `/favicon.ico` instead, `src/app/favicon.ico`: that icon
-drawn at 16, 32 and 48 pixels, the three as PNG pictures in one `.ico` file. Next.js serves both
-and adds their links to every page (its file convention for icons). When the icon changes, make
-the `.ico` again from the SVG.
+Adiutor's icon in a browser's tab is `public/brand/icon.svg`, and `public/brand/favicon.ico`: that
+icon drawn at 16, 32 and 48 pixels, the three as PNG pictures in one `.ico` file. The root layout
+links both on every page (`pageIcons`) until a staff Admin uploads a logo or an icon, and
+`/favicon.ico`, for tools that ask for it without reading the page, redirects to the `.ico` until
+then. When the icon changes, make the `.ico` again from the SVG.
 
 `src/styles/theme.css` is the Tailwind theme: the brand colours (`brand-teal`, `brand-green`,
 `brand-orange`, `ink`), the fonts (Inter and JetBrains Mono, then the system fonts as fallbacks),
@@ -735,8 +736,33 @@ The root layout reads the settings once per request (`pageBrandCss` in
 from the theme, as `light-dark()` pairs, which outranks `theme.css` wherever the two end up. It
 holds only hex colours that `paletteCss` wrote and checked, so nothing chosen can close the rule.
 With nothing chosen there's no `<style>` at all. `global-error.tsx`, which replaces the whole
-document and can't reach the database, keeps the theme's colours, and so do the logo and the
-favicon.
+document and can't reach the database, keeps the theme's colours, and shows no logo.
+
+### The logo and the browser tab icon
+
+A staff Admin uploads the operator's logo, and optionally an own browser tab icon, on Settings ›
+Appearance ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)). Only a
+PNG or JPEG of at most 1 MB is taken, checked by its header (`imageFacts`, `brandImageProblem` in
+`src/lib/branding/images.ts`): a logo at least 32 pixels high and at most 8 times as wide as it's
+high, an icon about square and at least 32 pixels. It's drawn again with Next's `ImageResponse`
+into a PNG of at most 1024×256 (an icon 512×512), and that PNG, never the uploaded file, is kept in
+the `brand_image` table (`src/server/branding/brand-images.ts`) and served.
+
+- **Where the logo shows:** `Logo` reads it from `BrandLogoProvider` / `useBrandLogo()`
+  (`src/components/brand/brand-logo.tsx`, handed down by the root layout from
+  `requestBrandImages()`), at the usual heights (24, 26 and 32 pixels) and its own width, shrinking
+  where the room is narrower. It's one image for both modes, so the Appearance tab previews it on
+  the light and the dark palette. Emails link it, 32 pixels high and at most 200 wide
+  (`emailLogo`).
+- **The browser tab icon** is made from the brand (`brandIconSource`,
+  `src/server/branding/brand-icon.tsx`): the own icon, else a logo that's about square, else the
+  staff name's initials in white on the light accent (bolder with a stroke, as the built-in font
+  has one weight); Adiutor's while neither was uploaded. It's drawn at 32 pixels and as a 180-pixel Apple touch icon on an opaque
+  background, once per version per process.
+- **Addresses:** `/branding/logo?v=<id>` and `/branding/icon?v=<hash>` (`?size=180` for the touch
+  icon), public and under the fixed file policy; the version changes with every upload (and, for
+  initials, with the staff's name and accent), so an address may be kept for a year.
+  `/favicon.ico` is rewritten to `/branding/favicon`, the 32-pixel icon as an `.ico`.
 
 ### The staff's name and "Powered by Adiutor"
 

@@ -27,8 +27,8 @@ detail, one topic each.
 - [Multi-factor authentication](mfa.md): second steps, who must have them, and when a session
   counts as confirmed.
 - [Security measures](security-measures.md): the audit log, rate limits, the client IP, tokens,
-  the name checks, webhooks' addresses, the lock order of concurrent changes, security headers and
-  the Content Security Policy.
+  the name checks, the logo and icon anyone may fetch, webhooks' addresses, the lock order of
+  concurrent changes, security headers and the Content Security Policy.
 - [Webhooks](webhooks.md): who sets them up, what a webhook has, how news reaches it, retries and
   turning off, tests and sending again, what's sent (JSON and chat), why its changes are security changes, its address and
   secret, and verifying a delivery.
