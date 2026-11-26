@@ -1,7 +1,7 @@
 /**
  * @file What a browser leaves behind when someone signs in or out there: its
- * trusted device, its previous session, and the notice cookies that no
- * longer apply.
+ * trusted device, its previous session, the notice cookies that no longer
+ * apply, and at sign-out what it kept in its cache.
  */
 import { and, eq, ne } from 'drizzle-orm';
 
@@ -143,6 +143,21 @@ export async function replacePreviousSession(
  */
 export function clearCookiesAtSignOut(ctx: AuthHookContext): void {
   cookiesToClearAtSignOut(ctx.headers?.get('cookie')).forEach((name) => expireCookie(ctx, name));
+}
+
+/**
+ * Asks the browser to drop what it keeps of Adiutor's responses at sign-out
+ * (`Clear-Site-Data: "cache"`), such as the attached files it keeps and
+ * checks with the server before each use, so the next person on a shared
+ * computer finds none of them. Only the cache: the cookies are cleared one
+ * by one ({@link clearCookiesAtSignOut}), so the "Last used" sign-in method
+ * and the language stay. Firefox ignores it for now; a copy it keeps is
+ * still only used once the server says the reader may.
+ *
+ * @param ctx - The endpoint context, after the request.
+ */
+export function clearCacheAtSignOut(ctx: AuthHookContext): void {
+  ctx.setHeader?.('Clear-Site-Data', '"cache"');
 }
 
 /**

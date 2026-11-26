@@ -1,11 +1,13 @@
 /**
- * @file Integration tests for forgetting trusted devices.
+ * @file Integration tests for forgetting trusted devices, and for clearing
+ * the browser's cache at sign-out.
  */
 import { APIError } from 'better-auth/api';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createSession, createUser } from '../../../../tests/integration/helpers';
 import { afterAuthRequest } from './after-request';
+import type { AuthHookContext } from './hook-context';
 import {
   db,
   trustDevice,
@@ -51,6 +53,22 @@ describe('forgetting trusted devices', () => {
       '',
       expect.objectContaining({ maxAge: 0, path: '/' }),
     );
+  });
+
+  it('asks the browser to drop its cache at sign-out, and only then', async () => {
+    const jane = await createUser(db, 'jane@adiutor.test');
+    const headers = await signedInHeaders(await createSession(db, jane));
+    const signOut = githubCallback(headers).ctx;
+    const signIn = githubCallback(headers).ctx;
+    const signOutHeader = vi.fn<NonNullable<AuthHookContext['setHeader']>>();
+    const signInHeader = vi.fn<NonNullable<AuthHookContext['setHeader']>>();
+
+    await afterAuthRequest({ ...signOut, path: '/sign-out', setHeader: signOutHeader });
+    await afterAuthRequest({ ...signIn, setHeader: signInHeader });
+
+    // The files it kept are gone for the next person; the cookies are cleared one by one.
+    expect(signOutHeader).toHaveBeenCalledExactlyOnceWith('Clear-Site-Data', '"cache"');
+    expect(signInHeader).not.toHaveBeenCalled();
   });
 
   it('forgets nothing at sign-out for a trusted-device cookie whose signature doesn’t check out', async () => {
