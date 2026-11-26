@@ -22,7 +22,7 @@ import SelectField from '@/components/ui/select-field';
 import { ChangesFieldset, useSignedInAs } from '@/components/ui/signed-in-as';
 import TextField from '@/components/ui/text-field';
 import TextAreaField from '@/components/ui/textarea-field';
-import { useOncePerVisit, useTransientActionState } from '@/components/ui/use-transient-state';
+import { useTransientActionState } from '@/components/ui/use-transient-state';
 import {
   DEFAULT_SFTP_PORT,
   PRIVATE_KEY_MAX_LENGTH,
@@ -211,8 +211,9 @@ function SftpFields({ saved }: { saved: Extract<StorageView, { driver: 'sftp' }>
  *
  * The form isn't cleared after a save (`resetOnSuccess: false`): it shows
  * what was saved, and only its secrets are emptied, which are never shown
- * again. Each visit starts from the saved storage's driver
- * (`useOncePerVisit`).
+ * again. The driver chosen stays, like what's typed in its fields, also on
+ * the way back from confirming: saving always passes through that page
+ * first, so a reset there would undo the choice before it's saved.
  *
  * @param props - Form props.
  * @param props.current - The saved storage, without its secrets, or `null`.
@@ -238,7 +239,6 @@ export default function StorageForm({
     resetOnSuccess: false,
   });
   const [driver, setDriver] = useState<StorageDriver | ''>(current?.driver ?? '');
-  useOncePerVisit(() => setDriver(current?.driver ?? ''));
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (result?.ok) {
