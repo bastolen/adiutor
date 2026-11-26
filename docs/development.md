@@ -52,6 +52,17 @@ away, as in production ([The endpoint](jobs.md#the-endpoint)).
 `pnpm jobs:run` runs a tick at once, and `pnpm jobs:run <job>` one job. Production servers never
 tick themselves: see [Background jobs](deploying.md#background-jobs) in the deployment docs.
 
+## Attachments
+
+Attaching files is off until there's a storage and **People can attach files** is on (see
+[Attachments](requests.md#attachments)). To try it locally, make a folder (`mkdir -p
+.local/attachments`, which git ignores) and choose it on the Attachments tab of Settings as a
+staff Admin, by its absolute path (`pwd` prints the start of it); saving asks for your second step
+when your account has one. Then turn on People can attach files on the same tab. Setting
+`ATTACHMENTS_STORAGE=local` and `ATTACHMENTS_DIR` in `.env` instead chooses the folder for the
+whole server and locks the Storage card. The S3 and SFTP servers that `pnpm services:up` starts
+work too: `.env.example` has the values to try them with.
+
 ## Starting over
 
 The database files live in `docker/database/` (git-ignored). To start over with an empty database

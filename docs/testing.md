@@ -167,4 +167,11 @@ account)` where a spec needs the state itself) and open each test with those coo
 
 `pnpm services:up` must be running for integration and end-to-end tests. The integration tests
 also reach its S3-compatible server (SeaweedFS) and its SFTP server (OpenSSH), which the storage
-drivers' tests use; CI starts them with `docker compose` too.
+drivers' tests use; CI starts them with `docker compose` too. The other integration tests keep
+attached files in a temporary folder (the test context's `storage`), and store them with
+`storeAttachment` (`tests/integration/helpers/requests.ts`), as an upload and a text would have.
+
+The end-to-end tests keep attached files in `e2e/.attachments`, which the global setup empties
+before every run; the seed chooses it as the storage and turns attaching on. A test that needs a
+request with files stores its own with `storeAttachment` (`e2e/support/db.ts`), and one that
+attaches files picks them with the file chooser, drops or pastes them (`e2e/attachments.spec.ts`).
