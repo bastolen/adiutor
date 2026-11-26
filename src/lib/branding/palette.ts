@@ -1,6 +1,6 @@
 /**
  * @file Works out the palette a page shows from the brand colours a staff
- * Admin chose (decision 0047): an accent, optionally a different accent for
+ * Admin chose (decision 0049): an accent, optionally a different accent for
  * dark mode, and a tint for the greys. Nothing chosen is the theme itself.
  *
  * - **The tint** rebuilds every grey in both modes (backgrounds, surfaces,

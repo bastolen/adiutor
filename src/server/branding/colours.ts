@@ -1,5 +1,5 @@
 /**
- * @file The brand colours a staff Admin chose (decision 0047): the
+ * @file The brand colours a staff Admin chose (decision 0049): the
  * `brand.*` settings, read for every page (the root layout) and every email.
  * Imports no server-only code, so the emails Better Auth sends can load it
  * too.

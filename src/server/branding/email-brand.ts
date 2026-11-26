@@ -1,5 +1,5 @@
 /**
- * @file The brand an email is sent in (decision 0047): the colours a staff
+ * @file The brand an email is sent in (decision 0049): the colours a staff
  * Admin chose, worked out into the light palette. Every send loads it and
  * passes it as `EmailBaseProps.brand`. Imports no server-only code, so the
  * emails Better Auth sends can load it too.

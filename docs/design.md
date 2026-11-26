@@ -682,7 +682,7 @@ and the signed-out pages' brand panel its own tokens (`brand-panel`, `brand-pane
 ### Brand colours
 
 Adiutor can run in the colours of whoever operates it ([decision
-0047](decisions/0047-brand-colours-from-an-accent-and-a-tint.md)). A staff Admin chooses up to three
+0049](decisions/0049-brand-colours-from-an-accent-and-a-tint.md)). A staff Admin chooses up to three
 colours, kept as the `brand.accent`, `brand.accent_dark` and `brand.tint` settings; `null` is the
 theme's own. The palette every page shows is worked out from them by `derivePalette`
 (`src/lib/branding/palette.ts`), in OKLCH (`colour-space.ts`), where the same lightness looks

@@ -1,5 +1,5 @@
 /**
- * @file The brand colours on the Appearance tab of Settings (decision 0047):
+ * @file The brand colours on the Appearance tab of Settings (decision 0049):
  * reading them to edit, and saving them. Staff Admins only (`staff:manage`).
  * Pages and emails read them with `loadBrandColours` (`colours.ts`), which
  * checks no permission.

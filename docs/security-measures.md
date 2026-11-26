@@ -540,7 +540,7 @@ HTML (`dangerouslySetInnerHTML`) is a lint error except for the theme script and
 errors and uncaught `EvalError`s).
 
 The brand colours a staff Admin chose reach every page as CSS ([decision
-0047](decisions/0047-brand-colours-from-an-accent-and-a-tint.md)), so nothing typed into them may
+0049](decisions/0049-brand-colours-from-an-accent-and-a-tint.md)), so nothing typed into them may
 reach it: a colour is six hex digits when it's saved (`brandColourSchema`) and when it's read back
 (the registry gives the fallback for anything else, `loadBrandColours` checks again), the CSS holds
 only colours `derivePalette` worked out and wrote in hex, and `paletteCss` checks every value once

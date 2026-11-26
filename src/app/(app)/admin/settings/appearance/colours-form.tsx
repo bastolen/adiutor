@@ -1,5 +1,5 @@
 /**
- * @file Form to choose the brand colours (decision 0047): the accent, an
+ * @file Form to choose the brand colours (decision 0049): the accent, an
  * accent for dark mode and the tint, with a preview of the palette they make
  * as they're typed. Its text comes from `admin.settings.appearance.colours`,
  * which the page passes through `ClientMessages`.

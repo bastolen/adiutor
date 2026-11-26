@@ -1,6 +1,6 @@
 /**
  * @file The Appearance tab of Settings, served at `/admin/settings/appearance`:
- * the brand colours every page and email shows (decision 0047). Platform
+ * the brand colours every page and email shows (decision 0049). Platform
  * Admins only (`staff:manage`). The heading and tabs come from the Settings
  * layout.
  */

@@ -76,7 +76,7 @@ see [Emails](i18n.md#emails). Templates share the frame and building blocks in
   for the staff only, gets none and keeps them
 - the fonts in `theme.ts` (`fontFamily`, `monoFontFamily`): the device's own, not the Inter and
   JetBrains Mono the app ships, because many email clients block or strip web fonts
-- the colours, which are the brand colours a staff Admin chose (decision 0047). `theme.ts` has
+- the colours, which are the brand colours a staff Admin chose (decision 0049). `theme.ts` has
   `EmailColours`, `DEFAULT_EMAIL_COLOURS` (the app's light theme, which is what an email has when
   nothing was chosen) and `emailColoursOf` (the light palette of `derivePalette`; emails have no
   dark mode). A template works its colours out once, `const colours = emailColours(brand)`

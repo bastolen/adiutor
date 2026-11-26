@@ -4,7 +4,7 @@
  * Email clients don't support CSS variables or stylesheets well, so emails
  * use inline styles built from these plain values. The defaults match the app's
  * light theme in `src/styles/theme.css`; a brand's colours replace them
- * (decision 0047).
+ * (decision 0049).
  */
 import type { CSSProperties } from 'react';
 
@@ -45,7 +45,7 @@ export const DEFAULT_EMAIL_COLOURS: EmailColours = {
 
 /**
  * The colours of an email in a brand's light palette (emails have no dark
- * mode; decision 0047). They go into inline styles, so each is checked to be
+ * mode; decision 0049). They go into inline styles, so each is checked to be
  * a hex colour once more, like the page's CSS (`paletteCss`); anything else
  * would be a bug, and the email keeps the theme's colour there instead.
  *

@@ -108,7 +108,7 @@
  * Code reads these from a copy, `THEME_PALETTE` in `src/lib/branding`
  * (`theme.test.ts` keeps the two the same), to check palettes against the
  * theme's rules and to work out the palette for the brand colours a staff
- * Admin chose, which the root layout sets over these (decision 0047).
+ * Admin chose, which the root layout sets over these (decision 0049).
  *
  * `src/lib/theme.ts` sets `data-theme="light"` or `data-theme="dark"` on
  * `<html>` before the page paints, which fixes the scheme. Without
@@ -191,7 +191,7 @@
    * The decorative brand panel of the signed-out pages (`brand-panel.tsx`),
    * the same in both modes: dark ink, with a bright and a deep glow in the
    * accent colours. Brand colours a staff Admin chose replace them, like the
-   * tokens above (decision 0047).
+   * tokens above (decision 0049).
    */
   --brand-panel: var(--color-ink);
   --brand-panel-glow: var(--color-brand-green);

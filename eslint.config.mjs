@@ -444,7 +444,7 @@ const restrictedImportsConfig = [
       /**
        * Emails are bundled into server code (the jobs route, the
        * instrumentation), where React's server build has no hooks or context:
-       * values reach the blocks as props (decision 0047).
+       * values reach the blocks as props (decision 0049).
        */
       'no-restricted-imports': [
         'error',
@@ -468,7 +468,7 @@ const restrictedImportsConfig = [
                 'use',
               ],
               message:
-                'Emails render in server code, where React has no hooks or context: pass values as props (decision 0047).',
+                'Emails render in server code, where React has no hooks or context: pass values as props (decision 0049).',
             },
           ],
         },

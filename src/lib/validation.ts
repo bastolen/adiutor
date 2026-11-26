@@ -165,7 +165,7 @@ function hexColourSchema(error: ValidationMessageKey) {
   return z.string().transform(tidyHexColour).refine(isHexColour, { error });
 }
 
-/** A brand colour as the `brand.*` settings keep it (decision 0047). */
+/** A brand colour as the `brand.*` settings keep it (decision 0049). */
 export const brandColourSchema = hexColourSchema('validation.brandColour.invalid');
 
 /**

@@ -6,7 +6,7 @@ import type { EmailColours } from '@/components/email/theme';
 import { DEFAULT_LOCALE, type Locale } from '@/lib/i18n/locales';
 
 /**
- * How the operator's brand shows in an email (decision 0047). An object, so
+ * How the operator's brand shows in an email (decision 0049). An object, so
  * what more of the brand an email shows has a place to go.
  */
 export interface EmailBrand {

@@ -56,7 +56,7 @@ export const instant = false;
  * nonce, or the Content Security Policy would block it.
  *
  * When a staff Admin chose brand colours, a `<style>` sets the palette worked
- * out from them over the theme's (decision 0047), for every page including
+ * out from them over the theme's (decision 0049), for every page including
  * the signed-out and error pages. It holds only hex colours branding wrote
  * (`paletteCss`), and the policy allows inline styles.
  *

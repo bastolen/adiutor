@@ -71,7 +71,7 @@ export const SETTINGS = {
    */
   'requests.prefix': defineSetting(requestPrefixSchema, DEFAULT_REQUEST_PREFIX as string),
   /**
-   * The brand colours (decision 0047), set on the Appearance tab of Settings
+   * The brand colours (decision 0049), set on the Appearance tab of Settings
    * and worked out into the palette every page and email uses
    * (`src/lib/branding`). `null` is the theme's own: the accent is the main
    * actions, links and focus rings (teal and green), the dark accent the

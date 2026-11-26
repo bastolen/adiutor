@@ -1,4 +1,4 @@
-# 0047. Brand colours from an accent and a tint, worked out to keep the rules
+# 0049. Brand colours from an accent and a tint, worked out to keep the rules
 
 - **Status:** Accepted
 - **Date:** 2026-11-26
