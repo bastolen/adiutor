@@ -587,14 +587,14 @@ test('an Admin sets up the mail server, which is tried with a test email first',
       ),
     ).toBeVisible();
 
-    const host = page.getByRole('textbox', { name: 'Server' });
+    const host = card.getByRole('textbox', { name: 'Server' });
     await host.fill('smtp.adiutor.test');
-    await page.getByRole('combobox', { name: 'Security' }).click();
+    await card.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^None/ }).click();
-    await page.getByRole('textbox', { name: 'Username' }).fill('mailer@adiutor.test');
-    await page.getByLabel('Password').fill('e2e-mail-password');
-    await page.getByRole('textbox', { name: 'Sender name' }).fill('Adiutor Tests');
-    await page.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
+    await card.getByRole('textbox', { name: 'Username' }).fill('mailer@adiutor.test');
+    await card.getByLabel('Password').fill('e2e-mail-password');
+    await card.getByRole('textbox', { name: 'Sender name' }).fill('Adiutor Tests');
+    await card.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
 
     // Without TLS to another computer, production refuses it, and what was typed stays.
     await card.getByRole('button', { name: 'Test and save' }).click();
@@ -603,9 +603,9 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     );
     await expect(host).toHaveValue('smtp.adiutor.test');
 
-    await page.getByRole('combobox', { name: 'Security' }).click();
+    await card.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^STARTTLS/ }).click();
-    await page.getByLabel('Password').fill('e2e-mail-password');
+    await card.getByLabel('Password').fill('e2e-mail-password');
     await card.getByRole('button', { name: 'Test and save' }).click();
     await expect(toasts(page)).toContainText(
       'Mail server saved. A test email reached you through it.',
@@ -627,8 +627,8 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     // Saved without the password, which is emptied and never shown again.
     await page.reload();
     await expect(host).toHaveValue('smtp.adiutor.test');
-    await expect(page.getByRole('spinbutton', { name: 'Port' })).toHaveValue('587');
-    const password = page.getByLabel('Password');
+    await expect(card.getByRole('spinbutton', { name: 'Port' })).toHaveValue('587');
+    const password = card.getByLabel('Password');
     await expect(password).toHaveValue('');
     await expect(password).toHaveAccessibleDescription(
       'A password is saved. Leave this empty to keep it while the server, port and username stay the same.',
