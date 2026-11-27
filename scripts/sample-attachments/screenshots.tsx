@@ -436,7 +436,7 @@ export async function openingHoursPreview(at: Date): Promise<SampleFile> {
   const bytes = await drawScreenshot(
     <BrowserWindow
       title="Opening hours | Adiutor Tests Alpha"
-      url="https://adiutor.dev/preview/opening-hours"
+      url="https://adiutor.test/preview/opening-hours"
     >
       <div
         style={{

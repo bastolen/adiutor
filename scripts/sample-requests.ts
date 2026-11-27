@@ -143,7 +143,7 @@ export default function sampleRequests(world: SampleRequestWorld): SampleRequest
           by: sam,
           at: ago(0, 5),
           reply:
-            'Done on the test site: https://adiutor.dev/preview\n\nPlease check it, and we’ll publish it.',
+            'Done on the test site: https://adiutor.test/preview\n\nPlease check it, and we’ll publish it.',
         },
         { by: sam, at: ago(0, 5), change: 'status', from: 'in_progress', to: 'waiting' },
       ],
