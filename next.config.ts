@@ -75,29 +75,6 @@ const nextConfig: NextConfig = {
     return [{ source: '/favicon.ico', destination: '/branding/favicon' }];
   },
 
-  /**
-   * Sends the addresses of Settings tabs that were merged into others to the
-   * card that took the old tab's first place (decision 0055), so bookmarks,
-   * emailed links and return addresses still land there. Temporary (307), so
-   * browsers don't keep them: a later tab may take one of these addresses.
-   * The query string comes along; an anchor on the old address gives way to
-   * the card's.
-   *
-   * @returns The redirect rules.
-   */
-  async redirects() {
-    return [
-      { source: '/admin/settings/appearance', destination: '/admin/settings#logo' },
-      { source: '/admin/settings/email', destination: '/admin/settings/integrations#mail-server' },
-      {
-        source: '/admin/settings/attachments',
-        destination: '/admin/settings/integrations#attachments',
-      },
-      // Only the list: a webhook's page keeps its address.
-      { source: '/admin/settings/webhooks', destination: '/admin/settings/integrations#webhooks' },
-    ].map((rule) => ({ ...rule, permanent: false }));
-  },
-
   /** Enables Cache Components (part of the create-next-app defaults). */
   cacheComponents: true,
 

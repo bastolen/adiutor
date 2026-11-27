@@ -39,6 +39,8 @@ How the tabs look is in [Companies, users and roles](../companies-and-roles.md#s
   lands on the logo, two cards above.
 - The redirects are temporary (307), so browsers don't keep them and a later tab may take one of
   these addresses.
+- **2026-11-27:** the four redirects are gone, once nobody used the old addresses any more; the old
+  addresses now answer 404. A webhook's page kept its address, so emailed links still work.
 - `appearance/`, `attachments/` and `email/` hold cards and actions, not routes: each old page
   became the cards component its tab renders (`appearance-cards.tsx` and so on).
 
