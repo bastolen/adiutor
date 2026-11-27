@@ -4,7 +4,8 @@
  * at a time per process. A PDF still drawing at its time limit stops the
  * worker, which starts again for the next one; so does a PDF that broke
  * PDFium, and every `PDFS_PER_WORKER` PDFs. An idle worker closes after
- * `PDF_WORKER_IDLE_SECONDS`. The pixels are drawn as WebP like an image.
+ * `PDF_WORKER_IDLE_SECONDS`. The page is drawn once at `PAGE_SIZE`, and
+ * both the preview and the large page for the viewer are made from it.
  */
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,8 +16,9 @@ import {
   PDF_LIMITS,
   PDF_WORKER_IDLE_SECONDS,
   type PdfLimits,
+  PAGE_QUALITY,
+  PAGE_SIZE,
   PDFS_PER_WORKER,
-  PREVIEW_SIZE,
 } from './limits';
 import { pdfiumModule } from './pdf-wasm';
 
@@ -137,7 +139,7 @@ async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitma
   const pending = nextAnswer(worker, limits.seconds);
   // A copy of its own for the worker, handed over rather than copied again.
   const pdf = bytes.slice();
-  worker.thread.postMessage({ pdf, side: PREVIEW_SIZE }, [pdf.buffer]);
+  worker.thread.postMessage({ pdf, side: PAGE_SIZE }, [pdf.buffer]);
   const answer = await pending;
   if (answer && 'failed' in answer && answer.broken) {
     stop(worker);
@@ -153,21 +155,37 @@ async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitma
   return answer && 'bitmap' in answer ? answer.bitmap : null;
 }
 
+/** A PDF's first page, drawn: its preview, and large for the viewer. */
+export interface DrawnPdf {
+  /** The preview, as WebP inside `PREVIEW_SIZE`. */
+  preview: Uint8Array<ArrayBuffer>;
+  /** The page, as WebP inside `PAGE_SIZE`, or `null` when only the preview could be made. */
+  page: Uint8Array<ArrayBuffer> | null;
+}
+
 /**
- * Draws the preview of a PDF's first page, one PDF at a time per process.
+ * Draws a PDF's first page once, large, and makes its preview from it: one
+ * PDF at a time per process.
  *
  * @param bytes - The PDF.
  * @param limits - The limits it's drawn under; {@link PDF_LIMITS} by default.
- * @returns The preview as WebP, or `null` when it can't be drawn (a password, broken, past a
- *   limit, too slow).
+ * @returns The preview and the large page, or `null` when it can't be drawn (a password,
+ *   broken, past a limit, too slow).
  * @throws {Error} When PDFium can't be loaded (the server is missing it).
  */
 export default async function drawPdf(
   bytes: Uint8Array,
   limits: PdfLimits = PDF_LIMITS,
-): Promise<Uint8Array<ArrayBuffer> | null> {
+): Promise<DrawnPdf | null> {
   const mine = turn.then(() => drawInWorker(bytes, limits));
   turn = mine.catch(() => undefined);
   const bitmap = await mine;
-  return bitmap ? drawBitmap(bitmap) : null;
+  if (!bitmap) {
+    return null;
+  }
+  const [preview, page] = await Promise.all([
+    drawBitmap(bitmap),
+    drawBitmap(bitmap, { size: PAGE_SIZE, quality: PAGE_QUALITY }),
+  ]);
+  return preview ? { preview, page } : null;
 }

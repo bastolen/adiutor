@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestAttachment } from '@/db/schema';
 
+import { simplePdf } from '../../../../tests/files/pdfs';
 import {
   createCompany,
   createStaffSettings,
@@ -28,6 +29,7 @@ import {
 import {
   attachmentKey,
   type FileStorage,
+  pageKey,
   previewKey,
   StorageError,
   storageFor,
@@ -138,6 +140,18 @@ describe('attachment-previews', () => {
     expect(await previewOf(unsent)).toBeNull();
     expect(await previewOf(drawn)).toBe('drawn');
     expect(await run()).toEqual({ summary: { previews: 0, withoutPreview: 0 } });
+  });
+
+  it('draws a PDF’s large page with its preview', async () => {
+    const pdf = await screenshot({
+      name: 'invoice.pdf',
+      contentType: 'application/pdf',
+      bytes: simplePdf(),
+    });
+
+    expect(await run()).toEqual({ summary: { previews: 1, withoutPreview: 0 } });
+    expect(await previewOf(pdf)).toBe('drawn');
+    expect(await storage.get(pageKey(pdf))).not.toBeNull();
   });
 
   it('deletes the preview of a file removed while it was drawn', async () => {

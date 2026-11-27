@@ -10,6 +10,15 @@ export const PREVIEW_SIZE = 480;
 /** The WebP quality previews are drawn at: small, and sharp enough for a tile. */
 export const PREVIEW_QUALITY = 75;
 
+/**
+ * A PDF's first page is drawn large too, for the viewer, inside a square of
+ * this many pixels: an A4 page's text stays readable.
+ */
+export const PAGE_SIZE = 1600;
+
+/** The WebP quality a PDF's large page is drawn at: text stays crisp. */
+export const PAGE_QUALITY = 80;
+
 /** The type a preview is stored and served as. */
 export const PREVIEW_CONTENT_TYPE = 'image/webp';
 

@@ -778,12 +778,14 @@ in [Attachments](deploying.md#attachments).
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
   yet). A PNG, JPEG, GIF (its first frame) or WebP image is drawn as it is, a PDF's first page on
   white, and an Office or OpenDocument file from the thumbnail it carries, when it has one (pages
-  show from their top, where the title is). A video's preview is a frame the uploader's browser
+  show from their top, where the title is). A PDF's first page is drawn once at 1,600 pixels, and
+  kept large too (`pageKey`), served from `/attachments/<id>/page` with the file's checks; a PDF
+  drawn before pages were has only its preview. A video's preview is a frame the uploader's browser
   drew while it uploaded (`video-frame.ts`), which the picker shows at once and sends before the
   video counts as uploaded (`setVideoFrame`, once per video); its tile has a play mark. Any other
   kind keeps its icon, and so does a file that can't be drawn (a PDF that needs a password, a Word
-  file without a thumbnail, a video the browser can't decode or uploaded before previews). An upload that
-  finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
+  file without a thumbnail, a video the browser can't decode or uploaded before previews). An
+  upload that finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
   and the `attachment-previews` job draws its preview within minutes, as it does for files attached
   before previews existed (see [Background jobs](jobs.md#the-jobs)). The tile loads it from
   `/attachments/<id>/preview`, with the file's checks and caching; never the file itself.

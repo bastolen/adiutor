@@ -1,6 +1,6 @@
 /**
- * @file Tests for drawing a PDF's first page: on white, fitted inside 480
- * pixels as WebP; `null` for a PDF that needs a password, a broken one, one
+ * @file Tests for drawing a PDF's first page: on white, as a WebP preview
+ * fitted inside 480 pixels and a large page inside 1,600 for the viewer; `null` for a PDF that needs a password, a broken one, one
  * that needs more memory than PDFium's cap, and one still drawing at its
  * time limit, whose worker is stopped and started again for the next PDF.
  * @vitest-environment node
@@ -13,34 +13,43 @@ import drawPdf from './draw-pdf';
 import { PDF_LIMITS } from './limits';
 
 describe('drawPdf', () => {
-  it('draws the first page on white, fitted inside 480 pixels', { timeout: 20_000 }, async () => {
-    const webp = await drawPdf(simplePdf());
-    if (!webp) {
-      throw new Error('Expected a preview.');
-    }
-    const image = sharp(webp);
-    expect(await image.metadata()).toMatchObject({ format: 'webp', width: 339, height: 480 });
-    const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
-    /**
-     * A pixel of the preview.
-     *
-     * @param x - Across, from the left.
-     * @param y - Down, from the top.
-     * @returns Its red, green and blue.
-     */
-    const pixel = (x: number, y: number) => {
-      const at = (y * info.width + x) * info.channels;
-      return [...data.subarray(at, at + 3)];
-    };
-    // The red block at the top of the page, and white below it.
-    expect(pixel(10, 10)[0]).toBeGreaterThan(200);
-    expect(pixel(10, 10)[1]).toBeLessThan(60);
-    expect(pixel(10, 470)).toEqual([255, 255, 255]);
-  });
+  it(
+    'draws the first page on white, as a preview inside 480 pixels and large inside 1,600',
+    { timeout: 20_000 },
+    async () => {
+      const drawn = await drawPdf(simplePdf());
+      if (!drawn?.page) {
+        throw new Error('Expected a preview and a page.');
+      }
+      expect(await sharp(drawn.page).metadata()).toMatchObject({
+        format: 'webp',
+        width: 1131,
+        height: 1600,
+      });
+      const image = sharp(drawn.preview);
+      expect(await image.metadata()).toMatchObject({ format: 'webp', width: 339, height: 480 });
+      const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+      /**
+       * A pixel of the preview.
+       *
+       * @param x - Across, from the left.
+       * @param y - Down, from the top.
+       * @returns Its red, green and blue.
+       */
+      const pixel = (x: number, y: number) => {
+        const at = (y * info.width + x) * info.channels;
+        return [...data.subarray(at, at + 3)];
+      };
+      // The red block at the top of the page, and white below it.
+      expect(pixel(10, 10)[0]).toBeGreaterThan(200);
+      expect(pixel(10, 10)[1]).toBeLessThan(60);
+      expect(pixel(10, 470)).toEqual([255, 255, 255]);
+    },
+  );
 
   it('draws a landscape page across', { timeout: 20_000 }, async () => {
-    const webp = await drawPdf(simplePdf('0 0 842 595'));
-    expect(await sharp(webp ?? new Uint8Array()).metadata()).toMatchObject({
+    const drawn = await drawPdf(simplePdf('0 0 842 595'));
+    expect(await sharp(drawn?.preview ?? new Uint8Array()).metadata()).toMatchObject({
       width: 480,
       height: 339,
     });

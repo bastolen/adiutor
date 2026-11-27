@@ -46,6 +46,7 @@ function servable(hasPreview = true): AttachmentToServe {
     contentType: 'application/pdf',
     readFile: vi.fn(),
     readFilePart: vi.fn(),
+    readPage: vi.fn(),
     hasPreview,
     readPreview: vi.fn(async () => ({
       body: new Response('RIFF....WEBP').body ?? new ReadableStream(),

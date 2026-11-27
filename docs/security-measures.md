@@ -430,8 +430,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   download under a policy that runs nothing.
 - **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
-  extension kept. A file and its preview are kept under keys made from its ID only
-  (`attachmentKey`, `previewKey`), never its name.
+  extension kept. A file, its preview and a PDF's large page are kept under keys made from its ID
+  only (`attachmentKey`, `previewKey`, `pageKey`), never its name.
 - **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
   the person may write requests anywhere, the name and type, the announced size and the hourly
   limit come first, and the body is read only after them, so a refused upload costs no memory. A
@@ -488,8 +488,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   preview is served at `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's
   caching, as `image/webp` with `nosniff` and as a download, and is deleted with its file.
 - **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
-  have attached (a password in a screenshot), and its bytes and its preview are deleted from the
-  storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
+  have attached (a password in a screenshot), and its bytes, its preview and a PDF's large page are
+  deleted from the storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
   stays as the mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without

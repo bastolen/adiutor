@@ -30,7 +30,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { RATE_LIMITS } from '../rate-limit';
-import { attachmentKey, type FileStorage, previewKey, StorageError } from '../storage';
+import { attachmentKey, type FileStorage, pageKey, previewKey, StorageError } from '../storage';
 import { DAILY_UPLOAD_BYTES, uploadAttachment } from './attachments';
 
 const { ctx, db, storage } = setupTestContext();
@@ -172,13 +172,16 @@ describe('uploadAttachment', () => {
     });
   });
 
-  it('draws a preview of a PDF’s first page', async () => {
+  it('draws a preview of a PDF’s first page, and the page large for the viewer', async () => {
     const uploaded = await upload(ctx, client, 'invoice.pdf', simplePdf());
 
     expect(uploaded.preview).toBe(true);
     const stored = await storage.get(previewKey(uploaded.id));
     const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
     expect(await sharp(preview).metadata()).toMatchObject({ format: 'webp', height: 480 });
+    const storedPage = await storage.get(pageKey(uploaded.id));
+    const page = new Uint8Array(await new Response(storedPage?.body).arrayBuffer());
+    expect(await sharp(page).metadata()).toMatchObject({ format: 'webp', height: 1600 });
   });
 
   it('draws an OpenDocument file’s preview from the thumbnail it carries', async () => {

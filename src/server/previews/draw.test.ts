@@ -31,15 +31,20 @@ describe('drawPreview', () => {
     vi.mocked(drawImage).mockResolvedValueOnce(WEBP).mockResolvedValueOnce(null);
     const bytes = new Uint8Array([1, 2, 3]);
 
-    expect(await drawPreview('image', bytes, 'skip')).toEqual({ status: 'drawn', webp: WEBP });
+    expect(await drawPreview('image', bytes, 'skip')).toEqual({
+      status: 'drawn',
+      webp: WEBP,
+      page: null,
+    });
     expect(await drawPreview('image', bytes, 'skip')).toEqual({ status: 'none' });
     expect(drawImage).toHaveBeenCalledWith({ bytes });
   });
 
-  it('draws a PDF’s first page', async () => {
-    vi.mocked(drawPdf).mockResolvedValueOnce(WEBP);
+  it('draws a PDF’s first page, with the large page for the viewer', async () => {
+    const page = new Uint8Array([0x57, 0x45, 0x42, 0x50]);
+    vi.mocked(drawPdf).mockResolvedValueOnce({ preview: WEBP, page });
     const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-    expect(await drawPreview('pdf', bytes, 'wait')).toEqual({ status: 'drawn', webp: WEBP });
+    expect(await drawPreview('pdf', bytes, 'wait')).toEqual({ status: 'drawn', webp: WEBP, page });
     expect(drawPdf).toHaveBeenCalledWith(bytes);
     expect(drawImage).not.toHaveBeenCalled();
   });
@@ -47,7 +52,11 @@ describe('drawPreview', () => {
   it('draws the thumbnail an Office file carries', async () => {
     vi.mocked(drawOfficeThumbnail).mockResolvedValueOnce(WEBP);
     const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
-    expect(await drawPreview('office', bytes, 'wait')).toEqual({ status: 'drawn', webp: WEBP });
+    expect(await drawPreview('office', bytes, 'wait')).toEqual({
+      status: 'drawn',
+      webp: WEBP,
+      page: null,
+    });
     expect(drawOfficeThumbnail).toHaveBeenCalledWith(bytes);
   });
 

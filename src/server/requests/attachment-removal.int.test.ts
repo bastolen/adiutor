@@ -22,7 +22,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { RATE_LIMITS } from '../rate-limit';
-import { attachmentKey, type FileStorage, previewKey, StorageError } from '../storage';
+import { attachmentKey, type FileStorage, pageKey, previewKey, StorageError } from '../storage';
 import { loadAttachment, removeAttachment } from './attachments';
 import { getRequest } from './detail';
 import { ctx, db, storage, storeEntry, storeRequest } from './test-helpers';
@@ -113,6 +113,22 @@ describe('removeAttachment', () => {
         removed: expect.objectContaining({ by: expect.objectContaining({ name: support.name }) }),
       }),
     ]);
+  });
+
+  it('deletes a PDF’s large page with its file', async () => {
+    const pdf = await storeAttachment(db, storage, {
+      requestId,
+      uploadedBy: client.id,
+      name: 'invoice.pdf',
+      contentType: 'application/pdf',
+      preview: 'drawn',
+    });
+    expect(await storage.get(pageKey(pdf))).not.toBeNull();
+
+    await removeAttachment(ctx, support, { request: number, attachment: pdf });
+
+    expect(await storage.get(pageKey(pdf))).toBeNull();
+    expect(await storage.get(previewKey(pdf))).toBeNull();
   });
 
   it('removes a file on an internal note too', async () => {

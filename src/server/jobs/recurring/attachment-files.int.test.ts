@@ -25,7 +25,7 @@ import {
   storeAttachment,
   storeRequest,
 } from '../../../../tests/integration/helpers';
-import { attachmentKey, previewKey, storageFor } from '../../storage';
+import { attachmentKey, pageKey, previewKey, storageFor } from '../../storage';
 import attachmentFiles from './attachment-files';
 
 const { ctx, db, storage } = setupTestContext();
@@ -123,6 +123,8 @@ describe('attachment-files', () => {
     const removed = await storeAttachment(db, storage, {
       uploadedBy: uploader,
       requestId,
+      name: 'invoice.pdf',
+      contentType: 'application/pdf',
       preview: 'drawn',
     });
     const deletedAlready = await storeAttachment(db, storage, { uploadedBy: uploader, requestId });
@@ -139,6 +141,7 @@ describe('attachment-files', () => {
 
     expect(await storage.get(attachmentKey(removed))).toBeNull();
     expect(await storage.get(previewKey(removed))).toBeNull();
+    expect(await storage.get(pageKey(removed))).toBeNull();
     const [row] = await db
       .select({ fileDeletedAt: requestAttachment.fileDeletedAt })
       .from(requestAttachment)

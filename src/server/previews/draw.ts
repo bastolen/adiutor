@@ -25,6 +25,8 @@ export type PreviewDrawing =
       status: 'drawn';
       /** The preview. */
       webp: Uint8Array<ArrayBuffer>;
+      /** A PDF's first page, large, for the viewer; `null` for every other kind. */
+      page: Uint8Array<ArrayBuffer> | null;
     }
   | {
       /** It can't be drawn (broken, past a limit, nothing to draw): the icon. */
@@ -54,26 +56,46 @@ export function drawsFromFile(kind: AttachmentPreviewKind | null): kind is FileP
   return kind !== null && (PREVIEWS_FROM_FILES as readonly string[]).includes(kind);
 }
 
+/** A preview, drawn: and for a PDF, its first page large. */
+interface DrawnPreview {
+  /** The preview. */
+  webp: Uint8Array<ArrayBuffer>;
+  /** A PDF's first page, large, or `null`. */
+  page: Uint8Array<ArrayBuffer> | null;
+}
+
+/**
+ * Draws a preview made of one image.
+ *
+ * @param webp - The image, or `null` when it couldn't be drawn.
+ * @returns The preview, without a page.
+ */
+function alone(webp: Uint8Array<ArrayBuffer> | null): DrawnPreview | null {
+  return webp ? { webp, page: null } : null;
+}
+
 /**
  * Draws one preview, in its kind's way.
  *
  * @param kind - The kind of preview.
  * @param bytes - The file, or a video's frame.
- * @returns The preview, or `null` when it can't be drawn.
+ * @returns The preview (and a PDF's large page), or `null` when it can't be drawn.
  */
 async function drawByKind(
   kind: AttachmentPreviewKind,
   bytes: Uint8Array,
-): Promise<Uint8Array<ArrayBuffer> | null> {
+): Promise<DrawnPreview | null> {
   switch (kind) {
     case 'image':
-      return drawImage({ bytes });
-    case 'pdf':
-      return drawPdf(bytes);
+      return alone(await drawImage({ bytes }));
+    case 'pdf': {
+      const drawn = await drawPdf(bytes);
+      return drawn ? { webp: drawn.preview, page: drawn.page } : null;
+    }
     case 'office':
-      return drawOfficeThumbnail(bytes);
+      return alone(await drawOfficeThumbnail(bytes));
     case 'video':
-      return drawImage({ bytes, checks: FRAME_CHECKS, limits: VIDEO_FRAME_LIMITS });
+      return alone(await drawImage({ bytes, checks: FRAME_CHECKS, limits: VIDEO_FRAME_LIMITS }));
     default:
       return null;
   }
@@ -98,7 +120,7 @@ export async function drawPreview(
     if (drawn === BUSY) {
       return { status: 'skipped' };
     }
-    return drawn ? { status: 'drawn', webp: drawn } : { status: 'none' };
+    return drawn ? { status: 'drawn', ...drawn } : { status: 'none' };
   } catch (error) {
     // The library itself failed to load: no file is to blame, so none is marked.
     // eslint-disable-next-line no-console -- The kind and the error's name only: no file's content.

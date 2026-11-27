@@ -448,9 +448,10 @@ the same):
 
 **Back up the files with the database.** A file is found by its row in the database, and a row
 whose file is gone can't be downloaded. Files are kept at the same paths in every storage
-(`attachments/<two characters>/<ID>`, and their previews at `previews/<two characters>/<ID>`), so
-moving to another storage is copying everything under `attachments/` and `previews/` there as it is
-(with `rclone copy`, say), then switching.
+(`attachments/<two characters>/<ID>`, their previews at `previews/<two characters>/<ID>` and PDFs'
+large pages at `pages/<two characters>/<ID>`), so moving to another storage is copying everything
+under `attachments/`, `previews/` and `pages/` there as it is (with `rclone copy`, say), then
+switching.
 
 **Previews** of attached files, for their tiles, are drawn by the app itself
 ([decision 0057](decisions/0057-small-previews-of-attached-files.md)), with nothing to install: its

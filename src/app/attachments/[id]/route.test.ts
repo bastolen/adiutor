@@ -81,6 +81,7 @@ function servable(
     ),
     hasPreview: true,
     readPreview: vi.fn(),
+    readPage: vi.fn(),
   };
 }
 

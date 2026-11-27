@@ -22,6 +22,7 @@ import { drawAndStorePreview, drawsFromFile, type FilePreviewKind } from '../../
 import {
   attachmentKey,
   type FileStorage,
+  pageKey,
   previewKey,
   StorageError,
   type StoredFile,
@@ -224,6 +225,8 @@ export default defineRecurringJob({
               } else {
                 // eslint-disable-next-line no-await-in-loop -- one file at a time, on one connection
                 await shared.delete(previewKey(row.id));
+                // eslint-disable-next-line no-await-in-loop -- one file at a time, on one connection
+                await shared.delete(pageKey(row.id));
               }
             } else {
               // eslint-disable-next-line no-await-in-loop -- one row at a time

@@ -22,7 +22,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
   what the request pages share (the list, the board, the badges, the text, the people, the files
   and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`) in
   `src/app/(app)/_requests/`. Files are uploaded to `src/app/api/attachments/` and downloaded from
-  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/`. The logo and the
+  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/` and a
+  PDF's large first page from `src/app/attachments/[id]/page/`. The logo and the
   browser tab icon made from the brand are served to anyone from `src/app/branding/` (`logo/`,
   `icon/`, and `favicon/`, where `/favicon.ico` is rewritten). A
   company's pages, a user's page, Settings, the Logs and the account pages have a `layout.tsx` with their header and tabs (see

@@ -8,7 +8,7 @@ import type { Database } from '@/db';
 import { request, requestAttachment, requestEntry, requestParticipant } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { incrementSetting } from '@/server/settings';
-import { attachmentKey, type FileStorage, previewKey } from '@/server/storage';
+import { attachmentKey, type FileStorage, pageKey, previewKey } from '@/server/storage';
 
 /** What a stored request may be given; everything else gets a default. */
 export type RequestValues = Partial<typeof request.$inferInsert>;
@@ -121,7 +121,8 @@ export async function assignmentsOf(db: Database, requestId: string) {
  * @param values.createdAt - When the upload started.
  * @param values.uploadedAt - When it was stored; `null` for an upload that never finished.
  * @param values.signedInAsStaffId - The staff member signed in as the uploader, if any.
- * @param values.preview - Where its preview stands; `drawn` stores a preview too.
+ * @param values.preview - Where its preview stands; `drawn` stores a preview too, and a large
+ *   page for a PDF.
  * @returns Its ID.
  */
 export async function storeAttachment(
@@ -167,6 +168,9 @@ export async function storeAttachment(
   }
   if (values.preview === 'drawn') {
     await storage.put(previewKey(stored.id), new TextEncoder().encode('preview'), 'image/webp');
+    if (values.contentType === 'application/pdf') {
+      await storage.put(pageKey(stored.id), new TextEncoder().encode('page'), 'image/webp');
+    }
   }
   return stored.id;
 }
