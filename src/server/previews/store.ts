@@ -1,11 +1,12 @@
 /**
  * @file Draws a file's preview and keeps it next to the file
- * (`previewKey`), saying how that went: drawn and stored, impossible to draw,
- * not tried (`skipped`), or drawn but not stored (`unstored`).
+ * (`previewKey`), with a PDF's large first page (`pageKey`), saying how that
+ * went: drawn and stored, impossible to draw, not tried (`skipped`), or
+ * drawn but not stored (`unstored`).
  */
 import type { AttachmentPreviewKind } from '@/lib/requests';
 
-import { type FileStorage, previewKey, StorageError } from '../storage';
+import { type FileStorage, pageKey, previewKey, StorageError } from '../storage';
 import { drawPreview } from './draw';
 import { PREVIEW_CONTENT_TYPE } from './limits';
 
@@ -43,7 +44,6 @@ export default async function drawAndStorePreview(
   }
   try {
     await storage.put(previewKey(input.id), drawing.webp, PREVIEW_CONTENT_TYPE);
-    return 'drawn';
   } catch (error) {
     if (error instanceof StorageError) {
       // eslint-disable-next-line no-console -- The kind only: the storage's reply may say more.
@@ -52,4 +52,19 @@ export default async function drawAndStorePreview(
     }
     throw error;
   }
+  if (!drawing.page) {
+    return 'drawn';
+  }
+  // The large page only adds to the preview: without it, the viewer shows the preview.
+  try {
+    await storage.put(pageKey(input.id), drawing.page, PREVIEW_CONTENT_TYPE);
+  } catch (error) {
+    if (error instanceof StorageError) {
+      // eslint-disable-next-line no-console -- The kind only: the storage's reply may say more.
+      console.error('A PDF’s large page could not be stored:', error.failure);
+      return 'drawn';
+    }
+    throw error;
+  }
+  return 'drawn';
 }

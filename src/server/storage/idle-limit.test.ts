@@ -71,4 +71,31 @@ describe('withIdleLimit', () => {
     expect(cancel).toHaveBeenCalledWith('stopped');
     expect(onEnd).toHaveBeenCalledOnce();
   });
+
+  it('lets the source go when the reader stops asking for more', async () => {
+    vi.useFakeTimers();
+    try {
+      const cancelled = vi.fn();
+      const onEnd = vi.fn();
+      const source = new ReadableStream<Uint8Array>({
+        /**
+         * Sends a piece each time it's asked.
+         *
+         * @param controller - The source's controller.
+         */
+        pull(controller) {
+          controller.enqueue(new TextEncoder().encode('piece'));
+        },
+        cancel: cancelled,
+      });
+      const reader = withIdleLimit(source, 1000, onEnd).getReader();
+      await reader.read();
+      // A reader that reads nothing more: a paused video, a client that stalls.
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(onEnd).toHaveBeenCalledOnce();
+      expect(cancelled).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

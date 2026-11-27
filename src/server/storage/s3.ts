@@ -12,11 +12,13 @@ import { createHash } from 'node:crypto';
 
 import { AwsV4Signer } from 'aws4fetch';
 
+import { rangeHeader, resolveRange } from '@/lib/request/byte-range';
 import type { S3StorageConfig } from '@/lib/storage';
 
 import { StorageError, storageErrorOf } from './errors';
 import withIdleLimit from './idle-limit';
 import { assertStorageKey } from './keys';
+import sliceStream from './slice';
 import type { FileStorage } from './types';
 
 /** The time limits, in milliseconds. */
@@ -144,6 +146,17 @@ async function send(request: Promise<Response>): Promise<Response> {
   } catch (error) {
     throw storageErrorOf(error, 'unreachable');
   }
+}
+
+/**
+ * The file's size a `Content-Range` header names, after its slash (`bytes 0-9/1234`).
+ *
+ * @param header - The header.
+ * @returns The size, or `null` when it names none.
+ */
+function totalOf(header: string | null): number | null {
+  const match = /\/(\d+)$/.exec(header ?? '');
+  return match ? Number(match[1]) : null;
 }
 
 /**
@@ -288,6 +301,74 @@ export default function bucketStorage(
         body: withIdleLimit(response.body, timeouts.idle),
         size: Number.isSafeInteger(length) && length >= 0 ? length : null,
       };
+    },
+
+    /**
+     * Reads a part of a file, as the bucket's server reads the range itself;
+     * from a server that sends the whole file instead, the part is cut out.
+     *
+     * @param key - Where.
+     * @param range - The part.
+     * @returns The part, or `null` when the file isn't there.
+     */
+    async getPart(key, range) {
+      const answered = new AbortController();
+      const timer = setTimeout(
+        () => answered.abort(new StorageError('timed_out')),
+        timeouts.firstByte,
+      );
+      let response: Response;
+      try {
+        response = await send(
+          signedFetch(urlOf(key), {
+            method: 'GET',
+            headers: { Range: rangeHeader(range) },
+            signal: answered.signal,
+          }),
+        );
+      } finally {
+        clearTimeout(timer);
+      }
+      if (response.status === 404) {
+        const code = await errorCode(response);
+        if (code === 'NoSuchBucket') {
+          throw new StorageError('not_found');
+        }
+        return null;
+      }
+      if (response.status === 416) {
+        await response.body?.cancel();
+        return { unsatisfiable: true, total: totalOf(response.headers.get('content-range')) };
+      }
+      if (!response.ok || !response.body) {
+        throw await replyError(response);
+      }
+      const body = withIdleLimit(response.body, timeouts.idle);
+      if (response.status === 206) {
+        // Only a part that's whole numbers, in order and inside the file is taken as one.
+        const [, start = NaN, end = NaN, total = NaN] = (
+          /^bytes (\d{1,15})-(\d{1,15})\/(\d{1,15})$/.exec(
+            response.headers.get('content-range') ?? '',
+          ) ?? []
+        ).map(Number);
+        if (start <= end && end < total) {
+          return { body, start, end, total };
+        }
+        await body.cancel();
+        throw new StorageError('failed');
+      }
+      // A server that ignored the range sends the whole file, as a 200: the part is cut from it.
+      const length = Number(response.headers.get('content-length'));
+      if (response.status !== 200 || !Number.isSafeInteger(length) || length <= 0) {
+        await body.cancel();
+        throw new StorageError('failed');
+      }
+      const part = resolveRange(range, length);
+      if (!part) {
+        await body.cancel();
+        return { unsatisfiable: true, total: length };
+      }
+      return { body: sliceStream(body, part.start, part.end), ...part, total: length };
     },
 
     /**

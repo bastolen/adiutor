@@ -10,13 +10,13 @@
  * UUID as the database writes one (lowercase), which must end in them.
  */
 const KEY =
-  /^(attachments|previews|checks)\/([0-9a-f]{2})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{10}\2$/;
+  /^(attachments|previews|pages|checks)\/([0-9a-f]{2})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{10}\2$/;
 
 /**
- * The kinds of file: an attachment, its preview, and the file a storage
- * test writes and deletes.
+ * The kinds of file: an attachment, its preview, a PDF's large first page,
+ * and the file a storage test writes and deletes.
  */
-type KeyKind = 'attachments' | 'previews' | 'checks';
+type KeyKind = 'attachments' | 'previews' | 'pages' | 'checks';
 
 /**
  * Makes a key.
@@ -53,6 +53,16 @@ export function attachmentKey(id: string): string {
  */
 export function previewKey(id: string): string {
   return keyOf('previews', id);
+}
+
+/**
+ * Where a PDF's first page is kept, drawn large for the viewer.
+ *
+ * @param id - The attachment's ID.
+ * @returns Its page's key.
+ */
+export function pageKey(id: string): string {
+  return keyOf('pages', id);
 }
 
 /**

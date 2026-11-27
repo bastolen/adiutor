@@ -15,7 +15,7 @@ import { and, asc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { requestAttachment } from '@/db/schema';
 
-import { attachmentKey, type FileStorage, previewKey } from '../../storage';
+import { attachmentKey, type FileStorage, pageKey, previewKey } from '../../storage';
 import { defineRecurringJob } from '../define';
 
 /** How many rows are read at a time. */
@@ -44,7 +44,7 @@ const REMOVED_KEPT = and(
 );
 
 /**
- * Deletes a file and its preview, on the job's connection.
+ * Deletes a file, its preview and a PDF's large page, on the job's connection.
  *
  * @param storage - The storage, in the job's session.
  * @param id - The attachment.
@@ -52,6 +52,7 @@ const REMOVED_KEPT = and(
 async function deleteFiles(storage: FileStorage, id: string): Promise<void> {
   await storage.delete(attachmentKey(id));
   await storage.delete(previewKey(id));
+  await storage.delete(pageKey(id));
 }
 
 export default defineRecurringJob({

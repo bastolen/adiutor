@@ -1,8 +1,10 @@
 /**
  * @file What every storage driver offers (decision 0044): putting a file
- * under a key, reading it back as a stream, and deleting it. Keys come from
+ * under a key, reading it back as a stream (whole, or a part of it, for a
+ * video that's played), and deleting it. Keys come from
  * `keys.ts` only, never from a name someone typed.
  */
+import type { RangeRequest } from '@/lib/request/byte-range';
 import type { StorageDriver } from '@/lib/storage';
 
 /** A file read back from storage. */
@@ -12,6 +14,25 @@ export interface StoredFile {
   /** Its size in bytes, when the storage says. */
   size: number | null;
 }
+
+/** A part of a file read back from storage, or the file's size when it has none of the part. */
+export type StoredPart =
+  | {
+      /** The part's bytes, as they arrive; cancelling the stream ends the read. */
+      body: ReadableStream<Uint8Array>;
+      /** Its first byte in the file. */
+      start: number;
+      /** Its last byte in the file. */
+      end: number;
+      /** The file's whole size, in bytes. */
+      total: number;
+    }
+  | {
+      /** The file has none of the part asked for (it starts past the end). */
+      unsatisfiable: true;
+      /** The file's whole size, when the storage says. */
+      total: number | null;
+    };
 
 /**
  * A place files are kept. Every call has time limits of its own, and a
@@ -35,6 +56,14 @@ export interface FileStorage {
    * @returns The file, or `null` when nothing is stored under the key.
    */
   get(key: string): Promise<StoredFile | null>;
+  /**
+   * Reads a part of a file, as a video that's played asks for one.
+   *
+   * @param key - Where.
+   * @param range - The part (`parseRange`).
+   * @returns The part, or `null` when nothing is stored under the key.
+   */
+  getPart(key: string, range: RangeRequest): Promise<StoredPart | null>;
   /**
    * Deletes a file; one that isn't there counts as deleted.
    *

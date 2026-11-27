@@ -45,6 +45,8 @@ function servable(hasPreview = true): AttachmentToServe {
     name: 'Café menu.pdf',
     contentType: 'application/pdf',
     readFile: vi.fn(),
+    readFilePart: vi.fn(),
+    readPage: vi.fn(),
     hasPreview,
     readPreview: vi.fn(async () => ({
       body: new Response('RIFF....WEBP').body ?? new ReadableStream(),
@@ -74,7 +76,6 @@ describe('GET /attachments/[id]/preview', () => {
     expect(await response.text()).toBe('RIFF....WEBP');
     expect(Object.fromEntries(response.headers)).toMatchObject({
       'content-type': 'image/webp',
-      'content-length': '12',
       'content-disposition':
         'attachment; filename="Cafe menu.webp"; filename*=UTF-8\'\'Caf%C3%A9%20menu.webp',
       'x-content-type-options': 'nosniff',

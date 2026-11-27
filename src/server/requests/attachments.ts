@@ -18,6 +18,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { requestAttachment, requestEntry } from '@/db/schema';
 import { getInternalRequestPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
+import type { RangeRequest } from '@/lib/request/byte-range';
 import {
   type AttachmentPreviewKind,
   type AttachmentPreviewState,
@@ -42,9 +43,11 @@ import {
   attachmentKey,
   attachmentLimitMb,
   type FileStorage,
+  pageKey,
   previewKey,
   StorageError,
   type StoredFile,
+  type StoredPart,
 } from '../storage';
 import { getRequestAccess } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
@@ -334,6 +337,14 @@ export interface AttachmentToServe {
    * @throws {StorageError} When the storage fails (not when the file is merely missing).
    */
   readFile(): Promise<StoredFile | null>;
+  /**
+   * Reads a part of its bytes, as a video that's played asks for one.
+   *
+   * @param range - The part.
+   * @returns The part, or `null` when the storage has none under its key.
+   * @throws {StorageError} When the storage fails.
+   */
+  readFilePart(range: RangeRequest): Promise<StoredPart | null>;
   /** Whether it has a preview (decision 0057). */
   hasPreview: boolean;
   /**
@@ -343,6 +354,13 @@ export interface AttachmentToServe {
    * @throws {StorageError} When the storage fails (not when the preview is merely missing).
    */
   readPreview(): Promise<StoredFile | null>;
+  /**
+   * Reads a PDF's first page, drawn large for the viewer, only once it's needed.
+   *
+   * @returns The page, or `null` when the storage has none under its key.
+   * @throws {StorageError} When the storage fails.
+   */
+  readPage(): Promise<StoredFile | null>;
 }
 
 /**
@@ -405,13 +423,14 @@ export async function loadAttachment(
    * Reads one of the file's keys from the storage.
    *
    * @param key - The file's key, or its preview's.
-   * @param missing - What the log says when the storage has nothing there.
+   * @param missing - What the log says when the storage has nothing there, or `null` for
+   *   something that may well be missing (a PDF's page drawn before pages were).
    * @returns What's stored there, or `null` when nothing is (or no storage is chosen).
    */
-  const read = async (key: string, missing: string): Promise<StoredFile | null> => {
+  const read = async (key: string, missing: string | null): Promise<StoredFile | null> => {
     const storage = ctx.storage ? await ctx.storage() : null;
     const file = storage ? await storage.get(key) : null;
-    if (!file) {
+    if (!file && missing) {
       // A row without its file: a storage that changed, or files not backed up with the database.
       // eslint-disable-next-line no-console -- The ID only: it names no one.
       console.warn(missing, parsed.data);
@@ -429,18 +448,39 @@ export async function loadAttachment(
      */
     readFile: () => read(attachmentKey(parsed.data), 'An attachment has no file in the storage:'),
     /**
+     * Reads a part of the file's bytes from the storage.
+     *
+     * @param range - The part.
+     * @returns The part, or `null` when the storage has none (or none is chosen).
+     */
+    readFilePart: async (range) => {
+      const storage = ctx.storage ? await ctx.storage() : null;
+      const part = storage ? await storage.getPart(attachmentKey(parsed.data), range) : null;
+      if (!part) {
+        // eslint-disable-next-line no-console -- The ID only: it names no one.
+        console.warn('An attachment has no file in the storage:', parsed.data);
+      }
+      return part;
+    },
+    /**
      * Reads the preview's bytes from the storage.
      *
      * @returns The preview, or `null` when the storage has none.
      */
     readPreview: () =>
       read(previewKey(parsed.data), 'An attachment’s preview has no file in the storage:'),
+    /**
+     * Reads a PDF's large first page from the storage.
+     *
+     * @returns The page, or `null` when the storage has none (a PDF drawn before pages were).
+     */
+    readPage: () => read(pageKey(parsed.data), null),
   };
 }
 
 /**
- * Deletes a removed file's bytes and its preview, and notes that they're
- * gone. A storage that fails leaves them for the `attachment-files` job,
+ * Deletes a removed file's bytes, its preview and a PDF's large page, and
+ * notes that they're gone. A storage that fails leaves them for the `attachment-files` job,
  * which tries again.
  *
  * @param ctx - Service context.
@@ -455,6 +495,7 @@ async function deleteRemovedFile(ctx: ServiceContext, id: string): Promise<void>
     await storage.session(async (shared) => {
       await shared.delete(attachmentKey(id));
       await shared.delete(previewKey(id));
+      await shared.delete(pageKey(id));
     });
     await ctx.db
       .update(requestAttachment)

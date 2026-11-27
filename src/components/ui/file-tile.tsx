@@ -2,8 +2,10 @@
  * @file A file as a tile (an attachment, or a file waiting to be sent): a
  * thumbnail for an image, or an icon for its kind, its name and a line under
  * it (its size, how far an upload is, what went wrong), and room for actions
- * in a corner. Given a link, the whole tile is that link (to download it),
- * with the actions above it. Presentational: its text comes from its caller.
+ * in a corner. Given a link, the whole tile is that link (to download it);
+ * given `onOpen`, the whole tile is a button that opens the file (in a
+ * viewer); either way the actions sit above it. Presentational: its text
+ * comes from its caller.
  */
 'use client';
 
@@ -37,6 +39,12 @@ interface FileTileProps {
   href?: string;
   /** The link's name for screen readers, which must hold the name, e.g. "Download error.png, 240 kB". */
   linkLabel?: string;
+  /** Opens the file (in a viewer): the whole tile is a button that does, instead of a link. */
+  onOpen?: () => void;
+  /** The open button's name for screen readers, which must hold the name, e.g. "Open error.png, 240 kB". */
+  openLabel?: string;
+  /** The open button's `id`, so focus can come back to it (when the viewer closes). */
+  openId?: string;
   /** Buttons in the tile's top corner, e.g. Remove, above the link. */
   actions?: ReactNode;
   /** Whether it's shown as one that's gone (dashed, without a thumbnail). */
@@ -59,6 +67,9 @@ interface FileTileProps {
  * @param props.playMark - Whether the thumbnail is a video's frame.
  * @param props.href - Where the tile links to.
  * @param props.linkLabel - The link's name for screen readers.
+ * @param props.onOpen - Opens the file; the tile is a button that does.
+ * @param props.openLabel - The open button's name for screen readers.
+ * @param props.openId - The open button's `id`.
  * @param props.actions - Buttons in the tile's top corner.
  * @param props.gone - Whether it's shown as one that's gone.
  * @param props.children - More under the line.
@@ -72,6 +83,9 @@ export default function FileTile({
   playMark = false,
   href = undefined,
   linkLabel = undefined,
+  onOpen = undefined,
+  openLabel = undefined,
+  openId = undefined,
   actions = null,
   gone = false,
   children = null,
@@ -85,8 +99,8 @@ export default function FileTile({
       className={cn(
         'relative flex h-full flex-col overflow-hidden rounded-lg border bg-surface transition-colors',
         gone ? 'border-dashed border-border' : 'border-border',
-        href &&
-          'hover:border-muted-foreground has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring',
+        (href || onOpen) &&
+          'hover:border-muted-foreground has-[[data-tile-action]:focus-visible]:outline-2 has-[[data-tile-action]:focus-visible]:outline-offset-2 has-[[data-tile-action]:focus-visible]:outline-ring',
       )}
     >
       <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
@@ -117,9 +131,26 @@ export default function FileTile({
         )}
       </div>
       <div className="flex flex-col gap-0.5 p-2">
-        {href ? (
+        {/* eslint-disable-next-line no-nested-ternary -- three kinds of tile: opens, links, or neither */}
+        {onOpen ? (
+          <button
+            type="button"
+            id={openId}
+            data-tile-action=""
+            aria-label={openLabel}
+            onClick={onOpen}
+            className={cn(
+              nameClass,
+              // The whole tile is the button.
+              'cursor-pointer text-left after:absolute after:inset-0 hover:underline focus-visible:outline-none',
+            )}
+          >
+            {name}
+          </button>
+        ) : href ? (
           <a
             href={href}
+            data-tile-action=""
             aria-label={linkLabel}
             className={cn(
               nameClass,

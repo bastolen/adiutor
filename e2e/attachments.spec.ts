@@ -3,6 +3,7 @@
  * attached while writing (by the Attach button, a drop and a paste, checked
  * in the browser and uploaded at once) and sent with a reply, a note or a
  * new request; and the files of a request's texts, shown under each text
+ * and opened in a viewer (decision 0058),
  * with a preview for an image, a PDF and a video (decision 0057: drawn on
  * the server, or for a video from a frame the uploader's browser drew; never
  * the original) and downloaded under their names, a note's files for the staff
@@ -207,6 +208,38 @@ test('a company reads the files of a request’s texts and downloads them, never
   }
 });
 
+test('a company opens a request’s files in the viewer, steps through them and downloads one', async ({
+  page,
+  context,
+}) => {
+  const { number } = await requestWithFiles('Files to look at in the viewer');
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  await page.getByRole('button', { name: /^Open error\.png/ }).click();
+  const image = page.getByRole('dialog', { name: 'error.png' });
+  // The description's screenshot and the reply's log: the note's file isn't the company's.
+  await expect(image).toContainText('1 of 2');
+  await expect(image.getByRole('img', { name: 'error.png' })).toHaveAttribute(
+    'src',
+    /^\/attachments\/[0-9a-f-]+$/,
+  );
+  await expect(image.getByRole('img', { name: 'error.png' })).toHaveJSProperty('naturalWidth', 1);
+
+  await page.keyboard.press('ArrowRight');
+  const log = page.getByRole('dialog', { name: 'printer.log' });
+  await expect(log).toContainText('2 of 2');
+  // A log shows its text, read as a part of the file.
+  await expect(log.getByLabel('printer.log, as text')).toHaveText('printer offline');
+  const download = page.waitForEvent('download');
+  await log.getByRole('link', { name: 'Download' }).click();
+  expect((await download).suggestedFilename()).toBe('printer.log');
+
+  await page.keyboard.press('Escape');
+  await expect(log).toBeHidden();
+  await expect(page.getByRole('button', { name: /^Open printer\.log/ })).toBeFocused();
+});
+
 test('the staff read an internal note’s files too', async ({ page, context }) => {
   const { number, noteFile } = await requestWithFiles('Files the staff read');
   await context.addCookies(adminCookies());
@@ -369,6 +402,19 @@ test('a screen recording shows a frame the uploader’s browser drew, with a pla
   );
   await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 320);
   await expect(sent.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
+
+  // In the viewer it plays, asked for a part at a time.
+  const href = (await recording.getAttribute('href')) ?? '';
+  const part = page.waitForResponse(
+    (response) => response.url().endsWith(href) && response.status() === 206,
+  );
+  await sent.getByRole('button', { name: /^Open demo\.webm/ }).click();
+  const video = page.getByRole('dialog', { name: 'demo.webm' }).getByLabel('demo.webm');
+  await expect(video).toHaveAttribute('src', href);
+  expect((await part).headers()['content-range']).toMatch(/^bytes 0-\d+\/\d+$/);
+  await expect
+    .poll(() => video.evaluate((element) => (element as HTMLVideoElement).readyState))
+    .toBeGreaterThan(0);
 });
 
 test('the staff attach a file to an internal note', async ({ page, context }) => {

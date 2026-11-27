@@ -20,9 +20,11 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
   what the request pages share (the list, the board, the badges, the text, the people, the files
-  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`) in
+  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`, and the
+  viewer they open in, `attachment-viewer.tsx`) in
   `src/app/(app)/_requests/`. Files are uploaded to `src/app/api/attachments/` and downloaded from
-  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/`. The logo and the
+  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/` and a
+  PDF's large first page from `src/app/attachments/[id]/page/`. The logo and the
   browser tab icon made from the brand are served to anyone from `src/app/branding/` (`logo/`,
   `icon/`, and `favicon/`, where `/favicon.ico` is rewritten). A
   company's pages, a user's page, Settings, the Logs and the account pages have a `layout.tsx` with their header and tabs (see
@@ -124,7 +126,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
     request configuration, the translator for code outside React, and the providers that pass
     messages to client components (see [Languages](i18n.md)).
   - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header,
-    and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
+    the part of a file a request asks for (`byte-range.ts`), and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
     Continue, `own-page-post.ts`): HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
     values, the rules of working on one, the board's lanes, their numbers, their text, the kinds

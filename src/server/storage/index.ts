@@ -8,7 +8,7 @@
  */
 export { activeStorage, storageFor } from './active';
 export { STORAGE_FAILURES, StorageError, type StorageFailure } from './errors';
-export { attachmentKey, checkKey, previewKey } from './keys';
+export { attachmentKey, checkKey, pageKey, previewKey } from './keys';
 export { openStorage, sealStorage } from './secrets';
 export {
   type AttachmentEnvironment,
@@ -21,4 +21,4 @@ export {
   setUpStorage,
 } from './settings';
 export { hostKeyFingerprint } from './sftp';
-export type { FileStorage, StoredFile } from './types';
+export type { FileStorage, StoredFile, StoredPart } from './types';

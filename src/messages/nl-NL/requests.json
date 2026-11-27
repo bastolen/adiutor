@@ -300,6 +300,7 @@
     "attachments": {
       "label": "{count, plural, one {# bijlage} other {# bijlagen}}",
       "download": "{name} downloaden, {size}",
+      "open": "{name} openen, {size}",
       "attach": "Bestanden toevoegen",
       "hint": "Je kunt bestanden ook neerzetten of plakken: tot {count, number} van hoogstens {maximum, number} MB per stuk.",
       "dropHere": "Laat de bestanden los om ze toe te voegen.",
@@ -321,7 +322,21 @@
       "removeDescription": "Het wordt voor iedereen verwijderd en kan niet worden teruggehaald. Op zijn plek in de tekst staat wie het heeft verwijderd.",
       "removeConfirm": "Bestand verwijderen",
       "removedDone": "{name} verwijderd.",
-      "removedBy": "Verwijderd door {name}"
+      "removedBy": "Verwijderd door {name}",
+      "viewer": {
+        "position": "{position, number} van {count, number}",
+        "previous": "Vorig bestand",
+        "next": "Volgend bestand",
+        "download": "Downloaden",
+        "pdfFirstPage": "De eerste pagina. Download de pdf om alles te lezen.",
+        "notShown": "Dit bestand kan hier niet worden getoond. Download het om het te openen.",
+        "textLabel": "{name}, als tekst",
+        "textLoading": "De tekst wordt geladen…",
+        "textCut": "Je ziet het begin van het bestand. Download het om alles te lezen.",
+        "textFailed": "De tekst kon niet worden geladen. Download het bestand om het te lezen.",
+        "videoFailed": "Deze video kan niet in je browser worden afgespeeld. Download hem om hem te bekijken.",
+        "shown": "{name}: {position, number} van {count, number}"
+      }
     }
   }
 }

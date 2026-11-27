@@ -19,6 +19,7 @@ import {
   storeEntries,
   storeRequest,
   choosePictureOf,
+  storeAttachment,
   storeOwnRequest,
 } from './support/db';
 import {
@@ -2025,4 +2026,43 @@ test('a request’s activity view is chosen with the keyboard, focus staying on 
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menu')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Newest first' })).toBeFocused();
+});
+
+test('the attachment viewer opens, steps and closes with the keyboard alone', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'Files for the keyboard' });
+  for (const name of ['first.log', 'second.log']) {
+    // eslint-disable-next-line no-await-in-loop -- In order, so the page shows them in that order.
+    await storeAttachment(number, {
+      name,
+      contentType: 'text/plain',
+      bytes: new TextEncoder().encode(`${name} says hello`),
+    });
+  }
+  await context.addCookies(adminCookies());
+  await page.goto(`/requests/${number}`);
+  await whenHydrated(page);
+
+  const first = page.getByRole('button', { name: /^Open first\.log/ });
+  await first.focus();
+  await page.keyboard.press('Enter');
+  const viewer = page.getByRole('dialog', { name: 'first.log' });
+  await expect(viewer).toBeVisible();
+  // Focus is in the dialog, and the arrow keys step.
+  await expect(viewer.locator(':focus')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('dialog', { name: 'second.log' })).toBeVisible();
+  // Next waits at the end, still focusable.
+  const next = page.getByRole('button', { name: 'Next file' });
+  await pressUntilFocused(page, 'Tab', next);
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await page.keyboard.press('Enter');
+  await expect(next).toBeFocused();
+
+  // Escape closes it, and focus goes to the tile of the file shown last.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Open second\.log/ })).toBeFocused();
 });

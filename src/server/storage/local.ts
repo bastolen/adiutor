@@ -12,6 +12,8 @@ import { type FileHandle, mkdir, open, rename, rm, stat, writeFile } from 'node:
 import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 
+import { resolveRange } from '@/lib/request/byte-range';
+
 import { StorageError } from './errors';
 import { assertStorageKey } from './keys';
 import type { FileStorage } from './types';
@@ -139,6 +141,43 @@ export default function diskStorage(dir: string): FileStorage {
         // The stream closes the handle when it ends or is cancelled.
         const body = Readable.toWeb(handle.createReadStream()) as ReadableStream<Uint8Array>;
         return { body, size };
+      } catch (error) {
+        await handle.close().catch(() => {});
+        throw diskError(error);
+      }
+    },
+
+    /**
+     * Reads a part of a file, in a folder with the marker.
+     *
+     * @param key - Where.
+     * @param range - The part.
+     * @returns The part, or `null` when the file isn't there.
+     */
+    async getPart(key, range) {
+      const path = pathOf(key);
+      await assertMarked();
+      let handle: FileHandle;
+      try {
+        handle = await open(path, 'r');
+      } catch (error) {
+        if (isMissing(error)) {
+          return null;
+        }
+        throw diskError(error);
+      }
+      try {
+        const { size } = await handle.stat();
+        const part = resolveRange(range, size);
+        if (!part) {
+          await handle.close();
+          return { unsatisfiable: true, total: size };
+        }
+        // The stream closes the handle when it ends or is cancelled.
+        const body = Readable.toWeb(
+          handle.createReadStream({ start: part.start, end: part.end }),
+        ) as ReadableStream<Uint8Array>;
+        return { body, ...part, total: size };
       } catch (error) {
         await handle.close().catch(() => {});
         throw diskError(error);

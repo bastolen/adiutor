@@ -11,8 +11,11 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type { RangeRequest } from '@/lib/request/byte-range';
+
 import { attachmentKey } from './keys';
 import diskStorage, { MARKER_FILE } from './local';
+import type { FileStorage } from './types';
 
 /** An ID as the database makes one. */
 const ID = '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a';
@@ -39,6 +42,35 @@ async function textOf(body: ReadableStream<Uint8Array>): Promise<string> {
   return new Response(body).text();
 }
 
+/**
+ * Reads a part of a stored file as text, or says why there's none.
+ *
+ * @param storage - The storage.
+ * @param key - The file's key.
+ * @param range - The part.
+ * @returns The part's text and place, `unsatisfiable` with the size, or `null`.
+ */
+async function partOf(
+  storage: FileStorage,
+  key: string,
+  range: RangeRequest,
+): Promise<
+  | { text: string; start: number; end: number; total: number }
+  | { unsatisfiable: true; total: number | null }
+  | null
+> {
+  const part = await storage.getPart(key, range);
+  if (!part || 'unsatisfiable' in part) {
+    return part;
+  }
+  return {
+    text: await new Response(part.body).text(),
+    start: part.start,
+    end: part.end,
+    total: part.total,
+  };
+}
+
 describe('diskStorage', () => {
   it('marks the folder when it’s set up, then stores a file at its key and reads it back', async () => {
     const storage = diskStorage(dir);
@@ -56,6 +88,37 @@ describe('diskStorage', () => {
     const file = await storage.get(attachmentKey(ID));
     expect(file?.size).toBe(11);
     expect(file && (await textOf(file.body))).toBe('printer log');
+  });
+
+  it('reads a part of a file, from a byte to a byte, to the end or its last bytes', async () => {
+    const storage = diskStorage(dir);
+    await storage.setUp();
+    const key = attachmentKey(ID);
+    await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
+
+    expect(await partOf(storage, key, { start: 2, end: 5 })).toEqual({
+      text: 'inte',
+      start: 2,
+      end: 5,
+      total: 11,
+    });
+    expect(await partOf(storage, key, { start: 8, end: null })).toMatchObject({
+      text: 'log',
+      end: 10,
+    });
+    expect(await partOf(storage, key, { suffix: 3 })).toMatchObject({ text: 'log', start: 8 });
+    expect(await partOf(storage, key, { start: 0, end: 999 })).toMatchObject({
+      text: 'printer log',
+    });
+    expect(await partOf(storage, key, { start: 11, end: null })).toMatchObject({
+      unsatisfiable: true,
+    });
+    expect(
+      await storage.getPart(attachmentKey('0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3b'), {
+        start: 0,
+        end: null,
+      }),
+    ).toBeNull();
   });
 
   it('says a missing file is missing, and deletes one that is gone without a fuss', async () => {

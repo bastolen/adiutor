@@ -76,6 +76,7 @@ import {
 } from '@/server/requests';
 
 import AttachmentList, { attachedCount } from '../../_requests/attachment-list';
+import AttachmentViewer, { type ViewableFile } from '../../_requests/attachment-viewer';
 import InternalLabel from '../../_requests/internal-label';
 import RaisedForNote from '../../_requests/raised-for-note';
 import PersonLine, {
@@ -307,231 +308,242 @@ async function RequestContent({
     />
   );
 
+  // Every file the reader can see, in the page's order, for the viewer to step through.
+  const viewable: ViewableFile[] = [
+    detail.description.attachments,
+    ...detail.entries.map((shownEntry) => shownEntry.body?.attachments),
+  ]
+    .flatMap((attachments) => attachments ?? [])
+    .filter((attachment) => attachment.removed === null)
+    .map(({ id, name, size, preview }) => ({ id, name, size, preview }));
+
   return (
     <ClientMessages namespaces={['requests']}>
-      <PageHeader
-        title={<span className="wrap-anywhere">{detail.title}</span>}
-        description={
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono">{formatRequestNumber(detail.prefix, detail.number)}</span>
-            <span aria-hidden="true">·</span>
-            {detail.company ? (
-              <TextLink standalone href={`/companies/${detail.company.slug}`}>
-                {detail.company.name}
-              </TextLink>
-            ) : (
-              <InternalLabel />
-            )}
-          </span>
-        }
-        back={{ href: '/requests', label: t('back') }}
-      />
+      <AttachmentViewer files={viewable}>
+        <PageHeader
+          title={<span className="wrap-anywhere">{detail.title}</span>}
+          description={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-mono">{formatRequestNumber(detail.prefix, detail.number)}</span>
+              <span aria-hidden="true">·</span>
+              {detail.company ? (
+                <TextLink standalone href={`/companies/${detail.company.slug}`}>
+                  {detail.company.name}
+                </TextLink>
+              ) : (
+                <InternalLabel />
+              )}
+            </span>
+          }
+          back={{ href: '/requests', label: t('back') }}
+        />
 
-      {/* Set by the redirect after the request was raised; not part of any link on this page. */}
-      {searchParam(query.raised) === '1' && (
-        <ToastOnArrival message={t('justRaised')} param="raised" />
-      )}
+        {/* Set by the redirect after the request was raised; not part of any link on this page. */}
+        {searchParam(query.raised) === '1' && (
+          <ToastOnArrival message={t('justRaised')} param="raised" />
+        )}
 
-      {detail.company?.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
+        {detail.company?.deactivated && <Alert tone="info">{t('deactivated')}</Alert>}
 
-      {/* On a wide screen the details stand next to the description and the conversation; on a
+        {/* On a wide screen the details stand next to the description and the conversation; on a
           narrower one they come between the two, in the order they're read. */}
-      {/* The first row is as tall as the description; what the details need beyond it goes to
+        {/* The first row is as tall as the description; what the details need beyond it goes to
           the second, so no gap opens between the description and the conversation. */}
-      <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:grid-rows-[auto_1fr] xl:items-start">
-        <div className="xl:col-start-1 xl:row-start-1">
-          {/* Its anchor is where an email about a mention in the description links to. */}
-          <Card id={DESCRIPTION_ANCHOR} title={t('description')}>
-            {/* Who asked and when, then what they asked, across the card's full width. */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <PersonAvatar person={detail.raisedBy} names={names} />
-                <PersonLine person={detail.raisedBy} names={names}>
-                  <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
-                    <RelativeTime date={detail.createdAt} />
-                    {detail.raisedOnBehalf && (
-                      <RaisedForNote
-                        staff={detail.raisedOnBehalf}
-                        person={detail.raisedBy}
+        <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:grid-rows-[auto_1fr] xl:items-start">
+          <div className="xl:col-start-1 xl:row-start-1">
+            {/* Its anchor is where an email about a mention in the description links to. */}
+            <Card id={DESCRIPTION_ANCHOR} title={t('description')}>
+              {/* Who asked and when, then what they asked, across the card's full width. */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <PersonAvatar person={detail.raisedBy} names={names} />
+                  <PersonLine person={detail.raisedBy} names={names}>
+                    <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
+                      <RelativeTime date={detail.createdAt} />
+                      {detail.raisedOnBehalf && (
+                        <RaisedForNote
+                          staff={detail.raisedOnBehalf}
+                          person={detail.raisedBy}
+                          names={names}
+                        />
+                      )}
+                      <SignedInAsMark
+                        mark={detail.raisedSignedInAs}
+                        author={detail.raisedOnBehalf ?? detail.raisedBy}
                         names={names}
                       />
-                    )}
-                    <SignedInAsMark
-                      mark={detail.raisedSignedInAs}
-                      author={detail.raisedOnBehalf ?? detail.raisedBy}
-                      names={names}
-                    />
-                    <EditedNote
-                      text={detail.description}
-                      id="description"
-                      source={descriptionSource}
-                      names={names}
-                      staffOnly={internal}
-                    />
-                  </span>
-                </PersonLine>
-              </div>
-              {detail.description.edit ? (
-                <EditableText
-                  request={detail.number}
-                  entry={null}
-                  edit={detail.description.edit}
-                  staffOnly={internal}
-                  attaching={attaching}
-                  attached={attachedCount(detail.description.attachments)}
-                >
-                  {descriptionText}
-                </EditableText>
-              ) : (
-                descriptionText
-              )}
-              <AttachmentList
-                attachments={detail.description.attachments}
-                names={names}
-                removal={removal}
-              />
-            </div>
-          </Card>
-        </div>
-
-        <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
-          <RequestDetails
-            detail={detail}
-            statusControl={
-              manages ? (
-                <StatusSelect
-                  request={detail.number}
-                  status={detail.status}
-                  // The status it has and the ones the staff may move it to: waiting for
-                  // approval comes only with "Send as solution", so the select only shows it
-                  // while the request has it.
-                  options={REQUEST_STATUSES.filter(
-                    (status) =>
-                      status === detail.status ||
-                      mayChangeStatus(detail.permissions, detail.status, status),
-                  ).map((status) => ({
-                    value: status,
-                    label: tRequests('status', { status, audience: detail.audience }),
-                  }))}
-                />
-              ) : null
-            }
-            assigneeControls={
-              manages && (
-                <>
-                  {!detail.assignees.some(({ isViewer }) => isViewer) && (
-                    <RowAction
-                      action={changeAssigneesAction}
-                      allowedWhileSignedInAs
-                      fields={{ ...fields, add: actor.id }}
-                      label={tRequests('controls.assignToMe')}
-                      doneMessage={tRequests('saved.assignedYou')}
-                    />
-                  )}
-                  <ChangeAssignees
+                      <EditedNote
+                        text={detail.description}
+                        id="description"
+                        source={descriptionSource}
+                        names={names}
+                        staffOnly={internal}
+                      />
+                    </span>
+                  </PersonLine>
+                </div>
+                {detail.description.edit ? (
+                  <EditableText
                     request={detail.number}
-                    choices={assigneeChoices}
-                    assigned={assigned}
-                    internal={internal}
-                  />
-                </>
-              )
-            }
-            subscriberControls={
-              !detail.company?.deactivated && (
-                <>
-                  {/* Someone it's assigned to follows it as that. One button that stays where it
-                      is, so the keyboard keeps its place when its text changes. */}
-                  {!detail.assignees.some(({ isViewer }) => isViewer) && (
-                    <RowAction
-                      action={changeSubscriptionAction}
-                      allowedWhileSignedInAs
-                      fields={{ ...fields, subscribe: detail.subscribed ? 'no' : 'yes' }}
-                      label={
-                        detail.subscribed
-                          ? tRequests('controls.unsubscribe')
-                          : tRequests('controls.subscribe')
-                      }
-                    />
-                  )}
-                  {scope !== 'self' && (
-                    <ChangeSubscribers
-                      request={detail.number}
-                      choices={subscriberChoices}
-                      company={names.company}
-                      scope={scope}
-                      internal={internal}
-                    />
-                  )}
-                </>
-              )
-            }
-            controls={
-              (manages || choices.length > 0) && (
-                <>
-                  {manages && detail.priority && (
-                    <EditDetails
-                      request={detail.number}
-                      internal={internal}
-                      details={{
-                        title: detail.title,
-                        type: detail.type,
-                        priority: detail.priority,
-                      }}
-                      types={typeChoices}
-                    />
-                  )}
-                  {choices.includes('done') && (
-                    <RowAction
-                      action={changeStatusAction}
-                      allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'done', from: detail.status }}
-                      label={tRequests('controls.markDone')}
-                      variant="primary"
-                    />
-                  )}
-                  {choices.includes('cancelled') && (
-                    <RowAction
-                      action={changeStatusAction}
-                      allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'cancelled', from: detail.status }}
-                      label={tRequests('controls.cancel')}
-                      confirm={{
-                        title: tRequests('controls.cancelTitle'),
-                        description: tRequests('controls.cancelDescription'),
-                        // "Cancel" next to "Cancel request" would say nothing.
-                        cancelLabel: tRequests('controls.keep'),
-                      }}
-                    />
-                  )}
-                  {choices.includes('open') && (
-                    <RowAction
-                      action={changeStatusAction}
-                      allowedWhileSignedInAs
-                      fields={{ ...fields, status: 'open', from: detail.status }}
-                      label={tRequests('controls.reopen')}
-                    />
-                  )}
-                </>
-              )
-            }
-          />
-        </div>
-
-        <div className="xl:col-start-1 xl:row-start-2">
-          <ActivityViewProvider
-            view={detail.activity}
-            offered={offeredActivityGroups(detail.permissions)}
-          >
-            <Card title={t('conversation')} actions={<ActivityControls />}>
-              <div className="flex flex-col gap-6">
-                <ActivityError />
-                {newestFirst ? [writing, thread] : [thread, writing]}
+                    entry={null}
+                    edit={detail.description.edit}
+                    staffOnly={internal}
+                    attaching={attaching}
+                    attached={attachedCount(detail.description.attachments)}
+                  >
+                    {descriptionText}
+                  </EditableText>
+                ) : (
+                  descriptionText
+                )}
+                <AttachmentList
+                  attachments={detail.description.attachments}
+                  names={names}
+                  removal={removal}
+                />
               </div>
             </Card>
-          </ActivityViewProvider>
+          </div>
+
+          <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+            <RequestDetails
+              detail={detail}
+              statusControl={
+                manages ? (
+                  <StatusSelect
+                    request={detail.number}
+                    status={detail.status}
+                    // The status it has and the ones the staff may move it to: waiting for
+                    // approval comes only with "Send as solution", so the select only shows it
+                    // while the request has it.
+                    options={REQUEST_STATUSES.filter(
+                      (status) =>
+                        status === detail.status ||
+                        mayChangeStatus(detail.permissions, detail.status, status),
+                    ).map((status) => ({
+                      value: status,
+                      label: tRequests('status', { status, audience: detail.audience }),
+                    }))}
+                  />
+                ) : null
+              }
+              assigneeControls={
+                manages && (
+                  <>
+                    {!detail.assignees.some(({ isViewer }) => isViewer) && (
+                      <RowAction
+                        action={changeAssigneesAction}
+                        allowedWhileSignedInAs
+                        fields={{ ...fields, add: actor.id }}
+                        label={tRequests('controls.assignToMe')}
+                        doneMessage={tRequests('saved.assignedYou')}
+                      />
+                    )}
+                    <ChangeAssignees
+                      request={detail.number}
+                      choices={assigneeChoices}
+                      assigned={assigned}
+                      internal={internal}
+                    />
+                  </>
+                )
+              }
+              subscriberControls={
+                !detail.company?.deactivated && (
+                  <>
+                    {/* Someone it's assigned to follows it as that. One button that stays where it
+                      is, so the keyboard keeps its place when its text changes. */}
+                    {!detail.assignees.some(({ isViewer }) => isViewer) && (
+                      <RowAction
+                        action={changeSubscriptionAction}
+                        allowedWhileSignedInAs
+                        fields={{ ...fields, subscribe: detail.subscribed ? 'no' : 'yes' }}
+                        label={
+                          detail.subscribed
+                            ? tRequests('controls.unsubscribe')
+                            : tRequests('controls.subscribe')
+                        }
+                      />
+                    )}
+                    {scope !== 'self' && (
+                      <ChangeSubscribers
+                        request={detail.number}
+                        choices={subscriberChoices}
+                        company={names.company}
+                        scope={scope}
+                        internal={internal}
+                      />
+                    )}
+                  </>
+                )
+              }
+              controls={
+                (manages || choices.length > 0) && (
+                  <>
+                    {manages && detail.priority && (
+                      <EditDetails
+                        request={detail.number}
+                        internal={internal}
+                        details={{
+                          title: detail.title,
+                          type: detail.type,
+                          priority: detail.priority,
+                        }}
+                        types={typeChoices}
+                      />
+                    )}
+                    {choices.includes('done') && (
+                      <RowAction
+                        action={changeStatusAction}
+                        allowedWhileSignedInAs
+                        fields={{ ...fields, status: 'done', from: detail.status }}
+                        label={tRequests('controls.markDone')}
+                        variant="primary"
+                      />
+                    )}
+                    {choices.includes('cancelled') && (
+                      <RowAction
+                        action={changeStatusAction}
+                        allowedWhileSignedInAs
+                        fields={{ ...fields, status: 'cancelled', from: detail.status }}
+                        label={tRequests('controls.cancel')}
+                        confirm={{
+                          title: tRequests('controls.cancelTitle'),
+                          description: tRequests('controls.cancelDescription'),
+                          // "Cancel" next to "Cancel request" would say nothing.
+                          cancelLabel: tRequests('controls.keep'),
+                        }}
+                      />
+                    )}
+                    {choices.includes('open') && (
+                      <RowAction
+                        action={changeStatusAction}
+                        allowedWhileSignedInAs
+                        fields={{ ...fields, status: 'open', from: detail.status }}
+                        label={tRequests('controls.reopen')}
+                      />
+                    )}
+                  </>
+                )
+              }
+            />
+          </div>
+
+          <div className="xl:col-start-1 xl:row-start-2">
+            <ActivityViewProvider
+              view={detail.activity}
+              offered={offeredActivityGroups(detail.permissions)}
+            >
+              <Card title={t('conversation')} actions={<ActivityControls />}>
+                <div className="flex flex-col gap-6">
+                  <ActivityError />
+                  {newestFirst ? [writing, thread] : [thread, writing]}
+                </div>
+              </Card>
+            </ActivityViewProvider>
+          </div>
         </div>
-      </div>
+      </AttachmentViewer>
     </ClientMessages>
   );
 }

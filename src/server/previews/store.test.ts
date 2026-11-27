@@ -6,7 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type FileStorage, previewKey, StorageError } from '../storage';
+import { type FileStorage, pageKey, previewKey, StorageError } from '../storage';
 import { drawPreview } from './draw';
 import drawAndStorePreview from './store';
 
@@ -43,12 +43,30 @@ afterEach(() => {
 
 describe('drawAndStorePreview', () => {
   it('stores a drawn preview next to its file', async () => {
-    vi.mocked(drawPreview).mockResolvedValue({ status: 'drawn', webp: WEBP });
+    vi.mocked(drawPreview).mockResolvedValue({ status: 'drawn', webp: WEBP, page: null });
     const put = vi.fn(async () => {});
 
     expect(await drawAndStorePreview(storageWith(put), input)).toBe('drawn');
     expect(put).toHaveBeenCalledExactlyOnceWith(previewKey(ID), WEBP, 'image/webp');
     expect(drawPreview).toHaveBeenCalledWith('image', input.bytes, 'skip');
+  });
+
+  it('stores a PDF’s large page too, and is drawn without it when the storage refuses it', async () => {
+    const page = new Uint8Array([0x57, 0x45, 0x42, 0x50]);
+    vi.mocked(drawPreview).mockResolvedValue({ status: 'drawn', webp: WEBP, page });
+    const put = vi.fn(async () => {});
+    expect(await drawAndStorePreview(storageWith(put), input)).toBe('drawn');
+    expect(put).toHaveBeenCalledWith(pageKey(ID), page, 'image/webp');
+
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const refusingPages = storageWith(async (key) => {
+      if (key === pageKey(ID)) {
+        throw new StorageError('timed_out');
+      }
+    });
+    expect(await drawAndStorePreview(refusingPages, input)).toBe('drawn');
+    expect(error).toHaveBeenCalledWith('A PDF’s large page could not be stored:', 'timed_out');
+    error.mockRestore();
   });
 
   it('gives none for a file it can’t draw, and stores nothing', async () => {
@@ -63,7 +81,7 @@ describe('drawAndStorePreview', () => {
     vi.mocked(drawPreview).mockResolvedValueOnce({ status: 'skipped' });
     expect(await drawAndStorePreview(storageWith(vi.fn()), input)).toBe('skipped');
 
-    vi.mocked(drawPreview).mockResolvedValueOnce({ status: 'drawn', webp: WEBP });
+    vi.mocked(drawPreview).mockResolvedValueOnce({ status: 'drawn', webp: WEBP, page: null });
     const failing = storageWith(async () => {
       throw new StorageError('timed_out');
     });

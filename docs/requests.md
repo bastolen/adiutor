@@ -770,20 +770,37 @@ in [Attachments](deploying.md#attachments).
   refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
   is no longer available. Attach it again."), anyone else's isn't.
 - **On a request's page,** each text shows its files under it (`AttachmentList` in
-  `src/app/(app)/_requests/`, a `FileTile` each): the file's preview, or an icon for its kind, with
-  its name and size. A tile is a link that downloads the file ("Download error.png, 240 kB" to
-  screen readers); nothing opens in the page.
+  `src/app/(app)/_requests/`, a tile each, `ViewableAttachmentTile`): the file's preview, or an
+  icon for its kind, with its name and size. The tile opens the file in the viewer ("Open
+  error.png, 240 kB" to screen readers), and its corner has a Download button ("Download
+  error.png, 240 kB"), beside Remove for the staff who may remove files.
+- **The viewer** ([decision 0058](decisions/0058-files-open-in-a-viewer.md), `AttachmentViewer`
+  around the page, built on `FileViewer` and `Modal`): the file's name, where it is among the
+  page's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
+  and → keys, step through every file the reader can see on the page, in its order (for a file on
+  its own there's neither), and each step is said to screen readers ("notes.odt: 3 of 7"). An image shows
+  as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
+  browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
+  pages were), a text file or log its first 200 KB as text (`attachment-text.ts`: asked for as a
+  part of the file, never through a redirect, UTF-8 or UTF-16, in a region that wraps and scrolls
+  and takes focus, with a note when the file goes on), a video plays (the browser asks for it a part at a time, so it starts at once and
+  seeks; its frame is the poster, and a video the browser can't play says so), an Office file its
+  thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
+  closed again when someone comes back to the page.
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
   `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
   yet). A PNG, JPEG, GIF (its first frame) or WebP image is drawn as it is, a PDF's first page on
   white, and an Office or OpenDocument file from the thumbnail it carries, when it has one (pages
-  show from their top, where the title is). A video's preview is a frame the uploader's browser
+  show from their top, where the title is). A PDF's first page is drawn once at 1,600 pixels, and
+  kept large too (`pageKey`), served from `/attachments/<id>/page` with the file's checks; a PDF
+  drawn before pages were, or whose page is too heavy to draw that large in time (it's drawn again
+  at 480 pixels), has only its preview. A video's preview is a frame the uploader's browser
   drew while it uploaded (`video-frame.ts`), which the picker shows at once and sends before the
   video counts as uploaded (`setVideoFrame`, once per video); its tile has a play mark. Any other
   kind keeps its icon, and so does a file that can't be drawn (a PDF that needs a password, a Word
-  file without a thumbnail, a video the browser can't decode or uploaded before previews). An upload that
-  finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
+  file without a thumbnail, a video the browser can't decode or uploaded before previews). An
+  upload that finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
   and the `attachment-previews` job draws its preview within minutes, as it does for files attached
   before previews existed (see [Background jobs](jobs.md#the-jobs)). The tile loads it from
   `/attachments/<id>/preview`, with the file's checks and caching; never the file itself.

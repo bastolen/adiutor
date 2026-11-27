@@ -4,7 +4,10 @@
  * at a time per process. A PDF still drawing at its time limit stops the
  * worker, which starts again for the next one; so does a PDF that broke
  * PDFium, and every `PDFS_PER_WORKER` PDFs. An idle worker closes after
- * `PDF_WORKER_IDLE_SECONDS`. The pixels are drawn as WebP like an image.
+ * `PDF_WORKER_IDLE_SECONDS`. The page is drawn once at `PAGE_SIZE`, and
+ * both the preview and the large page for the viewer are made from it; a
+ * page too heavy to draw that large in time is drawn again at
+ * `PREVIEW_SIZE`, for its preview alone.
  */
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,6 +18,8 @@ import {
   PDF_LIMITS,
   PDF_WORKER_IDLE_SECONDS,
   type PdfLimits,
+  PAGE_QUALITY,
+  PAGE_SIZE,
   PDFS_PER_WORKER,
   PREVIEW_SIZE,
 } from './limits';
@@ -59,10 +64,13 @@ function stop(worker: PdfWorker): void {
  *
  * @param worker - The worker.
  * @param seconds - The time limit.
- * @returns Its answer, or `null` when it failed, stopped or didn't answer in time (it's stopped
- *   then).
+ * @returns Its answer, `timeout` when it didn't answer in time, or `null` when it failed or
+ *   stopped (it's stopped then, either way).
  */
-async function nextAnswer(worker: PdfWorker, seconds: number): Promise<WorkerAnswer | null> {
+async function nextAnswer(
+  worker: PdfWorker,
+  seconds: number,
+): Promise<WorkerAnswer | 'timeout' | null> {
   const waiting = new AbortController();
   const { signal } = waiting;
   try {
@@ -70,9 +78,9 @@ async function nextAnswer(worker: PdfWorker, seconds: number): Promise<WorkerAns
       // Rejects when the worker fails.
       once(worker.thread, 'message', { signal }).then(([message]) => message as WorkerAnswer),
       once(worker.thread, 'exit', { signal }).then(() => null),
-      delay(seconds * 1000, null, { signal }),
+      delay(seconds * 1000, 'timeout' as const, { signal }),
     ]);
-    if (!answer) {
+    if (answer === null || answer === 'timeout') {
       stop(worker);
     }
     return answer;
@@ -109,7 +117,7 @@ async function startWorker(limits: PdfLimits): Promise<PdfWorker> {
     }
   });
   const answer = await nextAnswer(worker, limits.seconds);
-  if (!answer || !('ready' in answer)) {
+  if (!answer || answer === 'timeout' || !('ready' in answer)) {
     stop(worker);
     throw new Error('PDFium did not start.');
   }
@@ -121,9 +129,14 @@ async function startWorker(limits: PdfLimits): Promise<PdfWorker> {
  *
  * @param bytes - The PDF.
  * @param limits - The limits it's drawn under.
- * @returns Its pixels, or `null` when it can't be drawn.
+ * @param side - The longest side of the drawing, in pixels.
+ * @returns Its pixels, `timeout` when it took too long, or `null` when it can't be drawn.
  */
-async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitmap | null> {
+async function drawInWorker(
+  bytes: Uint8Array,
+  limits: PdfLimits,
+  side: number,
+): Promise<Bitmap | 'timeout' | null> {
   if (idleTimer) {
     clearTimeout(idleTimer);
     idleTimer = null;
@@ -137,8 +150,11 @@ async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitma
   const pending = nextAnswer(worker, limits.seconds);
   // A copy of its own for the worker, handed over rather than copied again.
   const pdf = bytes.slice();
-  worker.thread.postMessage({ pdf, side: PREVIEW_SIZE }, [pdf.buffer]);
+  worker.thread.postMessage({ pdf, side }, [pdf.buffer]);
   const answer = await pending;
+  if (answer === 'timeout') {
+    return 'timeout';
+  }
   if (answer && 'failed' in answer && answer.broken) {
     stop(worker);
   }
@@ -153,21 +169,44 @@ async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitma
   return answer && 'bitmap' in answer ? answer.bitmap : null;
 }
 
+/** A PDF's first page, drawn: its preview, and large for the viewer. */
+export interface DrawnPdf {
+  /** The preview, as WebP inside `PREVIEW_SIZE`. */
+  preview: Uint8Array<ArrayBuffer>;
+  /** The page, as WebP inside `PAGE_SIZE`, or `null` when only the preview could be made. */
+  page: Uint8Array<ArrayBuffer> | null;
+}
+
 /**
- * Draws the preview of a PDF's first page, one PDF at a time per process.
+ * Draws a PDF's first page once, large, and makes its preview from it (or,
+ * when drawing it large takes too long, draws it small for its preview
+ * alone): one PDF at a time per process.
  *
  * @param bytes - The PDF.
  * @param limits - The limits it's drawn under; {@link PDF_LIMITS} by default.
- * @returns The preview as WebP, or `null` when it can't be drawn (a password, broken, past a
- *   limit, too slow).
+ * @returns The preview and the large page, or `null` when it can't be drawn (a password,
+ *   broken, past a limit, too slow).
  * @throws {Error} When PDFium can't be loaded (the server is missing it).
  */
 export default async function drawPdf(
   bytes: Uint8Array,
   limits: PdfLimits = PDF_LIMITS,
-): Promise<Uint8Array<ArrayBuffer> | null> {
-  const mine = turn.then(() => drawInWorker(bytes, limits));
+): Promise<DrawnPdf | null> {
+  const mine = turn.then(async () => {
+    const large = await drawInWorker(bytes, limits, PAGE_SIZE);
+    // A page too heavy to draw large in time may still draw small: it keeps its preview.
+    return large === 'timeout'
+      ? { bitmap: await drawInWorker(bytes, limits, PREVIEW_SIZE), large: false }
+      : { bitmap: large, large: true };
+  });
   turn = mine.catch(() => undefined);
-  const bitmap = await mine;
-  return bitmap ? drawBitmap(bitmap) : null;
+  const { bitmap, large } = await mine;
+  if (!bitmap || bitmap === 'timeout') {
+    return null;
+  }
+  const [preview, page] = await Promise.all([
+    drawBitmap(bitmap),
+    large ? drawBitmap(bitmap, { size: PAGE_SIZE, quality: PAGE_QUALITY }) : null,
+  ]);
+  return preview ? { preview, page } : null;
 }

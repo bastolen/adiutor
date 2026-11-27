@@ -966,6 +966,17 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('list', { name: '4 attachments' })).toBeVisible();
         await expect(page.locator('svg.lucide-play')).toBeVisible();
         await expectAccessible(page);
+
+        // The viewer, open on the PDF, then on the video and the log's text.
+        await page.getByRole('button', { name: /^Open invoice\.pdf/ }).click();
+        await expect(page.getByRole('dialog', { name: 'invoice.pdf' })).toBeVisible();
+        await expectAccessible(page);
+        await page.getByRole('button', { name: 'Next file' }).click();
+        await expect(page.getByRole('dialog', { name: 'demo.webm' })).toBeVisible();
+        await expectAccessible(page);
+        await page.getByRole('button', { name: 'Next file' }).click();
+        await expect(page.getByRole('region', { name: 'printer.log, as text' })).toBeVisible();
+        await expectAccessible(page);
       });
 
       test('a reply with files waiting to be sent, an image among them', async ({ page }) => {

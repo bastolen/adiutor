@@ -243,6 +243,42 @@ describe('bucketStorage', () => {
     expect(await bucketStorage(config).get(attachmentKey(ID.replace(/a$/, 'b')))).toBeNull();
   });
 
+  it('reads a part through the bucket’s own range, and refuses one it can’t trust', async () => {
+    const requests = stubFetch((request) => {
+      const range = request.headers.get('range');
+      if (range === 'bytes=2-5') {
+        return new Response('inte', { status: 206, headers: { 'Content-Range': 'bytes 2-5/11' } });
+      }
+      if (range === 'bytes=8-') {
+        // A server that ignored the range: the whole file.
+        return new Response('printer log', { headers: { 'Content-Length': '11' } });
+      }
+      if (range === 'bytes=20-') {
+        return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */11' } });
+      }
+      // A part whose numbers don't add up.
+      return new Response('x', { status: 206, headers: { 'Content-Range': 'bytes 9-3/11' } });
+    });
+    const storage = bucketStorage(config);
+    const key = attachmentKey(ID);
+
+    const part = await storage.getPart(key, { start: 2, end: 5 });
+    expect(part).toMatchObject({ start: 2, end: 5, total: 11 });
+    expect(requests[0]?.headers.get('range')).toBe('bytes=2-5');
+    // The part is cut out of a whole file a server sent instead.
+    const cut = await storage.getPart(key, { start: 8, end: null });
+    if (!cut || 'unsatisfiable' in cut) {
+      throw new Error('Expected a part.');
+    }
+    expect(cut).toMatchObject({ start: 8, end: 10, total: 11 });
+    expect(await new Response(cut.body).text()).toBe('log');
+    expect(await storage.getPart(key, { start: 20, end: null })).toEqual({
+      unsatisfiable: true,
+      total: 11,
+    });
+    await expect(storage.getPart(key, { suffix: 3 })).rejects.toMatchObject({ failure: 'failed' });
+  });
+
   it('takes a delete of a missing file as done', async () => {
     stubFetch(() => errorReply(404, 'NoSuchKey'));
     await expect(bucketStorage(config).delete(attachmentKey(ID))).resolves.toBeUndefined();

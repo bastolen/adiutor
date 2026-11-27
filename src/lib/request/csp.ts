@@ -87,8 +87,9 @@ export function contentSecurityPolicy(
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
-    // The hidden video a frame is drawn from when one is attached (decision 0057); nothing plays.
-    'media-src blob:',
+    // A video played in the attachments' viewer (decision 0058), from Adiutor itself, and the
+    // hidden one a frame is drawn from when a video is attached (decision 0057).
+    "media-src 'self' blob:",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

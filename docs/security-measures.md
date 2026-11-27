@@ -430,8 +430,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   download under a policy that runs nothing.
 - **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
-  extension kept. A file and its preview are kept under keys made from its ID only
-  (`attachmentKey`, `previewKey`), never its name.
+  extension kept. A file, its preview and a PDF's large page are kept under keys made from its ID
+  only (`attachmentKey`, `previewKey`, `pageKey`), never its name.
 - **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
   the person may write requests anywhere, the name and type, the announced size and the hourly
   limit come first, and the body is read only after them, so a refused upload costs no memory. A
@@ -468,7 +468,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   scan at a time before the time limit can stop it, is drawn only up to 16 megapixels and 100 scans. A PDF's first page is drawn by PDFium, built to WebAssembly without
   JavaScript or XFA, in a worker thread (`draw-pdf.ts`): the module's memory is capped at 256 MiB
   before it's compiled (`lowerMemoryMaximum`), so a PDF that wants more fails inside it; a PDF
-  still drawing after 5 seconds stops the worker, and a password-protected one isn't opened. Its
+  still drawing after 5 seconds stops the worker (drawn large for the viewer first, it's tried once
+  more at 480 pixels, for its preview alone), and a password-protected one isn't opened. Its
   pixels are drawn as WebP like an image. An Office or OpenDocument file's preview is the
   thumbnail it carries, the file's own claim of what it looks like: a zip reader of our own
   (`zip-entry.ts`, on Node's zlib) reads the archive's directory and that one entry only, and
@@ -488,8 +489,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   preview is served at `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's
   caching, as `image/webp` with `nosniff` and as a download, and is deleted with its file.
 - **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
-  have attached (a password in a screenshot), and its bytes and its preview are deleted from the
-  storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
+  have attached (a password in a screenshot), and its bytes, its preview and a PDF's large page are
+  deleted from the storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
   stays as the mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
@@ -498,7 +499,13 @@ A file attached to a request is uploaded on its own first, then sent with its te
   nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
   over a route's own. A tile's preview loads from under the same address
   (`/attachments/<id>/preview`), the same way: an image element shows an image whatever its
-  `Content-Disposition` says, and `img-src 'self'` stays.
+  `Content-Disposition` says, and `img-src 'self'` stays. The viewer ([decision
+  0058](decisions/0058-files-open-in-a-viewer.md)) shows a file the same way, from its own
+  address: an image (or a PDF's large page, `/attachments/<id>/page`) in an `<img>`, and a text
+  file's first 200 KB fetched as a part of it (never through a redirect, and only from a `200` or
+  `206`, so a session that ended shows no sign-in page as its text) and put in the page as text
+  (React escapes it, so markup in it stays text), and a video in a `<video>` that asks for it a part at a time, never in
+  a frame, so nothing a file holds runs, and navigating to the address is still a download.
 - **Kept by the reader's browser, checked every time** ([decision
   0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
 no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
@@ -512,6 +519,19 @@ no-cache` with the ID as `ETag`, since a file's bytes, name and type never chang
   signing out in that browser (it expires, it's signed out from another device, or the account
   deactivates itself) clears nothing: such a copy stays in the browser's cache on disk until the
   browser drops it.
+- **A part at a time, after the same checks** (`storedResponse`, `parseRange`): a file may be asked
+  for a part at a time (`Range: bytes=…`), as a video player does to play and seek. Only one range
+  is read, from a byte to a byte, to the end, or the last few bytes, and only once the checks and
+  the browser's copy (`If-None-Match`) are settled; several ranges, or a copy from before
+  (`If-Range` with another tag), get the whole file. The part is `206` with `Content-Range`, at
+  most 8 MB of it (`MAX_PART_BYTES`: the player asks for the next part), and a part past the end
+  `416`. Each storage reads the part itself (`getPart`), so no more of the file is read than asked
+  for; a bucket's answer is checked (a `206` whose numbers don't add up fails), and from a server
+  that sends the whole file instead, the part is cut out. A `HEAD` request gets the headers alone,
+  without reading the storage (Next.js never reads a `HEAD` answer's body). A storage read ends
+  after 30 seconds without a piece either way: from a storage that stops sending, and for a reader
+  that stops reading (a paused video, a client that stalls on purpose), so nobody holds an SFTP
+  connection or an open file for as long as they like.
 
 ## The logo and the browser tab icon
 
@@ -749,8 +769,9 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). Media load only
-from the page's own `blob:` addresses (`media-src blob:`): the hidden video a frame is drawn from
-when someone attaches one, which never plays. The logos and icons
+from Adiutor itself and the page's own `blob:` addresses (`media-src 'self' blob:`): a video played
+in the attachments' viewer, and the hidden video a frame is drawn from when someone attaches one,
+which never plays. The logos and icons
 the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
 (`IMAGE_FILE_POLICY`, from `next.config.ts`), as do the files it serves (`filePolicyFor`:
 attachments get `FILE_POLICY`, the brand's images `IMAGE_FILE_POLICY`);

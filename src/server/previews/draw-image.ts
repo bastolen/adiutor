@@ -21,6 +21,14 @@ import {
   PREVIEW_SIZE,
 } from './limits';
 
+/** How large, and how sharp, a drawing from pixels is. */
+export interface BitmapDrawing {
+  /** It fits inside a square of this many pixels. */
+  size: number;
+  /** Its WebP quality. */
+  quality: number;
+}
+
 /** The kinds of image a preview is drawn from, by their signatures. */
 const IMAGE_CHECKS: readonly AttachmentCheck[] = ['png', 'jpeg', 'gif', 'webp'];
 
@@ -141,21 +149,26 @@ export default async function drawImage({
 }
 
 /**
- * Draws a preview from pixels drawn elsewhere (a PDF's page), opaque.
+ * Draws a WebP image from pixels drawn elsewhere (a PDF's page), opaque:
+ * its preview, or another size of it.
  *
  * @param bitmap - The pixels.
- * @returns The preview as WebP, or `null` when they don't make an image.
+ * @param drawing - How large and sharp; a preview's by default.
+ * @returns The WebP image, or `null` when they don't make an image.
  * @throws {Error} When sharp itself can't be loaded.
  */
-export async function drawBitmap(bitmap: Bitmap): Promise<Uint8Array<ArrayBuffer> | null> {
+export async function drawBitmap(
+  bitmap: Bitmap,
+  drawing: BitmapDrawing = { size: PREVIEW_SIZE, quality: PREVIEW_QUALITY },
+): Promise<Uint8Array<ArrayBuffer> | null> {
   const { default: sharp } = await loadSharp();
   try {
     const webp = await sharp(bitmap.data, {
       raw: { width: bitmap.width, height: bitmap.height, channels: 4 },
     })
       .removeAlpha()
-      .resize(PREVIEW_SIZE, PREVIEW_SIZE, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: PREVIEW_QUALITY })
+      .resize(drawing.size, drawing.size, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: drawing.quality })
       .timeout({ seconds: IMAGE_LIMITS.seconds })
       .toBuffer();
     return new Uint8Array(webp);
