@@ -6,6 +6,7 @@
       "expired-sign-in-data": "Verwijdert verlopen inloglinks, codes en sessies, beëindigde links uit e-mails over verzoeken, en verlopen limieten op pogingen.",
       "invitation-reminders": "Herinnert mensen eenmalig aan uitnodigingen die ze nog niet hebben geaccepteerd, twee dagen voordat ze verlopen.",
       "attachment-files": "Verwijdert bestanden die zijn geüpload om toe te voegen maar nooit zijn verstuurd, na een dag, en uploads die nooit zijn afgerond.",
+      "attachment-previews": "Maakt de voorbeelden van bijgevoegde bestanden die er nog geen hebben, zoals bestanden die zijn bijgevoegd voordat er voorbeelden waren.",
       "retention": "Verwijdert auditgebeurtenissen na een jaar, fouten na 7 dagen en de geschiedenis van taken en de leveringen aan webhooks na 30 dagen.",
       "security-notice": "Laat mensen weten wanneer er iets aan de beveiliging van hun account verandert.",
       "added-to-company": "Laat mensen weten dat medewerkers ze aan een bedrijf hebben toegevoegd.",
@@ -34,7 +35,9 @@
       "queuedJobs": "{count, plural, one {# taak uit de wachtrij verwijderd} other {# taken uit de wachtrij verwijderd}}",
       "webhookDeliveries": "{count, plural, one {# levering aan een webhook verwijderd} other {# leveringen aan webhooks verwijderd}}",
       "unsentFiles": "{count, plural, one {# niet-verstuurd bestand verwijderd} other {# niet-verstuurde bestanden verwijderd}}",
-      "removedFiles": "{count, plural, one {# verwijderd bestand gewist} other {# verwijderde bestanden gewist}}"
+      "removedFiles": "{count, plural, one {# verwijderd bestand gewist} other {# verwijderde bestanden gewist}}",
+      "previews": "{count, plural, one {# voorbeeld gemaakt} other {# voorbeelden gemaakt}}",
+      "withoutPreview": "{count, plural, one {# bestand zonder voorbeeld} other {# bestanden zonder voorbeeld}}"
     }
   }
 }

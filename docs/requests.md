@@ -781,8 +781,9 @@ in [Attachments](deploying.md#attachments).
   show from their top, where the title is); any other kind keeps its icon, and so does a file that
   can't be drawn (a PDF that needs a password, a Word file without a thumbnail). An upload that
   finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
-  without a preview. The tile loads it from `/attachments/<id>/preview`, with the file's checks and
-  caching; never the file itself.
+  and the `attachment-previews` job draws its preview within minutes, as it does for files attached
+  before previews existed (see [Background jobs](jobs.md#the-jobs)). The tile loads it from
+  `/attachments/<id>/preview`, with the file's checks and caching; never the file itself.
 - **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
   kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
   Someone signed out is sent to sign in and back; a file they may not read is "not found".

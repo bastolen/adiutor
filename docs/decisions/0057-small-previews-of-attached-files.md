@@ -29,8 +29,9 @@ and delete.
   usually in PowerPoint's, rarely in Word's or Excel's), read by a small zip reader of our own with
   hard caps (`zip-entry.ts`) and drawn again like an image; PNG or JPEG only.
 - **Drawn at upload,** from the bytes the upload already holds, at most two at a time per server. A
-  drawing that can't start, or a preview the storage refuses, is left for later; a file that can't
-  be drawn is `none`. A preview never fails the upload.
+  drawing that can't start, or a preview the storage refuses, is left for the `attachment-previews`
+  job, which also draws the files attached before previews existed; a file that can't be drawn is
+  `none`. A preview never fails the upload.
 - **Served from `/attachments/<id>/preview`** with the file's own checks and caching (decision
   0054), as `image/webp`, and a download if it's opened on its own. A tile shows a preview or an
   icon, never the file itself.

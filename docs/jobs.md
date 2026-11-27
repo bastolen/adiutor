@@ -43,6 +43,7 @@ A tick runs every recurring job that's due, one after another, then the queued j
 | `expired-sign-in-data`       | hourly          | Deletes expired sign-in links, codes and sessions, ended links in emails about requests, and finished rate-limit windows                                                               |
 | `invitation-reminders`       | hourly, at :10  | Emails a reminder 48 hours before an invitation expires, soonest first, until its deadline; the rest go next run                                                                       |
 | `attachment-files`           | hourly, at :25  | Purges attached files never sent with a text (after 25 hours, or once the uploader's account is gone) and uploads unfinished after an hour, and deletes removed files the storage kept |
+| `attachment-previews`        | every 5 minutes | Draws the previews of sent files that have none: files attached before previews existed, or whose upload couldn't draw or store one                                                    |
 | `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days                  |
 
 `attachment-files` works on one storage connection a run, deletes each file and its preview before
@@ -52,6 +53,14 @@ so a run that stops halfway leaves nothing behind that the next one can't find, 
 while no storage is chosen, or while its folder isn't set up as Adiutor's (see
 [Attachments](deploying.md#attachments)). It also runs from a jobs
 container, which therefore needs the storage too: the same volume, for local disk.
+
+`attachment-previews` draws each preview as an upload does
+([decision 0057](decisions/0057-small-previews-of-attached-files.md)), newest file first, on one
+storage connection a run. It claims a file before it draws it (marking it as one without a
+preview), so a file that brings the process down is never tried again, and marks it drawn once its
+preview is stored. A storage that fails, or a drawing library that won't load, puts the file back
+and ends the run with a failure that says which, for the next run to try again. Like
+`attachment-files`, it does nothing while no storage is chosen or its folder isn't set up.
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.

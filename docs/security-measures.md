@@ -474,7 +474,9 @@ A file attached to a request is uploaded on its own first, then sent with its te
   refuses more than 10,000 entries, an entry over 2 MB packed or 4 MB unpacked, one that unpacks to
   more than it says or fails its checksum, encryption, zip64 and any packing but stored or deflated;
   the thumbnail is then drawn like an image, PNG or JPEG only. A server draws at most two previews
-  at once (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for later.
+  at once (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for the
+  `attachment-previews` job, which claims each file before it draws it, so a file that brings the
+  process down is never tried again.
   Anything broken, past a limit or too slow keeps its icon, and a preview never fails an upload. The
   preview is served at `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's
   caching, as `image/webp` with `nosniff` and as a download, and is deleted with its file.
