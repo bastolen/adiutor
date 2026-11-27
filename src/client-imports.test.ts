@@ -157,6 +157,11 @@ const RULES: ImportRule[] = [
     instead:
       'files are stored and read on the server only: upload them to `/api/attachments` and link to `/attachments/<id>`.',
   })),
+  ...['src/server/previews', 'sharp', '@embedpdf/pdfium'].map((module) => ({
+    module,
+    instead:
+      'previews are drawn on the server only: show a file’s preview from `/attachments/<id>/preview`.',
+  })),
 ];
 
 /**

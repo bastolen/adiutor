@@ -361,6 +361,7 @@ const FOLDER_MODULES = [
   'server/people/invitations',
   'server/people/invite-links',
   'server/people/user-admin',
+  'server/previews',
   'server/queue',
   'server/requests',
   'server/settings',
@@ -612,7 +613,7 @@ const literalTextPropSyntax = [
 const claudeRulesConfig = [
   {
     name: 'adiutor/claude-rules/provider-ids',
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx,mts}'],
     ignores: [
       ...TEST_FILES,
       'src/lib/sign-in/oauth-providers.ts',
@@ -692,7 +693,7 @@ const claudeRulesConfig = [
      * startup, never from `process.env` directly.
      */
     name: 'adiutor/claude-rules/env',
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx,mts}'],
     ignores: [...TEST_FILES, 'src/lib/env.ts', 'src/lib/env-schema.ts'],
     rules: {
       'no-restricted-properties': [

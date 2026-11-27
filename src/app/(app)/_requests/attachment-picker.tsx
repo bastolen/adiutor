@@ -4,8 +4,10 @@
  * screenshot pasted into it. Each file is checked in the browser (its kind,
  * its size, how many), uploaded at once with its progress shown, and sent
  * with the text as an `attachment` field holding its ID; the file itself
- * never rides along with the form. Its text comes from
- * `requests.attachments` (through `ClientMessages`).
+ * never rides along with the form. An image shows the uploader's own copy,
+ * and a video a frame drawn here, which the server then takes as its
+ * preview (decision 0057). Its text comes from `requests.attachments`
+ * (through `ClientMessages`).
  */
 'use client';
 
@@ -30,6 +32,7 @@ import { maxFileBytes } from '@/lib/storage';
 
 import attachmentIcon from './attachment-icon';
 import uploadAttachment from './upload-attachment';
+import drawVideoFrame from './video-frame';
 
 /** What a form needs to offer attaching: given only while people can attach files. */
 export interface Attaching {
@@ -51,8 +54,10 @@ interface WaitingFile {
   progress: number;
   /** Its ID once it's uploaded, which the form sends. */
   id: string | null;
-  /** A `blob:` address of an image, for its thumbnail. */
+  /** A `blob:` address of an image, or of a video's frame, for its thumbnail. */
   preview: string | null;
+  /** Whether it's a video, whose thumbnail carries a play mark. */
+  video: boolean;
   /** Stops its upload. */
   stop: AbortController;
 }
@@ -154,7 +159,15 @@ export default function AttachmentPicker({
   }, [files]);
 
   // The files waiting for their upload to start, oldest first, and how many uploads run now.
-  const queue = useRef<{ key: string; name: string; file: File; stop: AbortController }[]>([]);
+  const queue = useRef<
+    {
+      key: string;
+      name: string;
+      file: File;
+      stop: AbortController;
+      frame: Promise<Blob | null> | null;
+    }[]
+  >([]);
   const running = useRef(0);
 
   /**
@@ -166,7 +179,7 @@ export default function AttachmentPicker({
     while (running.current < UPLOADS_AT_ONCE && queue.current.length > 0) {
       const next = queue.current.shift();
       if (next && !next.stop.signal.aborted) {
-        const { key, name, file, stop } = next;
+        const { key, name, file, stop, frame } = next;
         running.current += 1;
         update(key, { started: true });
         uploadAttachment(file, {
@@ -181,8 +194,34 @@ export default function AttachmentPicker({
           .then(
             (outcome) => {
               if (outcome.ok) {
-                update(key, { id: outcome.file.id, name: outcome.file.name, progress: 1 });
-                setSaid(t('ready', { name: outcome.file.name }));
+                const { id } = outcome.file;
+                /** Marks the file uploaded, so the form can send it, unless it was taken off. */
+                const ready = () => {
+                  if (stop.signal.aborted) {
+                    return;
+                  }
+                  update(key, { id, name: outcome.file.name, progress: 1 });
+                  setSaid(t('ready', { name: outcome.file.name }));
+                };
+                if (!frame) {
+                  ready();
+                  return;
+                }
+                // A video counts as uploaded once its frame went too: the server takes it only
+                // while no text has the video yet. A frame that isn't taken changes nothing.
+                void frame
+                  .then(async (drawn) => {
+                    if (drawn && !stop.signal.aborted) {
+                      const form = new FormData();
+                      form.set('attachment', id);
+                      form.set('frame', drawn, 'frame.jpg');
+                      // Loaded when a frame is sent: no form that holds the picker loads it before.
+                      const { videoFrameAction } = await import('./video-frame-actions');
+                      await videoFrameAction(form);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(ready);
                 return;
               }
               if (outcome.stopped) {
@@ -236,11 +275,19 @@ export default function AttachmentPicker({
         started: false,
         progress: 0,
         id: null,
-        preview: type?.thumbnail ? URL.createObjectURL(file) : null,
+        preview: type?.preview === 'image' ? URL.createObjectURL(file) : null,
+        video: type?.preview === 'video',
         stop: new AbortController(),
       };
+      // A video's frame is drawn while it uploads, and shown once it's there.
+      const frame = waiting.video ? drawVideoFrame(file) : null;
+      void frame?.then((drawn) => {
+        if (drawn && !waiting.stop.signal.aborted) {
+          update(waiting.key, { preview: URL.createObjectURL(drawn) });
+        }
+      });
       started.push(waiting);
-      queue.current.push({ key: waiting.key, name, file, stop: waiting.stop });
+      queue.current.push({ key: waiting.key, name, file, stop: waiting.stop, frame });
     });
     setRefusal(refused);
     if (started.length > 0) {
@@ -260,6 +307,8 @@ export default function AttachmentPicker({
     const clear = () => {
       queue.current = [];
       current.current.forEach((file) => {
+        // Also keeps a video's frame that comes later from showing.
+        file.stop.abort();
         if (file.preview) {
           URL.revokeObjectURL(file.preview);
         }
@@ -392,6 +441,7 @@ export default function AttachmentPicker({
                   }
                   icon={<Icon aria-hidden="true" />}
                   thumbnail={file.preview ?? undefined}
+                  playMark={file.video}
                   actions={
                     <Button
                       variant="secondary"

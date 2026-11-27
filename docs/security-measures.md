@@ -423,15 +423,15 @@ A file attached to a request is uploaded on its own first, then sent with its te
 - **Only the allow-list** (`ATTACHMENT_TYPES` in `src/lib/requests/attachments.ts`), by extension:
   images, PDF, text, Office and OpenDocument files, archives and screen recordings; never HTML,
   SVG, scripts or programs. **A file's bytes must be what its extension says**
-  (`matchesAttachmentKind` in `src/server/requests/attachment-checks.ts`): each kind's signature,
+  (`matchesAttachmentKind` in `src/lib/requests/attachment-checks.ts`): each kind's signature,
   and for text, valid UTF-8 or UTF-16 throughout without a NUL character, so an HTML page named
   `.png`, or a compiled program named `.txt`, is refused. Text is text whatever it says: a script
   or a page named `.txt` is kept, as `text/plain`, and like every file is only ever served as a
   download under a policy that runs nothing.
 - **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
-  extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its
-  name.
+  extension kept. A file and its preview are kept under keys made from its ID only
+  (`attachmentKey`, `previewKey`), never its name.
 - **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
   the person may write requests anywhere, the name and type, the announced size and the hourly
   limit come first, and the body is read only after them, so a refused upload costs no memory. A
@@ -458,17 +458,47 @@ A file attached to a request is uploaded on its own first, then sent with its te
   only the files its reader may see, the same way, so a company never learns that a note has a
   file. An unsent or removed file, or one the reader may not read, is "not found", by its address
   too.
+- **Previews are drawn from untrusted files, within limits** ([decision
+  0057](decisions/0057-small-previews-of-attached-files.md), `src/server/previews/`): a tile shows a
+  small WebP image drawn on the server, never the file itself. An image reaches the decoder (sharp,
+  libvips) only when its signature says PNG, JPEG, GIF or WebP (`matchesAttachmentKind`), so libvips
+  never sees SVG, TIFF or any other format it reads; it's decoded only up to 50 megapixels, its
+  first frame only, within 5 seconds, with libvips' cache off, and drawn again as WebP without its
+  metadata (no location). A progressive JPEG, which is decoded whole (about 6 bytes a pixel) and a
+  scan at a time before the time limit can stop it, is drawn only up to 16 megapixels and 100 scans. A PDF's first page is drawn by PDFium, built to WebAssembly without
+  JavaScript or XFA, in a worker thread (`draw-pdf.ts`): the module's memory is capped at 256 MiB
+  before it's compiled (`lowerMemoryMaximum`), so a PDF that wants more fails inside it; a PDF
+  still drawing after 5 seconds stops the worker, and a password-protected one isn't opened. Its
+  pixels are drawn as WebP like an image. An Office or OpenDocument file's preview is the
+  thumbnail it carries, the file's own claim of what it looks like: a zip reader of our own
+  (`zip-entry.ts`, on Node's zlib) reads the archive's directory and that one entry only, and
+  refuses more than 10,000 entries, an entry over 2 MB packed or 4 MB unpacked, one that unpacks to
+  more than it says or fails its checksum, encryption, zip64 and any packing but stored or deflated;
+  the thumbnail is then drawn like an image, PNG or JPEG only. A video's preview is a frame its
+  uploader's browser drew, the uploader's own claim too: the server takes one frame per video, only
+  for the uploader's own unsent upload with the same staff member signed in as them, if one was
+  (`setVideoFrame`, under its own rate limit), of at most 512 KB, claiming the video before it
+  draws it so two frames sent at once can't both be taken, and draws it again as a JPEG, PNG or WebP
+  image of at most 4 megapixels. A preview drawn while its file was removed or purged is deleted
+  once it's stored, so no copy of a removed file stays behind. A server draws at most two previews
+  at once (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for the
+  `attachment-previews` job, which claims each file before it draws it, so a file that brings the
+  process down is never tried again.
+  Anything broken, past a limit or too slow keeps its icon, and a preview never fails an upload. The
+  preview is served at `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's
+  caching, as `image/webp` with `nosniff` and as a download, and is deleted with its file.
 - **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
-  have attached (a password in a screenshot), and its bytes are deleted from the storage once
-  that's saved, or by the `attachment-files` job if the storage fails then. The row stays as the
-  mark of who removed it, with no name of whoever uploaded it.
+  have attached (a password in a screenshot), and its bytes and its preview are deleted from the
+  storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
+  stays as the mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
   quotes or backslashes), its type from the allow-list with `nosniff`, and
   `Cross-Origin-Resource-Policy: same-origin`. The proxy gives these paths a fixed policy that runs
   nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
-  over a route's own. Thumbnails load from the same address: an image element shows an image
-  whatever its `Content-Disposition` says, and `img-src 'self'` stays.
+  over a route's own. A tile's preview loads from under the same address
+  (`/attachments/<id>/preview`), the same way: an image element shows an image whatever its
+  `Content-Disposition` says, and `img-src 'self'` stays.
 - **Kept by the reader's browser, checked every time** ([decision
   0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
 no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
@@ -718,7 +748,9 @@ development only), and inline event handlers never do (`script-src-attr 'none'`)
 markup can't run script. Next.js adds the nonce to its own scripts; the root layout reads it
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
-check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
+check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). Media load only
+from the page's own `blob:` addresses (`media-src blob:`): the hidden video a frame is drawn from
+when someone attaches one, which never plays. The logos and icons
 the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
 (`IMAGE_FILE_POLICY`, from `next.config.ts`), as do the files it serves (`filePolicyFor`:
 attachments get `FILE_POLICY`, the brand's images `IMAGE_FILE_POLICY`);

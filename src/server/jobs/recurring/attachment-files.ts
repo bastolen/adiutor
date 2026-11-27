@@ -15,7 +15,7 @@ import { and, asc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { requestAttachment } from '@/db/schema';
 
-import { attachmentKey } from '../../storage';
+import { attachmentKey, type FileStorage, previewKey } from '../../storage';
 import { defineRecurringJob } from '../define';
 
 /** How many rows are read at a time. */
@@ -42,6 +42,17 @@ const REMOVED_KEPT = and(
   isNotNull(requestAttachment.removedAt),
   isNull(requestAttachment.fileDeletedAt),
 );
+
+/**
+ * Deletes a file and its preview, on the job's connection.
+ *
+ * @param storage - The storage, in the job's session.
+ * @param id - The attachment.
+ */
+async function deleteFiles(storage: FileStorage, id: string): Promise<void> {
+  await storage.delete(attachmentKey(id));
+  await storage.delete(previewKey(id));
+}
 
 export default defineRecurringJob({
   name: 'attachment-files',
@@ -83,7 +94,7 @@ export default defineRecurringJob({
           }
           // The file first: a row left behind is found again; a file without one never is.
           // eslint-disable-next-line no-await-in-loop -- one connection, one file at a time
-          await shared.delete(attachmentKey(row.id));
+          await deleteFiles(shared, row.id);
           // Checked again: a text may have claimed it just now (it can't once it's purgeable).
           // eslint-disable-next-line no-await-in-loop -- one row at a time, after its file
           const deleted = await ctx.db
@@ -109,7 +120,7 @@ export default defineRecurringJob({
             break;
           }
           // eslint-disable-next-line no-await-in-loop -- one connection, one file at a time
-          await shared.delete(attachmentKey(row.id));
+          await deleteFiles(shared, row.id);
           // eslint-disable-next-line no-await-in-loop -- one row at a time, after its file
           await ctx.db
             .update(requestAttachment)

@@ -1,10 +1,11 @@
 /**
  * @file The files attached to a request's text (its description, a reply or
  * an internal note), under the text: a tile each, which downloads the file
- * from `/attachments/<id>`, with a thumbnail for an image, and in a removed
- * file's place a tile that says who removed it. The service gives only the
- * files the reader may see (a note's only to the staff). Its text comes from
- * `requests.attachments`.
+ * from `/attachments/<id>`, with its preview when it has one (from
+ * `/attachments/<id>/preview`, decision 0057; a page from its top, a video's
+ * frame with a play mark), and in a removed file's place a tile that says
+ * who removed it. The service gives only the files the reader may see (a
+ * note's only to the staff). Its text comes from `requests.attachments`.
  */
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -12,6 +13,7 @@ import FileTile from '@/components/ui/file-tile';
 import RowAction from '@/components/ui/row-action';
 import type { ActionResult } from '@/lib/action-result';
 import { formatFileSize } from '@/lib/format';
+import { attachmentTypeOf } from '@/lib/requests';
 import type { RequestAttachmentView } from '@/server/requests';
 
 import attachmentIcon from './attachment-icon';
@@ -24,6 +26,18 @@ export interface AttachmentRemoval {
   request: number;
   /** The server action that removes a file (fields `request` and `attachment`). */
   action: (previous: ActionResult | null, formData: FormData) => Promise<ActionResult>;
+}
+
+/**
+ * Whether a file's preview is a page (a PDF's, or an Office file's
+ * thumbnail), which shows from its top.
+ *
+ * @param name - The file's name.
+ * @returns Whether it is.
+ */
+function showsPage(name: string): boolean {
+  const kind = attachmentTypeOf(name)?.preview;
+  return kind === 'pdf' || kind === 'office';
 }
 
 /**
@@ -97,7 +111,10 @@ export default function AttachmentList({
               name={attachment.name}
               detail={size}
               icon={icon}
-              thumbnail={attachment.thumbnail ? href : undefined}
+              thumbnail={attachment.preview ? `${href}/preview` : undefined}
+              // A page shows from its top, where its title is.
+              thumbnailPosition={showsPage(attachment.name) ? 'top' : 'center'}
+              playMark={attachmentTypeOf(attachment.name)?.preview === 'video'}
               href={href}
               linkLabel={t('download', { name: attachment.name, size })}
               actions={

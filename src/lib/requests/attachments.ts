@@ -6,7 +6,7 @@
  * file before it's sent and the server checks it again.
  */
 
-/** How a file's bytes are checked against its extension (`attachment-checks.ts` on the server). */
+/** How a file's bytes are checked against its extension (`attachment-checks.ts`). */
 export type AttachmentCheck =
   | 'png'
   | 'jpeg'
@@ -22,6 +22,24 @@ export type AttachmentCheck =
   | 'mov'
   | 'webm';
 
+/**
+ * How a small preview of a file is made, for its tile: drawn on the server
+ * from an image, from a PDF's first page, or from the thumbnail an Office or
+ * OpenDocument file carries; or, for a video, from a frame the uploader's
+ * browser draws.
+ */
+export type AttachmentPreviewKind = 'image' | 'pdf' | 'office' | 'video';
+
+/**
+ * Where a file's preview stands (`request_attachment.preview`): drawn and
+ * kept next to the file, or tried and impossible (the tile shows the file's
+ * icon). `null` in the column means not drawn yet.
+ */
+export const ATTACHMENT_PREVIEW_STATES = ['drawn', 'none'] as const;
+
+/** Where a file's preview stands. */
+export type AttachmentPreviewState = (typeof ATTACHMENT_PREVIEW_STATES)[number];
+
 /** A type of file that may be attached. */
 export interface AttachmentType {
   /** Its extensions, in lower case, without the dot. */
@@ -30,8 +48,8 @@ export interface AttachmentType {
   contentType: string;
   /** How its bytes are checked. */
   check: AttachmentCheck;
-  /** Whether the page shows it as a thumbnail (an image every browser shows). */
-  thumbnail: boolean;
+  /** How its preview is made, or `null` when it keeps its icon. */
+  preview: AttachmentPreviewKind | null;
 }
 
 /**
@@ -40,60 +58,60 @@ export interface AttachmentType {
  * served as a download, so none of them opens in a page.
  */
 export const ATTACHMENT_TYPES: readonly AttachmentType[] = [
-  { extensions: ['png'], contentType: 'image/png', check: 'png', thumbnail: true },
-  { extensions: ['jpg', 'jpeg'], contentType: 'image/jpeg', check: 'jpeg', thumbnail: true },
-  { extensions: ['gif'], contentType: 'image/gif', check: 'gif', thumbnail: true },
-  { extensions: ['webp'], contentType: 'image/webp', check: 'webp', thumbnail: true },
-  { extensions: ['heic', 'heif'], contentType: 'image/heic', check: 'heic', thumbnail: false },
-  { extensions: ['pdf'], contentType: 'application/pdf', check: 'pdf', thumbnail: false },
+  { extensions: ['png'], contentType: 'image/png', check: 'png', preview: 'image' },
+  { extensions: ['jpg', 'jpeg'], contentType: 'image/jpeg', check: 'jpeg', preview: 'image' },
+  { extensions: ['gif'], contentType: 'image/gif', check: 'gif', preview: 'image' },
+  { extensions: ['webp'], contentType: 'image/webp', check: 'webp', preview: 'image' },
+  { extensions: ['heic', 'heif'], contentType: 'image/heic', check: 'heic', preview: null },
+  { extensions: ['pdf'], contentType: 'application/pdf', check: 'pdf', preview: 'pdf' },
   {
     extensions: ['txt', 'log', 'csv', 'json', 'xml', 'yaml', 'yml', 'md'],
     contentType: 'text/plain',
     check: 'text',
-    thumbnail: false,
+    preview: null,
   },
   {
     extensions: ['docx'],
     contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
   {
     extensions: ['xlsx'],
     contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
   {
     extensions: ['pptx'],
     contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
   {
     extensions: ['odt'],
     contentType: 'application/vnd.oasis.opendocument.text',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
   {
     extensions: ['ods'],
     contentType: 'application/vnd.oasis.opendocument.spreadsheet',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
   {
     extensions: ['odp'],
     contentType: 'application/vnd.oasis.opendocument.presentation',
     check: 'zip',
-    thumbnail: false,
+    preview: 'office',
   },
-  { extensions: ['zip'], contentType: 'application/zip', check: 'zip', thumbnail: false },
-  { extensions: ['7z'], contentType: 'application/x-7z-compressed', check: '7z', thumbnail: false },
-  { extensions: ['gz', 'tgz'], contentType: 'application/gzip', check: 'gzip', thumbnail: false },
-  { extensions: ['mp4', 'm4v'], contentType: 'video/mp4', check: 'mp4', thumbnail: false },
-  { extensions: ['mov'], contentType: 'video/quicktime', check: 'mov', thumbnail: false },
-  { extensions: ['webm'], contentType: 'video/webm', check: 'webm', thumbnail: false },
+  { extensions: ['zip'], contentType: 'application/zip', check: 'zip', preview: null },
+  { extensions: ['7z'], contentType: 'application/x-7z-compressed', check: '7z', preview: null },
+  { extensions: ['gz', 'tgz'], contentType: 'application/gzip', check: 'gzip', preview: null },
+  { extensions: ['mp4', 'm4v'], contentType: 'video/mp4', check: 'mp4', preview: 'video' },
+  { extensions: ['mov'], contentType: 'video/quicktime', check: 'mov', preview: 'video' },
+  { extensions: ['webm'], contentType: 'video/webm', check: 'webm', preview: 'video' },
 ];
 
 /** Every type a file may be stored as, for the column's CHECK constraint. */
@@ -105,6 +123,15 @@ export const ATTACHMENT_CONTENT_TYPES = [
 export const ATTACHMENT_ACCEPT = ATTACHMENT_TYPES.flatMap((type) =>
   type.extensions.map((extension) => `.${extension}`),
 ).join(',');
+
+/**
+ * The longest side of the frame a browser draws of a video it uploads, for
+ * its preview, in pixels (decision 0057).
+ */
+export const VIDEO_FRAME_SIZE = 480;
+
+/** The largest such frame, in bytes: a JPEG of that size is a tenth of it. */
+export const VIDEO_FRAME_MAX_BYTES = 512 * 1024;
 
 /** The most files one text (a description, reply or note) may have, removed ones aside. */
 export const MAX_ATTACHMENTS_PER_TEXT = 10;

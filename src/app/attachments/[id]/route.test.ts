@@ -49,7 +49,13 @@ function servable(
     size: 8,
   })),
 ): AttachmentToServe {
-  return { name: 'Café menu.pdf', contentType: 'application/pdf', readFile };
+  return {
+    name: 'Café menu.pdf',
+    contentType: 'application/pdf',
+    readFile,
+    hasPreview: true,
+    readPreview: vi.fn(),
+  };
 }
 
 beforeEach(() => {

@@ -3,7 +3,8 @@
  * 25 hours, once the uploader's account is gone, and unfinished uploads
  * after an hour; a sent file, or one uploaded lately, stays; the files of
  * removed attachments that are still in storage are deleted; nothing
- * happens without a storage, or in a folder that isn't set up.
+ * happens without a storage, or in a folder that isn't set up. A file's
+ * preview goes with it.
  */
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -24,7 +25,7 @@ import {
   storeAttachment,
   storeRequest,
 } from '../../../../tests/integration/helpers';
-import { attachmentKey, storageFor } from '../../storage';
+import { attachmentKey, previewKey, storageFor } from '../../storage';
 import attachmentFiles from './attachment-files';
 
 const { ctx, db, storage } = setupTestContext();
@@ -77,6 +78,7 @@ describe('attachment-files', () => {
     const old = await storeAttachment(db, storage, {
       uploadedBy: uploader,
       createdAt: minutesAgo(26 * 60),
+      preview: 'drawn',
     });
     const unfinished = await storeAttachment(db, storage, {
       uploadedBy: uploader,
@@ -102,6 +104,7 @@ describe('attachment-files', () => {
 
     expect((await left()).sort()).toEqual([recent, uploading, sent].sort());
     expect(await storage.get(attachmentKey(old))).toBeNull();
+    expect(await storage.get(previewKey(old))).toBeNull();
     expect(await storage.get(attachmentKey(unfinished))).toBeNull();
     expect(await storage.get(attachmentKey(recent))).not.toBeNull();
     expect(await storage.get(attachmentKey(sent))).not.toBeNull();
@@ -117,7 +120,11 @@ describe('attachment-files', () => {
   });
 
   it('deletes the files of removed attachments still in storage, and notes they’re gone', async () => {
-    const removed = await storeAttachment(db, storage, { uploadedBy: uploader, requestId });
+    const removed = await storeAttachment(db, storage, {
+      uploadedBy: uploader,
+      requestId,
+      preview: 'drawn',
+    });
     const deletedAlready = await storeAttachment(db, storage, { uploadedBy: uploader, requestId });
     await db
       .update(requestAttachment)
@@ -131,6 +138,7 @@ describe('attachment-files', () => {
     expect(await run()).toEqual({ summary: { unsentFiles: 0, removedFiles: 1 } });
 
     expect(await storage.get(attachmentKey(removed))).toBeNull();
+    expect(await storage.get(previewKey(removed))).toBeNull();
     const [row] = await db
       .select({ fileDeletedAt: requestAttachment.fileDeletedAt })
       .from(requestAttachment)

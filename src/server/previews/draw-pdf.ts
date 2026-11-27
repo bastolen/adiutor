@@ -1,0 +1,173 @@
+/**
+ * @file Draws the preview of a PDF's first page: PDFium runs in a worker
+ * thread (`pdf-worker.mts`) with its memory capped (`pdf-wasm.ts`), one PDF
+ * at a time per process. A PDF still drawing at its time limit stops the
+ * worker, which starts again for the next one; so does a PDF that broke
+ * PDFium, and every `PDFS_PER_WORKER` PDFs. An idle worker closes after
+ * `PDF_WORKER_IDLE_SECONDS`. The pixels are drawn as WebP like an image.
+ */
+import { once } from 'node:events';
+import { setTimeout as delay } from 'node:timers/promises';
+import { Worker } from 'node:worker_threads';
+
+import { type Bitmap, drawBitmap } from './draw-image';
+import {
+  PDF_LIMITS,
+  PDF_WORKER_IDLE_SECONDS,
+  type PdfLimits,
+  PDFS_PER_WORKER,
+  PREVIEW_SIZE,
+} from './limits';
+import { pdfiumModule } from './pdf-wasm';
+
+/** A worker with PDFium, and how many PDFs it drew. */
+interface PdfWorker {
+  /** The thread. */
+  thread: Worker;
+  /** The memory cap it was started with, in pages. */
+  memoryPages: number;
+  /** How many PDFs it was given. */
+  given: number;
+}
+
+/** What the worker answers. */
+type WorkerAnswer = { ready: true } | { bitmap: Bitmap } | { failed: true; broken?: boolean };
+
+/** The worker, while one runs. */
+let current: PdfWorker | null = null;
+
+/** Closes the worker once it's been idle a while. */
+let idleTimer: NodeJS.Timeout | null = null;
+
+/** The PDF being drawn: the next waits for it. */
+let turn: Promise<unknown> = Promise.resolve();
+
+/**
+ * Stops a worker, and forgets it if it's the one in use.
+ *
+ * @param worker - The worker.
+ */
+function stop(worker: PdfWorker): void {
+  if (current === worker) {
+    current = null;
+  }
+  void worker.thread.terminate();
+}
+
+/**
+ * Waits for the worker's next answer, within a time limit.
+ *
+ * @param worker - The worker.
+ * @param seconds - The time limit.
+ * @returns Its answer, or `null` when it failed, stopped or didn't answer in time (it's stopped
+ *   then).
+ */
+async function nextAnswer(worker: PdfWorker, seconds: number): Promise<WorkerAnswer | null> {
+  const waiting = new AbortController();
+  const { signal } = waiting;
+  try {
+    const answer = await Promise.race([
+      // Rejects when the worker fails.
+      once(worker.thread, 'message', { signal }).then(([message]) => message as WorkerAnswer),
+      once(worker.thread, 'exit', { signal }).then(() => null),
+      delay(seconds * 1000, null, { signal }),
+    ]);
+    if (!answer) {
+      stop(worker);
+    }
+    return answer;
+  } catch {
+    stop(worker);
+    return null;
+  } finally {
+    // Takes back the listeners and the timer.
+    waiting.abort();
+  }
+}
+
+/**
+ * Starts a worker with PDFium.
+ *
+ * @param limits - The limits it runs under.
+ * @returns The worker, once it's ready.
+ * @throws {Error} When PDFium can't be loaded or doesn't start (the server is missing it).
+ */
+async function startWorker(limits: PdfLimits): Promise<PdfWorker> {
+  const wasm = await pdfiumModule(limits.memoryPages);
+  const worker: PdfWorker = {
+    thread: new Worker(new URL('./pdf-worker.mts', import.meta.url), { workerData: { wasm } }),
+    memoryPages: limits.memoryPages,
+    given: 0,
+  };
+  // An idle worker never keeps the process alive (the jobs' command ends when its work does).
+  worker.thread.unref();
+  // A worker that fails or stops between PDFs is simply started again for the next one.
+  worker.thread.on('error', () => stop(worker));
+  worker.thread.on('exit', () => {
+    if (current === worker) {
+      current = null;
+    }
+  });
+  const answer = await nextAnswer(worker, limits.seconds);
+  if (!answer || !('ready' in answer)) {
+    stop(worker);
+    throw new Error('PDFium did not start.');
+  }
+  return worker;
+}
+
+/**
+ * Draws one PDF's first page in the worker, starting one when there's none.
+ *
+ * @param bytes - The PDF.
+ * @param limits - The limits it's drawn under.
+ * @returns Its pixels, or `null` when it can't be drawn.
+ */
+async function drawInWorker(bytes: Uint8Array, limits: PdfLimits): Promise<Bitmap | null> {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+  if (current && current.memoryPages !== limits.memoryPages) {
+    stop(current);
+  }
+  current ??= await startWorker(limits);
+  const worker = current;
+  worker.given += 1;
+  const pending = nextAnswer(worker, limits.seconds);
+  // A copy of its own for the worker, handed over rather than copied again.
+  const pdf = bytes.slice();
+  worker.thread.postMessage({ pdf, side: PREVIEW_SIZE }, [pdf.buffer]);
+  const answer = await pending;
+  if (answer && 'failed' in answer && answer.broken) {
+    stop(worker);
+  }
+  if (current === worker) {
+    if (worker.given >= PDFS_PER_WORKER) {
+      stop(worker);
+    } else {
+      idleTimer = setTimeout(() => stop(worker), PDF_WORKER_IDLE_SECONDS * 1000);
+      idleTimer.unref();
+    }
+  }
+  return answer && 'bitmap' in answer ? answer.bitmap : null;
+}
+
+/**
+ * Draws the preview of a PDF's first page, one PDF at a time per process.
+ *
+ * @param bytes - The PDF.
+ * @param limits - The limits it's drawn under; {@link PDF_LIMITS} by default.
+ * @returns The preview as WebP, or `null` when it can't be drawn (a password, broken, past a
+ *   limit, too slow).
+ * @throws {Error} When PDFium can't be loaded (the server is missing it).
+ */
+export default async function drawPdf(
+  bytes: Uint8Array,
+  limits: PdfLimits = PDF_LIMITS,
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  const mine = turn.then(() => drawInWorker(bytes, limits));
+  turn = mine.catch(() => undefined);
+  const bitmap = await mine;
+  return bitmap ? drawBitmap(bitmap) : null;
+}

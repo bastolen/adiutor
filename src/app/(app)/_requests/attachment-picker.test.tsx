@@ -1,8 +1,10 @@
 /**
  * @file Tests for attaching files while a text is written: files chosen,
  * dropped or pasted are checked in the browser, uploaded with their progress
- * shown, and sent with the form by their IDs; a refused one is said, a
- * removed one stops uploading, and a reset form starts empty.
+ * shown, and sent with the form by their IDs; a video shows a frame drawn
+ * in the browser, which goes to the server before it counts as uploaded; a
+ * refused one is said, a removed one stops uploading, and a reset form
+ * starts empty.
  */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,8 +14,12 @@ import { defined } from '@/lib/defined';
 
 import AttachmentPicker from './attachment-picker';
 import uploadAttachment, { type UploadOutcome } from './upload-attachment';
+import drawVideoFrame from './video-frame';
+import { videoFrameAction } from './video-frame-actions';
 
 vi.mock('./upload-attachment', () => ({ default: vi.fn() }));
+vi.mock('./video-frame', () => ({ default: vi.fn() }));
+vi.mock('./video-frame-actions', () => ({ videoFrameAction: vi.fn(async () => true) }));
 
 /** An upload that's under way, which the test ends. */
 interface PendingUpload {
@@ -54,6 +60,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.mocked(uploadAttachment).mockReset();
+  vi.mocked(drawVideoFrame).mockReset();
+  vi.mocked(videoFrameAction).mockClear();
 });
 
 /**
@@ -163,6 +171,76 @@ describe('AttachmentPicker', () => {
     expect(new FormData(form as HTMLFormElement).getAll('attachment')).toEqual(['attachment-1']);
     expect(screen.getByText('printer.log is ready to send.')).toBeInTheDocument();
     expect(onUploadingChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('shows a video’s frame with a play mark, and sends the frame before the video is ready', async () => {
+    const frame = new Blob(['jpeg'], { type: 'image/jpeg' });
+    vi.mocked(drawVideoFrame).mockResolvedValue(frame);
+    const { form, chooser } = renderPicker();
+
+    const video = new File(['webm'], 'demo.webm', { type: 'video/webm' });
+    choose(chooser, [video]);
+    const waiting = await screen.findByRole('list', { name: '1 file to send' });
+    expect(drawVideoFrame).toHaveBeenCalledWith(video);
+    await waitFor(() =>
+      expect(waiting.querySelector('img')).toHaveAttribute('src', 'blob:preview'),
+    );
+    expect(waiting.querySelector('img')?.previousElementSibling).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-1', name: 'demo.webm', size: 4 },
+    });
+    await screen.findByText('demo.webm is ready to send.');
+    const sent = defined(vi.mocked(videoFrameAction).mock.calls[0]?.[0], 'the frame sent');
+    expect(sent.get('attachment')).toBe('attachment-1');
+    expect(sent.get('frame')).toBeInstanceOf(File);
+    expect(new FormData(form as HTMLFormElement).getAll('attachment')).toEqual(['attachment-1']);
+  });
+
+  it('says nothing of a video taken off while its frame was still drawn', async () => {
+    /** Hands over the frame the browser drew. */
+    let drawn: (frame: Blob | null) => void = () => {};
+    vi.mocked(drawVideoFrame).mockReturnValue(
+      new Promise((resolve) => {
+        drawn = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    const { chooser } = renderPicker();
+
+    choose(chooser, [new File(['webm'], 'demo.webm', { type: 'video/webm' })]);
+    await screen.findByRole('list', { name: '1 file to send' });
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-3', name: 'demo.webm', size: 4 },
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove demo.webm' }));
+    await act(async () => {
+      drawn(new Blob(['jpeg'], { type: 'image/jpeg' }));
+    });
+
+    expect(screen.queryByText('demo.webm is ready to send.')).toBeNull();
+    expect(videoFrameAction).not.toHaveBeenCalled();
+  });
+
+  it('readies a video whose frame can’t be drawn without sending one', async () => {
+    vi.mocked(drawVideoFrame).mockResolvedValue(null);
+    const { chooser } = renderPicker();
+
+    choose(chooser, [new File(['mov'], 'demo.mov', { type: 'video/quicktime' })]);
+    const waiting = await screen.findByRole('list', { name: '1 file to send' });
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-2', name: 'demo.mov', size: 3 },
+    });
+
+    await screen.findByText('demo.mov is ready to send.');
+    expect(videoFrameAction).not.toHaveBeenCalled();
+    expect(waiting.querySelector('img')).toBeNull();
   });
 
   it('refuses in the browser a kind it can’t attach, an empty file and a file too large', () => {

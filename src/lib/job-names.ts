@@ -20,6 +20,7 @@ export const RECURRING_JOB_NAMES = [
   'expired-sign-in-data',
   'invitation-reminders',
   'attachment-files',
+  'attachment-previews',
   'retention',
 ] as const;
 
@@ -89,6 +90,9 @@ const JOB_SUMMARY_KEYS = [
   'unsentFiles',
   /** Removed attachments whose files were deleted, because that failed when they were removed. */
   'removedFiles',
+  /** Attached files whose previews were drawn, and ones that can't have a preview. */
+  'previews',
+  'withoutPreview',
   /** Deliveries to webhooks deleted after 30 days. */
   'webhookDeliveries',
 ] as const;

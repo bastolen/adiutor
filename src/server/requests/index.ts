@@ -89,3 +89,4 @@ export {
   type UploadedAttachment,
   uploadAttachment,
 } from './attachments';
+export { default as setVideoFrame } from './attachment-frames';

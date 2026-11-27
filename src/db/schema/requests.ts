@@ -27,6 +27,7 @@ import {
 import {
   ASSIGNMENT_CHANGES,
   ATTACHMENT_CONTENT_TYPES,
+  ATTACHMENT_PREVIEW_STATES,
   REQUEST_ENTRY_KINDS,
   REQUEST_PARTICIPANT_ROLES,
   REQUEST_PRIORITIES,
@@ -457,8 +458,9 @@ export const requestTextVersion = pgTable(
  * own first (unsent: no request yet) and claimed by the text it's sent with
  * (`claimAttachments`); one left unsent is purged after a day, file and row.
  * A removed file keeps its row, so its place in the text says who removed
- * it, while the file itself is deleted. The rows go with the request or the
- * text.
+ * it, while the file itself is deleted. A small preview of the file, for its
+ * tile, is kept next to it under a key made from the same ID (`previewKey`)
+ * and deleted with it. The rows go with the request or the text.
  */
 export const requestAttachment = pgTable(
   'request_attachment',
@@ -501,6 +503,12 @@ export const requestAttachment = pgTable(
     }),
     /** When a removed file's bytes were deleted from storage; the cleanup job tries again until then. */
     fileDeletedAt: timestampTz('file_deleted_at'),
+    /**
+     * Where its preview stands (`ATTACHMENT_PREVIEW_STATES`): `drawn` (kept
+     * under `previewKey`), `none` (tried and impossible: the tile shows an
+     * icon), or `null` while it isn't drawn yet.
+     */
+    preview: text('preview'),
   },
   (table) => [
     /** A request's files, by text; also serves the request foreign key. */
@@ -515,7 +523,14 @@ export const requestAttachment = pgTable(
     index('request_attachment_unsent_idx')
       .on(table.createdAt)
       .where(sql`${table.requestId} is null`),
+    /** The sent files still without a preview, which the previews job draws. */
+    index('request_attachment_undrawn_idx')
+      .on(table.createdAt)
+      .where(
+        sql`${table.preview} is null and ${table.requestId} is not null and ${table.removedAt} is null`,
+      ),
     oneOf('request_attachment_content_type_valid', table.contentType, ATTACHMENT_CONTENT_TYPES),
+    oneOf('request_attachment_preview_valid', table.preview, ATTACHMENT_PREVIEW_STATES),
     check('request_attachment_size_fits', sql`${table.size} > 0`),
     /** A reply's or note's file belongs to that reply's request. */
     check(

@@ -16,14 +16,26 @@ describe('attachmentTypeOf', () => {
   it('finds the type by the extension, in any case', () => {
     expect(attachmentTypeOf('Screenshot.PNG')).toMatchObject({
       contentType: 'image/png',
-      thumbnail: true,
+      preview: 'image',
     });
     expect(attachmentTypeOf('printer.log')).toMatchObject({
       contentType: 'text/plain',
       check: 'text',
     });
     expect(attachmentTypeOf('report.tar.gz')).toMatchObject({ contentType: 'application/gzip' });
-    expect(attachmentTypeOf('demo.mov')).toMatchObject({ contentType: 'video/quicktime' });
+    expect(attachmentTypeOf('demo.mov')).toMatchObject({
+      contentType: 'video/quicktime',
+      preview: 'video',
+    });
+  });
+
+  it('says how each kind gets its preview, and which keep their icon', () => {
+    expect(attachmentTypeOf('report.pdf')?.preview).toBe('pdf');
+    expect(attachmentTypeOf('plan.docx')?.preview).toBe('office');
+    expect(attachmentTypeOf('slides.odp')?.preview).toBe('office');
+    for (const name of ['photo.heic', 'printer.log', 'logs.zip', 'backup.7z', 'logs.tgz']) {
+      expect(attachmentTypeOf(name)?.preview, name).toBeNull();
+    }
   });
 
   it('refuses what isn\u2019t on the list, or has no extension', () => {

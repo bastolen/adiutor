@@ -194,8 +194,10 @@ import {
   updateRequestType,
   loadAttachment,
   removeAttachment,
+  setVideoFrame,
   uploadAttachment,
 } from './requests';
+import { signedInAsWork } from './signed-in-as';
 import { getSmtpSettings, saveSmtpSettings } from './smtp';
 import {
   getAttachmentSettings,
@@ -651,6 +653,19 @@ function listOperations(): Operation[] {
            */
           read: async () => new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
         }),
+    ],
+    [
+      'give an uploaded video its frame',
+      async (w) => {
+        const { signedInAsStaffId } = signedInAsWork(w.actor);
+        const video = await storeAttachment(db, storage, {
+          uploadedBy: w.actor.id,
+          name: 'demo.webm',
+          contentType: 'video/webm',
+          ...(signedInAsStaffId && { signedInAsStaffId }),
+        });
+        return setVideoFrame(ctx, w.actor, { attachment: video, frame: new Uint8Array([0xff]) });
+      },
     ],
     // After the upload, which it would refuse.
     ['turn attaching files off', (w) => saveAttachmentsEnabled(ctx, w.actor, false, {})],
@@ -1180,6 +1195,7 @@ const OWN_WORK: ReadonlySet<string> = new Set([
   'dismiss own MFA recommendation',
   'remove an attachment',
   'upload a file to attach',
+  'give an uploaded video its frame',
   'raise request (own)',
   'raise request (other)',
   'raise request for someone (own)',
@@ -1355,6 +1371,8 @@ const EXPECTED: Record<string, string> = {
   'turn attaching files off': 'FFFFFFA',
   // A file to attach, for whoever writes requests somewhere: not a Watcher, and not Finance.
   'upload a file to attach': 'FAAAFAA',
+  // A video's frame, for its preview: only ever for the uploader's own upload, whoever they are.
+  'give an uploaded video its frame': 'AAAAAAA',
   // A file on a request, removed by the staff who work on requests only.
   'remove an attachment': 'FFFAFAA',
   // A file is read by whoever reads its text: a description's by everyone who sees the request,

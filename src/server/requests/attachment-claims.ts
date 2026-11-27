@@ -23,6 +23,29 @@ import { signedInAsWork } from '../signed-in-as';
 const UNSENT_FOR = sql`interval '24 hours'`;
 
 /**
+ * The uploads that are an actor's own to send: uploaded by them, by the same
+ * staff member signed in as them if one was (so a file uploaded while signed
+ * in as someone isn't theirs alone), finished, unsent and no older than 24
+ * hours. A video's frame is taken under the same rule (`setVideoFrame`).
+ *
+ * @param actor - The acting user.
+ * @returns The condition on `request_attachment`.
+ */
+export function ownUnsentUploads(actor: Actor) {
+  const work = signedInAsWork(actor);
+  return and(
+    isNull(requestAttachment.requestId),
+    isNotNull(requestAttachment.uploadedAt),
+    gt(requestAttachment.createdAt, sql`now() - ${UNSENT_FOR}`),
+    eq(requestAttachment.uploadedBy, actor.id),
+    eq(requestAttachment.signedInAs, work.signedInAs),
+    work.signedInAsStaffId === null
+      ? isNull(requestAttachment.signedInAsStaffId)
+      : eq(requestAttachment.signedInAsStaffId, work.signedInAsStaffId),
+  );
+}
+
+/**
  * The refusal for more files on a text than it may have.
  *
  * @returns The error.
@@ -39,9 +62,7 @@ function tooManyError(): ServiceError {
  * the text's row is there, after the request's row is locked (attachments
  * come after the request in the lock order). The text's own service has
  * checked that the actor may write it; this checks that each file is theirs
- * to send: uploaded by them, by the same staff member signed in as them if
- * one was (so a file uploaded while signed in as someone isn't theirs alone
- * to send), finished, unsent and no older than 24 hours.
+ * to send ({@link ownUnsentUploads}).
  *
  * @param tx - The transaction that stores the text.
  * @param actor - The acting user.
@@ -83,23 +104,10 @@ export default async function claimAttachments(
     throw tooManyError();
   }
 
-  const work = signedInAsWork(actor);
   const claimed = await tx
     .update(requestAttachment)
     .set({ requestId: place.requestId, entryId: place.entryId })
-    .where(
-      and(
-        inArray(requestAttachment.id, wanted),
-        isNull(requestAttachment.requestId),
-        isNotNull(requestAttachment.uploadedAt),
-        gt(requestAttachment.createdAt, sql`now() - ${UNSENT_FOR}`),
-        eq(requestAttachment.uploadedBy, actor.id),
-        eq(requestAttachment.signedInAs, work.signedInAs),
-        work.signedInAsStaffId === null
-          ? isNull(requestAttachment.signedInAsStaffId)
-          : eq(requestAttachment.signedInAsStaffId, work.signedInAsStaffId),
-      ),
-    )
+    .where(and(inArray(requestAttachment.id, wanted), ownUnsentUploads(actor)))
     .returning({ id: requestAttachment.id });
   if (claimed.length === wanted.length) {
     return claimed.length;

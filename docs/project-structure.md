@@ -20,8 +20,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
   what the request pages share (the list, the board, the badges, the text, the people, the files
-  and the picker that attaches them) in `src/app/(app)/_requests/`. Files are uploaded to
-  `src/app/api/attachments/` and downloaded from `src/app/attachments/[id]/`. The logo and the
+  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`) in
+  `src/app/(app)/_requests/`. Files are uploaded to `src/app/api/attachments/` and downloaded from
+  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/`. The logo and the
   browser tab icon made from the brand are served to anyone from `src/app/branding/` (`logo/`,
   `icon/`, and `favicon/`, where `/favicon.ico` is rewritten). A
   company's pages, a user's page, Settings, the Logs and the account pages have a `layout.tsx` with their header and tabs (see
@@ -58,8 +59,14 @@ The folders of the repository and what belongs in each. Back to the [documentati
     and who reads it in `detail-reader.ts`), who is told what happens to one (`tell-people.ts`)
     and what one person's email about it shows (`read-request-update.ts`, made of the shapes in
     `request-update.ts` and read from `request-update-context.ts`), and their attachments:
-    uploading, downloading and removing (`attachments.ts`), the check of a file's bytes against
-    its type (`attachment-checks.ts`) and sending uploads with a text (`attachment-claims.ts`).
+    uploading, downloading and removing (`attachments.ts`), sending uploads with a text
+    (`attachment-claims.ts`) and taking a video's frame as its preview (`attachment-frames.ts`).
+  - `src/server/previews/`: the small previews of attached files (a folder module, see
+    [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) or a PDF's first
+    page (`draw-pdf.ts`, PDFium in a worker thread, `pdf-worker.mts`, with its memory capped,
+    `pdf-wasm.ts`) or the thumbnail an Office file carries (`office-thumbnail.ts`, read with a small
+    zip reader, `zip-entry.ts`) by its kind (`draw.ts`), within the limits (`limits.ts`) and a few at
+    a time (`limiter.ts`), and keeping it next to its file (`store.ts`).
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),
@@ -120,8 +127,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
     and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
     Continue, `own-page-post.ts`): HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
-    values, the rules of working on one, the board's lanes, their numbers, their text and the kinds
-    of file that can be attached (`attachments.ts`), free of zod and server code, so the database schema, the services and client components can all import it.
+    values, the rules of working on one, the board's lanes, their numbers, their text, the kinds
+    of file that can be attached (`attachments.ts`) and the check of a file's bytes against its kind
+    (`attachment-checks.ts`), free of zod and server code, so the database schema, the services and client components can all import it.
 - `src/emails/`: the email templates (see [Email](email.md)).
 - `src/messages/`: the translation catalogues, one folder per language and one JSON file per area
   (see [Languages](i18n.md)).
@@ -132,5 +140,6 @@ The folders of the repository and what belongs in each. Back to the [documentati
   integration tests' setup, which points `@/db` at the test database, and helpers), `i18n/`
   (next-intl's stand-ins for unit tests, and rendering in another language), `ui/` (what component
   and action tests share: the kept-alive page, the form data and the confirmation window),
-  `http/` (a receiver for webhooks on `127.0.0.1`) and `build/` (whether a local e2e run can
+  `files/` (small files written by hand: PDFs and zip archives), `http/` (a receiver for webhooks on
+  `127.0.0.1`) and `build/` (whether a local e2e run can
   reuse the last build).

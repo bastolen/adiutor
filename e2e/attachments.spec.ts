@@ -3,24 +3,32 @@
  * attached while writing (by the Attach button, a drop and a paste, checked
  * in the browser and uploaded at once) and sent with a reply, a note or a
  * new request; and the files of a request's texts, shown under each text
- * with a thumbnail for an image and downloaded under their names, a note's
- * files for the staff only, kept by the reader's browser and checked with
- * the server before each use. Each test stores or raises a request of its
- * own.
+ * with a preview for an image, a PDF and a video (decision 0057: drawn on
+ * the server, or for a video from a frame the uploader's browser drew; never
+ * the original) and downloaded under their names, a note's files for the staff
+ * only, kept by the reader's browser and checked with the server before
+ * each use. Each test stores or raises a request of its own.
  */
 import type { Locator, Page } from '@playwright/test';
 
+import { simplePdf } from '../tests/files/pdfs';
 import { storeAttachment, storeEntries, storeOwnRequest } from './support/db';
 import { PLATFORM_ADMIN, REQUESTS_CLIENT } from './support/fixtures';
 import { markdownEditor, toasts } from './support/helpers';
 import { signedInOnce } from './support/stored-sign-in';
 import { expect, test } from './support/test';
 
-/** A one-pixel PNG, which a browser shows as a thumbnail. */
+/** A one-pixel PNG, an image a preview is drawn from. */
 const PNG = Uint8Array.from(
   atob(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   ),
+  (character) => character.charCodeAt(0),
+);
+
+/** A one-pixel WebP, as a preview the server drew. */
+const WEBP = Uint8Array.from(
+  atob('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='),
   (character) => character.charCodeAt(0),
 );
 
@@ -107,7 +115,12 @@ async function requestWithFiles(title: string): Promise<{ number: number; noteFi
     { by: REQUESTS_CLIENT.email, side: 'company', kind: 'comment', text: 'The log is attached.' },
     { by: PLATFORM_ADMIN.email, side: 'staff', kind: 'note', text: 'Driver notes attached.' },
   ]);
-  await storeAttachment(number, { name: 'error.png', contentType: 'image/png', bytes: PNG });
+  await storeAttachment(number, {
+    name: 'error.png',
+    contentType: 'image/png',
+    bytes: PNG,
+    preview: WEBP,
+  });
   await storeAttachment(number, {
     name: 'printer.log',
     contentType: 'text/plain',
@@ -133,19 +146,30 @@ test('a company reads the files of a request’s texts and downloads them, never
 
   const description = page.getByRole('region', { name: 'Description' });
   await expect(description.getByRole('list', { name: '1 attachment' })).toBeVisible();
-  // The screenshot shows as a thumbnail, loaded from Adiutor itself.
-  await expect(description.locator('img')).toHaveJSProperty('naturalWidth', 1);
+  // The screenshot shows its preview, loaded from Adiutor itself, never the original.
   const screenshot = description.getByRole('link', { name: /^Download error\.png, \d+ bytes$/ });
   await expect(screenshot).toBeVisible();
+  const preview = `${(await screenshot.getAttribute('href')) ?? ''}/preview`;
+  await expect(description.locator('img')).toHaveAttribute('src', preview);
+  await expect(description.locator('img')).toHaveJSProperty('naturalWidth', 1);
 
-  // The browser kept it, and asks again when the page loads afresh: the same file, not sent again.
-  const thumbnail = (await screenshot.getAttribute('href')) ?? '';
-  const reloaded = page.waitForResponse((response) => response.url().endsWith(thumbnail));
+  // The browser kept it, and asks again when the page loads afresh: the same preview, not sent
+  // again.
+  const reloaded = page.waitForResponse((response) => response.url().endsWith(preview));
   await page.reload();
   const checked = await reloaded;
-  expect(await checked.request().headerValue('if-none-match')).toBe(`"${thumbnail.split('/')[2]}"`);
+  expect(await checked.request().headerValue('if-none-match')).toBe(
+    `"${preview.split('/')[2]}-preview"`,
+  );
   expect(checked.status()).toBe(304);
   await expect(description.locator('img')).toHaveJSProperty('naturalWidth', 1);
+  const served = await page.request.get(preview);
+  expect(served.headers()).toMatchObject({
+    'content-type': 'image/webp',
+    'content-disposition': 'attachment; filename="error.webp"; filename*=UTF-8\'\'error.webp',
+    'cache-control': 'private, no-cache',
+    'content-security-policy': "default-src 'none'; sandbox",
+  });
 
   const conversation = page.getByRole('region', { name: 'Conversation' });
   const log = conversation.getByRole('link', { name: 'Download printer.log, 15 bytes' });
@@ -244,7 +268,107 @@ test('a company attaches files by button, drop and paste, and sends them with a 
     name: '2 attachments',
   });
   await expect(sent.getByRole('link', { name: 'Download printer.log, 15 bytes' })).toBeVisible();
-  await expect(sent.getByRole('link', { name: /^Download screenshot\.png/ })).toBeVisible();
+  const screenshot = sent.getByRole('link', { name: /^Download screenshot\.png/ });
+  await expect(screenshot).toBeVisible();
+  // The server drew the screenshot's preview when it was uploaded; the log keeps its icon.
+  await expect(sent.locator('img')).toHaveCount(1);
+  await expect(sent.locator('img')).toHaveAttribute(
+    'src',
+    `${(await screenshot.getAttribute('href')) ?? ''}/preview`,
+  );
+  await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 1);
+});
+
+test('a PDF sent with a reply shows its first page, from the top', async ({ page, context }) => {
+  const number = await storeOwnRequest({ title: 'A PDF attached to a reply' });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  await chooseFiles(page, [
+    { name: 'invoice.pdf', mimeType: 'application/pdf', buffer: Buffer.from(simplePdf()) },
+  ]);
+  // Until it's sent, a PDF shows its icon: the server draws its page.
+  const waiting = page.getByRole('list', { name: '1 file to send' });
+  await expect(waiting).toBeVisible();
+  await expect(waiting.locator('img')).toHaveCount(0);
+  await (await markdownEditor(page, 'Your reply')).fill('The invoice is attached.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  const sent = page.getByRole('region', { name: 'Conversation' }).getByRole('list', {
+    name: '1 attachment',
+  });
+  const pdf = sent.getByRole('link', { name: /^Download invoice\.pdf/ });
+  await expect(pdf).toBeVisible();
+  const preview = sent.locator('img');
+  await expect(preview).toHaveAttribute('src', `${(await pdf.getAttribute('href')) ?? ''}/preview`);
+  // An A4 page, 480 pixels high.
+  await expect(preview).toHaveJSProperty('naturalHeight', 480);
+  await expect(preview).toHaveClass(/object-top/);
+});
+
+test('a screen recording shows a frame the uploader’s browser drew, with a play mark', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'A recording attached to a reply' });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  // A second of video, recorded in the browser from a canvas, as a screen recorder makes one.
+  const webm = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    const drawing = canvas.getContext('2d');
+    const recorder = new MediaRecorder(canvas.captureStream(10), { mimeType: 'video/webm' });
+    const chunks: Blob[] = [];
+    recorder.addEventListener('dataavailable', (event) => chunks.push(event.data));
+    const stopped = new Promise((resolve) => {
+      recorder.addEventListener('stop', resolve);
+    });
+    recorder.start();
+    let frame = 0;
+    const painting = setInterval(() => {
+      if (drawing) {
+        drawing.fillStyle = frame % 2 === 0 ? '#1565c0' : '#c62828';
+        drawing.fillRect(0, 0, 320, 240);
+      }
+      frame += 1;
+    }, 50);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1200);
+    });
+    recorder.stop();
+    clearInterval(painting);
+    await stopped;
+    return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];
+  });
+
+  await chooseFiles(page, [
+    { name: 'demo.webm', mimeType: 'video/webm', buffer: Buffer.from(webm) },
+  ]);
+  // Before it's sent, the tile shows the frame the browser drew, marked as a video.
+  const waiting = page.getByRole('list', { name: '1 file to send' });
+  await expect(waiting.locator('img')).toHaveAttribute('src', /^blob:/);
+  await expect(waiting.locator('img')).toHaveJSProperty('naturalWidth', 320);
+  await expect(waiting.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
+  await (await markdownEditor(page, 'Your reply')).fill('The recording is attached.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  const sent = page.getByRole('region', { name: 'Conversation' }).getByRole('list', {
+    name: '1 attachment',
+  });
+  const recording = sent.getByRole('link', { name: /^Download demo\.webm/ });
+  await expect(recording).toBeVisible();
+  // The server took the frame as the video's preview.
+  await expect(sent.locator('img')).toHaveAttribute(
+    'src',
+    `${(await recording.getAttribute('href')) ?? ''}/preview`,
+  );
+  await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 320);
+  await expect(sent.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
 });
 
 test('the staff attach a file to an internal note', async ({ page, context }) => {

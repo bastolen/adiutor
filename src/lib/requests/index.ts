@@ -138,16 +138,25 @@ export {
   writtenMentionKeys,
   writtenMentionMarker,
 } from './mentions';
-export type { AttachmentCheck, AttachmentType } from './attachments';
+export { default as matchesAttachmentKind } from './attachment-checks';
+export type {
+  AttachmentCheck,
+  AttachmentPreviewKind,
+  AttachmentPreviewState,
+  AttachmentType,
+} from './attachments';
 export {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_CONTENT_TYPES,
   ATTACHMENT_NAME_HEADER,
   ATTACHMENT_NAME_MAX_LENGTH,
+  ATTACHMENT_PREVIEW_STATES,
   ATTACHMENT_TYPES,
   ATTACHMENT_UPLOAD_PATH,
   attachmentTypeOf,
   cleanAttachmentName,
   MAX_ATTACHMENTS_PER_TEXT,
   UPLOADS_AT_ONCE,
+  VIDEO_FRAME_MAX_BYTES,
+  VIDEO_FRAME_SIZE,
 } from './attachments';

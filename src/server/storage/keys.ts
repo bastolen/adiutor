@@ -10,10 +10,13 @@
  * UUID as the database writes one (lowercase), which must end in them.
  */
 const KEY =
-  /^(attachments|checks)\/([0-9a-f]{2})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{10}\2$/;
+  /^(attachments|previews|checks)\/([0-9a-f]{2})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{10}\2$/;
 
-/** The kinds of file: an attachment, and the file a storage test writes and deletes. */
-type KeyKind = 'attachments' | 'checks';
+/**
+ * The kinds of file: an attachment, its preview, and the file a storage
+ * test writes and deletes.
+ */
+type KeyKind = 'attachments' | 'previews' | 'checks';
 
 /**
  * Makes a key.
@@ -39,6 +42,17 @@ function keyOf(kind: KeyKind, id: string): string {
  */
 export function attachmentKey(id: string): string {
   return keyOf('attachments', id);
+}
+
+/**
+ * Where an attachment's preview is kept: a small WebP image drawn from the
+ * file, for its tile.
+ *
+ * @param id - The attachment's ID.
+ * @returns Its preview's key.
+ */
+export function previewKey(id: string): string {
+  return keyOf('previews', id);
 }
 
 /**

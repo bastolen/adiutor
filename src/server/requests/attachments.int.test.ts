@@ -7,12 +7,15 @@
  * someone recorded.
  */
 import { eq } from 'drizzle-orm';
+import sharp from 'sharp';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { company as companyTable, requestAttachment } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { UPLOADS_AT_ONCE } from '@/lib/requests';
 
+import { simplePdf } from '../../../tests/files/pdfs';
+import { zipOf } from '../../../tests/files/zips';
 import {
   createCompany,
   createStaffSettings,
@@ -27,7 +30,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { RATE_LIMITS } from '../rate-limit';
-import { attachmentKey, type FileStorage, StorageError } from '../storage';
+import { attachmentKey, type FileStorage, previewKey, StorageError } from '../storage';
 import { DAILY_UPLOAD_BYTES, uploadAttachment } from './attachments';
 
 const { ctx, db, storage } = setupTestContext();
@@ -127,15 +130,124 @@ describe('uploadAttachment', () => {
       name: 'Screenshot.png',
       size: PNG.byteLength,
       contentType: 'image/png',
-      thumbnail: true,
+      // A signature alone is no image to draw.
+      preview: false,
     });
     const row = firstRow(
       await db.select().from(requestAttachment).where(eq(requestAttachment.id, uploaded.id)),
       'the row',
     );
-    expect(row).toMatchObject({ requestId: null, uploadedBy: client.id, signedInAs: false });
+    expect(row).toMatchObject({
+      requestId: null,
+      uploadedBy: client.id,
+      signedInAs: false,
+      preview: 'none',
+    });
     expect(row.uploadedAt).toBeInstanceOf(Date);
     expect((await storage.get(attachmentKey(uploaded.id)))?.size).toBe(PNG.byteLength);
+    expect(await storage.get(previewKey(uploaded.id))).toBeNull();
+  });
+
+  it('draws a small preview of an image and keeps it next to the file', async () => {
+    const photo = new Uint8Array(
+      await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#336699' } })
+        .jpeg()
+        .toBuffer(),
+    );
+
+    const uploaded = await upload(ctx, client, 'photo.jpg', photo);
+
+    expect(uploaded.preview).toBe(true);
+    const [row] = await db
+      .select({ preview: requestAttachment.preview })
+      .from(requestAttachment)
+      .where(eq(requestAttachment.id, uploaded.id));
+    expect(row?.preview).toBe('drawn');
+    const stored = await storage.get(previewKey(uploaded.id));
+    const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
+    expect(await sharp(preview).metadata()).toMatchObject({
+      format: 'webp',
+      width: 480,
+      height: 360,
+    });
+  });
+
+  it('draws a preview of a PDF’s first page', async () => {
+    const uploaded = await upload(ctx, client, 'invoice.pdf', simplePdf());
+
+    expect(uploaded.preview).toBe(true);
+    const stored = await storage.get(previewKey(uploaded.id));
+    const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
+    expect(await sharp(preview).metadata()).toMatchObject({ format: 'webp', height: 480 });
+  });
+
+  it('draws an OpenDocument file’s preview from the thumbnail it carries', async () => {
+    const thumbnail = new Uint8Array(
+      await sharp({ create: { width: 181, height: 256, channels: 3, background: '#f4f4f4' } })
+        .png()
+        .toBuffer(),
+    );
+    const odt = zipOf([
+      { name: 'mimetype', data: 'application/vnd.oasis.opendocument.text' },
+      { name: 'Thumbnails/thumbnail.png', data: thumbnail },
+    ]);
+
+    expect((await upload(ctx, client, 'plan.odt', odt)).preview).toBe(true);
+    // One without a thumbnail keeps its icon.
+    const bare = zipOf([{ name: 'mimetype', data: 'application/vnd.oasis.opendocument.text' }]);
+    expect((await upload(ctx, client, 'bare.odt', bare)).preview).toBe(false);
+  });
+
+  it('marks a kind of file that keeps its icon, and leaves a video for its frame', async () => {
+    const log = await upload(ctx, client, 'printer.log', new TextEncoder().encode('offline'));
+    const video = await upload(
+      ctx,
+      client,
+      'demo.webm',
+      new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, ...new TextEncoder().encode('webm')]),
+    );
+    const rows = await db
+      .select({ id: requestAttachment.id, preview: requestAttachment.preview })
+      .from(requestAttachment);
+    expect(rows.find((row) => row.id === log.id)?.preview).toBe('none');
+    expect(rows.find((row) => row.id === video.id)?.preview).toBeNull();
+    expect(log.preview).toBe(false);
+  });
+
+  it('still uploads when the preview can’t be stored, leaving it for the previews job', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const refusingPreviews: FileStorage = {
+      ...storage,
+      /**
+       * Stores files, and fails for previews.
+       *
+       * @param key - Where.
+       * @param bytes - What.
+       * @param contentType - Its type.
+       */
+      put: async (key, bytes, contentType) => {
+        if (key.startsWith('previews/')) {
+          throw new StorageError('timed_out');
+        }
+        await storage.put(key, bytes, contentType);
+      },
+    };
+    const photo = new Uint8Array(
+      await sharp({ create: { width: 40, height: 30, channels: 3, background: '#336699' } })
+        .png()
+        .toBuffer(),
+    );
+
+    const uploaded = await upload(withStorage(refusingPreviews), client, 'small.png', photo);
+
+    const [row] = await db
+      .select({ preview: requestAttachment.preview, uploadedAt: requestAttachment.uploadedAt })
+      .from(requestAttachment)
+      .where(eq(requestAttachment.id, uploaded.id));
+    expect(row?.uploadedAt).toBeInstanceOf(Date);
+    expect(row?.preview).toBeNull();
+    expect(error).toHaveBeenCalledWith('A preview could not be stored yet:', 'timed_out');
+    error.mockRestore();
   });
 
   it('is off until attaching is turned on and a storage is chosen', async () => {

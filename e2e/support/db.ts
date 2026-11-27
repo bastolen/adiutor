@@ -30,7 +30,7 @@ import {
 } from '../../src/lib/sign-in/tokens';
 import type { ForcedTheme } from '../../src/lib/theme';
 import { readSettings, writeSettings } from '../../src/server/settings';
-import { attachmentKey, storageFor } from '../../src/server/storage';
+import { attachmentKey, previewKey, storageFor } from '../../src/server/storage';
 import { storeAuthenticator } from '../../tests/auth/authenticator';
 import getTestDatabaseUrl from '../../tests/database/database-url';
 import storeRequests from '../../tests/database/store-requests';
@@ -1178,11 +1178,18 @@ export async function resetActivityView(email: string): Promise<void> {
  * @param file.contentType - Its type, from the allow-list.
  * @param file.bytes - Its bytes.
  * @param file.entryText - The whole text of the entry it's attached to; the description without one.
+ * @param file.preview - Its preview, as WebP, when it has one.
  * @returns The attachment's ID.
  */
 export async function storeAttachment(
   number: number,
-  file: { name: string; contentType: string; bytes: Uint8Array<ArrayBuffer>; entryText?: string },
+  file: {
+    name: string;
+    contentType: string;
+    bytes: Uint8Array<ArrayBuffer>;
+    entryText?: string;
+    preview?: Uint8Array<ArrayBuffer>;
+  },
 ): Promise<string> {
   const entryId = file.entryText === undefined ? null : await findEntryId(number, file.entryText);
   const id = await withTestDatabase(
@@ -1197,16 +1204,17 @@ export async function storeAttachment(
             contentType: file.contentType,
             size: file.bytes.byteLength,
             uploadedAt: new Date(),
+            preview: file.preview ? 'drawn' : null,
           })
           .returning({ id: schema.requestAttachment.id }),
         'the attachment',
       ).id,
   );
-  await storageFor({ driver: 'local', dir: ATTACHMENTS_DIR }).put(
-    attachmentKey(id),
-    file.bytes,
-    file.contentType,
-  );
+  const storage = storageFor({ driver: 'local', dir: ATTACHMENTS_DIR });
+  await storage.put(attachmentKey(id), file.bytes, file.contentType);
+  if (file.preview) {
+    await storage.put(previewKey(id), file.preview, 'image/webp');
+  }
   return id;
 }
 

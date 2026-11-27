@@ -448,8 +448,19 @@ the same):
 
 **Back up the files with the database.** A file is found by its row in the database, and a row
 whose file is gone can't be downloaded. Files are kept at the same paths in every storage
-(`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
-`attachments/` there as it is (with `rclone copy`, say), then switching.
+(`attachments/<two characters>/<ID>`, and their previews at `previews/<two characters>/<ID>`), so
+moving to another storage is copying everything under `attachments/` and `previews/` there as it is
+(with `rclone copy`, say), then switching.
+
+**Previews** of attached files, for their tiles, are drawn by the app itself
+([decision 0057](decisions/0057-small-previews-of-attached-files.md)), with nothing to install: its
+image library (sharp) comes prebuilt for Linux, macOS and Windows, and PDFs are drawn by PDFium
+built to WebAssembly, so both work the same in the Docker image, on a plain server and on Vercel.
+Drawing takes some memory while it runs, at most two previews at a time per server: an image up to
+about 100 MB for a moment (a progressive JPEG, which is decoded whole), and PDFium's worker up to
+256 MiB, closing after a minute without a PDF. Leave the app's container room above what it uses at
+rest. On Vercel, PDFium's WebAssembly file is added to the traces of the routes that draw
+(`outputFileTracingIncludes` in `next.config.ts`).
 
 **The largest file** anyone may attach is chosen on the Integrations tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on

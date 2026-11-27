@@ -5,9 +5,12 @@
  * an HTML page named `.png`, or a compiled program named `.txt`, is never
  * stored. Text is text whatever it says: a script or a page named `.txt`
  * is kept as plain text, and every file is served as a download that runs
- * nothing; this keeps what's stored to what it claims to be.
+ * nothing; this keeps what's stored to what it claims to be. The previews
+ * (`src/server/previews`) check an image the same way before they decode
+ * it. Free of server code, like the rest of this folder, though only the
+ * server uses it.
  */
-import type { AttachmentCheck } from '@/lib/requests';
+import type { AttachmentCheck } from './attachments';
 
 /** The brands of an ISO media file (`ftyp`) that are HEIC or HEIF images. */
 const HEIC_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1']);
