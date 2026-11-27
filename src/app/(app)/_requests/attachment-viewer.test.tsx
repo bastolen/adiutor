@@ -7,7 +7,7 @@
  */
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import renderInLocale from '../../../../tests/i18n/render';
 import AttachmentViewer, { type ViewableFile } from './attachment-viewer';
@@ -24,14 +24,15 @@ const FILES: ViewableFile[] = [
 /**
  * The page's tiles, in a viewer.
  *
+ * @param files - The page's files.
  * @returns The rendered page.
  */
-function renderPage() {
+function renderPage(files: ViewableFile[] = FILES) {
   return renderInLocale(
     'en-US',
-    <AttachmentViewer files={FILES}>
+    <AttachmentViewer files={files}>
       <ul>
-        {FILES.map((file) => (
+        {files.map((file) => (
           <li key={file.id}>
             <ViewableAttachmentTile
               id={file.id}
@@ -57,6 +58,10 @@ function renderPage() {
 function shownImage(name: string): HTMLElement {
   return within(screen.getByRole('dialog')).getByRole('img', { name });
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('AttachmentViewer', () => {
   it('opens a file from its tile, which keeps a Download button of its own', async () => {
@@ -131,5 +136,42 @@ describe('AttachmentViewer', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: 'Open invoice.pdf' })).toHaveFocus();
+  });
+
+  it('shows a text file’s start as text, and says when the file goes on', async () => {
+    vi.stubGlobal('fetch', async () => new Response('<b>printer</b> offline', { status: 206 }));
+    const user = userEvent.setup();
+    renderPage([
+      {
+        id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3e',
+        name: 'printer.log',
+        size: 900,
+        preview: false,
+      },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: 'Open printer.log' }));
+
+    const text = await screen.findByLabelText('printer.log, as text');
+    // Only ever text: markup in it is shown as it is.
+    expect(text).toHaveTextContent('<b>printer</b> offline');
+    expect(text.querySelector('b')).toBeNull();
+    expect(
+      screen.getByText('Showing the start of the file. Download it to read all of it.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a text file’s icon when its text can’t be loaded', async () => {
+    vi.stubGlobal('fetch', async () => new Response(null, { status: 503 }));
+    const user = userEvent.setup();
+    renderPage([
+      { id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3e', name: 'printer.log', size: 15, preview: false },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: 'Open printer.log' }));
+
+    expect(
+      await screen.findByText('The text couldn’t be loaded. Download the file to read it.'),
+    ).toBeInTheDocument();
   });
 });

@@ -329,7 +329,11 @@
         "next": "Next file",
         "download": "Download",
         "pdfFirstPage": "The first page. Download the PDF to read all of it.",
-        "notShown": "This file can’t be shown here. Download it to open it."
+        "notShown": "This file can’t be shown here. Download it to open it.",
+        "textLabel": "{name}, as text",
+        "textLoading": "Loading the text…",
+        "textCut": "Showing the start of the file. Download it to read all of it.",
+        "textFailed": "The text couldn’t be loaded. Download the file to read it."
       }
     }
   }

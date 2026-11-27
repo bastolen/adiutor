@@ -3,14 +3,23 @@
  * reader can see on the page, in the page's order, opened from its tile and
  * stepped through with Previous and Next. Each kind shows what it can, from
  * the file's own address and its checks: an image as it is (a HEIC photo only
- * where the browser shows it), a PDF's first page drawn large, an Office
- * file's thumbnail, and for anything else its icon, with Download. Its text
+ * where the browser shows it), a PDF's first page drawn large, a text file's
+ * start as text, an Office file's thumbnail, and for anything else its icon,
+ * with Download. Its text
  * comes from `requests.attachments`.
  */
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { createContext, createElement, type ReactNode, use, useCallback, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  type ReactNode,
+  use,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import FileViewer from '@/components/ui/file-viewer';
 import { useTransientState } from '@/components/ui/use-transient-state';
@@ -18,6 +27,7 @@ import { formatFileSize } from '@/lib/format';
 import { attachmentTypeOf } from '@/lib/requests';
 
 import attachmentIcon from './attachment-icon';
+import { readTextStart, type TextStart } from './attachment-text';
 
 /** A file the viewer can open: what the page knows of it. */
 export interface ViewableFile {
@@ -32,7 +42,7 @@ export interface ViewableFile {
 }
 
 /** What the viewer shows a file as. */
-type ShownAs = 'image' | 'pdf' | 'thumbnail' | 'icon';
+type ShownAs = 'image' | 'pdf' | 'text' | 'thumbnail' | 'icon';
 
 /**
  * What the viewer shows a file as, by its type.
@@ -47,6 +57,9 @@ function shownAs(file: ViewableFile): ShownAs {
   }
   if (type?.preview === 'pdf') {
     return 'pdf';
+  }
+  if (type?.check === 'text') {
+    return 'text';
   }
   return file.preview ? 'thumbnail' : 'icon';
 }
@@ -152,6 +165,54 @@ function ViewerImage({
 }
 
 /**
+ * A text file's start, as text: read as a part of the file, shown in a box
+ * that wraps its lines and scrolls (and takes focus, so the keyboard scrolls
+ * it too), with a note when the file goes on.
+ *
+ * @param props - Text props.
+ * @param props.file - The file.
+ * @param props.fallback - What shows when it can't be read.
+ */
+function TextContent({ file, fallback }: { file: ViewableFile; fallback: ReactNode }) {
+  const t = useTranslations('requests.attachments.viewer');
+  const [start, setStart] = useState<TextStart | 'loading' | 'failed'>('loading');
+
+  useEffect(() => {
+    const reading = new AbortController();
+    readTextStart(`/attachments/${file.id}`, file.size, reading.signal).then(setStart, () => {
+      if (!reading.signal.aborted) {
+        setStart('failed');
+      }
+    });
+    return () => reading.abort();
+  }, [file.id, file.size]);
+
+  if (start === 'failed') {
+    return fallback;
+  }
+  if (start === 'loading') {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        {t('textLoading')}
+      </p>
+    );
+  }
+  return (
+    <div className="flex size-full min-h-0 flex-col gap-2 p-2">
+      <pre
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A box that scrolls must take focus, so the keyboard can scroll it.
+        tabIndex={0}
+        aria-label={t('textLabel', { name: file.name })}
+        className="min-h-0 flex-1 overflow-auto rounded-md bg-surface p-4 text-left font-mono text-sm wrap-anywhere whitespace-pre-wrap text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        {start.text}
+      </pre>
+      {start.cut && <p className="text-xs text-muted-foreground">{t('textCut')}</p>}
+    </div>
+  );
+}
+
+/**
  * The file itself, as the viewer shows its kind.
  *
  * @param props - Content props.
@@ -177,6 +238,10 @@ function FileContent({ file }: { file: ViewableFile }) {
           </div>
           {preview && <p className="text-xs text-muted-foreground">{t('pdfFirstPage')}</p>}
         </div>
+      );
+    case 'text':
+      return (
+        <TextContent file={file} fallback={<IconPanel file={file} note={t('textFailed')} />} />
       );
     case 'thumbnail':
       return (

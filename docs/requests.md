@@ -780,7 +780,9 @@ in [Attachments](deploying.md#attachments).
   and → keys, step through every file the reader can see on the page, in its order. An image shows
   as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
   browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
-  pages were), an Office file its thumbnail, and anything else its icon with "This file can't be
+  pages were), a text file or log its first 200 KB as text (`attachment-text.ts`: asked for as a
+  part of the file, UTF-8 or UTF-16, in a box that wraps and scrolls, with a note when the file
+  goes on), an Office file its thumbnail, and anything else its icon with "This file can't be
   shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
   closed again when someone comes back to the page.
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),

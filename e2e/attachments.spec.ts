@@ -229,6 +229,8 @@ test('a company opens a request’s files in the viewer, steps through them and 
   await page.keyboard.press('ArrowRight');
   const log = page.getByRole('dialog', { name: 'printer.log' });
   await expect(log).toContainText('2 of 2');
+  // A log shows its text, read as a part of the file.
+  await expect(log.getByLabel('printer.log, as text')).toHaveText('printer offline');
   const download = page.waitForEvent('download');
   await log.getByRole('link', { name: 'Download' }).click();
   expect((await download).suggestedFilename()).toBe('printer.log');

@@ -329,7 +329,11 @@
         "next": "Archivo siguiente",
         "download": "Descargar",
         "pdfFirstPage": "La primera página. Descarga el PDF para leerlo entero.",
-        "notShown": "Este archivo no se puede mostrar aquí. Descárgalo para abrirlo."
+        "notShown": "Este archivo no se puede mostrar aquí. Descárgalo para abrirlo.",
+        "textLabel": "{name}, como texto",
+        "textLoading": "Cargando el texto…",
+        "textCut": "Se muestra el principio del archivo. Descárgalo para leerlo entero.",
+        "textFailed": "No se ha podido cargar el texto. Descarga el archivo para leerlo."
       }
     }
   }
