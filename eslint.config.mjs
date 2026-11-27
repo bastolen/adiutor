@@ -370,18 +370,36 @@ const FOLDER_MODULES = [
   'server/webhooks',
 ];
 
+/** What a refused import into a folder module is told. */
+const folderModuleMessage =
+  'Import the module itself (its index.ts is the public API), not a file inside its folder.';
+
 /**
  * Code outside a folder module imports the module itself (its `index.ts`),
- * never a file inside the folder, by `@/` path or a relative one. Files
- * inside import each other as `./file`, which this leaves alone.
+ * never a file inside the folder, by `@/` path or a relative one that names
+ * the module's whole path (`../../server/webhooks/x`). Files inside import
+ * each other as `./file`, which this leaves alone.
  */
 const folderModulePatterns = [
+  {
+    regex: `^(@/|(\\.{1,2}/)+(.*/)?)(${FOLDER_MODULES.join('|')})/.+`,
+    message: folderModuleMessage,
+  },
+];
+
+/**
+ * Under `src/server` and `src/lib`, a sibling folder module is also reached
+ * by its folder's name alone (`../webhooks/x` from `src/server/requests/`).
+ * Only there: elsewhere a folder of the same name is something else, such as
+ * the route folder `admin/settings/webhooks/`. One pattern, which covers the
+ * whole path too, so an import is reported once.
+ */
+const serverAndLibPatterns = [
   {
     regex: `^(@/(${FOLDER_MODULES.join('|')})|(\\.{1,2}/)+(.*/)?(${FOLDER_MODULES.map((module) =>
       module.split('/').pop(),
     ).join('|')}))/.+`,
-    message:
-      'Import the module itself (its index.ts is the public API), not a file inside its folder.',
+    message: folderModuleMessage,
   },
 ];
 
@@ -441,6 +459,16 @@ const restrictedImportsConfig = [
     },
   },
   {
+    name: 'adiutor/restricted-imports/server-and-lib',
+    files: ['src/server/**/*.{ts,tsx,mts,cts}', 'src/lib/**/*.{ts,tsx,mts,cts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: serverAndLibPatterns, paths: [useActionStatePath, nextAfterPath] },
+      ],
+    },
+  },
+  {
     name: 'adiutor/restricted-imports/emails',
     files: ['src/emails/**/*.{ts,tsx}', 'src/components/email/**/*.{ts,tsx}'],
     rules: {
@@ -489,15 +517,26 @@ const restrictedImportsConfig = [
       ],
     },
   },
+  /*
+   * Route handlers, where `after()` may read the request: Better Auth's
+   * endpoints (in `src/lib`, so with its patterns), and the jobs' tick, whose
+   * continuation needs `after()` so Vercel keeps the function running until
+   * it's done.
+   */
   {
     name: 'adiutor/restricted-imports/auth',
-    files: ['src/lib/auth.ts', 'src/app/api/jobs/route.ts'],
+    files: ['src/lib/auth.ts'],
     rules: {
-      /**
-       * Route handlers, where `after()` may read the request: Better Auth's
-       * endpoints, and the jobs' tick, whose continuation needs `after()` so
-       * Vercel keeps the function running until it's done.
-       */
+      'no-restricted-imports': [
+        'error',
+        { patterns: serverAndLibPatterns, paths: [useActionStatePath] },
+      ],
+    },
+  },
+  {
+    name: 'adiutor/restricted-imports/jobs-route',
+    files: ['src/app/api/jobs/route.ts'],
+    rules: {
       'no-restricted-imports': [
         'error',
         { patterns: folderModulePatterns, paths: [useActionStatePath] },

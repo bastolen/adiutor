@@ -15,7 +15,6 @@ import { globalPermissionMetadata } from '@/server/page-metadata';
 
 import AttachmentSettingsCards from '../attachments/attachment-cards';
 import EmailSettingsCards from '../email/email-cards';
-// eslint-disable-next-line no-restricted-imports -- Settings' route folder, not the `server/webhooks` module the rule guards.
 import WebhookSettings from '../webhooks/webhook-cards';
 
 /**
