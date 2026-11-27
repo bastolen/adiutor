@@ -201,6 +201,32 @@ describe('AttachmentPicker', () => {
     expect(new FormData(form as HTMLFormElement).getAll('attachment')).toEqual(['attachment-1']);
   });
 
+  it('says nothing of a video taken off while its frame was still drawn', async () => {
+    /** Hands over the frame the browser drew. */
+    let drawn: (frame: Blob | null) => void = () => {};
+    vi.mocked(drawVideoFrame).mockReturnValue(
+      new Promise((resolve) => {
+        drawn = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    const { chooser } = renderPicker();
+
+    choose(chooser, [new File(['webm'], 'demo.webm', { type: 'video/webm' })]);
+    await screen.findByRole('list', { name: '1 file to send' });
+    await finishUpload(uploads[0], {
+      ok: true,
+      file: { id: 'attachment-3', name: 'demo.webm', size: 4 },
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove demo.webm' }));
+    await act(async () => {
+      drawn(new Blob(['jpeg'], { type: 'image/jpeg' }));
+    });
+
+    expect(screen.queryByText('demo.webm is ready to send.')).toBeNull();
+    expect(videoFrameAction).not.toHaveBeenCalled();
+  });
+
   it('readies a video whose frame can’t be drawn without sending one', async () => {
     vi.mocked(drawVideoFrame).mockResolvedValue(null);
     const { chooser } = renderPicker();

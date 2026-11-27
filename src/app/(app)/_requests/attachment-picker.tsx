@@ -195,8 +195,11 @@ export default function AttachmentPicker({
             (outcome) => {
               if (outcome.ok) {
                 const { id } = outcome.file;
-                /** Marks the file uploaded, so the form can send it. */
+                /** Marks the file uploaded, so the form can send it, unless it was taken off. */
                 const ready = () => {
+                  if (stop.signal.aborted) {
+                    return;
+                  }
                   update(key, { id, name: outcome.file.name, progress: 1 });
                   setSaid(t('ready', { name: outcome.file.name }));
                 };

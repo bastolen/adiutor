@@ -3,10 +3,9 @@
  * an internal note), under the text: a tile each, which downloads the file
  * from `/attachments/<id>`, with its preview when it has one (from
  * `/attachments/<id>/preview`, decision 0057; a page from its top, a video's
- * frame with a play mark),
- * and in a removed file's place a tile that says who removed it. The service
- * gives only the files the reader may see (a note's only to the staff). Its
- * text comes from `requests.attachments`.
+ * frame with a play mark), and in a removed file's place a tile that says
+ * who removed it. The service gives only the files the reader may see (a
+ * note's only to the staff). Its text comes from `requests.attachments`.
  */
 import { useLocale, useTranslations } from 'next-intl';
 

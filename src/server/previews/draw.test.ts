@@ -1,7 +1,8 @@
 /**
  * @file Tests for drawing a preview by its kind: an image drawn, a broken
- * one `none`, a PDF's first page, an Office file's thumbnail, which kinds are drawn from the file, and `skipped` when every
- * slot is taken or the drawing library won't load, logged without the file.
+ * one `none`, a PDF's first page, an Office file's thumbnail, which kinds
+ * are drawn from the file, and `skipped` when every slot is taken or the
+ * drawing library won't load, logged without the file.
  * @vitest-environment node
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
