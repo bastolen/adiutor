@@ -2,7 +2,8 @@
  * @file The storage files go to now: the one the server's environment
  * chooses (`ATTACHMENTS_STORAGE`), or else the one saved on the Integrations
  * tab of Settings, or none. The driver is built once per set of settings and
- * kept, so a save takes effect with the next file.
+ * kept, so a save takes effect with the next file, and the one it replaces
+ * lets go of its connection once its calls are done.
  */
 import type { Database, DatabaseTransaction } from '@/db';
 import { env } from '@/lib/env';
@@ -37,7 +38,8 @@ export function storageFor(config: StorageConfig): FileStorage {
 
 /**
  * The driver for a set of settings, built the first time and kept until the
- * settings change.
+ * settings change; the one it replaces is closed (`close`, which waits for
+ * the calls still using it).
  *
  * @param fingerprint - The settings as kept (with secrets encrypted, from Settings).
  * @param build - Builds the driver when it's new.
@@ -45,7 +47,10 @@ export function storageFor(config: StorageConfig): FileStorage {
  */
 async function kept(fingerprint: string, build: () => Promise<FileStorage>): Promise<FileStorage> {
   if (built?.fingerprint !== fingerprint) {
-    built = { fingerprint, storage: await build() };
+    const storage = await build();
+    const replaced = built;
+    built = { fingerprint, storage };
+    replaced?.storage.close();
   }
   return built.storage;
 }

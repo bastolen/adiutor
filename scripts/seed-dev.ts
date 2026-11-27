@@ -700,7 +700,9 @@ async function seedAttachmentStorage(tx: DatabaseTransaction): Promise<void> {
   }
   const config = { driver: 'local', dir: seedAttachmentsDir() } as const;
   await mkdir(config.dir, { recursive: true });
-  await storageFor(config).setUp();
+  const storage = storageFor(config);
+  await storage.setUp();
+  storage.close();
   await writeSettings(tx, { 'attachments.storage': await sealStorage(config) });
 }
 

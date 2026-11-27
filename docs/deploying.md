@@ -444,7 +444,9 @@ the same):
   the fingerprint against the server's own `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`,
   since a scan can't tell an impostor. The
   folder must exist, with an absolute path, and like the local disk it's set up with the marker file.
-  Each upload or download opens its own connection, so it's slower than the others.
+  Calls share one connection, kept for a minute after its last use, so only the first upload or
+  download after a quiet spell waits for connecting
+  ([decision 0059](decisions/0059-one-kept-sftp-connection.md)).
 
 **Back up the files with the database.** A file is found by its row in the database, and a row
 whose file is gone can't be downloaded. Files are kept at the same paths in every storage
