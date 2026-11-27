@@ -333,7 +333,8 @@
         "textLabel": "{name}, como texto",
         "textLoading": "Cargando el texto…",
         "textCut": "Se muestra el principio del archivo. Descárgalo para leerlo entero.",
-        "textFailed": "No se ha podido cargar el texto. Descarga el archivo para leerlo."
+        "textFailed": "No se ha podido cargar el texto. Descarga el archivo para leerlo.",
+        "videoFailed": "Este vídeo no se puede reproducir en tu navegador. Descárgalo para verlo."
       }
     }
   }

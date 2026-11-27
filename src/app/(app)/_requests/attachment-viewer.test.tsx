@@ -174,4 +174,23 @@ describe('AttachmentViewer', () => {
       await screen.findByText('The text couldn’t be loaded. Download the file to read it.'),
     ).toBeInTheDocument();
   });
+
+  it('plays a video with its frame as the poster, and says so when it can’t play', async () => {
+    const user = userEvent.setup();
+    const id = '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3f';
+    renderPage([{ id, name: 'demo.webm', size: 90_000, preview: true }]);
+
+    await user.click(screen.getByRole('button', { name: 'Open demo.webm' }));
+
+    const video = within(screen.getByRole('dialog')).getByLabelText('demo.webm');
+    expect(video.tagName).toBe('VIDEO');
+    expect(video).toHaveAttribute('src', `/attachments/${id}`);
+    expect(video).toHaveAttribute('poster', `/attachments/${id}/preview`);
+    expect(video).toHaveAttribute('controls');
+
+    fireEvent.error(video);
+    expect(
+      await screen.findByText('This video can’t play in your browser. Download it to watch it.'),
+    ).toBeInTheDocument();
+  });
 });

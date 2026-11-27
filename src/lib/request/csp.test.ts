@@ -67,7 +67,7 @@ describe('contentSecurityPolicy', () => {
     });
   });
 
-  it('lets media load only from the page’s own blob: addresses, for a video’s frame', () => {
-    expect(directives(contentSecurityPolicy('abc123', false))['media-src']).toBe('blob:');
+  it('lets media load only from Adiutor itself and the page’s own blob: addresses', () => {
+    expect(directives(contentSecurityPolicy('abc123', false))['media-src']).toBe("'self' blob:");
   });
 });

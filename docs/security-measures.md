@@ -502,8 +502,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   0058](decisions/0058-files-open-in-a-viewer.md)) shows a file the same way, from its own
   address: an image (or a PDF's large page, `/attachments/<id>/page`) in an `<img>`, and a text
   file's first 200 KB fetched as a part of it and put in the page as text (React escapes it, so
-  markup in it stays text), never in a frame, so nothing a file holds runs, and navigating to the
-  address is still a download.
+  markup in it stays text), and a video in a `<video>` that asks for it a part at a time, never in
+  a frame, so nothing a file holds runs, and navigating to the address is still a download.
 - **Kept by the reader's browser, checked every time** ([decision
   0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
 no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
@@ -761,8 +761,9 @@ markup can't run script. Next.js adds the nonce to its own scripts; the root lay
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
 check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). Media load only
-from the page's own `blob:` addresses (`media-src blob:`): the hidden video a frame is drawn from
-when someone attaches one, which never plays. The logos and icons
+from Adiutor itself and the page's own `blob:` addresses (`media-src 'self' blob:`): a video played
+in the attachments' viewer, and the hidden video a frame is drawn from when someone attaches one,
+which never plays. The logos and icons
 the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
 (`IMAGE_FILE_POLICY`, from `next.config.ts`), as do the files it serves (`filePolicyFor`:
 attachments get `FILE_POLICY`, the brand's images `IMAGE_FILE_POLICY`);

@@ -402,6 +402,19 @@ test('a screen recording shows a frame the uploader’s browser drew, with a pla
   );
   await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 320);
   await expect(sent.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
+
+  // In the viewer it plays, asked for a part at a time.
+  const href = (await recording.getAttribute('href')) ?? '';
+  const part = page.waitForResponse(
+    (response) => response.url().endsWith(href) && response.status() === 206,
+  );
+  await sent.getByRole('button', { name: /^Open demo\.webm/ }).click();
+  const video = page.getByRole('dialog', { name: 'demo.webm' }).getByLabel('demo.webm');
+  await expect(video).toHaveAttribute('src', href);
+  expect((await part).headers()['content-range']).toMatch(/^bytes 0-\d+\/\d+$/);
+  await expect
+    .poll(() => video.evaluate((element) => (element as HTMLVideoElement).readyState))
+    .toBeGreaterThan(0);
 });
 
 test('the staff attach a file to an internal note', async ({ page, context }) => {

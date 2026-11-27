@@ -333,7 +333,8 @@
         "textLabel": "{name}, as text",
         "textLoading": "Loading the text…",
         "textCut": "Showing the start of the file. Download it to read all of it.",
-        "textFailed": "The text couldn’t be loaded. Download the file to read it."
+        "textFailed": "The text couldn’t be loaded. Download the file to read it.",
+        "videoFailed": "This video can’t play in your browser. Download it to watch it."
       }
     }
   }

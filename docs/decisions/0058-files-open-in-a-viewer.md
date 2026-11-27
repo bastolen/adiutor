@@ -20,8 +20,9 @@ from its tile.
 - **The viewer shows a file only from its own address, after the same checks:** an image as it is
   (an `<img>` from `/attachments/<id>`, which the page's `img-src 'self'` already allowed), a PDF's
   first page drawn large at upload (`/attachments/<id>/page`, 1,600 pixels), a text file's first
-  200 KB as text (read as a part of the file, `Range`), an Office file's thumbnail, and for
-  anything else its icon. Nothing is shown in a frame, and nothing the file holds
+  200 KB as text (read as a part of the file, `Range`), a video playing in a `<video>` (a part at
+  a time, which every storage reads itself; the page's `media-src` adds `'self'`), an Office
+  file's thumbnail, and for anything else its icon. Nothing is shown in a frame, and nothing the file holds
   runs.
 - **Navigating to a file is still a download** under the fixed policy that runs nothing
   (`FILE_POLICY`): decision 0044's rule holds for the address itself.
@@ -37,6 +38,8 @@ Details: [Attachments](../requests.md#attachments) and
   preview instead.
 - A HEIC photo shows only in a browser that decodes it (Safari); elsewhere it's its icon.
 - A long log shows its start; the rest is a download.
+- A video plays only where the browser decodes it: an HEVC `.mov` in Chrome or Firefox says so,
+  with Download. A reverse proxy in front must pass `Range` and the `206` answers through.
 
 ## Alternatives considered
 
@@ -44,5 +47,7 @@ Details: [Attachments](../requests.md#attachments) and
   in a frame, which the file policy (`sandbox`) and decision 0044 rule out.
 - **Every page of a PDF drawn on request:** much more drawing on the server for each look, and a
   page limit anyway.
+- **Showing a video's frame large, without playing it:** no partial reads to add to the storages,
+  but the point of a screen recording is to watch it.
 - **Steps through the files of one text only:** simpler, but a request's screenshots are usually
   spread over its replies.

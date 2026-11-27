@@ -4,8 +4,9 @@
  * stepped through with Previous and Next. Each kind shows what it can, from
  * the file's own address and its checks: an image as it is (a HEIC photo only
  * where the browser shows it), a PDF's first page drawn large, a text file's
- * start as text, an Office file's thumbnail, and for anything else its icon,
- * with Download. Its text
+ * start as text, a video playing (a part at a time, with its frame as the
+ * poster), an Office file's thumbnail, and for anything else its icon, with
+ * Download. Its text
  * comes from `requests.attachments`.
  */
 'use client';
@@ -42,7 +43,7 @@ export interface ViewableFile {
 }
 
 /** What the viewer shows a file as. */
-type ShownAs = 'image' | 'pdf' | 'text' | 'thumbnail' | 'icon';
+type ShownAs = 'image' | 'pdf' | 'text' | 'video' | 'thumbnail' | 'icon';
 
 /**
  * What the viewer shows a file as, by its type.
@@ -60,6 +61,9 @@ function shownAs(file: ViewableFile): ShownAs {
   }
   if (type?.check === 'text') {
     return 'text';
+  }
+  if (type?.preview === 'video') {
+    return 'video';
   }
   return file.preview ? 'thumbnail' : 'icon';
 }
@@ -213,6 +217,36 @@ function TextContent({ file, fallback }: { file: ViewableFile; fallback: ReactNo
 }
 
 /**
+ * A video, playing in the viewer: the browser asks for it a part at a time
+ * (`Range`), so it starts at once and seeks; its frame is the poster. A
+ * video the browser can't play (an HEVC `.mov` in Chrome) gives way to the
+ * fallback.
+ *
+ * @param props - Video props.
+ * @param props.file - The file.
+ * @param props.fallback - What shows when it can't play.
+ */
+function VideoContent({ file, fallback }: { file: ViewableFile; fallback: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  const href = `/attachments/${file.id}`;
+  if (failed) {
+    return fallback;
+  }
+  return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption -- Screen recordings people attach come without captions to offer.
+    <video
+      controls
+      preload="metadata"
+      src={href}
+      poster={file.preview ? `${href}/preview` : undefined}
+      aria-label={file.name}
+      onError={() => setFailed(true)}
+      className="max-h-full max-w-full"
+    />
+  );
+}
+
+/**
  * The file itself, as the viewer shows its kind.
  *
  * @param props - Content props.
@@ -242,6 +276,10 @@ function FileContent({ file }: { file: ViewableFile }) {
     case 'text':
       return (
         <TextContent file={file} fallback={<IconPanel file={file} note={t('textFailed')} />} />
+      );
+    case 'video':
+      return (
+        <VideoContent file={file} fallback={<IconPanel file={file} note={t('videoFailed')} />} />
       );
     case 'thumbnail':
       return (
