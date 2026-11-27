@@ -788,7 +788,8 @@ in [Attachments](deploying.md#attachments).
   3, 2026", "Reply by Pat, Nov 3, 2026", "Internal note by Sam, Nov 4, 2026" for the staff). That
   link goes to the text (`TextSourceLink`): on the page, it brings it into view and focuses it;
   further back than the page shows or in a group the reader hides, it opens the page at it
-  (`?entry=`) and focuses it then. The row opens the file in the viewer, with a Download button at
+  (`?entry=`) and focuses it then (one further back than every chunk the page adds,
+  `MAX_EARLIER_CHUNKS`, leaves focus on the link). The row opens the file in the viewer, with a Download button at
   its end, and nothing removes a file from here. It shows five files, then "Show all 7 files"
   (`ShowMoreList`), which expands it in place with focus on the sixth. Removed files aren't
   listed, and a request without files the reader may open has no card.

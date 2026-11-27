@@ -5,7 +5,8 @@
  * further back than the page shows, or in a group the reader hides), it
  * opens the page at it (`?entry=`, which shows that entry whatever the
  * groups), then focuses it. Next.js never moves focus after a navigation,
- * so the link does.
+ * so the link does. A text the page still can't show (further back than
+ * every chunk it adds) leaves focus on the link.
  */
 'use client';
 
@@ -37,6 +38,7 @@ export default function TextSourceLink({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const link = useRef<HTMLAnchorElement>(null);
   // Set while the page opens at the text, so it's focused once it's there.
   const opening = useRef(false);
 
@@ -48,11 +50,22 @@ export default function TextSourceLink({
     const target = shownElementById(anchor);
     if (target) {
       showAndFocus(target);
+    } else {
+      link.current?.focus();
     }
   }, [pending, anchor]);
 
+  // A page left before it opened at the text forgets it, so coming back doesn't move focus.
+  useEffect(
+    () => () => {
+      opening.current = false;
+    },
+    [],
+  );
+
   return (
     <TextLink
+      ref={link}
       standalone
       href={href}
       prefetch={false}

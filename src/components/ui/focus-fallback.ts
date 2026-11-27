@@ -31,9 +31,10 @@ export function isShown(element: Element): boolean {
  * @returns The shown element, if there is one.
  */
 export function shownElementById(id: string): HTMLElement | null {
+  // Compared as text, never put in a selector, so no id can change what's matched.
   return (
-    [...document.querySelectorAll<HTMLElement>(`[id="${id.replaceAll('"', '\\"')}"]`)].find(
-      isShown,
+    [...document.querySelectorAll<HTMLElement>('[id]')].find(
+      (element) => element.id === id && isShown(element),
     ) ?? null
   );
 }

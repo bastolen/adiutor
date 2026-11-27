@@ -1,10 +1,11 @@
 /**
  * @file Tests for the link from a file to the text it was sent with: a text
  * on the page is brought into view and focused without a navigation, one
- * that isn't opens the page at it, and a click with a modifier key is left to
- * the browser.
+ * that isn't opens the page at it (focus staying on the link when the page
+ * still can't show it), a click with a modifier key is left to the browser,
+ * and the id it looks for is compared as text.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -56,9 +57,39 @@ describe('TextSourceLink', () => {
       </TextSourceLink>,
     );
 
-    await user.click(screen.getByRole('link', { name: 'Your reply' }));
+    // The page that opens doesn't show it either, and focus went nowhere meanwhile.
+    vi.mocked(useRouter().push).mockImplementationOnce(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    const link = screen.getByRole('link', { name: 'Your reply' });
+    await user.click(link);
 
     expect(useRouter().push).toHaveBeenCalledWith(HREF);
+    await waitFor(() => expect(link).toHaveFocus());
+  });
+
+  it('finds its text by an id compared as text, never as a selector', async () => {
+    const user = userEvent.setup();
+    const odd = 'entry-"] , li[id';
+    render(
+      <>
+        <TextSourceLink href={HREF} anchor={odd}>
+          Your reply
+        </TextSourceLink>
+        <ol>
+          <li id="entry-1" tabIndex={-1}>
+            Another reply
+          </li>
+          <li id={odd} tabIndex={-1}>
+            The log is attached.
+          </li>
+        </ol>
+      </>,
+    );
+
+    await user.click(screen.getByRole('link', { name: 'Your reply' }));
+
+    expect(screen.getByText('The log is attached.')).toHaveFocus();
   });
 
   it('leaves a click with a modifier key to the browser', async () => {
