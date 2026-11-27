@@ -22,7 +22,12 @@ keyboard support.
   `FileTile` (a file as a tile: a thumbnail or its kind's icon, its name and a line under it, a
   download link over the whole tile when given one, and room for actions in a corner; the
   attachments under a request's texts use it, with Remove for the staff and a dashed tile for a
-  removed one, and so do the files waiting to be sent, with their progress), `SetByEnvironment`
+  removed one, and so do the files waiting to be sent, with their progress), `FileRow` (the same
+  file as a compact row in a list: a small picture, its name with a line under it that may hold a
+  link of its own, and actions at its end; both shapes are built from `FilePicture` and `FileName`
+  in `file-parts.tsx`), `ShowMoreList` (a list that shows its first few items and a "Show all"
+  button that expands it in place, handing focus to the first item it adds; whether it's expanded
+  is kept while the page is, a view the reader chose rather than transient state), `SetByEnvironment`
   (for a setting the server's environment chooses: the sentence that says so, naming the
   variable, above what was chosen; `useSetByEnvironment` gives it for a locked field's
   description), `Skeleton`, `Pagination` (with `PageSizeLinks`, its choice of sizes, on its own

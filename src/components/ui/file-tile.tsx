@@ -9,10 +9,11 @@
  */
 'use client';
 
-import { Play } from 'lucide-react';
-import { type ReactNode, type Ref, useState } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import cn from '@/lib/cn';
+
+import { fileActionRing, FileName, FilePicture } from './file-parts';
 
 /** Props for {@link FileTile}. */
 interface FileTileProps {
@@ -54,9 +55,8 @@ interface FileTileProps {
 }
 
 /**
- * A file as a tile. A thumbnail loads lazily from Adiutor's own address (the
- * Content Security Policy allows images from it only), and is decorative:
- * the name says what it is. One that can't load gives way to the icon.
+ * A file as a tile, its picture across the top (`FilePicture`) and its name
+ * (`FileName`) under it.
  *
  * @param props - Tile props.
  * @param props.name - The file's name.
@@ -90,81 +90,32 @@ export default function FileTile({
   gone = false,
   children = null,
 }: FileTileProps) {
-  const [failed, setFailed] = useState(false);
-  const showThumbnail = thumbnail !== undefined && !failed && !gone;
-  const nameClass = 'text-sm font-medium wrap-anywhere text-foreground';
-
   return (
     <div
       className={cn(
         'relative flex h-full flex-col overflow-hidden rounded-lg border bg-surface transition-colors',
         gone ? 'border-dashed border-border' : 'border-border',
-        (href || onOpen) &&
-          'hover:border-muted-foreground has-[[data-tile-action]:focus-visible]:outline-2 has-[[data-tile-action]:focus-visible]:outline-offset-2 has-[[data-tile-action]:focus-visible]:outline-ring',
+        (href || onOpen) && cn('hover:border-muted-foreground', fileActionRing),
       )}
     >
-      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
-        {showThumbnail && playMark && (
-          // Says it's a video, as the name does; the play button's shape, not a button.
-          <span
-            aria-hidden="true"
-            className="absolute flex size-9 items-center justify-center rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface"
-          >
-            <Play className="size-4 translate-x-px fill-current" />
-          </span>
-        )}
-        {showThumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element -- Served by Adiutor's own route, which needs the viewer's session: Next's image optimizer fetches without it.
-          <img
-            src={thumbnail}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={() => setFailed(true)}
-            className={cn(
-              'size-full object-cover',
-              thumbnailPosition === 'top' ? 'object-top' : 'object-center',
-            )}
-          />
-        ) : (
-          <span className="text-muted-foreground [&>svg]:size-8">{icon}</span>
-        )}
-      </div>
+      <FilePicture
+        size="tile"
+        icon={icon}
+        thumbnail={thumbnail}
+        thumbnailPosition={thumbnailPosition}
+        playMark={playMark}
+        gone={gone}
+      />
       <div className="flex flex-col gap-0.5 p-2">
-        {/* eslint-disable-next-line no-nested-ternary -- three kinds of tile: opens, links, or neither */}
-        {onOpen ? (
-          <button
-            ref={openRef}
-            type="button"
-            data-tile-action=""
-            aria-label={openLabel}
-            onClick={onOpen}
-            className={cn(
-              nameClass,
-              // The whole tile is the button.
-              'cursor-pointer text-left after:absolute after:inset-0 hover:underline focus-visible:outline-none',
-            )}
-          >
-            {name}
-          </button>
-        ) : href ? (
-          <a
-            href={href}
-            data-tile-action=""
-            aria-label={linkLabel}
-            className={cn(
-              nameClass,
-              // The whole tile is the link.
-              'after:absolute after:inset-0 hover:underline focus-visible:outline-none',
-            )}
-          >
-            {name}
-          </a>
-        ) : (
-          <span className={cn(nameClass, gone && 'text-muted-foreground line-through')}>
-            {name}
-          </span>
-        )}
+        <FileName
+          name={name}
+          onOpen={onOpen}
+          openLabel={openLabel}
+          openRef={openRef}
+          href={href}
+          linkLabel={linkLabel}
+          gone={gone}
+        />
         <span className="text-xs text-muted-foreground">{detail}</span>
         {children}
       </div>
