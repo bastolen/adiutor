@@ -1,8 +1,8 @@
 /**
- * @file The Storage card's content while the server's environment chooses
- * where files are kept: what it chose, without any secret, and that it
- * can't be changed here; and, for a folder that isn't set up as Adiutor's
- * yet, the button that sets it up. Its text comes from
+ * @file The storage part of the Attachments card while the server's
+ * environment chooses where files are kept: what it chose, without any
+ * secret, and that it can't be changed here; and, for a folder that isn't
+ * set up as Adiutor's yet, the button that sets it up. Its text comes from
  * `admin.settings.attachments.storage`.
  */
 import { useTranslations } from 'next-intl';

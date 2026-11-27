@@ -1,7 +1,7 @@
 /**
- * @file Server actions for the Appearance tab of Settings: the brand colours,
- * the logo and browser tab icon (decision 0052), and light and dark mode
- * (decision 0053).
+ * @file Server actions for the appearance cards on Settings' General tab:
+ * the brand colours, the logo and browser tab icon (decision 0052), and
+ * light and dark mode (decision 0053).
  */
 'use server';
 

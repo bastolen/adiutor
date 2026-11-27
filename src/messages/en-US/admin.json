@@ -253,16 +253,13 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "How users see you, who’s on the staff, how requests are numbered and typed, where attached files are kept, and where webhooks send.",
+      "description": "How users see you, who’s on the staff, how requests are numbered and typed, and where emails, attached files and webhooks go.",
       "sections": "Settings sections",
       "tabs": {
         "general": "General",
         "staff": "Staff",
         "requests": "Requests",
-        "webhooks": "Webhooks",
-        "appearance": "Appearance",
-        "attachments": "Attachments",
-        "email": "Email"
+        "integrations": "Integrations"
       },
       "general": {
         "name": {
@@ -375,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Send what happens to requests to your own systems as signed JSON, or to a chat channel as a message. Each webhook picks the request types and events it gets.",
@@ -520,7 +516,6 @@
         "removedToast": "Webhook removed."
       },
       "appearance": {
-        "title": "Appearance",
         "chooseFirst": "Choose an image first.",
         "choose": "Choose image",
         "noneChosen": "No image chosen",
@@ -624,9 +619,10 @@
       },
       "attachments": {
         "title": "Attachments",
+        "description": "The files people attach to requests, replies and internal notes.",
         "storage": {
           "title": "Where files are kept",
-          "description": "Files people attach to requests are kept here. Each one is served from this server, to whoever may read it.",
+          "description": "Attached files are kept here, and each one is served from this server to whoever may read it.",
           "none": "No storage is chosen yet, so nobody can attach files.",
           "driver": "Storage",
           "choose": "Choose a storage",
@@ -671,7 +667,7 @@
           "signsInWith": "Signs in with",
           "signsInWithPassword": "A password",
           "signsInWithKey": "A private key",
-          "save": "Test and save",
+          "save": "Test and save storage",
           "saved": "Storage saved. A test file was written, read back and deleted there.",
           "confirmFirst": "Choosing where files are kept needs you to confirm it’s you first.",
           "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
@@ -688,9 +684,9 @@
         },
         "attaching": {
           "title": "Attaching files",
-          "description": "Whether people can attach files to requests, replies and internal notes. While it’s off, files already attached can still be downloaded.",
+          "description": "Whether people can attach files. While it’s off, files already attached can still be downloaded.",
           "label": "People can attach files",
-          "storageFirst": "Choose where files are kept first.",
+          "storageFirst": "First choose where files are kept, below.",
           "save": "Save",
           "savedOn": "People can attach files now.",
           "savedOff": "Attaching files is turned off."
@@ -705,7 +701,6 @@
         }
       },
       "email": {
-        "title": "Email",
         "server": {
           "title": "Mail server",
           "description": "Sign-in links, password resets, invitations, security notices and the emails about requests are sent through this server.",
@@ -739,10 +734,13 @@
           "fromAddress": "Sender address",
           "fromAddressHint": "An address on a domain you control, which this server may send from.",
           "whoIsTold": "Saving sends a test email to you through this server, then tells every staff Admin, you included.",
-          "save": "Test and save",
+          "save": "Test and save mail server",
           "saved": "Mail server saved. A test email reached you through it.",
           "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }
+      },
+      "integrations": {
+        "title": "Integrations · Settings"
       }
     },
     "companies": {

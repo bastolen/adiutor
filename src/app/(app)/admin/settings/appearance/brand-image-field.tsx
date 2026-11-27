@@ -1,5 +1,5 @@
 /**
- * @file The file field of the logo and icon forms on the Appearance tab
+ * @file The file field of the logo and icon forms on the General tab
  * (decision 0052), with the image chosen in it before it's uploaded and the
  * checks the browser can make first: a file is chosen, it's a PNG or JPEG
  * and it isn't too large. Its size and shape are the server's to check. Its

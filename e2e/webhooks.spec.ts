@@ -1,5 +1,5 @@
 /**
- * @file End-to-end tests for webhooks on Settings › Webhooks: a staff Admin
+ * @file End-to-end tests for webhooks on Settings › Integrations: a staff Admin
  * adds one, sees its signing secret once and finds it listed with its host
  * (never its address); an address inside the server's own network is refused in the
  * dialog; and a webhook to a receiver on 127.0.0.1 (which the test server
@@ -44,7 +44,7 @@ test('a staff Admin adds a webhook, sees its secret once, and finds it listed by
   page,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings/webhooks');
+  await page.goto('/admin/settings/integrations');
   const card = page.getByRole('region', { name: 'Webhooks' });
   await card.getByRole('button', { name: 'Add webhook' }).click();
   const dialog = page.getByRole('dialog', { name: 'Add a webhook' });
@@ -82,7 +82,7 @@ test('an address inside the server’s own network is refused in the dialog, wit
   page,
 }) => {
   await signIn(page, PLATFORM_ADMIN);
-  await page.goto('/admin/settings/webhooks');
+  await page.goto('/admin/settings/integrations');
   await page
     .getByRole('region', { name: 'Webhooks' })
     .getByRole('button', { name: 'Add webhook' })
@@ -107,7 +107,7 @@ test('a webhook gets a signed test and a signed delivery of a request’s news, 
   const receiver = await startWebhookReceiver();
   try {
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/webhooks');
+    await page.goto('/admin/settings/integrations');
     const card = page.getByRole('region', { name: 'Webhooks' });
     await card.getByRole('button', { name: 'Add webhook' }).click();
     const dialog = page.getByRole('dialog', { name: 'Add a webhook' });
@@ -117,9 +117,18 @@ test('a webhook gets a signed test and a signed delivery of a request’s news, 
     const secret = await dialog.getByRole('textbox', { name: 'Signing secret' }).inputValue();
     await dialog.getByRole('button', { name: 'Done' }).click();
 
-    // Its page: a test is sent while the Admin waits.
+    // Its page, under the Integrations tab: a test is sent while the Admin waits.
     await card.getByRole('link', { name: 'E2E Receiver' }).click();
     await expect(page.getByRole('region', { name: 'E2E Receiver' })).toContainText('127.0.0.1');
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Settings sections' })
+        .getByRole('link', { name: 'Integrations' }),
+    ).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByRole('link', { name: 'All webhooks' })).toHaveAttribute(
+      'href',
+      '/admin/settings/integrations#webhooks',
+    );
     await page.getByRole('button', { name: 'Send a test' }).click();
     await expect(toasts(page)).toContainText('Test delivered: the receiver answered 200.');
     expect(JSON.parse(receiver.received[0]?.body ?? '{}')).toMatchObject({
@@ -170,7 +179,7 @@ test('a webhook gets a signed test and a signed delivery of a request’s news, 
       .getByRole('alertdialog', { name: 'Remove E2E Receiver?' })
       .getByRole('button', { name: 'Remove webhook' })
       .click();
-    await expect(page).toHaveURL(/\/admin\/settings\/webhooks(\?|$)/);
+    await expect(page).toHaveURL('/admin/settings/integrations#webhooks');
     await expect(toasts(page)).toContainText('Webhook removed.');
     await expect(page.getByRole('region', { name: 'Webhooks' })).not.toContainText('E2E Receiver');
   } finally {

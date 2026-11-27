@@ -1,5 +1,5 @@
 /**
- * @file The Email tab of Settings (decision 0045): the mail server emails go
+ * @file The mail server card of Settings (decision 0045): the mail server emails go
  * out through and their sender, which staff Admins choose unless the
  * server's environment does (`SMTP_URL`, `EMAIL_FROM`). A mail server is
  * tried before it's saved (a test email to the staff Admin saving it), its
@@ -54,7 +54,7 @@ export interface SmtpEnvironment {
 /** Sends one email through a given mail server (`sendThrough`); the tests give their own. */
 export type SendThrough = typeof sendThrough;
 
-/** What the Email tab shows. */
+/** What the mail server card shows. */
 export interface SmtpSettings {
   /**
    * The mail server: chosen by the server's environment (`SMTP_URL`, its view
@@ -83,7 +83,7 @@ export async function openSmtp(stored: SmtpConfig): Promise<SmtpConfig> {
 }
 
 /**
- * Reads the Email tab's settings.
+ * Reads the mail server card's settings.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
@@ -224,7 +224,7 @@ export async function saveSmtpSettings(
     appUrl: ctx.baseUrl,
     locale: await recipientLocale(ctx, own?.locale),
     server: serverName(config),
-    url: `${ctx.baseUrl}/admin/settings/email`,
+    url: `${ctx.baseUrl}/admin/settings/integrations#mail-server`,
     brand: await loadEmailBrand(ctx.db),
   });
   await checkBeforeSaving(

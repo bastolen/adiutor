@@ -438,5 +438,5 @@ export function noStorageMessage(environment: StorageEnvironment): string {
   if (chosen.state === 'incomplete') {
     return `ATTACHMENTS_STORAGE in .env also needs ${chosen.missing.join(', ')}, so there are no sample files.`;
   }
-  return 'Attachments have no storage, so there are no sample files. Choose one on the Attachments tab of Settings, or set ATTACHMENTS_STORAGE in .env (see "Attachments" in docs/development.md).';
+  return 'Attachments have no storage, so there are no sample files. Choose one on the Integrations tab of Settings, or set ATTACHMENTS_STORAGE in .env (see "Attachments" in docs/development.md).';
 }

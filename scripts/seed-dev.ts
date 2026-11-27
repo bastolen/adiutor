@@ -58,7 +58,7 @@
  * ({@link seedAttachmentsDir}), which the seed chooses as the attachments'
  * storage, unless `ATTACHMENTS_STORAGE` in `.env` chooses one (or `off`: then
  * no files). "People can attach files" stays off, as on a
- * new install; turn it on in Settings › Attachments to try uploading.
+ * new install; turn it on in Settings › Integrations to try uploading.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
@@ -688,7 +688,7 @@ async function seedHistory(
 
 /**
  * Chooses the seed's folder ({@link seedAttachmentsDir}) as the attachments' storage, as a
- * staff Admin would on the Attachments tab: the folder made and marked as
+ * staff Admin would on the Integrations tab: the folder made and marked as
  * Adiutor's, and saved in Settings. Nothing when the server's environment
  * chooses the storage, or turns attachments off.
  *

@@ -30,7 +30,7 @@ export const FORCED_THEMES = ['light', 'dark'] as const;
 export type ForcedTheme = (typeof FORCED_THEMES)[number];
 
 /**
- * The choices on the Appearance tab of Settings: both modes (each person
+ * The choices on the General tab of Settings: both modes (each person
  * chooses, following their device until they do), or one only.
  */
 export const THEME_MODE_CHOICES = ['both', ...FORCED_THEMES] as const;

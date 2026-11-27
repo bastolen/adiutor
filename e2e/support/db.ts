@@ -471,7 +471,7 @@ export type AttachmentSettingRows = { key: string; value: unknown }[];
 
 /**
  * Reads the attachment settings' rows (`attachments.*`), for a test that
- * changes them on the Attachments tab to put them back afterwards.
+ * changes them on the Integrations tab to put them back afterwards.
  *
  * @returns The rows, whatever they hold.
  */
@@ -502,7 +502,7 @@ export async function restoreAttachmentSettings(rows: AttachmentSettingRows): Pr
 }
 
 /**
- * Reads the mail server saved on the Email tab of Settings (`email.smtp`),
+ * Reads the mail server saved on the Integrations tab of Settings (`email.smtp`),
  * for a test that changes it to put back.
  *
  * @returns Its row, or `null` while none is saved.

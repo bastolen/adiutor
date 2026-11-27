@@ -3,7 +3,7 @@
  * logo and an own browser tab icon. What kind of image a file is and how
  * large, read from its first bytes before anything decodes it, the shapes
  * and sizes each may have, and the sizes Adiutor stores them at. Free of zod
- * and server code, so the Appearance tab's forms check the same rules first.
+ * and server code, so the General tab's forms check the same rules first.
  */
 import { BRAND_ICON_MIN_SIDE, BRAND_IMAGE_MAX_SIDE, BRAND_LOGO_MIN_HEIGHT } from '../input-rules';
 

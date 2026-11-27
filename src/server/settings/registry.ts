@@ -77,7 +77,7 @@ export const SETTINGS = {
    */
   'requests.prefix': defineSetting(requestPrefixSchema, DEFAULT_REQUEST_PREFIX as string),
   /**
-   * The brand colours (decision 0049), set on the Appearance tab of Settings
+   * The brand colours (decision 0049), set on the General tab of Settings
    * and worked out into the palette every page and email uses
    * (`src/lib/branding`). `null` is the theme's own: the accent is the main
    * actions, links and focus rings (teal and green), the dark accent the
@@ -90,7 +90,7 @@ export const SETTINGS = {
   /** The colour whose hue the greys take; `null` keeps the theme's navy. */
   'brand.tint': defineSetting(brandColourSchema.nullable(), null),
   /**
-   * The one mode every page shows (decision 0053), set on the Appearance tab
+   * The one mode every page shows (decision 0053), set on the General tab
    * of Settings; `null` offers both, each person choosing their own.
    */
   'brand.forced_theme': defineSetting(forcedThemeSchema.nullable(), null),
@@ -114,7 +114,7 @@ export const SETTINGS = {
    */
   'setup.completed_at': defineSetting(momentSchema, null),
   /**
-   * Where attached files are kept, chosen on the Attachments tab of Settings
+   * Where attached files are kept, chosen on the Integrations tab of Settings
    * (decision 0044), with its secrets encrypted (`sealStorage`). The server's
    * environment wins over it when it chooses a storage (`ATTACHMENTS_STORAGE`).
    * `null` until a staff Admin chooses one.
@@ -128,14 +128,14 @@ export const SETTINGS = {
   'attachments.max_file_mb': defineSetting(maxFileMbSchema(MAX_FILE_MB), DEFAULT_MAX_FILE_MB),
   /**
    * Whether people can attach files ("People can attach files" on the
-   * Attachments tab of Settings): off until a staff Admin turns it on, and
+   * Integrations tab of Settings): off until a staff Admin turns it on, and
    * it counts only while a storage is chosen. Off, files already attached
    * stay downloadable.
    */
   'attachments.enabled': defineSetting(z.boolean(), false),
   /**
    * The mail server emails go out through, and their sender, chosen on the
-   * Email tab of Settings, with its password encrypted (`sealSecret`). The
+   * Integrations tab of Settings, with its password encrypted (`sealSecret`). The
    * server's environment wins over it: `SMTP_URL` for the server, and
    * `EMAIL_FROM` for the sender. `null` until a staff Admin saves one.
    */

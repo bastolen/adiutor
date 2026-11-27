@@ -73,7 +73,7 @@ export const WEBHOOK_URL_MAX_LENGTH = 2048;
 
 /**
  * The largest logo or browser tab icon a staff Admin may upload, in MB
- * (`setBrandImage`, and the Appearance tab's file fields).
+ * (`setBrandImage`, and the logo and icon cards' file fields).
  */
 export const BRAND_IMAGE_MAX_MB = 1;
 

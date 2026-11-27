@@ -118,15 +118,15 @@
       "heading": "De mailserver is gewijzigd",
       "changedBy": "{by} heeft de mailserver waarmee {staff} e-mail verstuurt gewijzigd in {server}.",
       "changed": "De mailserver waarmee {staff} e-mail verstuurt is gewijzigd in {server}.",
-      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die {staff} verstuurt. Herken je dit niet, controleer dan de instellingen voor e-mail en de auditlog.",
-      "button": "Instellingen voor e-mail openen"
+      "advice": "Wie de mailserver beheert, kan de inloglinks en codes lezen die {staff} verstuurt. Herken je dit niet, controleer dan de instellingen voor de mailserver en de auditlog.",
+      "button": "Instellingen voor de mailserver openen"
     },
     "smtpTest": {
       "subject": "{staff} kan e-mail versturen via deze mailserver",
-      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad E-mail van de instellingen.",
+      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad Integraties van de instellingen.",
       "heading": "Deze mailserver werkt",
       "body": "{staff} stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
-      "button": "Instellingen voor e-mail openen"
+      "button": "Instellingen voor de mailserver openen"
     },
     "jobFailing": {
       "subject": "Achtergrondtaak {job} blijft mislukken op {staff}",

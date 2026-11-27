@@ -253,16 +253,13 @@
     },
     "settings": {
       "title": "Ajustes",
-      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, dónde se guardan los archivos adjuntos y adónde envían los webhooks.",
+      "description": "Cómo os ven los usuarios, quién forma parte del personal, cómo se numeran y clasifican las solicitudes, y adónde van los correos, los archivos adjuntos y los webhooks.",
       "sections": "Secciones de los ajustes",
       "tabs": {
         "general": "General",
         "staff": "Personal",
         "requests": "Solicitudes",
-        "webhooks": "Webhooks",
-        "appearance": "Apariencia",
-        "attachments": "Archivos adjuntos",
-        "email": "Correo"
+        "integrations": "Integraciones"
       },
       "general": {
         "name": {
@@ -375,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Envía lo que pasa con las solicitudes a tus propios sistemas como JSON firmado, o a un canal de chat como mensaje. Cada webhook elige los tipos de solicitud y los eventos que recibe.",
@@ -520,7 +516,6 @@
         "removedToast": "Webhook eliminado."
       },
       "appearance": {
-        "title": "Apariencia",
         "chooseFirst": "Elige primero una imagen.",
         "choose": "Elegir imagen",
         "noneChosen": "Ninguna imagen elegida",
@@ -624,9 +619,10 @@
       },
       "attachments": {
         "title": "Archivos adjuntos",
+        "description": "Los archivos que se adjuntan a las solicitudes, las respuestas y las notas internas.",
         "storage": {
           "title": "Dónde se guardan los archivos",
-          "description": "Los archivos que se adjuntan a las solicitudes se guardan aquí. Cada uno se sirve desde este servidor, a quien pueda leerlo.",
+          "description": "Los archivos adjuntos se guardan aquí, y cada uno se sirve desde este servidor a quien pueda leerlo.",
           "none": "Aún no se ha elegido un almacenamiento, así que nadie puede adjuntar archivos.",
           "driver": "Almacenamiento",
           "choose": "Elige un almacenamiento",
@@ -671,7 +667,7 @@
           "signsInWith": "Inicia sesión con",
           "signsInWithPassword": "Una contraseña",
           "signsInWithKey": "Una clave privada",
-          "save": "Probar y guardar",
+          "save": "Probar y guardar el almacenamiento",
           "saved": "Almacenamiento guardado. Se escribió, se leyó y se borró un archivo de prueba ahí.",
           "confirmFirst": "Para elegir dónde se guardan los archivos, primero confirma que eres tú.",
           "offInEnvironment": "Los archivos adjuntos están desactivados en el entorno del servidor (ATTACHMENTS_STORAGE=off).",
@@ -688,9 +684,9 @@
         },
         "attaching": {
           "title": "Adjuntar archivos",
-          "description": "Si las personas pueden adjuntar archivos a las solicitudes, las respuestas y las notas internas. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
+          "description": "Si las personas pueden adjuntar archivos. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
           "label": "Las personas pueden adjuntar archivos",
-          "storageFirst": "Primero elige dónde se guardan los archivos.",
+          "storageFirst": "Primero elige abajo dónde se guardan los archivos.",
           "save": "Guardar",
           "savedOn": "Ahora las personas pueden adjuntar archivos.",
           "savedOff": "Adjuntar archivos está desactivado."
@@ -705,7 +701,6 @@
         }
       },
       "email": {
-        "title": "Correo",
         "server": {
           "title": "Servidor de correo",
           "description": "Los enlaces de inicio de sesión, los restablecimientos de contraseña, las invitaciones, los avisos de seguridad y los correos sobre solicitudes se envían a través de este servidor.",
@@ -739,10 +734,13 @@
           "fromAddress": "Dirección del remitente",
           "fromAddressHint": "Una dirección de un dominio que controlas, desde la que este servidor puede enviar.",
           "whoIsTold": "Al guardar, te llega un correo de prueba a través de este servidor y después se avisa a todos los administradores del personal, también a ti.",
-          "save": "Probar y guardar",
+          "save": "Probar y guardar el servidor de correo",
           "saved": "Servidor de correo guardado. Te ha llegado un correo de prueba a través de él.",
           "confirmFirst": "Para cambiar el servidor de correo, primero confirma que eres tú."
         }
+      },
+      "integrations": {
+        "title": "Integraciones · Ajustes"
       }
     },
     "companies": {

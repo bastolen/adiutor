@@ -1,5 +1,5 @@
 /**
- * @file Integration tests for the Email tab of Settings: what it shows,
+ * @file Integration tests for the mail server card of Settings: what it shows,
  * saving a mail server (tried with a test email to the staff Admin first,
  * the password encrypted and kept only for its server, refused while the
  * environment chooses, with a confirmation, a limit and an audit event), and
@@ -36,7 +36,7 @@ const { ctx, db } = setupTestContext();
 /** An environment that chooses nothing, so Settings decides. */
 const SETTINGS_DECIDE = {};
 
-/** The Email tab's form, as a browser sends it. */
+/** The mail server form, as a browser sends it. */
 const FORM = {
   host: 'smtp.adiutor.test',
   port: '587',

@@ -1,5 +1,5 @@
 /**
- * @file Integration tests for the brand colours on the Appearance tab of
+ * @file Integration tests for the brand colours on the General tab of
  * Settings, against the test database: saving and reading them, a dark
  * accent on its own, clearing them back to the theme's, Adiutor's own
  * colours stored as none, the colours it refuses, the audit event, and who

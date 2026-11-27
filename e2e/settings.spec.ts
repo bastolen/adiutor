@@ -3,9 +3,9 @@
  * the logo and the icon made from it, light and dark mode, the request
  * number prefix, request types, where attached files are kept (and the
  * storage chosen kept through confirming it's you), inviting staff, staff
- * roles and the last-Admin guard, and confirming it's you before giving a
- * staff role or a company's Admin role. A test that changes a setting puts
- * it back.
+ * roles and the last-Admin guard, confirming it's you before giving a staff
+ * role or a company's Admin role, and the addresses of the tabs merged into
+ * others. A test that changes a setting puts it back.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -59,6 +59,7 @@ import {
   waitForEmailAbout,
   waitForNewEmail,
 } from './support/outbox';
+import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
@@ -139,7 +140,7 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
   const palette = derivePalette(chosen);
   try {
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
     const accent = page.getByRole('textbox', { name: 'Accent', exact: true });
     const accentDark = page.getByRole('textbox', { name: 'Accent in dark mode', exact: true });
@@ -206,7 +207,7 @@ test('an Admin chooses the brand colours, which every page shows', async ({ page
 
     // Back to Adiutor's own: the page has no colours of its own any more.
     await page.emulateMedia({ colorScheme: 'light' });
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     await page.getByRole('button', { name: 'Use Adiutor’s colours' }).click();
     await expect(accent).toHaveValue(ADIUTOR_COLOURS.accent);
     await expect(accentDark).toHaveValue(ADIUTOR_COLOURS.accentDark);
@@ -230,7 +231,7 @@ test('an Admin uploads a logo, which every page and email shows, with an icon ma
   const visitor = await browser.newPage();
   try {
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     // The file input itself: the "Choose image" button opens it.
     const logoField = page.getByLabel('Logo image', { exact: true }).and(page.locator('input'));
     const upload = page.getByRole('button', { name: 'Upload logo' });
@@ -331,7 +332,7 @@ test('an Admin keeps every page in light mode, which hides the dark accent, and 
   try {
     await page.emulateMedia({ colorScheme: 'dark' });
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     const html = page.locator('html');
     await expect(html).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByRole('radio', { name: /^Light and dark mode/ })).toBeChecked();
@@ -363,6 +364,33 @@ test('an Admin keeps every page in light mode, which hides the dark accent, and 
   } finally {
     await setForcedTheme();
   }
+});
+
+test('the addresses of tabs merged into others lead to their first cards', async ({ page }) => {
+  await signIn(page, PLATFORM_ADMIN);
+  const tabs = page.getByRole('navigation', { name: 'Settings sections' });
+
+  // Appearance is on the General tab now, from its logo on.
+  await page.goto('/admin/settings/appearance');
+  await expect(page).toHaveURL('/admin/settings#logo');
+  await expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('region', { name: 'Logo' })).toBeInViewport();
+
+  // Email, Attachments and Webhooks are on the Integrations tab, which a webhook's page keeps.
+  const integrations = tabs.getByRole('link', { name: 'Integrations' });
+  await inOrder(
+    [
+      ['email', 'mail-server', 'Mail server'],
+      ['attachments', 'attachments', 'Attachments'],
+      ['webhooks', 'webhooks', 'Webhooks'],
+    ] as const,
+    async ([old, card, region]) => {
+      await page.goto(`/admin/settings/${old}`);
+      await expect(page).toHaveURL(`/admin/settings/integrations#${card}`);
+      await expect(integrations).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('region', { name: region })).toBeInViewport();
+    },
+  );
 });
 
 test('the staff’s name shows instead of Adiutor everywhere, with Powered by Adiutor', async ({
@@ -445,14 +473,18 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
   try {
     await restoreAttachmentSettings([]);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/attachments');
+    await page.goto('/admin/settings/integrations');
+    // The mail server's card shares the tab: the storage's own controls are in its card.
+    const card = page.getByRole('group', { name: 'Where files are kept' });
     await expect(
       page.getByText('No storage is chosen yet, so nobody can attach files.'),
     ).toBeVisible();
     // Attaching can only be turned on once there's a storage.
     const attaching = page.getByRole('checkbox', { name: 'People can attach files' });
     await expect(attaching).toBeDisabled();
-    await expect(attaching).toHaveAccessibleDescription('Choose where files are kept first.');
+    await expect(attaching).toHaveAccessibleDescription(
+      'First choose where files are kept, below.',
+    );
 
     await page.getByRole('combobox', { name: 'Storage' }).click();
     await page.getByRole('option', { name: /A folder on this server/ }).click();
@@ -460,14 +492,14 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
 
     // A folder that isn't there fails its test, and what was typed stays.
     await dir.fill(join(folder, 'missing'));
-    await page.getByRole('button', { name: 'Test and save' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    await card.getByRole('button', { name: 'Test and save storage' }).click();
+    await expect(card.getByRole('alert')).toContainText(
       "The bucket or the folder doesn't exist. Create it first.",
     );
     await expect(dir).toHaveValue(join(folder, 'missing'));
 
     await dir.fill(folder);
-    await page.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save storage' }).click();
     await expect(toasts(page)).toContainText('Storage saved.');
     await expect(page.getByText('No storage is chosen yet')).toBeHidden();
     await expect(dir).toHaveValue(folder);
@@ -476,7 +508,7 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
 
     await attaching.check();
     await page
-      .getByRole('region', { name: 'Attaching files' })
+      .getByRole('group', { name: 'Attaching files' })
       .getByRole('button', { name: 'Save' })
       .click();
     await expect(toasts(page)).toContainText('People can attach files now.');
@@ -504,7 +536,7 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await signIn(page, PLATFORM_ADMIN);
     // Signed in 20 minutes ago, as far as the confirmation window goes.
     await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
-    await page.goto('/admin/settings/attachments');
+    await page.goto('/admin/settings/integrations');
 
     const storage = page.getByRole('combobox', { name: 'Storage' });
     await storage.click();
@@ -516,21 +548,20 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await bucket.fill('adiutor-tests');
     await accessKeyId.fill('e2e-key-id');
 
-    // Saving needs a recent confirmation: the step-up page comes back to the storage's card.
-    const save = page.getByRole('button', { name: 'Test and save' });
+    // Saving needs a recent confirmation: the step-up page comes back to the Attachments card.
+    const card = page.getByRole('group', { name: 'Where files are kept' });
+    const save = card.getByRole('button', { name: 'Test and save storage' });
     await expect(save).toHaveCount(0);
-    const confirm = page
-      .getByRole('region', { name: 'Where files are kept' })
-      .getByRole('link', { name: /^Confirm it.s you$/ });
+    const confirm = card.getByRole('link', { name: /^Confirm it.s you$/ });
     await expect(confirm).toHaveAttribute(
       'href',
-      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fattachments%23storage&for=change',
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fintegrations%23attachments&for=change',
     );
     await confirm.click();
     await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
     // Back with the bucket chosen and everything typed, ready to save.
-    await expect(page).toHaveURL('/admin/settings/attachments#storage', { timeout: 15_000 });
+    await expect(page).toHaveURL('/admin/settings/integrations#attachments', { timeout: 15_000 });
     await expect(save).toBeEnabled();
     await expect(storage).toHaveText(/An S3-compatible bucket/);
     await expect(endpoint).toHaveValue('https://files.adiutor.test');
@@ -548,7 +579,9 @@ test('an Admin sets up the mail server, which is tried with a test email first',
   try {
     await restoreSmtpSetting(null);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/email');
+    await page.goto('/admin/settings/integrations');
+    // The Attachments card shares the tab: the mail server's own controls are in its card.
+    const card = page.getByRole('region', { name: 'Mail server' });
     // The tests' server runs in production, where a missing mail server means no sign-in links.
     await expect(
       page.getByText(
@@ -556,26 +589,26 @@ test('an Admin sets up the mail server, which is tried with a test email first',
       ),
     ).toBeVisible();
 
-    const host = page.getByRole('textbox', { name: 'Server' });
+    const host = card.getByRole('textbox', { name: 'Server' });
     await host.fill('smtp.adiutor.test');
-    await page.getByRole('combobox', { name: 'Security' }).click();
+    await card.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^None/ }).click();
-    await page.getByRole('textbox', { name: 'Username' }).fill('mailer@adiutor.test');
-    await page.getByLabel('Password').fill('e2e-mail-password');
-    await page.getByRole('textbox', { name: 'Sender name' }).fill('Adiutor Tests');
-    await page.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
+    await card.getByRole('textbox', { name: 'Username' }).fill('mailer@adiutor.test');
+    await card.getByLabel('Password').fill('e2e-mail-password');
+    await card.getByRole('textbox', { name: 'Sender name' }).fill('Adiutor Tests');
+    await card.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
 
     // Without TLS to another computer, production refuses it, and what was typed stays.
-    await page.getByRole('button', { name: 'Test and save' }).click();
-    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    await card.getByRole('button', { name: 'Test and save mail server' }).click();
+    await expect(card.getByRole('alert')).toContainText(
       'Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted.',
     );
     await expect(host).toHaveValue('smtp.adiutor.test');
 
-    await page.getByRole('combobox', { name: 'Security' }).click();
+    await card.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^STARTTLS/ }).click();
-    await page.getByLabel('Password').fill('e2e-mail-password');
-    await page.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByLabel('Password').fill('e2e-mail-password');
+    await card.getByRole('button', { name: 'Test and save mail server' }).click();
     await expect(toasts(page)).toContainText(
       'Mail server saved. A test email reached you through it.',
     );
@@ -596,8 +629,8 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     // Saved without the password, which is emptied and never shown again.
     await page.reload();
     await expect(host).toHaveValue('smtp.adiutor.test');
-    await expect(page.getByRole('spinbutton', { name: 'Port' })).toHaveValue('587');
-    const password = page.getByLabel('Password');
+    await expect(card.getByRole('spinbutton', { name: 'Port' })).toHaveValue('587');
+    const password = card.getByLabel('Password');
     await expect(password).toHaveValue('');
     await expect(password).toHaveAccessibleDescription(
       'A password is saved. Leave this empty to keep it while the server, port and username stay the same.',

@@ -1,7 +1,7 @@
 /**
- * @file Server actions for the Attachments tab of Settings: where attached
- * files are kept (tried before it's saved, and only with a recent
- * confirmation), setting up the one the environment chooses, whether people
+ * @file Server actions for the Attachments card on Settings' Integrations
+ * tab: where attached files are kept (tried before it's saved, and only with
+ * a recent confirmation), setting up the one the environment chooses, whether people
  * can attach files, and the largest file anyone may attach.
  */
 'use server';
@@ -63,7 +63,7 @@ function storageFields(formData: FormData) {
 
 /**
  * Tries and saves where attached files are kept. Without a recent
- * confirmation it sends the user to confirm first, back to the Storage card.
+ * confirmation it sends the user to confirm first, back to the Attachments card.
  *
  * @param _previous - The previous result (unused).
  * @param formData - Field `driver` and the driver's own, and `returnTo`.
@@ -75,7 +75,7 @@ export async function saveStorageAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await confirmFirstIfNeeded(formData, '/admin/settings/attachments#storage', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/integrations#attachments', () =>
       saveAttachmentStorage(appContext, actor, storageFields(formData)),
     );
     refresh();
@@ -140,7 +140,7 @@ export async function setUpStorageAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await confirmFirstIfNeeded(formData, '/admin/settings/attachments#storage', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/integrations#attachments', () =>
       setUpStorage(appContext, actor),
     );
     refresh();

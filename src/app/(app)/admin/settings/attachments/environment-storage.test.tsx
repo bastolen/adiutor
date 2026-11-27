@@ -1,5 +1,5 @@
 /**
- * @file Tests for what the Storage card shows while the server's environment
+ * @file Tests for what the storage part of the Attachments card shows while the server's environment
  * chooses where files are kept: its settings without a secret, or that
  * attachments are off, and the button that sets up a folder that isn't
  * Adiutor's yet.
