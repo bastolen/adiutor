@@ -473,7 +473,11 @@ A file attached to a request is uploaded on its own first, then sent with its te
   (`zip-entry.ts`, on Node's zlib) reads the archive's directory and that one entry only, and
   refuses more than 10,000 entries, an entry over 2 MB packed or 4 MB unpacked, one that unpacks to
   more than it says or fails its checksum, encryption, zip64 and any packing but stored or deflated;
-  the thumbnail is then drawn like an image, PNG or JPEG only. A server draws at most two previews
+  the thumbnail is then drawn like an image, PNG or JPEG only. A video's preview is a frame its
+  uploader's browser drew, the uploader's own claim too: the server takes one frame per video, only
+  for the uploader's own unsent upload with the same staff member signed in as them, if one was
+  (`setVideoFrame`, under its own rate limit), of at most 512 KB, and draws it again as a JPEG, PNG
+  or WebP image of at most 4 megapixels. A server draws at most two previews
   at once (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for the
   `attachment-previews` job, which claims each file before it draws it, so a file that brings the
   process down is never tried again.
@@ -741,7 +745,9 @@ development only), and inline event handlers never do (`script-src-attr 'none'`)
 markup can't run script. Next.js adds the nonce to its own scripts; the root layout reads it
 (`x-nonce`) for the theme script. Reading it makes every page render per request, with an empty
 static shell (`instant = false` on the root layout only turns off Cache Components' empty-shell
-check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). The logos and icons
+check). Styles keep `'unsafe-inline'` (React and Radix use `style` attributes). Media load only
+from the page's own `blob:` addresses (`media-src blob:`): the hidden video a frame is drawn from
+when someone attaches one, which never plays. The logos and icons
 the proxy skips (`/brand/`, `/favicon.ico`) get a fixed policy that runs nothing
 (`IMAGE_FILE_POLICY`, from `next.config.ts`), as do the files it serves (`filePolicyFor`:
 attachments get `FILE_POLICY`, the brand's images `IMAGE_FILE_POLICY`);

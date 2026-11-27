@@ -107,6 +107,11 @@ export const RATE_LIMITS = {
    */
   attachmentUploadsPerUser: { limit: 100, windowSeconds: 60 * 60 },
   /**
+   * Frames one person's browser sends as the previews of the videos they
+   * uploaded (decision 0057): one per video, so no more than uploads.
+   */
+  videoFramesPerUser: { limit: 100, windowSeconds: 60 * 60 },
+  /**
    * Changes one staff Admin makes to webhooks: adding, changing, renewing a
    * secret, turning on or off and removing. Each change can look an address
    * up, and points request texts somewhere new.

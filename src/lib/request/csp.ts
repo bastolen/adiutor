@@ -87,6 +87,8 @@ export function contentSecurityPolicy(
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    // The hidden video a frame is drawn from when one is attached (decision 0057); nothing plays.
+    'media-src blob:',
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

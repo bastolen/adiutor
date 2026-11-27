@@ -27,6 +27,12 @@ export interface ImageLimits {
  */
 export const IMAGE_LIMITS: ImageLimits = { maxPixels: 50_000_000, seconds: 5 };
 
+/**
+ * A frame of a video, drawn by the uploader's browser: up to 4 megapixels,
+ * drawn again within 5 seconds.
+ */
+export const VIDEO_FRAME_LIMITS: ImageLimits = { maxPixels: 4_000_000, seconds: 5 };
+
 /** What a PDF may cost to draw. */
 export interface PdfLimits {
   /** The most memory PDFium may take, in pages of 64 KiB. */

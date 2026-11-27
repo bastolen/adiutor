@@ -7,6 +7,7 @@
  */
 'use client';
 
+import { Play } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 import cn from '@/lib/cn';
@@ -30,6 +31,8 @@ interface FileTileProps {
    * its middle, or its top (a page, whose title is at the top).
    */
   thumbnailPosition?: 'center' | 'top';
+  /** Whether the thumbnail is a video's frame, marked with a play button's shape (decorative). */
+  playMark?: boolean;
   /** Where the tile links to (the file, to download it); the tile is a link only with one. */
   href?: string;
   /** The link's name for screen readers, which must hold the name, e.g. "Download error.png, 240 kB". */
@@ -53,6 +56,7 @@ interface FileTileProps {
  * @param props.icon - The icon for its kind.
  * @param props.thumbnail - An image's address, for its thumbnail.
  * @param props.thumbnailPosition - Which part of the thumbnail shows when it doesn't fit.
+ * @param props.playMark - Whether the thumbnail is a video's frame.
  * @param props.href - Where the tile links to.
  * @param props.linkLabel - The link's name for screen readers.
  * @param props.actions - Buttons in the tile's top corner.
@@ -65,6 +69,7 @@ export default function FileTile({
   icon,
   thumbnail = undefined,
   thumbnailPosition = 'center',
+  playMark = false,
   href = undefined,
   linkLabel = undefined,
   actions = null,
@@ -84,7 +89,16 @@ export default function FileTile({
           'hover:border-muted-foreground has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring',
       )}
     >
-      <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
+        {showThumbnail && playMark && (
+          // Says it's a video, as the name does; the play button's shape, not a button.
+          <span
+            aria-hidden="true"
+            className="absolute flex size-9 items-center justify-center rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface"
+          >
+            <Play className="size-4 translate-x-px fill-current" />
+          </span>
+        )}
         {showThumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element -- Served by Adiutor's own route, which needs the viewer's session: Next's image optimizer fetches without it.
           <img

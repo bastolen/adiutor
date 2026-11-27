@@ -926,8 +926,13 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
-      test('a request with attachments, an image among them', async ({ page }) => {
+      test('a request with attachments, previews among them', async ({ page }) => {
         const number = await storeOwnRequest({ title: 'Attachments for the scan' });
+        // A one-pixel WebP, as a preview the server drew.
+        const preview = Uint8Array.from(
+          atob('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='),
+          (character) => character.charCodeAt(0),
+        );
         await storeAttachment(number, {
           name: 'error.png',
           contentType: 'image/png',
@@ -937,6 +942,20 @@ test.describe('in forced-colours mode', () => {
             ),
             (character) => character.charCodeAt(0),
           ),
+          preview,
+        });
+        await storeAttachment(number, {
+          name: 'invoice.pdf',
+          contentType: 'application/pdf',
+          bytes: new TextEncoder().encode('%PDF-1.7'),
+          preview,
+        });
+        // A video's frame carries a play mark.
+        await storeAttachment(number, {
+          name: 'demo.webm',
+          contentType: 'video/webm',
+          bytes: new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]),
+          preview,
         });
         await storeAttachment(number, {
           name: 'printer.log',
@@ -944,7 +963,8 @@ test.describe('in forced-colours mode', () => {
           bytes: new TextEncoder().encode('printer offline'),
         });
         await page.goto(`/requests/${number}`);
-        await expect(page.getByRole('list', { name: '2 attachments' })).toBeVisible();
+        await expect(page.getByRole('list', { name: '4 attachments' })).toBeVisible();
+        await expect(page.locator('svg.lucide-play')).toBeVisible();
         await expectAccessible(page);
       });
 

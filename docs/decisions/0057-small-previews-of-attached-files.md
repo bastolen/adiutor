@@ -28,6 +28,11 @@ and delete.
 - **An Office or OpenDocument file** shows the thumbnail it carries (always in OpenDocument files,
   usually in PowerPoint's, rarely in Word's or Excel's), read by a small zip reader of our own with
   hard caps (`zip-entry.ts`) and drawn again like an image; PNG or JPEG only.
+- **A video** shows a frame its uploader's browser drew (`video-frame.ts`, a hidden muted `<video>`
+  on the file's `blob:` address, which the page's `media-src blob:` allows), sent once the upload is
+  done and taken once, for the uploader's own unsent upload (`setVideoFrame`), then drawn again
+  within the image limits. Its tile carries a play mark. A video the browser can't decode keeps its
+  icon.
 - **Drawn at upload,** from the bytes the upload already holds, at most two at a time per server. A
   drawing that can't start, or a preview the storage refuses, is left for the `attachment-previews`
   job, which also draws the files attached before previews existed; a file that can't be drawn is
@@ -50,6 +55,9 @@ Details: [Files people attach](../security-measures.md#files-people-attach) and
   worker thread for 5 seconds, then a new one.
 - An Office file's thumbnail is its own claim of what it looks like, made by the program that saved
   it, not a drawing of its content; most Word and Excel files have none and keep their icon.
+- A video's frame is its uploader's claim, like an Office file's thumbnail: a browser made to lie
+  can send any picture, shown only to the readers of that file. Videos uploaded before previews
+  existed keep their icon, as no browser is there to draw them.
 - HEIC keeps its icon: prebuilt sharp has no HEVC decoder, and adding one brings LGPL code and
   patent questions.
 
@@ -66,5 +74,8 @@ Details: [Files people attach](../security-measures.md#files-people-attach) and
   to install everywhere, seconds per file, and a far larger surface for untrusted files.
 - **A zip library:** more than one entry needs, where a reader of a hundred lines can refuse
   everything it doesn't need (zip64, encryption, other packings).
+- **ffmpeg for videos:** decodes every video on the server, but it's a large native program (with
+  GPL builds and patent questions for H.264 and HEVC), and decoding untrusted video is a large
+  surface; the uploader's browser has already decoded the file.
 - **PDF.js:** draws in a browser; on a server it needs a canvas library of its own and runs the
   PDF's fonts and images through JavaScript in the server's process.

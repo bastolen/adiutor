@@ -3,8 +3,9 @@
  * attached while writing (by the Attach button, a drop and a paste, checked
  * in the browser and uploaded at once) and sent with a reply, a note or a
  * new request; and the files of a request's texts, shown under each text
- * with a preview for an image (decision 0057: drawn on the server, never the
- * original) and downloaded under their names, a note's files for the staff
+ * with a preview for an image, a PDF and a video (decision 0057: drawn on
+ * the server, or for a video from a frame the uploader's browser drew; never
+ * the original) and downloaded under their names, a note's files for the staff
  * only, kept by the reader's browser and checked with the server before
  * each use. Each test stores or raises a request of its own.
  */
@@ -304,6 +305,70 @@ test('a PDF sent with a reply shows its first page, from the top', async ({ page
   // An A4 page, 480 pixels high.
   await expect(preview).toHaveJSProperty('naturalHeight', 480);
   await expect(preview).toHaveClass(/object-top/);
+});
+
+test('a screen recording shows a frame the uploader’s browser drew, with a play mark', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'A recording attached to a reply' });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  // A second of video, recorded in the browser from a canvas, as a screen recorder makes one.
+  const webm = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    const drawing = canvas.getContext('2d');
+    const recorder = new MediaRecorder(canvas.captureStream(10), { mimeType: 'video/webm' });
+    const chunks: Blob[] = [];
+    recorder.addEventListener('dataavailable', (event) => chunks.push(event.data));
+    const stopped = new Promise((resolve) => {
+      recorder.addEventListener('stop', resolve);
+    });
+    recorder.start();
+    let frame = 0;
+    const painting = setInterval(() => {
+      if (drawing) {
+        drawing.fillStyle = frame % 2 === 0 ? '#1565c0' : '#c62828';
+        drawing.fillRect(0, 0, 320, 240);
+      }
+      frame += 1;
+    }, 50);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1200);
+    });
+    recorder.stop();
+    clearInterval(painting);
+    await stopped;
+    return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];
+  });
+
+  await chooseFiles(page, [
+    { name: 'demo.webm', mimeType: 'video/webm', buffer: Buffer.from(webm) },
+  ]);
+  // Before it's sent, the tile shows the frame the browser drew, marked as a video.
+  const waiting = page.getByRole('list', { name: '1 file to send' });
+  await expect(waiting.locator('img')).toHaveAttribute('src', /^blob:/);
+  await expect(waiting.locator('img')).toHaveJSProperty('naturalWidth', 320);
+  await expect(waiting.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
+  await (await markdownEditor(page, 'Your reply')).fill('The recording is attached.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  const sent = page.getByRole('region', { name: 'Conversation' }).getByRole('list', {
+    name: '1 attachment',
+  });
+  const recording = sent.getByRole('link', { name: /^Download demo\.webm/ });
+  await expect(recording).toBeVisible();
+  // The server took the frame as the video's preview.
+  await expect(sent.locator('img')).toHaveAttribute(
+    'src',
+    `${(await recording.getAttribute('href')) ?? ''}/preview`,
+  );
+  await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 320);
+  await expect(sent.locator('span[aria-hidden="true"] svg.lucide-play')).toBeVisible();
 });
 
 test('the staff attach a file to an internal note', async ({ page, context }) => {

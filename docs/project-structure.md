@@ -20,8 +20,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
   what the request pages share (the list, the board, the badges, the text, the people, the files
-  and the picker that attaches them) in `src/app/(app)/_requests/`. Files are uploaded to
-  `src/app/api/attachments/` and downloaded from `src/app/attachments/[id]/`. The logo and the
+  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`) in
+  `src/app/(app)/_requests/`. Files are uploaded to `src/app/api/attachments/` and downloaded from
+  `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/`. The logo and the
   browser tab icon made from the brand are served to anyone from `src/app/branding/` (`logo/`,
   `icon/`, and `favicon/`, where `/favicon.ico` is rewritten). A
   company's pages, a user's page, Settings, the Logs and the account pages have a `layout.tsx` with their header and tabs (see
@@ -58,8 +59,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
     and who reads it in `detail-reader.ts`), who is told what happens to one (`tell-people.ts`)
     and what one person's email about it shows (`read-request-update.ts`, made of the shapes in
     `request-update.ts` and read from `request-update-context.ts`), and their attachments:
-    uploading, downloading and removing (`attachments.ts`) and sending uploads with a text
-    (`attachment-claims.ts`).
+    uploading, downloading and removing (`attachments.ts`), sending uploads with a text
+    (`attachment-claims.ts`) and taking a video's frame as its preview (`attachment-frames.ts`).
   - `src/server/previews/`: the small previews of attached files (a folder module, see
     [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) or a PDF's first
     page (`draw-pdf.ts`, PDFium in a worker thread, `pdf-worker.ts`, with its memory capped,

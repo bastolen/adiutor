@@ -124,6 +124,15 @@ export const ATTACHMENT_ACCEPT = ATTACHMENT_TYPES.flatMap((type) =>
   type.extensions.map((extension) => `.${extension}`),
 ).join(',');
 
+/**
+ * The longest side of the frame a browser draws of a video it uploads, for
+ * its preview, in pixels (decision 0057).
+ */
+export const VIDEO_FRAME_SIZE = 480;
+
+/** The largest such frame, in bytes: a JPEG of that size is a tenth of it. */
+export const VIDEO_FRAME_MAX_BYTES = 512 * 1024;
+
 /** The most files one text (a description, reply or note) may have, removed ones aside. */
 export const MAX_ATTACHMENTS_PER_TEXT = 10;
 

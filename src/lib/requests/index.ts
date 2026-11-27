@@ -157,4 +157,6 @@ export {
   cleanAttachmentName,
   MAX_ATTACHMENTS_PER_TEXT,
   UPLOADS_AT_ONCE,
+  VIDEO_FRAME_MAX_BYTES,
+  VIDEO_FRAME_SIZE,
 } from './attachments';

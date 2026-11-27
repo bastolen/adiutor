@@ -1,17 +1,22 @@
 /**
  * @file Draws a file's preview by its kind (decision 0057): an image as it
  * is, a PDF's first page, the thumbnail an Office or OpenDocument file
- * carries. A drawing never throws for what's in a file: one it can't draw is
+ * carries, and for a video the frame its uploader's browser drew (a JPEG,
+ * PNG or WebP image within `VIDEO_FRAME_LIMITS`), drawn again. A drawing never throws for what's in a file: one it can't draw is
  * `none`, and keeps its icon. A drawing that can't start (every slot taken,
  * or the drawing library missing) is `skipped`, and left for the previews
  * job.
  */
-import type { AttachmentPreviewKind } from '@/lib/requests';
+import type { AttachmentCheck, AttachmentPreviewKind } from '@/lib/requests';
 
 import drawImage from './draw-image';
 import drawPdf from './draw-pdf';
 import inDrawingSlot, { BUSY } from './limiter';
+import { VIDEO_FRAME_LIMITS } from './limits';
 import drawOfficeThumbnail from './office-thumbnail';
+
+/** The kinds of image a video's frame may be. */
+const FRAME_CHECKS: readonly AttachmentCheck[] = ['jpeg', 'png', 'webp'];
 
 /** What drawing a preview gave. */
 export type PreviewDrawing =
@@ -30,7 +35,10 @@ export type PreviewDrawing =
       status: 'skipped';
     };
 
-/** The kinds of preview drawn from the file itself, at upload and by the previews job. */
+/**
+ * The kinds of preview drawn from the file itself, at upload and by the
+ * previews job; a video's comes from the frame its uploader's browser drew.
+ */
 export const PREVIEWS_FROM_FILES: readonly AttachmentPreviewKind[] = ['image', 'pdf', 'office'];
 
 /**
@@ -47,7 +55,7 @@ export function drawsFromFile(kind: AttachmentPreviewKind | null): kind is Attac
  * Draws one preview, in its kind's way.
  *
  * @param kind - The kind of preview.
- * @param bytes - The file.
+ * @param bytes - The file, or a video's frame.
  * @returns The preview, or `null` when it can't be drawn.
  */
 async function drawByKind(
@@ -61,6 +69,8 @@ async function drawByKind(
       return drawPdf(bytes);
     case 'office':
       return drawOfficeThumbnail(bytes);
+    case 'video':
+      return drawImage({ bytes, checks: FRAME_CHECKS, limits: VIDEO_FRAME_LIMITS });
     default:
       return null;
   }
