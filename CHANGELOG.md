@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.6.0](https://github.com/bastolen/adiutor/compare/v0.5.0...v0.6.0) (2026-11-27)
+
+
+### Features
+
+* attach files to requests ([#163](https://github.com/bastolen/adiutor/issues/163)) ([1621442](https://github.com/bastolen/adiutor/commit/16214423407c45c79e2e16192b8985fb909cf0a7))
+* **attachments:** open a request's files in a viewer ([#182](https://github.com/bastolen/adiutor/issues/182)) ([98b9d21](https://github.com/bastolen/adiutor/commit/98b9d21d732040422c4aa8e52a97cc07faa61c32))
+* **attachments:** show small previews of the files on a request ([#181](https://github.com/bastolen/adiutor/issues/181)) ([de211ca](https://github.com/bastolen/adiutor/commit/de211ca370bce04264b8471b77f22bc8ddf6db83))
+* let staff Admins choose the brand colours ([#161](https://github.com/bastolen/adiutor/issues/161)) ([36a7ca2](https://github.com/bastolen/adiutor/commit/36a7ca25f775a6dc203702dcd6743c54f4164f9d))
+* let staff Admins keep every page in light or dark mode ([#175](https://github.com/bastolen/adiutor/issues/175)) ([5b5c38c](https://github.com/bastolen/adiutor/commit/5b5c38c7c284c720f919516aa747ac932cd11c89))
+* let staff Admins upload the logo, with a browser tab icon made from it ([#170](https://github.com/bastolen/adiutor/issues/170)) ([ef1be5b](https://github.com/bastolen/adiutor/commit/ef1be5b2d34d9293850eb602863340c79b99a6f7))
+* regroup Settings into four tabs: General, Staff, Requests and Integrations ([#179](https://github.com/bastolen/adiutor/issues/179)) ([a784ceb](https://github.com/bastolen/adiutor/commit/a784ceb45e3690d5818f6eb72da1c58a28812755))
+* **requests:** internal requests for the staff ([#162](https://github.com/bastolen/adiutor/issues/162)) ([8f7f829](https://github.com/bastolen/adiutor/commit/8f7f829caaedb604e96b73388934e60af4c52b52))
+* **requests:** list every file on a request in a Files card ([#187](https://github.com/bastolen/adiutor/issues/187)) ([884af28](https://github.com/bastolen/adiutor/commit/884af28de2844a670866dcc9a0deb2f8eef827e5))
+* **requests:** raise a request for someone at a company ([#159](https://github.com/bastolen/adiutor/issues/159)) ([96c4e61](https://github.com/bastolen/adiutor/commit/96c4e61e14baba33284c295f02a8208399eb216f))
+* send news about requests to webhooks ([#160](https://github.com/bastolen/adiutor/issues/160)) ([b1a92ba](https://github.com/bastolen/adiutor/commit/b1a92bac0b6318ccc32af53cbe2e34cdb9773842))
+* set up the mail server in Settings, unless the environment names one ([#165](https://github.com/bastolen/adiutor/issues/165)) ([5bb5b2b](https://github.com/bastolen/adiutor/commit/5bb5b2b34f73e1507eaa2fe1733b0c8ac464c516))
+* show the staff's name instead of Adiutor, with Powered by Adiutor ([#166](https://github.com/bastolen/adiutor/issues/166)) ([ca7af55](https://github.com/bastolen/adiutor/commit/ca7af55bdabe47c97d8fe19078d4b708d3d1468b))
+
+
+### Bug Fixes
+
+* **account:** leave account names off the Picture card for staff who don't see them ([#174](https://github.com/bastolen/adiutor/issues/174)) ([0788bc8](https://github.com/bastolen/adiutor/commit/0788bc8484c995f9a0db4cd7cb7f5c843e19ef73))
+* **account:** load every picture someone can choose on the account page ([#167](https://github.com/bastolen/adiutor/issues/167)) ([f1dfcfa](https://github.com/bastolen/adiutor/commit/f1dfcfa1c26671a27c38e2b8c1b8bd8fbc63cac3))
+* **account:** offer the account whose picture shows when a provider's first has none ([#171](https://github.com/bastolen/adiutor/issues/171)) ([6865822](https://github.com/bastolen/adiutor/commit/6865822b6228661b2b18a87ecd679fe107d168e9))
+* keep Claude Security scan reports out of the Docker image ([#164](https://github.com/bastolen/adiutor/issues/164)) ([2f37bdf](https://github.com/bastolen/adiutor/commit/2f37bdfc65a34f7b6f8cb79d9921b21dbe4cf2cc))
+* paste a request's headings and code without the page's looks ([#158](https://github.com/bastolen/adiutor/issues/158)) ([7633876](https://github.com/bastolen/adiutor/commit/76338760ffb153b5472c5b159f6c84361dd5937d))
+* send S3 uploads with their length, so Cloudflare R2 accepts them ([#173](https://github.com/bastolen/adiutor/issues/173)) ([def74aa](https://github.com/bastolen/adiutor/commit/def74aaaa2201af07b82aef0e2ea87e320c8d2d4))
+* **settings:** keep the chosen storage on the way back from confirming it's you ([#169](https://github.com/bastolen/adiutor/issues/169)) ([e6b2591](https://github.com/bastolen/adiutor/commit/e6b25914d991110649195a924d2fab3a826dea0e))
+* show the colours in use in the brand colour fields, and allow a dark accent on its own ([#168](https://github.com/bastolen/adiutor/issues/168)) ([afed8bd](https://github.com/bastolen/adiutor/commit/afed8bd749208642890b2e6d6edbe746cc458205))
+* work out mention keys and picture versions from the current auth secret ([#154](https://github.com/bastolen/adiutor/issues/154)) ([7a27be7](https://github.com/bastolen/adiutor/commit/7a27be7cd01317ebbbc7c84d9ba0f7109d34fcf8))
+
+
+### Performance Improvements
+
+* **attachments:** let browsers keep files and check them with the server each time ([#176](https://github.com/bastolen/adiutor/issues/176)) ([da6f51f](https://github.com/bastolen/adiutor/commit/da6f51f07db615654d0233e0245a0cc939a5e87d))
+* **storage:** keep one SFTP connection while it's used, and a minute after ([#188](https://github.com/bastolen/adiutor/issues/188)) ([f744f0c](https://github.com/bastolen/adiutor/commit/f744f0c88f807c1730545085521d41da1f1459cc))
+
 ## [0.5.0](https://github.com/bastolen/adiutor/compare/v0.4.0...v0.5.0) (2026-11-25)
 
 
