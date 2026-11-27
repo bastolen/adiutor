@@ -1,7 +1,8 @@
 /**
  * @file The files attached to a request's text (its description, a reply or
  * an internal note), under the text: a tile each, which downloads the file
- * from `/attachments/<id>`, with a thumbnail for an image, and in a removed
+ * from `/attachments/<id>`, with its preview when it has one (from
+ * `/attachments/<id>/preview`, decision 0057), and in a removed
  * file's place a tile that says who removed it. The service gives only the
  * files the reader may see (a note's only to the staff). Its text comes from
  * `requests.attachments`.
@@ -97,7 +98,7 @@ export default function AttachmentList({
               name={attachment.name}
               detail={size}
               icon={icon}
-              thumbnail={attachment.thumbnail ? href : undefined}
+              thumbnail={attachment.preview ? `${href}/preview` : undefined}
               href={href}
               linkLabel={t('download', { name: attachment.name, size })}
               actions={

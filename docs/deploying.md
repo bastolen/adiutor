@@ -448,8 +448,16 @@ the same):
 
 **Back up the files with the database.** A file is found by its row in the database, and a row
 whose file is gone can't be downloaded. Files are kept at the same paths in every storage
-(`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
-`attachments/` there as it is (with `rclone copy`, say), then switching.
+(`attachments/<two characters>/<ID>`, and their previews at `previews/<two characters>/<ID>`), so
+moving to another storage is copying everything under `attachments/` and `previews/` there as it is
+(with `rclone copy`, say), then switching.
+
+**Previews** of attached files, for their tiles, are drawn by the app itself
+([decision 0057](decisions/0057-small-previews-of-attached-files.md)), with nothing to install: its
+image library (sharp) comes prebuilt for Linux, macOS and Windows, in the Docker image and on
+Vercel alike. Drawing takes some memory while it runs, at most two previews at a time per server
+(a large photo needs up to a few hundred megabytes for a moment), so leave the app's container room
+above what it uses at rest.
 
 **The largest file** anyone may attach is chosen on the Integrations tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on

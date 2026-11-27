@@ -58,8 +58,12 @@ The folders of the repository and what belongs in each. Back to the [documentati
     and who reads it in `detail-reader.ts`), who is told what happens to one (`tell-people.ts`)
     and what one person's email about it shows (`read-request-update.ts`, made of the shapes in
     `request-update.ts` and read from `request-update-context.ts`), and their attachments:
-    uploading, downloading and removing (`attachments.ts`), the check of a file's bytes against
-    its type (`attachment-checks.ts`) and sending uploads with a text (`attachment-claims.ts`).
+    uploading, downloading and removing (`attachments.ts`) and sending uploads with a text
+    (`attachment-claims.ts`).
+  - `src/server/previews/`: the small previews of attached files (a folder module, see
+    [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) by its kind
+    (`draw.ts`), within the limits (`limits.ts`) and a few at a time (`limiter.ts`), and keeping it
+    next to its file (`store.ts`).
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),
@@ -120,8 +124,9 @@ The folders of the repository and what belongs in each. Back to the [documentati
     and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
     Continue, `own-page-post.ts`): HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
-    values, the rules of working on one, the board's lanes, their numbers, their text and the kinds
-    of file that can be attached (`attachments.ts`), free of zod and server code, so the database schema, the services and client components can all import it.
+    values, the rules of working on one, the board's lanes, their numbers, their text, the kinds
+    of file that can be attached (`attachments.ts`) and the check of a file's bytes against its kind
+    (`attachment-checks.ts`), free of zod and server code, so the database schema, the services and client components can all import it.
 - `src/emails/`: the email templates (see [Email](email.md)).
 - `src/messages/`: the translation catalogues, one folder per language and one JSON file per area
   (see [Languages](i18n.md)).

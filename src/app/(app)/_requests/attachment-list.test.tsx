@@ -1,6 +1,7 @@
 /**
  * @file Tests for the files under a request's text: a download link each,
- * a removed file's place saying who removed it, and the Remove button with
+ * with its preview when it has one (never the file itself), a removed
+ * file's place saying who removed it, and the Remove button with
  * its confirmation for the staff who may remove files.
  */
 import { screen, waitFor, within } from '@testing-library/react';
@@ -30,14 +31,14 @@ const FILES: RequestAttachmentView[] = [
     id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a',
     name: 'error.png',
     size: 240_000,
-    thumbnail: true,
+    preview: true,
     removed: null,
   },
   {
     id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3b',
     name: 'password.txt',
     size: 15,
-    thumbnail: false,
+    preview: false,
     removed: { by: SAM, at: new Date('2026-11-26T10:00:00Z'), signedInAs: { staffName: 'Ada' } },
   },
 ];
@@ -57,6 +58,27 @@ describe('AttachmentList', () => {
     expect(within(list).getByText(/Ada/)).toBeInTheDocument();
     // Without a removal, there's nothing to remove.
     expect(within(list).queryByRole('button', { name: /^Remove/ })).toBeNull();
+  });
+
+  it('shows a file’s preview, never the file itself, and an icon without one', () => {
+    const log: RequestAttachmentView = {
+      id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3c',
+      name: 'printer.log',
+      size: 15,
+      preview: false,
+      removed: null,
+    };
+    const { container } = renderInLocale(
+      'en-US',
+      <AttachmentList attachments={[FILES[0] ?? log, log]} names={NAMES} />,
+    );
+
+    const images = container.querySelectorAll('img');
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute(
+      'src',
+      '/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a/preview',
+    );
   });
 
   it('shows nothing for a text without files', () => {

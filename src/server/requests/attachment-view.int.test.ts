@@ -1,8 +1,9 @@
 /**
  * @file Integration tests for reading a request's attachments: each text
  * with its own files, a note's files only for the staff, unsent files for
- * nobody, a removed file as who removed it; and downloading one, for whoever
- * may read its text and nobody else, checked before the storage is read.
+ * nobody, a removed file as who removed it; and downloading one, or its
+ * preview, for whoever may read its text and nobody else, checked before the
+ * storage is read.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +18,7 @@ import {
   storeAttachment,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
-import { attachmentKey } from '../storage';
+import { attachmentKey, previewKey } from '../storage';
 import { loadAttachment } from './attachments';
 import { getRequest } from './detail';
 import { ctx, db, storage, storeEntry, storeRequest } from './test-helpers';
@@ -59,6 +60,7 @@ beforeEach(async () => {
     uploadedBy: client.id,
     name: 'screenshot.png',
     contentType: 'image/png',
+    preview: 'drawn',
   });
   files.reply = await storeAttachment(db, storage, {
     requestId,
@@ -71,6 +73,7 @@ beforeEach(async () => {
     entryId: noteId,
     uploadedBy: support.id,
     name: 'driver notes.txt',
+    preview: 'drawn',
   });
   files.unsent = await storeAttachment(db, storage, { uploadedBy: client.id });
   files.removed = await storeAttachment(db, storage, {
@@ -79,6 +82,7 @@ beforeEach(async () => {
     uploadedBy: client.id,
     name: 'password.png',
     contentType: 'image/png',
+    preview: 'drawn',
   });
   await db
     .update(requestAttachment)
@@ -103,16 +107,17 @@ describe('getRequest', () => {
     const detail = await getRequest(ctx, client, number);
 
     expect(detail.description.attachments).toEqual([
-      { id: files.description, name: 'screenshot.png', size: 15, thumbnail: true, removed: null },
+      { id: files.description, name: 'screenshot.png', size: 15, preview: true, removed: null },
     ]);
     const reply = detail.entries.find((entry) => entry.id === replyId);
     expect(reply?.body?.attachments).toEqual([
-      { id: files.reply, name: 'printer.log', size: 15, thumbnail: false, removed: null },
+      { id: files.reply, name: 'printer.log', size: 15, preview: false, removed: null },
       {
         id: files.removed,
         name: 'password.png',
         size: 15,
-        thumbnail: true,
+        // Its preview went with it.
+        preview: false,
         removed: { by: expect.objectContaining({ side: 'staff' }), at: expect.any(Date) },
       },
     ]);
@@ -167,6 +172,32 @@ describe('loadAttachment', () => {
     const stored = await file?.readFile();
     expect(stored?.size).toBe(15);
     expect(get).toHaveBeenCalledExactlyOnceWith(attachmentKey(files.reply));
+    get.mockRestore();
+  });
+
+  it('gives a file’s preview to whoever may read the file, and only when it has one', async () => {
+    /**
+     * The text of a file's preview, for a reader.
+     *
+     * @param actor - The reader.
+     * @param id - The attachment's ID.
+     * @returns Its text, or `null` when there's none for the reader.
+     */
+    const previewOf = async (actor: Actor, id: string): Promise<string | null> => {
+      const file = await loadAttachment(ctx, actor, id);
+      const stored = file?.hasPreview ? await file.readPreview() : null;
+      return stored ? new Response(stored.body).text() : null;
+    };
+    const get = vi.spyOn(storage, 'get');
+
+    expect(await previewOf(client, files.description)).toBe('preview');
+    expect(get).toHaveBeenCalledExactlyOnceWith(previewKey(files.description));
+    // A note's preview, like its file, is for the readers of notes only.
+    expect(await previewOf(client, files.note)).toBeNull();
+    expect(await previewOf(finance, files.note)).toBe('preview');
+    // A removed file's is gone with it; a log has none.
+    expect(await previewOf(support, files.removed)).toBeNull();
+    expect((await loadAttachment(ctx, client, files.reply))?.hasPreview).toBe(false);
     get.mockRestore();
   });
 

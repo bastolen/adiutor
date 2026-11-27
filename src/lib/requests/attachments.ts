@@ -6,7 +6,7 @@
  * file before it's sent and the server checks it again.
  */
 
-/** How a file's bytes are checked against its extension (`attachment-checks.ts` on the server). */
+/** How a file's bytes are checked against its extension (`attachment-checks.ts`). */
 export type AttachmentCheck =
   | 'png'
   | 'jpeg'

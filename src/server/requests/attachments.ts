@@ -4,9 +4,11 @@
  * and the uploader's limits are checked before it's read, its bytes against
  * its type after; its row is stored first, the file is written to the
  * storage, and the row is marked uploaded, so no file is ever in storage
- * without a row the cleanup job can find. The upload is unsent until the text it's sent with claims it
- * (`claimAttachments`). Downloading one goes through the same checks as
- * reading its text (`loadAttachment`). The staff who work on requests remove
+ * without a row the cleanup job can find. A small preview is drawn from the
+ * bytes the upload holds and kept next to the file (decision 0057). The
+ * upload is unsent until the text it's sent with claims it
+ * (`claimAttachments`). Downloading one, or its preview, goes through the
+ * same checks as reading its text (`loadAttachment`). The staff who work on requests remove
  * one (`removeAttachment`): its row stays, as the mark of who removed it, and
  * its file is deleted, with its preview.
  */
@@ -19,6 +21,7 @@ import { firstRow } from '@/lib/defined';
 import {
   attachmentTypeOf,
   cleanAttachmentName,
+  matchesAttachmentKind,
   type RequestEntryKind,
   STAFF_ONLY_ENTRY_KINDS,
   UPLOADS_AT_ONCE,
@@ -29,6 +32,7 @@ import { idSchema } from '@/lib/validation';
 import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { forbiddenError, notFoundError, ServiceError } from '../errors';
+import { drawAndStorePreview, drawsFromFile } from '../previews';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
 import { readSettings } from '../settings';
 import { actingUserId, signedInAsWork } from '../signed-in-as';
@@ -41,7 +45,6 @@ import {
   type StoredFile,
 } from '../storage';
 import { getRequestAccess } from './access';
-import matchesAttachmentKind from './attachment-checks';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
 import { listRequestCompanies } from './list';
 
@@ -70,8 +73,8 @@ export interface UploadedAttachment {
   size: number;
   /** The type it's stored and served as. */
   contentType: string;
-  /** Whether it's shown as a thumbnail. */
-  thumbnail: boolean;
+  /** Whether its preview was drawn. */
+  preview: boolean;
 }
 
 /**
@@ -190,7 +193,10 @@ async function abandonUpload(ctx: ServiceContext, id: string): Promise<void> {
  * then is the file read (`read`) and checked against its type. Its row is
  * stored before the file, and marked uploaded after, so no file is ever in
  * storage without a row; a storage that fails leaves the row unfinished for
- * the cleanup job, which deletes whatever the storage may have kept.
+ * the cleanup job, which deletes whatever the storage may have kept. Between
+ * the two, the file's preview is drawn and stored, when its kind has one
+ * drawn from the file; one that can't be drawn or stored, or that finds this
+ * server busy drawing others, never fails the upload.
  *
  * @param ctx - Service context.
  * @param actor - The acting user.
@@ -260,15 +266,19 @@ export async function uploadAttachment(
     // A storage that fails may still have kept the file (a timeout after it stored it): the row
     // stays unfinished, and the cleanup job deletes both after an hour.
     await on.storage.put(attachmentKey(id), bytes, type.contentType);
+    // `null` when it wasn't drawn or stored: the previews job draws it later.
+    const preview = drawsFromFile(type.preview)
+      ? await drawAndStorePreview(on.storage, { id, kind: type.preview, bytes, whenBusy: 'skip' })
+      : null;
     const uploaded = await ctx.db
       .update(requestAttachment)
-      .set({ uploadedAt: sql`now()` })
+      .set({ uploadedAt: sql`now()`, preview })
       .where(and(eq(requestAttachment.id, id), isNull(requestAttachment.uploadedAt)))
       .returning({ id: requestAttachment.id });
     if (uploaded.length === 0) {
       throw new ServiceError('conflict', 'errors.attachments.unavailable', { name });
     }
-    return { id, name, size, contentType: type.contentType, thumbnail: type.preview === 'image' };
+    return { id, name, size, contentType: type.contentType, preview: preview === 'drawn' };
   } finally {
     const left = (uploadsUnderWay.get(acting) ?? 1) - 1;
     if (left > 0) {
@@ -293,6 +303,15 @@ export interface AttachmentToServe {
    * @throws {StorageError} When the storage fails (not when the file is merely missing).
    */
   readFile(): Promise<StoredFile | null>;
+  /** Whether it has a preview (decision 0057). */
+  hasPreview: boolean;
+  /**
+   * Reads its preview from the storage, only once it's needed.
+   *
+   * @returns The preview, or `null` when the storage has none under its key.
+   * @throws {StorageError} When the storage fails (not when the preview is merely missing).
+   */
+  readPreview(): Promise<StoredFile | null>;
 }
 
 /**
@@ -302,7 +321,8 @@ export interface AttachmentToServe {
  * of notes (`requests:view-internal`). An unsent file is nobody's to
  * download, a removed one is gone, and anything the reader may not read is
  * missing too, so nothing says it exists. The checks come first, and the
- * storage is read only when the file's bytes are (`readFile`).
+ * storage is read only when the file's bytes are (`readFile`), or its
+ * preview's (`readPreview`): a preview is read by whoever may read its file.
  *
  * @param ctx - Service context.
  * @param actor - The reader.
@@ -323,6 +343,7 @@ export async function loadAttachment(
       requestId: requestAttachment.requestId,
       name: requestAttachment.name,
       contentType: requestAttachment.contentType,
+      preview: requestAttachment.preview,
       entryKind: requestEntry.kind,
     })
     .from(requestAttachment)
@@ -349,25 +370,38 @@ export async function loadAttachment(
   if (!access || (staffOnly && !access.permissions.has('requests:view-internal'))) {
     return null;
   }
+  /**
+   * Reads one of the file's keys from the storage.
+   *
+   * @param key - The file's key, or its preview's.
+   * @returns What's stored there, or `null` when nothing is (or no storage is chosen).
+   */
+  const read = async (key: string): Promise<StoredFile | null> => {
+    const storage = ctx.storage ? await ctx.storage() : null;
+    const file = storage ? await storage.get(key) : null;
+    if (!file) {
+      // A row without its file: a storage that changed, or files not backed up with the database.
+      // eslint-disable-next-line no-console -- The ID only: it names no one.
+      console.warn('An attachment has no file in the storage:', parsed.data);
+    }
+    return file;
+  };
   return {
     name: row.name,
     contentType: row.contentType,
+    hasPreview: row.preview === 'drawn',
     /**
      * Reads the file's bytes from the storage.
      *
-     * @returns The file, or `null` when the storage has none (or none is chosen).
+     * @returns The file, or `null` when the storage has none.
      */
-    readFile: async () => {
-      const storage = ctx.storage ? await ctx.storage() : null;
-      const file = storage ? await storage.get(attachmentKey(parsed.data)) : null;
-      if (!file) {
-        // A row without its file: a storage that changed, or files not backed up with the
-        // database.
-        // eslint-disable-next-line no-console -- The ID only: it names no one.
-        console.warn('An attachment has no file in the storage:', parsed.data);
-      }
-      return file;
-    },
+    readFile: () => read(attachmentKey(parsed.data)),
+    /**
+     * Reads the preview's bytes from the storage.
+     *
+     * @returns The preview, or `null` when the storage has none.
+     */
+    readPreview: () => read(previewKey(parsed.data)),
   };
 }
 

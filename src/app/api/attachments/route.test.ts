@@ -70,7 +70,7 @@ const STORED = {
   name: 'Printer log é.txt',
   size: 15,
   contentType: 'text/plain',
-  thumbnail: false,
+  preview: false,
 };
 
 beforeEach(() => {

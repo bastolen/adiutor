@@ -17,12 +17,7 @@ import {
   user,
 } from '@/db/schema';
 import { appUrl } from '@/lib/env';
-import {
-  attachmentTypeOf,
-  mayContribute,
-  type RequestTextFormat,
-  STAFF_ONLY_ENTRY_KINDS,
-} from '@/lib/requests';
+import { mayContribute, type RequestTextFormat, STAFF_ONLY_ENTRY_KINDS } from '@/lib/requests';
 
 import type { Company } from '../access';
 import type { ServiceContext } from '../context';
@@ -53,8 +48,9 @@ export interface MentionedPerson extends RequestPerson {
 
 /**
  * A file attached to a request's text, as its reader gets it (decision
- * 0044): to download from `/attachments/<id>`, or, once it's removed, who
- * removed it and when. Never who uploaded it: that's the text's author, or
+ * 0044): to download from `/attachments/<id>`, with its preview at
+ * `/attachments/<id>/preview` when it has one (decision 0057), or, once it's
+ * removed, who removed it and when. Never who uploaded it: that's the text's author, or
  * whoever added it while editing the text.
  */
 export interface RequestAttachmentView {
@@ -64,8 +60,8 @@ export interface RequestAttachmentView {
   name: string;
   /** Its size in bytes. */
   size: number;
-  /** Whether the page shows it as a thumbnail (an image every browser shows). */
-  thumbnail: boolean;
+  /** Whether it has a preview, which its tile shows (none once it's removed). */
+  preview: boolean;
   /**
    * Who removed it and when, once it's removed (its file is gone then);
    * `null` while it's there. A staff member removes files, so `by` is on the
@@ -204,6 +200,7 @@ export async function loadTextRows(ctx: ServiceContext, requestId: string, inter
         entryId: requestAttachment.entryId,
         name: requestAttachment.name,
         size: requestAttachment.size,
+        preview: requestAttachment.preview,
         removedAt: requestAttachment.removedAt,
         removedBy: { id: user.id, name: user.name },
         removedSignedInAs: requestAttachment.removedSignedInAs,
@@ -309,7 +306,7 @@ export function shownTexts(
       id: row.id,
       name: row.name,
       size: row.size,
-      thumbnail: attachmentTypeOf(row.name)?.preview === 'image',
+      preview: row.preview === 'drawn' && !row.removedAt,
       removed,
     });
     texts.attachments.set(row.entryId, ofText);

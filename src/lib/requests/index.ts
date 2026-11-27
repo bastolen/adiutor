@@ -138,6 +138,7 @@ export {
   writtenMentionKeys,
   writtenMentionMarker,
 } from './mentions';
+export { default as matchesAttachmentKind } from './attachment-checks';
 export type {
   AttachmentCheck,
   AttachmentPreviewKind,

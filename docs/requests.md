@@ -770,10 +770,16 @@ in [Attachments](deploying.md#attachments).
   refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
   is no longer available. Attach it again."), anyone else's isn't.
 - **On a request's page,** each text shows its files under it (`AttachmentList` in
-  `src/app/(app)/_requests/`, a `FileTile` each): a thumbnail for a PNG, JPEG, GIF or WebP image,
-  loaded from Adiutor itself, or an icon for the file's kind, with its name and size. A tile is a
-  link that downloads the file ("Download error.png, 240 kB" to screen readers); nothing opens in
-  the page.
+  `src/app/(app)/_requests/`, a `FileTile` each): the file's preview, or an icon for its kind, with
+  its name and size. A tile is a link that downloads the file ("Download error.png, 240 kB" to
+  screen readers); nothing opens in the page.
+- **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
+  `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
+  file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
+  yet). A PNG, JPEG, GIF (its first frame) or WebP image is drawn as it is; any other kind keeps its
+  icon, and so does a file that can't be drawn. An upload that finds the server busy drawing two
+  others, or whose preview the storage refuses, still succeeds, without a preview. The tile loads it
+  from `/attachments/<id>/preview`, with the file's checks and caching; never the file itself.
 - **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
   kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
   Someone signed out is sent to sign in and back; a file they may not read is "not found".

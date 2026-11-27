@@ -423,7 +423,7 @@ A file attached to a request is uploaded on its own first, then sent with its te
 - **Only the allow-list** (`ATTACHMENT_TYPES` in `src/lib/requests/attachments.ts`), by extension:
   images, PDF, text, Office and OpenDocument files, archives and screen recordings; never HTML,
   SVG, scripts or programs. **A file's bytes must be what its extension says**
-  (`matchesAttachmentKind` in `src/server/requests/attachment-checks.ts`): each kind's signature,
+  (`matchesAttachmentKind` in `src/lib/requests/attachment-checks.ts`): each kind's signature,
   and for text, valid UTF-8 or UTF-16 throughout without a NUL character, so an HTML page named
   `.png`, or a compiled program named `.txt`, is refused. Text is text whatever it says: a script
   or a page named `.txt` is kept, as `text/plain`, and like every file is only ever served as a
@@ -458,17 +458,29 @@ A file attached to a request is uploaded on its own first, then sent with its te
   only the files its reader may see, the same way, so a company never learns that a note has a
   file. An unsent or removed file, or one the reader may not read, is "not found", by its address
   too.
+- **Previews are drawn from untrusted files, within limits** ([decision
+  0057](decisions/0057-small-previews-of-attached-files.md), `src/server/previews/`): a tile shows a
+  small WebP image drawn on the server, never the file itself. An image reaches the decoder (sharp,
+  libvips) only when its signature says PNG, JPEG, GIF or WebP (`matchesAttachmentKind`), so libvips
+  never sees SVG, TIFF or any other format it reads; it's decoded only up to 50 megapixels, its
+  first frame only, within 5 seconds, with libvips' cache off, and drawn again as WebP without its
+  metadata (no location). A server draws at most two previews at once (`DRAWINGS_AT_ONCE`); an
+  upload that finds both taken leaves its preview for later. Anything broken, past a limit or too
+  slow keeps its icon, and a preview never fails an upload. The preview is served at
+  `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's caching, as
+  `image/webp` with `nosniff` and as a download, and is deleted with its file.
 - **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't
-  have attached (a password in a screenshot), and its bytes are deleted from the storage once
-  that's saved, or by the `attachment-files` job if the storage fails then. The row stays as the
-  mark of who removed it, with no name of whoever uploaded it.
+  have attached (a password in a screenshot), and its bytes and its preview are deleted from the
+  storage once that's saved, or by the `attachment-files` job if the storage fails then. The row
+  stays as the mark of who removed it, with no name of whoever uploaded it.
 - **Always a download** (`GET /attachments/<id>`): `Content-Disposition: attachment` with the
   name (`attachmentDisposition`: `filename*` in UTF-8, and a plain ASCII `filename` without
   quotes or backslashes), its type from the allow-list with `nosniff`, and
   `Cross-Origin-Resource-Policy: same-origin`. The proxy gives these paths a fixed policy that runs
   nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
-  over a route's own. Thumbnails load from the same address: an image element shows an image
-  whatever its `Content-Disposition` says, and `img-src 'self'` stays.
+  over a route's own. A tile's preview loads from under the same address
+  (`/attachments/<id>/preview`), the same way: an image element shows an image whatever its
+  `Content-Disposition` says, and `img-src 'self'` stays.
 - **Kept by the reader's browser, checked every time** ([decision
   0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
 no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
