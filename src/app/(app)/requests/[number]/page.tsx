@@ -3,7 +3,8 @@
  * (what was asked, by whom), its conversation, and next to them its details:
  * status, who it's assigned to and who is subscribed, type and (for the
  * staff) priority, company, who raised it and when, the staff's first
- * response and its last activity.
+ * response and its last activity; and under those, every file on it the
+ * reader may open (the Files card), which the viewer steps through.
  * The number as people see it, with the staff's current prefix
  * (`/requests/AD-142`), redirects here, as do the short links `/r/142` and
  * `/r/AD-142`.
@@ -100,6 +101,7 @@ import EditableText from './editable-text';
 import EditedNote from './edited-note';
 import ReplyForm from './reply-form';
 import RequestDetails from './request-details';
+import RequestFiles from './request-files';
 import SolutionNotice from './solution-notice';
 import StatusSelect from './status-select';
 import Thread from './thread';
@@ -308,14 +310,14 @@ async function RequestContent({
     />
   );
 
-  // Every file the reader can see, in the page's order, for the viewer to step through.
-  const viewable: ViewableFile[] = [
-    detail.description.attachments,
-    ...detail.entries.map((shownEntry) => shownEntry.body?.attachments),
-  ]
-    .flatMap((attachments) => attachments ?? [])
-    .filter((attachment) => attachment.removed === null)
-    .map(({ id, name, size, preview }) => ({ id, name, size, preview }));
+  // Every file on the request the reader may open, in the page's order, for the viewer to step
+  // through: also those on replies further back than the page shows, or in groups it hides.
+  const viewable: ViewableFile[] = detail.files.map(({ id, name, size, preview }) => ({
+    id,
+    name,
+    size,
+    preview,
+  }));
 
   return (
     <ClientMessages namespaces={['requests']}>
@@ -405,7 +407,9 @@ async function RequestContent({
             </Card>
           </div>
 
-          <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          {/* The details, and every file on the request under them: on a narrow screen, between the
+            description and the conversation. */}
+          <div className="flex flex-col gap-6 xl:col-start-2 xl:row-span-2 xl:row-start-1">
             <RequestDetails
               detail={detail}
               statusControl={
@@ -527,6 +531,7 @@ async function RequestContent({
                 )
               }
             />
+            <RequestFiles detail={detail} />
           </div>
 
           <div className="xl:col-start-1 xl:row-start-2">

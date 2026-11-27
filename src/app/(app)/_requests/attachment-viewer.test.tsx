@@ -2,16 +2,18 @@
  * @file Tests for the viewer of a request's files: a tile opens its file, an
  * image as it is, a PDF's large page (or its preview when there's no page),
  * an Office file's thumbnail, and an icon for a file it can't show; Previous
- * and Next step through every file on the page, each step said to screen
- * readers; closing gives focus to the
- * tile of the file shown last; the tile keeps a Download button.
+ * and Next step through every file on the request, also those without a
+ * tile, each step said to screen readers; closing gives focus back to the
+ * place it was opened from (the tile, or the Files card's row) for the file
+ * shown last, else to the button it was opened with; the tile keeps a
+ * Download button.
  */
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import renderInLocale from '../../../../tests/i18n/render';
-import AttachmentViewer, { type ViewableFile } from './attachment-viewer';
+import AttachmentViewer, { useFileOpener, type ViewableFile } from './attachment-viewer';
 import ViewableAttachmentTile from './viewable-attachment-tile';
 
 /** A screenshot, a PDF, an OpenDocument text and an archive, in the page's order. */
@@ -23,17 +25,41 @@ const FILES: ViewableFile[] = [
 ];
 
 /**
+ * A file's button in the Files card, as a plain button for these tests.
+ *
+ * @param props - Button props.
+ * @param props.file - The file.
+ */
+function ListButton({ file }: { file: ViewableFile }) {
+  const opener = useFileOpener(file.id, 'files');
+  return (
+    <button type="button" ref={opener?.ref} onClick={opener?.onOpen}>
+      {`Open ${file.name} from the list`}
+    </button>
+  );
+}
+
+/**
  * The page's tiles, in a viewer.
  *
- * @param files - The page's files.
+ * @param files - The request's files, which the viewer steps through.
+ * @param options - Options.
+ * @param options.tiles - The files with a tile on the page (all of them by default).
+ * @param options.listed - The files with a button in the Files card (none by default).
  * @returns The rendered page.
  */
-function renderPage(files: ViewableFile[] = FILES) {
+function renderPage(
+  files: ViewableFile[] = FILES,
+  { tiles = files, listed = [] }: { tiles?: ViewableFile[]; listed?: ViewableFile[] } = {},
+) {
   return renderInLocale(
     'en-US',
     <AttachmentViewer files={files}>
+      {listed.map((file) => (
+        <ListButton key={file.id} file={file} />
+      ))}
       <ul>
-        {files.map((file) => (
+        {tiles.map((file) => (
           <li key={file.id}>
             <ViewableAttachmentTile
               id={file.id}
@@ -138,6 +164,34 @@ describe('AttachmentViewer', () => {
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Open invoice.pdf' })).toHaveFocus();
+  });
+
+  it('gives focus back to the Files card when it was opened from there, not to the tile', async () => {
+    const user = userEvent.setup();
+    renderPage(FILES, { listed: FILES });
+    await user.click(screen.getByRole('button', { name: 'Open error.png from the list' }));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Open error.png from the list' })).toHaveFocus();
+
+    // After a step, to that place's button of the file shown last.
+    await user.click(screen.getByRole('button', { name: 'Open error.png from the list' }));
+    await user.keyboard('{ArrowRight}{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Open invoice.pdf from the list' })).toHaveFocus();
+  });
+
+  it('steps to files without a tile, and gives focus back to the button it was opened with', async () => {
+    const user = userEvent.setup();
+    renderPage(FILES, { tiles: FILES.slice(0, 2), listed: FILES.slice(0, 1) });
+    await user.click(screen.getByRole('button', { name: 'Open invoice.pdf' }));
+
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('dialog', { name: 'notes.odt' })).toHaveAccessibleDescription('3 of 4');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // notes.odt has no tile: back to the tile it was opened from, not the list's button.
     expect(screen.getByRole('button', { name: 'Open invoice.pdf' })).toHaveFocus();
   });
 

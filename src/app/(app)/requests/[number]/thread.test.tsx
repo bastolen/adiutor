@@ -84,6 +84,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     prefix: 'AD',
     title: 'Update the opening hours on the website',
     description: { text: 'Our opening hours change next month.', format: 'plain' },
+    files: [],
     type: 'support',
     typeName: 'Support',
     status: 'open',

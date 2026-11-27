@@ -2,8 +2,9 @@
  * @file One request as its readers see it: its details, who it's assigned
  * to, the company it's in (none for an internal request), what the reader may do with it, and its
  * conversation, filtered and ordered the way the reader reads it (their
- * saved activity view). Its parts are in the files next to it: who reads the
- * page (`detail-reader.ts`), its texts (`detail-texts.ts`) and its
+ * saved activity view), and every file on it the reader may open. Its parts
+ * are in the files next to it: who reads the page (`detail-reader.ts`), its
+ * texts (`detail-texts.ts`), its files (`detail-files.ts`) and its
  * conversation (`detail-thread.ts`).
  */
 import { and, eq, min } from 'drizzle-orm';
@@ -33,6 +34,7 @@ import {
   type RequestRow,
 } from './access';
 import { readActivityView } from './activity-view';
+import requestFiles, { type RequestFileView } from './detail-files';
 import { type PageReader, signedInAsMark, type SignedInAsMark } from './detail-reader';
 import {
   loadTextRows,
@@ -57,6 +59,13 @@ export interface RequestDetail {
   title: string;
   /** What was asked. */
   description: RequestText;
+  /**
+   * Every file on it the reader may open, wherever its text is (on an
+   * earlier reply than the page shows, or in a group the reader hides), in
+   * the page's order, without removed files; a note's only for readers with
+   * `requests:view-internal`. For the Files card and the viewer.
+   */
+  files: RequestFileView[];
   /** Its type's key. */
   type: string;
   /** Its type's name. */
@@ -330,6 +339,7 @@ export async function getRequest(
       mayEdit: mayEditDescription(permissions, found.status),
       staffOnly: false,
     }),
+    files: requestFiles(reader, textRows.attached, thread.activity.order),
     type: found.type,
     typeName: typeNames.get(found.type) ?? found.type,
     status: found.status,

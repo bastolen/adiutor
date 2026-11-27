@@ -1,13 +1,14 @@
 /**
- * @file The viewer of a request's files (decision 0058): every file the
- * reader can see on the page, in the page's order, opened from its tile and
- * stepped through with Previous and Next. Each kind shows what it can, from
- * the file's own address and its checks: an image as it is (a HEIC photo only
- * where the browser shows it), a PDF's first page drawn large, a text file's
- * start as text, a video playing (a part at a time, with its frame as the
- * poster), an Office file's thumbnail, and for anything else its icon, with
- * Download. Its text
- * comes from `requests.attachments`.
+ * @file The viewer of a request's files (decision 0058): every file on the
+ * request the reader may open, in the page's order, opened from its tile
+ * under its text or its row in the Files card, and stepped through with
+ * Previous and Next. Closing it gives focus back to where it was opened.
+ * Each kind shows what it can, from the file's own address and its checks:
+ * an image as it is (a HEIC photo only where the browser shows it), a PDF's
+ * first page drawn large, a text file's start as text, a video playing (a
+ * part at a time, with its frame as the poster), an Office file's thumbnail,
+ * and for anything else its icon, with Download. Its text comes from
+ * `requests.attachments`.
  */
 'use client';
 
@@ -19,6 +20,8 @@ import {
   use,
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -71,25 +74,44 @@ function shownAs(file: ViewableFile): ShownAs {
 }
 
 /**
- * The `id` of a file's open button on its tile, for focus to come back to.
- *
- * @param id - The file's ID.
- * @returns The button's `id`.
+ * Where on the page a file's open button is: on its tile under its text, or
+ * on its row in the Files card. A file has a button in each, and focus goes
+ * back to the place the viewer was opened from.
  */
-export function openButtonId(id: string): string {
-  return `attachment-open-${id}`;
+export type FilePlace = 'text' | 'files';
+
+/** What the viewer gives the page's open buttons. */
+interface FileOpeners {
+  /** Opens a file, from a button in a place. */
+  open: (id: string, place: FilePlace) => void;
+  /** Notes a file's open button in a place, for focus to come back to; returns its removal. */
+  register: (id: string, place: FilePlace, button: HTMLElement) => () => void;
 }
 
-/** Opens a file in the viewer, by its ID; `null` outside a viewer. */
-const OpenFile = createContext<((id: string) => void) | null>(null);
+/** The page's viewer, for its open buttons; `null` outside a viewer. */
+const Openers = createContext<FileOpeners | null>(null);
 
 /**
- * Opens a file in the page's viewer.
+ * A file's open button in a place: what opens the file in the page's viewer,
+ * and a ref that tells the viewer where the button is, so focus comes back
+ * to it when the viewer closes.
  *
- * @returns The opener, or `null` on a page without a viewer.
+ * @param id - The file's ID.
+ * @param place - Where the button is.
+ * @returns The button's press and ref, or `null` on a page without a viewer.
  */
-export function useOpenFile(): ((id: string) => void) | null {
-  return use(OpenFile);
+export function useFileOpener(
+  id: string,
+  place: FilePlace,
+): { onOpen: () => void; ref: (button: HTMLButtonElement | null) => (() => void) | void } | null {
+  const openers = use(Openers);
+  const ref = useCallback(
+    (button: HTMLButtonElement | null) =>
+      openers && button ? openers.register(id, place, button) : undefined,
+    [openers, id, place],
+  );
+  const onOpen = useCallback(() => openers?.open(id, place), [openers, id, place]);
+  return openers && { onOpen, ref };
 }
 
 /**
@@ -289,13 +311,18 @@ function FileContent({ file }: { file: ViewableFile }) {
 }
 
 /**
- * Gives the page's file tiles a viewer to open files in: the files the
- * reader can see, in the page's order, which Previous and Next step
- * through. Its open state is transient, so it's closed when someone comes
- * back to the page.
+ * Gives the page's open buttons a viewer to open files in: every file on the
+ * request the reader may open, in the page's order, which Previous and Next
+ * step through. Its open state is transient, so it's closed when someone
+ * comes back to the page. When it closes, focus goes to the button of the
+ * file it showed last in the place it was opened from (the tiles, or the
+ * Files card), else to the button it was opened with; when neither is on the
+ * page any more (a row the Files card doesn't show), the dialog gives it to
+ * whatever had it before. The buttons are noted per viewer, so a copy of the
+ * page kept hidden (`<Activity>`) never takes it.
  *
  * @param props - Provider props.
- * @param props.files - The page's files, in its order, without removed ones.
+ * @param props.files - Every file on the request the reader may open, in the page's order.
  * @param props.children - The page.
  */
 export default function AttachmentViewer({
@@ -312,6 +339,9 @@ export default function AttachmentViewer({
   const [shownId, setShownId] = useState<string | null>(null);
   // What screen readers are told after a step: focus stays on Previous or Next, whose names stay.
   const [announcement, setAnnouncement] = useState('');
+  // Each file's open buttons, by place and ID; and the button the viewer was opened with.
+  const buttons = useRef(new Map<string, HTMLElement>());
+  const openedFrom = useRef<{ id: string; place: FilePlace } | null>(null);
   const index = files.findIndex((file) => file.id === openId);
   const shown = files.find((file) => file.id === (openId ?? shownId)) ?? null;
 
@@ -328,18 +358,58 @@ export default function AttachmentViewer({
     [setOpenId],
   );
 
-  /**
-   * Opens a file from its tile: the dialog's title names it, so nothing more is said.
-   *
-   * @param id - The file's ID.
-   */
-  const openFromTile = useCallback(
-    (id: string) => {
-      setAnnouncement('');
-      open(id);
-    },
+  const openers = useMemo<FileOpeners>(
+    () => ({
+      /**
+       * Opens a file from one of its buttons: the dialog's title names it, so nothing more is said.
+       *
+       * @param id - The file's ID.
+       * @param place - Where the button is.
+       */
+      open: (id, place) => {
+        openedFrom.current = { id, place };
+        setAnnouncement('');
+        open(id);
+      },
+      /**
+       * Notes a file's open button in a place.
+       *
+       * @param id - The file's ID.
+       * @param place - Where the button is.
+       * @param button - The button.
+       * @returns What forgets it again, unless another has taken its place meanwhile.
+       */
+      register: (id, place, button) => {
+        const key = `${place}:${id}`;
+        buttons.current.set(key, button);
+        return () => {
+          if (buttons.current.get(key) === button) {
+            buttons.current.delete(key);
+          }
+        };
+      },
+    }),
     [open],
   );
+
+  /**
+   * Gives focus back to where the viewer was opened from: the button of the
+   * file shown last in that place, else the button it was opened with.
+   *
+   * @param lastId - The file shown last.
+   * @returns Whether a button took it; if not, the dialog gives it back itself.
+   */
+  const focusOpener = (lastId: string): boolean => {
+    const from = openedFrom.current;
+    if (!from) {
+      return false;
+    }
+    const button = [lastId, from.id]
+      .map((id) => buttons.current.get(`${from.place}:${id}`))
+      .find((candidate) => candidate?.isConnected);
+    button?.focus();
+    return button !== undefined;
+  };
 
   /**
    * The step to the file at an offset from the open one.
@@ -361,7 +431,7 @@ export default function AttachmentViewer({
   };
 
   return (
-    <OpenFile value={openFromTile}>
+    <Openers value={openers}>
       {children}
       {shown && (
         <FileViewer
@@ -384,15 +454,11 @@ export default function AttachmentViewer({
           announcement={announcement}
           detail={formatFileSize(shown.size, locale)}
           download={{ href: `/attachments/${shown.id}`, label: t('download') }}
-          finalFocus={() => {
-            const tile = document.getElementById(openButtonId(shown.id));
-            tile?.focus();
-            return tile !== null;
-          }}
+          finalFocus={() => focusOpener(shown.id)}
         >
           <FileContent key={shown.id} file={shown} />
         </FileViewer>
       )}
-    </OpenFile>
+    </Openers>
   );
 }

@@ -8,7 +8,8 @@
  * the server, or for a video from a frame the uploader's browser drew; never
  * the original) and downloaded under their names, a note's files for the staff
  * only, kept by the reader's browser and checked with the server before
- * each use. Each test stores or raises a request of its own.
+ * each use; and every file on a request in its Files card, each linking to
+ * the text it was sent with. Each test stores or raises a request of its own.
  */
 import type { Locator, Page } from '@playwright/test';
 
@@ -216,7 +217,10 @@ test('a company opens a request’s files in the viewer, steps through them and 
   await context.addCookies(clientCookies());
   await page.goto(`/requests/${number}`);
 
-  await page.getByRole('button', { name: /^Open error\.png/ }).click();
+  await page
+    .getByRole('region', { name: 'Description' })
+    .getByRole('button', { name: /^Open error\.png/ })
+    .click();
   const image = page.getByRole('dialog', { name: 'error.png' });
   // The description's screenshot and the reply's log: the note's file isn't the company's.
   await expect(image).toContainText('1 of 2');
@@ -237,7 +241,94 @@ test('a company opens a request’s files in the viewer, steps through them and 
 
   await page.keyboard.press('Escape');
   await expect(log).toBeHidden();
-  await expect(page.getByRole('button', { name: /^Open printer\.log/ })).toBeFocused();
+  await expect(
+    page
+      .getByRole('region', { name: 'Conversation' })
+      .getByRole('button', { name: /^Open printer\.log/ }),
+  ).toBeFocused();
+});
+
+test('a company finds every file in the Files card, opens one there and goes to its reply', async ({
+  page,
+  context,
+}) => {
+  const { number } = await requestWithFiles('Files to find in the Files card');
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  // The description's screenshot and the reply's log: the note's file isn't the company's.
+  const card = page.getByRole('region', { name: 'Files (2)' });
+  const list = card.getByRole('list', { name: 'Files on this request' });
+  await expect(list.getByRole('listitem')).toHaveCount(2);
+  await expect(card.getByText('driver notes.txt')).toHaveCount(0);
+  await expect(card.getByRole('link', { name: 'Description' })).toHaveAttribute(
+    'href',
+    `/requests/${number}#request-description`,
+  );
+  await expect(card.getByRole('link', { name: /^Download printer\.log/ })).toBeVisible();
+
+  // Opened from its row, the viewer gives focus back to that row, not to the reply's tile.
+  const row = card.getByRole('button', { name: /^Open printer\.log/ });
+  await row.click();
+  await expect(page.getByRole('dialog', { name: 'printer.log' })).toContainText('2 of 2');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(row).toBeFocused();
+
+  // Its reply is on the page: the link brings it into view and focuses it.
+  await card.getByRole('link', { name: /^Your reply, / }).click();
+  await expect(page.locator('li[id^="entry-"]:focus')).toContainText('The log is attached.');
+});
+
+test('the Files card links to a reply further back than the page shows', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({
+    title: 'A file on an early reply',
+    earlierReplies: 55,
+  });
+  await storeAttachment(number, {
+    name: 'early.log',
+    contentType: 'text/plain',
+    bytes: textFile('early'),
+    entryText: 'Earlier reply 1, to make the conversation long.',
+  });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+  const conversation = page.getByRole('region', { name: 'Conversation' });
+  await expect(conversation.getByText('Earlier reply 1,')).toHaveCount(0);
+
+  await page
+    .getByRole('region', { name: 'Files (1)' })
+    .getByRole('link', { name: /^Your reply, / })
+    .click();
+
+  await expect(page).toHaveURL(new RegExp(`/requests/${number}\\?entry=[0-9a-f-]+#entry-`));
+  await expect(page.locator('li[id^="entry-"]:focus')).toContainText('Earlier reply 1,');
+});
+
+test('the Files card shows five files, and the rest when asked', async ({ page, context }) => {
+  const number = await storeOwnRequest({ title: 'Seven files for the Files card' });
+  for (const n of [1, 2, 3, 4, 5, 6, 7]) {
+    // eslint-disable-next-line no-await-in-loop -- In order, so the card lists them in that order.
+    await storeAttachment(number, {
+      name: `part-${n}.log`,
+      contentType: 'text/plain',
+      bytes: textFile(`part ${n}`),
+    });
+  }
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+  const card = page.getByRole('region', { name: 'Files (7)' });
+  const rows = card.getByRole('list', { name: 'Files on this request' }).getByRole('listitem');
+  await expect(rows).toHaveCount(5);
+
+  await card.getByRole('button', { name: 'Show all 7 files' }).click();
+
+  await expect(rows).toHaveCount(7);
+  await expect(card.getByRole('button', { name: 'Show all 7 files' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: /^Open part-6\.log/ })).toBeFocused();
 });
 
 test('the staff read an internal note’s files too', async ({ page, context }) => {
@@ -251,6 +342,13 @@ test('the staff read an internal note’s files too', async ({ page, context }) 
   ).toBeVisible();
   const response = await page.request.get(`/attachments/${noteFile}`);
   expect(await response.text()).toBe('reinstall the driver');
+
+  // The Files card lists it too, by the note it was sent with.
+  const card = page.getByRole('region', { name: 'Files (3)' });
+  await expect(card.getByRole('link', { name: /^Your internal note, / })).toBeVisible();
+  await expect(
+    card.getByRole('link', { name: new RegExp(`^Reply by ${REQUESTS_CLIENT.name}, `) }),
+  ).toBeVisible();
 });
 
 test('someone signed out who opens a file is sent to sign in', async ({ page }) => {
@@ -534,6 +632,10 @@ test('the staff remove a file, whose place says who removed it, and focus stays 
   await expect(description.getByText(`Removed by ${PLATFORM_ADMIN.name}`)).toBeVisible();
   await expect(link).toHaveCount(0);
   await expect(description.getByRole('heading', { name: 'Description' })).toBeFocused();
+  // The Files card no longer lists it.
+  const card = page.getByRole('region', { name: 'Files (2)' });
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(card.getByText('error.png')).toHaveCount(0);
   expect((await page.request.get(href)).status()).toBe(404);
   // A copy kept in a browser is refused too: the server always says whether it's still there.
   expect((await page.request.get(href, kept)).status()).toBe(404);

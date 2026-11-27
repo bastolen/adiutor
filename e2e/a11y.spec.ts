@@ -963,12 +963,14 @@ test.describe('in forced-colours mode', () => {
           bytes: new TextEncoder().encode('printer offline'),
         });
         await page.goto(`/requests/${number}`);
-        await expect(page.getByRole('list', { name: '4 attachments' })).toBeVisible();
-        await expect(page.locator('svg.lucide-play')).toBeVisible();
+        const description = page.getByRole('region', { name: 'Description' });
+        await expect(description.getByRole('list', { name: '4 attachments' })).toBeVisible();
+        await expect(description.locator('svg.lucide-play')).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Files (4)' })).toBeVisible();
         await expectAccessible(page);
 
         // The viewer, open on the PDF, then on the video and the log's text.
-        await page.getByRole('button', { name: /^Open invoice\.pdf/ }).click();
+        await description.getByRole('button', { name: /^Open invoice\.pdf/ }).click();
         await expect(page.getByRole('dialog', { name: 'invoice.pdf' })).toBeVisible();
         await expectAccessible(page);
         await page.getByRole('button', { name: 'Next file' }).click();
@@ -976,6 +978,23 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
         await page.getByRole('button', { name: 'Next file' }).click();
         await expect(page.getByRole('region', { name: 'printer.log, as text' })).toBeVisible();
+        await expectAccessible(page);
+      });
+
+      test('a request’s Files card, with all of its files shown', async ({ page }) => {
+        const number = await storeOwnRequest({ title: 'Seven files for the scan' });
+        for (const n of [1, 2, 3, 4, 5, 6, 7]) {
+          // eslint-disable-next-line no-await-in-loop -- In order, so the card lists them in that order.
+          await storeAttachment(number, {
+            name: `part-${n}.log`,
+            contentType: 'text/plain',
+            bytes: new TextEncoder().encode(`part ${n}`),
+          });
+        }
+        await page.goto(`/requests/${number}`);
+        const card = page.getByRole('region', { name: 'Files (7)' });
+        await card.getByRole('button', { name: 'Show all 7 files' }).click();
+        await expect(card.getByRole('listitem')).toHaveCount(7);
         await expectAccessible(page);
       });
 

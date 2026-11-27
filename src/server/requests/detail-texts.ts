@@ -8,6 +8,7 @@
  * belong to are in `detail-thread.ts`.
  */
 import { and, asc, desc, eq, isNull, notInArray, or, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import {
   requestAttachment,
@@ -31,6 +32,9 @@ import {
 import { editableText, type TextMention } from './edits';
 import mentionKey from './mention-key';
 import { withoutStaffPageLinksToEdit } from './staff-links';
+
+/** The author of the reply or note a file is attached to, joined beside who removed the file. */
+const entryAuthor = alias(user, 'entry_author');
 
 /** Someone a text mentions, as its reader sees them. */
 export interface MentionedPerson extends RequestPerson {
@@ -147,7 +151,9 @@ function ofShownText(
 /**
  * Loads what the texts the reader is shown come with ({@link ofShownText}):
  * the people each mentions, each one's earlier versions, newest first, and
- * the files attached to each, oldest first (sent ones only).
+ * the files attached to each, oldest first (sent ones only), with the reply
+ * or note each is on (its kind, author and time; none for the description's),
+ * for the list of every file on the request (`requestFiles`).
  * Every reader gets the versions' rows, since the newest says who made the
  * last edit and how and their number is what an edit sends back; only the
  * staff get the versions themselves ({@link requestText}).
@@ -205,11 +211,18 @@ export async function loadTextRows(ctx: ServiceContext, requestId: string, inter
         removedBy: { id: user.id, name: user.name },
         removedSignedInAs: requestAttachment.removedSignedInAs,
         removedSignedInAsStaff: { name: signedInAsStaff.name },
+        entry: {
+          kind: requestEntry.kind,
+          authorSide: requestEntry.authorSide,
+          at: requestEntry.createdAt,
+        },
+        entryAuthor: { id: entryAuthor.id, name: entryAuthor.name },
       })
       .from(requestAttachment)
       .leftJoin(user, eq(requestAttachment.removedBy, user.id))
       .leftJoin(signedInAsStaff, eq(requestAttachment.removedSignedInAsStaffId, signedInAsStaff.id))
       .leftJoin(requestEntry, eq(requestAttachment.entryId, requestEntry.id))
+      .leftJoin(entryAuthor, eq(requestEntry.authorId, entryAuthor.id))
       .where(
         and(
           eq(requestAttachment.requestId, requestId),

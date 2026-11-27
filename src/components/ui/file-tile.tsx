@@ -9,10 +9,11 @@
  */
 'use client';
 
-import { Play } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import cn from '@/lib/cn';
+
+import { fileActionRing, FileName, FilePicture } from './file-parts';
 
 /** Props for {@link FileTile}. */
 interface FileTileProps {
@@ -43,8 +44,8 @@ interface FileTileProps {
   onOpen?: () => void;
   /** The open button's name for screen readers, which must hold the name, e.g. "Open error.png, 240 kB". */
   openLabel?: string;
-  /** The open button's `id`, so focus can come back to it (when the viewer closes). */
-  openId?: string;
+  /** A ref to the open button, so focus can come back to it (when the viewer closes). */
+  openRef?: Ref<HTMLButtonElement>;
   /** Buttons in the tile's top corner, e.g. Remove, above the link. */
   actions?: ReactNode;
   /** Whether it's shown as one that's gone (dashed, without a thumbnail). */
@@ -54,9 +55,8 @@ interface FileTileProps {
 }
 
 /**
- * A file as a tile. A thumbnail loads lazily from Adiutor's own address (the
- * Content Security Policy allows images from it only), and is decorative:
- * the name says what it is. One that can't load gives way to the icon.
+ * A file as a tile, its picture across the top (`FilePicture`) and its name
+ * (`FileName`) under it.
  *
  * @param props - Tile props.
  * @param props.name - The file's name.
@@ -69,7 +69,7 @@ interface FileTileProps {
  * @param props.linkLabel - The link's name for screen readers.
  * @param props.onOpen - Opens the file; the tile is a button that does.
  * @param props.openLabel - The open button's name for screen readers.
- * @param props.openId - The open button's `id`.
+ * @param props.openRef - A ref to the open button.
  * @param props.actions - Buttons in the tile's top corner.
  * @param props.gone - Whether it's shown as one that's gone.
  * @param props.children - More under the line.
@@ -85,86 +85,37 @@ export default function FileTile({
   linkLabel = undefined,
   onOpen = undefined,
   openLabel = undefined,
-  openId = undefined,
+  openRef = undefined,
   actions = null,
   gone = false,
   children = null,
 }: FileTileProps) {
-  const [failed, setFailed] = useState(false);
-  const showThumbnail = thumbnail !== undefined && !failed && !gone;
-  const nameClass = 'text-sm font-medium wrap-anywhere text-foreground';
-
   return (
     <div
       className={cn(
         'relative flex h-full flex-col overflow-hidden rounded-lg border bg-surface transition-colors',
         gone ? 'border-dashed border-border' : 'border-border',
-        (href || onOpen) &&
-          'hover:border-muted-foreground has-[[data-tile-action]:focus-visible]:outline-2 has-[[data-tile-action]:focus-visible]:outline-offset-2 has-[[data-tile-action]:focus-visible]:outline-ring',
+        (href || onOpen) && cn('hover:border-muted-foreground', fileActionRing),
       )}
     >
-      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
-        {showThumbnail && playMark && (
-          // Says it's a video, as the name does; the play button's shape, not a button.
-          <span
-            aria-hidden="true"
-            className="absolute flex size-9 items-center justify-center rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface"
-          >
-            <Play className="size-4 translate-x-px fill-current" />
-          </span>
-        )}
-        {showThumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element -- Served by Adiutor's own route, which needs the viewer's session: Next's image optimizer fetches without it.
-          <img
-            src={thumbnail}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={() => setFailed(true)}
-            className={cn(
-              'size-full object-cover',
-              thumbnailPosition === 'top' ? 'object-top' : 'object-center',
-            )}
-          />
-        ) : (
-          <span className="text-muted-foreground [&>svg]:size-8">{icon}</span>
-        )}
-      </div>
+      <FilePicture
+        size="tile"
+        icon={icon}
+        thumbnail={thumbnail}
+        thumbnailPosition={thumbnailPosition}
+        playMark={playMark}
+        gone={gone}
+      />
       <div className="flex flex-col gap-0.5 p-2">
-        {/* eslint-disable-next-line no-nested-ternary -- three kinds of tile: opens, links, or neither */}
-        {onOpen ? (
-          <button
-            type="button"
-            id={openId}
-            data-tile-action=""
-            aria-label={openLabel}
-            onClick={onOpen}
-            className={cn(
-              nameClass,
-              // The whole tile is the button.
-              'cursor-pointer text-left after:absolute after:inset-0 hover:underline focus-visible:outline-none',
-            )}
-          >
-            {name}
-          </button>
-        ) : href ? (
-          <a
-            href={href}
-            data-tile-action=""
-            aria-label={linkLabel}
-            className={cn(
-              nameClass,
-              // The whole tile is the link.
-              'after:absolute after:inset-0 hover:underline focus-visible:outline-none',
-            )}
-          >
-            {name}
-          </a>
-        ) : (
-          <span className={cn(nameClass, gone && 'text-muted-foreground line-through')}>
-            {name}
-          </span>
-        )}
+        <FileName
+          name={name}
+          onOpen={onOpen}
+          openLabel={openLabel}
+          openRef={openRef}
+          href={href}
+          linkLabel={linkLabel}
+          gone={gone}
+        />
         <span className="text-xs text-muted-foreground">{detail}</span>
         {children}
       </div>

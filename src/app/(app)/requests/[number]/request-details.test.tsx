@@ -28,6 +28,7 @@ function detailOf(detail: Partial<RequestDetail> = {}): RequestDetail {
     prefix: 'AD',
     title: 'The printer is broken',
     description: { text: 'It prints blank pages.', format: 'plain' },
+    files: [],
     type: 'bug',
     typeName: 'Bug',
     status: 'open',

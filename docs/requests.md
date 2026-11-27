@@ -751,6 +751,13 @@ in [Attachments](deploying.md#attachments).
   none for the description), so it's read by whoever reads that text: a note's files only by the
   staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
   filtered like its mentions; `loadAttachment` checks the same for a download).
+- **Every file on a request** (`getRequest`'s `files`, `requestFiles` in `detail-files.ts`): the
+  files the reader may open, in one list, wherever their text is, also on a reply further back than
+  the page shows or in a group the reader hides. The description's come first, then each reply's
+  and note's in the order the reader reads the conversation, each text's oldest first. Each names
+  the reply or note it was sent with, by the text's author and when it was written (where it was
+  sent, not who uploaded it). Removed files are left out, and a note's files are only for readers
+  with `requests:view-internal`, filtered by the same query as the texts' files and checked again.
 - **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
   files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
   request, reply and write a note, and a text's editor (see [Editing a text](#editing-a-text)),
@@ -774,19 +781,34 @@ in [Attachments](deploying.md#attachments).
   icon for its kind, with its name and size. The tile opens the file in the viewer ("Open
   error.png, 240 kB" to screen readers), and its corner has a Download button ("Download
   error.png, 240 kB"), beside Remove for the staff who may remove files.
+- **The Files card** (`RequestFiles` in `src/app/(app)/requests/[number]/`, under the Details), so
+  a request's files are easy to find: every file on the request the reader may open
+  (`getRequest`'s `files`), "Files (7)", as a row each (`ViewableAttachmentRow`, a `FileRow`):
+  its preview or icon, its name, its size and where it was sent ("Description", "Your reply, Nov
+  3, 2026", "Reply by Pat, Nov 3, 2026", "Internal note by Sam, Nov 4, 2026" for the staff). That
+  link goes to the text (`TextSourceLink`): on the page, it brings it into view and focuses it;
+  further back than the page shows or in a group the reader hides, it opens the page at it
+  (`?entry=`) and focuses it then (one further back than every chunk the page adds,
+  `MAX_EARLIER_CHUNKS`, leaves focus on the link). The row opens the file in the viewer, with a Download button at
+  its end, and nothing removes a file from here. It shows five files, then "Show all 7 files"
+  (`ShowMoreList`), which expands it in place with focus on the sixth. Removed files aren't
+  listed, and a request without files the reader may open has no card.
 - **The viewer** ([decision 0058](decisions/0058-files-open-in-a-viewer.md), `AttachmentViewer`
   around the page, built on `FileViewer` and `Modal`): the file's name, where it is among the
-  page's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
-  and → keys, step through every file the reader can see on the page, in its order (for a file on
-  its own there's neither), and each step is said to screen readers ("notes.odt: 3 of 7"). An image shows
+  request's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
+  and → keys, step through every file on the request the reader may open (`getRequest`'s `files`,
+  also those on replies the page doesn't show), in the page's order (for a file on its own there's
+  neither), and each step is said to screen readers ("notes.odt: 3 of 7"). An image shows
   as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
   browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
   pages were), a text file or log its first 200 KB as text (`attachment-text.ts`: asked for as a
   part of the file, never through a redirect, UTF-8 or UTF-16, in a region that wraps and scrolls
   and takes focus, with a note when the file goes on), a video plays (the browser asks for it a part at a time, so it starts at once and
   seeks; its frame is the poster, and a video the browser can't play says so), an Office file its
-  thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
-  closed again when someone comes back to the page.
+  thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it,
+  and focus goes back to where it was opened from (`useFileOpener`, which notes each open button
+  by its place): that place's button for the file it showed last, else the button it was opened
+  with. It's closed again when someone comes back to the page.
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
   `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
@@ -1016,7 +1038,8 @@ says so with a "Show everything" button.
   it's assigned to, who is subscribed, type, priority (staff),
   company (or "Internal"), who raised it (and who raised it for them) and when, the staff's first response and the
   last activity, with the
-  controls. The bar is on
+  controls, and under it the Files card (every file on the request, see
+  [Attachments](#attachments)). The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1200px of
   content (`WidePage`), so the conversation and the reply's editor get the room.

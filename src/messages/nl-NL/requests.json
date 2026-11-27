@@ -336,6 +336,14 @@
         "textFailed": "De tekst kon niet worden geladen. Download het bestand om het te lezen.",
         "videoFailed": "Deze video kan niet in je browser worden afgespeeld. Download hem om hem te bekijken.",
         "shown": "{name}: {position, number} van {count, number}"
+      },
+      "overview": {
+        "title": "Bestanden ({count, number})",
+        "listLabel": "Bestanden bij dit verzoek",
+        "showAll": "{count, plural, one {Het # bestand tonen} other {Alle # bestanden tonen}}",
+        "fromDescription": "Beschrijving",
+        "fromReply": "{own, select, yes {Je reactie, {date}} other {Reactie van {name}, {date}}}",
+        "fromNote": "{own, select, yes {Je interne notitie, {date}} other {Interne notitie van {name}, {date}}}"
       }
     }
   }

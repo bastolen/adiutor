@@ -13,10 +13,9 @@ import FileTile from '@/components/ui/file-tile';
 import RowAction from '@/components/ui/row-action';
 import type { ActionResult } from '@/lib/action-result';
 import { formatFileSize } from '@/lib/format';
-import { attachmentTypeOf } from '@/lib/requests';
 import type { RequestAttachmentView } from '@/server/requests';
 
-import attachmentIcon from './attachment-icon';
+import attachmentIcon, { previewLook } from './attachment-icon';
 import { personName, type SideNames } from './request-person';
 import SignedInAsMark from './signed-in-as-mark';
 import ViewableAttachmentTile from './viewable-attachment-tile';
@@ -27,18 +26,6 @@ export interface AttachmentRemoval {
   request: number;
   /** The server action that removes a file (fields `request` and `attachment`). */
   action: (previous: ActionResult | null, formData: FormData) => Promise<ActionResult>;
-}
-
-/**
- * Whether a file's preview is a page (a PDF's, or an Office file's
- * thumbnail), which shows from its top.
- *
- * @param name - The file's name.
- * @returns Whether it is.
- */
-function showsPage(name: string): boolean {
-  const kind = attachmentTypeOf(name)?.preview;
-  return kind === 'pdf' || kind === 'office';
 }
 
 /**
@@ -114,9 +101,7 @@ export default function AttachmentList({
               detail={size}
               icon={icon}
               thumbnail={attachment.preview ? `${href}/preview` : undefined}
-              // A page shows from its top, where its title is.
-              thumbnailPosition={showsPage(attachment.name) ? 'top' : 'center'}
-              playMark={attachmentTypeOf(attachment.name)?.preview === 'video'}
+              {...previewLook(attachment.name)}
               openLabel={t('open', { name: attachment.name, size })}
               downloadLabel={t('download', { name: attachment.name, size })}
               actions={
