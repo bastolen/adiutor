@@ -1,6 +1,6 @@
 /**
  * @file Tests for drawing a preview by its kind: an image drawn, a broken
- * one `none`, which kinds are drawn from the file, and `skipped` when every
+ * one `none`, a PDF's first page, which kinds are drawn from the file, and `skipped` when every
  * slot is taken or the drawing library won't load, logged without the file.
  * @vitest-environment node
  */
@@ -8,12 +8,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { drawPreview, drawsFromFile } from './draw';
 import drawImage from './draw-image';
+import drawPdf from './draw-pdf';
 import inDrawingSlot from './limiter';
 
 vi.mock('./draw-image', () => ({ default: vi.fn() }));
+vi.mock('./draw-pdf', () => ({ default: vi.fn() }));
 
 afterEach(() => {
   vi.mocked(drawImage).mockReset();
+  vi.mocked(drawPdf).mockReset();
 });
 
 /** A preview, as the drawing gives it. */
@@ -27,6 +30,14 @@ describe('drawPreview', () => {
     expect(await drawPreview('image', bytes, 'skip')).toEqual({ status: 'drawn', webp: WEBP });
     expect(await drawPreview('image', bytes, 'skip')).toEqual({ status: 'none' });
     expect(drawImage).toHaveBeenCalledWith({ bytes });
+  });
+
+  it('draws a PDF’s first page', async () => {
+    vi.mocked(drawPdf).mockResolvedValueOnce(WEBP);
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    expect(await drawPreview('pdf', bytes, 'wait')).toEqual({ status: 'drawn', webp: WEBP });
+    expect(drawPdf).toHaveBeenCalledWith(bytes);
+    expect(drawImage).not.toHaveBeenCalled();
   });
 
   it('skips a drawing that finds every slot taken', async () => {
@@ -54,8 +65,9 @@ describe('drawPreview', () => {
 });
 
 describe('drawsFromFile', () => {
-  it('draws images from the file, and nothing for kinds without a preview', () => {
+  it('draws images and PDFs from the file, and nothing for kinds without a preview', () => {
     expect(drawsFromFile('image')).toBe(true);
+    expect(drawsFromFile('pdf')).toBe(true);
     expect(drawsFromFile('video')).toBe(false);
     expect(drawsFromFile(null)).toBe(false);
   });

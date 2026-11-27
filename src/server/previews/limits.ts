@@ -27,6 +27,29 @@ export interface ImageLimits {
  */
 export const IMAGE_LIMITS: ImageLimits = { maxPixels: 50_000_000, seconds: 5 };
 
+/** What a PDF may cost to draw. */
+export interface PdfLimits {
+  /** The most memory PDFium may take, in pages of 64 KiB. */
+  memoryPages: number;
+  /** The longest loading and drawing its first page may take, in seconds. */
+  seconds: number;
+}
+
+/**
+ * A PDF: its first page, in PDFium with at most 256 MiB of memory, within 5
+ * seconds; one at a time per server.
+ */
+export const PDF_LIMITS: PdfLimits = { memoryPages: 4096, seconds: 5 };
+
+/** How long PDFium's worker waits for the next PDF before it closes, in seconds. */
+export const PDF_WORKER_IDLE_SECONDS = 60;
+
+/**
+ * How many PDFs one worker draws before it's started afresh: PDFium's memory
+ * only ever grows.
+ */
+export const PDFS_PER_WORKER = 50;
+
 /**
  * How many previews one server draws at once. Decoding a large image takes
  * memory and a processor's time; an upload that finds both slots taken

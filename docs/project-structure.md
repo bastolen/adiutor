@@ -61,9 +61,10 @@ The folders of the repository and what belongs in each. Back to the [documentati
     uploading, downloading and removing (`attachments.ts`) and sending uploads with a text
     (`attachment-claims.ts`).
   - `src/server/previews/`: the small previews of attached files (a folder module, see
-    [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) by its kind
-    (`draw.ts`), within the limits (`limits.ts`) and a few at a time (`limiter.ts`), and keeping it
-    next to its file (`store.ts`).
+    [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) or a PDF's first
+    page (`draw-pdf.ts`, PDFium in a worker thread, `pdf-worker.ts`, with its memory capped,
+    `pdf-wasm.ts`) by its kind (`draw.ts`), within the limits (`limits.ts`) and a few at a time
+    (`limiter.ts`), and keeping it next to its file (`store.ts`).
   - `src/server/jobs/`: background jobs (see [Background jobs](jobs.md)): the tick, leases and
     history, with each recurring job in `recurring/` and every job listed in `registry.ts`.
   - `src/server/queue/`: declaring kinds of queued job and adding jobs to the queue (`queueJob`, `queueJobs`),
@@ -137,5 +138,6 @@ The folders of the repository and what belongs in each. Back to the [documentati
   integration tests' setup, which points `@/db` at the test database, and helpers), `i18n/`
   (next-intl's stand-ins for unit tests, and rendering in another language), `ui/` (what component
   and action tests share: the kept-alive page, the form data and the confirmation window),
-  `http/` (a receiver for webhooks on `127.0.0.1`) and `build/` (whether a local e2e run can
+  `files/` (small files written by hand, such as PDFs), `http/` (a receiver for webhooks on
+  `127.0.0.1`) and `build/` (whether a local e2e run can
   reuse the last build).

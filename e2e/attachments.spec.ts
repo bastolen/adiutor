@@ -10,6 +10,7 @@
  */
 import type { Locator, Page } from '@playwright/test';
 
+import { simplePdf } from '../tests/files/pdfs';
 import { storeAttachment, storeEntries, storeOwnRequest } from './support/db';
 import { PLATFORM_ADMIN, REQUESTS_CLIENT } from './support/fixtures';
 import { markdownEditor, toasts } from './support/helpers';
@@ -275,6 +276,34 @@ test('a company attaches files by button, drop and paste, and sends them with a 
     `${(await screenshot.getAttribute('href')) ?? ''}/preview`,
   );
   await expect(sent.locator('img')).toHaveJSProperty('naturalWidth', 1);
+});
+
+test('a PDF sent with a reply shows its first page, from the top', async ({ page, context }) => {
+  const number = await storeOwnRequest({ title: 'A PDF attached to a reply' });
+  await context.addCookies(clientCookies());
+  await page.goto(`/requests/${number}`);
+
+  await chooseFiles(page, [
+    { name: 'invoice.pdf', mimeType: 'application/pdf', buffer: Buffer.from(simplePdf()) },
+  ]);
+  // Until it's sent, a PDF shows its icon: the server draws its page.
+  const waiting = page.getByRole('list', { name: '1 file to send' });
+  await expect(waiting).toBeVisible();
+  await expect(waiting.locator('img')).toHaveCount(0);
+  await (await markdownEditor(page, 'Your reply')).fill('The invoice is attached.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect(toasts(page)).toContainText('Reply sent.');
+
+  const sent = page.getByRole('region', { name: 'Conversation' }).getByRole('list', {
+    name: '1 attachment',
+  });
+  const pdf = sent.getByRole('link', { name: /^Download invoice\.pdf/ });
+  await expect(pdf).toBeVisible();
+  const preview = sent.locator('img');
+  await expect(preview).toHaveAttribute('src', `${(await pdf.getAttribute('href')) ?? ''}/preview`);
+  // An A4 page, 480 pixels high.
+  await expect(preview).toHaveJSProperty('naturalHeight', 480);
+  await expect(preview).toHaveClass(/object-top/);
 });
 
 test('the staff attach a file to an internal note', async ({ page, context }) => {

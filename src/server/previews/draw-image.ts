@@ -4,8 +4,9 @@
  * `PREVIEW_SIZE` and stored as WebP without its metadata (no location). The
  * bytes' signature is checked first, so libvips never sees any other format
  * (SVG, TIFF, HEIC and the rest), and the decoding has a pixel and a time
- * limit (`limits.ts`). sharp is loaded on first use, so loading this file
- * costs nothing.
+ * limit (`limits.ts`). A PDF's page, drawn by PDFium, is made a preview
+ * here too (`drawBitmap`). sharp is loaded on first use, so loading this
+ * file costs nothing.
  */
 import type { Sharp } from 'sharp';
 
@@ -34,6 +35,16 @@ async function loadSharp(): Promise<typeof import('sharp')> {
     return module;
   });
   return loading;
+}
+
+/** Pixels drawn elsewhere (a PDF's page): four bytes a pixel, rows packed, the fourth unused. */
+export interface Bitmap {
+  /** Its width in pixels. */
+  width: number;
+  /** Its height in pixels. */
+  height: number;
+  /** Its pixels: red, green, blue and an unused byte each. */
+  data: Uint8Array;
 }
 
 /** An image to draw: its bytes, and which kinds it may be. */
@@ -88,6 +99,30 @@ export default async function drawImage({
     return new Uint8Array(webp);
   } catch {
     // Broken, past a limit, or too slow: the file keeps its icon.
+    return null;
+  }
+}
+
+/**
+ * Draws a preview from pixels drawn elsewhere (a PDF's page), opaque.
+ *
+ * @param bitmap - The pixels.
+ * @returns The preview as WebP, or `null` when they don't make an image.
+ * @throws {Error} When sharp itself can't be loaded.
+ */
+export async function drawBitmap(bitmap: Bitmap): Promise<Uint8Array<ArrayBuffer> | null> {
+  const { default: sharp } = await loadSharp();
+  try {
+    const webp = await sharp(bitmap.data, {
+      raw: { width: bitmap.width, height: bitmap.height, channels: 4 },
+    })
+      .removeAlpha()
+      .resize(PREVIEW_SIZE, PREVIEW_SIZE, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: PREVIEW_QUALITY })
+      .timeout({ seconds: IMAGE_LIMITS.seconds })
+      .toBuffer();
+    return new Uint8Array(webp);
+  } catch {
     return null;
   }
 }

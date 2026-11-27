@@ -1,6 +1,6 @@
 /**
  * @file Draws a file's preview by its kind (decision 0057): an image as it
- * is. A drawing never throws for what's in a file: one it can't draw is
+ * is, a PDF's first page. A drawing never throws for what's in a file: one it can't draw is
  * `none`, and keeps its icon. A drawing that can't start (every slot taken,
  * or the drawing library missing) is `skipped`, and left for the previews
  * job.
@@ -8,6 +8,7 @@
 import type { AttachmentPreviewKind } from '@/lib/requests';
 
 import drawImage from './draw-image';
+import drawPdf from './draw-pdf';
 import inDrawingSlot, { BUSY } from './limiter';
 
 /** What drawing a preview gave. */
@@ -28,7 +29,7 @@ export type PreviewDrawing =
     };
 
 /** The kinds of preview drawn from the file itself, at upload and by the previews job. */
-export const PREVIEWS_FROM_FILES: readonly AttachmentPreviewKind[] = ['image'];
+export const PREVIEWS_FROM_FILES: readonly AttachmentPreviewKind[] = ['image', 'pdf'];
 
 /**
  * Whether a kind of file's preview is drawn from the file itself.
@@ -54,6 +55,8 @@ async function drawByKind(
   switch (kind) {
     case 'image':
       return drawImage({ bytes });
+    case 'pdf':
+      return drawPdf(bytes);
     default:
       return null;
   }

@@ -79,6 +79,26 @@ describe('AttachmentList', () => {
       'src',
       '/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a/preview',
     );
+    expect(images[0]).toHaveClass('object-center');
+  });
+
+  it('shows a PDF’s page from its top, where its title is', () => {
+    const { container } = renderInLocale(
+      'en-US',
+      <AttachmentList
+        attachments={[
+          {
+            id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3d',
+            name: 'invoice.pdf',
+            size: 52_000,
+            preview: true,
+            removed: null,
+          },
+        ]}
+        names={NAMES}
+      />,
+    );
+    expect(container.querySelector('img')).toHaveClass('object-top');
   });
 
   it('shows nothing for a text without files', () => {

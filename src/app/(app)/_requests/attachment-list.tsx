@@ -2,10 +2,10 @@
  * @file The files attached to a request's text (its description, a reply or
  * an internal note), under the text: a tile each, which downloads the file
  * from `/attachments/<id>`, with its preview when it has one (from
- * `/attachments/<id>/preview`, decision 0057), and in a removed
- * file's place a tile that says who removed it. The service gives only the
- * files the reader may see (a note's only to the staff). Its text comes from
- * `requests.attachments`.
+ * `/attachments/<id>/preview`, decision 0057; a PDF's page from its top),
+ * and in a removed file's place a tile that says who removed it. The service
+ * gives only the files the reader may see (a note's only to the staff). Its
+ * text comes from `requests.attachments`.
  */
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -13,6 +13,7 @@ import FileTile from '@/components/ui/file-tile';
 import RowAction from '@/components/ui/row-action';
 import type { ActionResult } from '@/lib/action-result';
 import { formatFileSize } from '@/lib/format';
+import { attachmentTypeOf } from '@/lib/requests';
 import type { RequestAttachmentView } from '@/server/requests';
 
 import attachmentIcon from './attachment-icon';
@@ -99,6 +100,10 @@ export default function AttachmentList({
               detail={size}
               icon={icon}
               thumbnail={attachment.preview ? `${href}/preview` : undefined}
+              // A page shows from its top, where its title is.
+              thumbnailPosition={
+                attachmentTypeOf(attachment.name)?.preview === 'pdf' ? 'top' : 'center'
+              }
               href={href}
               linkLabel={t('download', { name: attachment.name, size })}
               actions={

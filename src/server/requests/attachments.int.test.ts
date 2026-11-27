@@ -14,6 +14,7 @@ import { company as companyTable, requestAttachment } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { UPLOADS_AT_ONCE } from '@/lib/requests';
 
+import { simplePdf } from '../../../tests/files/pdfs';
 import {
   createCompany,
   createStaffSettings,
@@ -168,6 +169,15 @@ describe('uploadAttachment', () => {
       width: 480,
       height: 360,
     });
+  });
+
+  it('draws a preview of a PDF’s first page', async () => {
+    const uploaded = await upload(ctx, client, 'invoice.pdf', simplePdf());
+
+    expect(uploaded.preview).toBe(true);
+    const stored = await storage.get(previewKey(uploaded.id));
+    const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
+    expect(await sharp(preview).metadata()).toMatchObject({ format: 'webp', height: 480 });
   });
 
   it('draws no preview for a kind of file that keeps its icon', async () => {

@@ -46,8 +46,8 @@ solution the company approves. Your staff see every company's requests; each com
   mentions, and internal notes and priorities only the staff see. See
   [Requests](docs/requests.md).
 - **Attachments.** Screenshots, logs, PDFs, Office files and screen recordings go with a request,
-  a reply or a note: by a button, dropped on the form or pasted. Images show a small preview
-  drawn on the server, and files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
+  a reply or a note: by a button, dropped on the form or pasted. Images and PDFs show a small
+  preview drawn on the server, and files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
   Settings. See [Attachments](docs/requests.md#attachments) and
   [Deploying](docs/deploying.md#attachments).
 - **Internal requests.** Your staff keep their own work next to the companies': an internal
@@ -108,7 +108,8 @@ security.
 - **Data:** PostgreSQL 18 with [Drizzle ORM](https://orm.drizzle.team), and Zod for validation
 - **Files:** a folder on disk, any S3-compatible bucket (signed with
   [aws4fetch](https://github.com/mhart/aws4fetch)) or SFTP (with [ssh2](https://github.com/mscdex/ssh2)),
-  with previews drawn by [sharp](https://sharp.pixelplumbing.com)
+  with previews drawn by [sharp](https://sharp.pixelplumbing.com) and, for PDFs,
+  [PDFium](https://pdfium.googlesource.com/pdfium/) in WebAssembly
 - **Email:** [React Email](https://react.email) templates sent over SMTP, through a mail server
   set up in Settings or the environment, with [Mailpit](https://mailpit.axllent.org) catching them in
   development

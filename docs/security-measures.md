@@ -464,9 +464,14 @@ A file attached to a request is uploaded on its own first, then sent with its te
   libvips) only when its signature says PNG, JPEG, GIF or WebP (`matchesAttachmentKind`), so libvips
   never sees SVG, TIFF or any other format it reads; it's decoded only up to 50 megapixels, its
   first frame only, within 5 seconds, with libvips' cache off, and drawn again as WebP without its
-  metadata (no location). A server draws at most two previews at once (`DRAWINGS_AT_ONCE`); an
-  upload that finds both taken leaves its preview for later. Anything broken, past a limit or too
-  slow keeps its icon, and a preview never fails an upload. The preview is served at
+  metadata (no location). A PDF's first page is drawn by PDFium, built to WebAssembly without
+  JavaScript or XFA, in a worker thread (`draw-pdf.ts`): the module's memory is capped at 256 MiB
+  before it's compiled (`lowerMemoryMaximum`), so a PDF that wants more fails inside it; a PDF
+  still drawing after 5 seconds stops the worker, and a password-protected one isn't opened. Its
+  pixels are drawn as WebP like an image. A server draws at most two previews at once
+  (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for later. Anything
+  broken, past a limit or too slow keeps its icon, and a preview never fails an upload. The preview
+  is served at
   `/attachments/<id>/preview` with `loadAttachment`'s checks and the file's caching, as
   `image/webp` with `nosniff` and as a download, and is deleted with its file.
 - **Removing deletes the file:** the staff who work on requests remove a file someone shouldn't

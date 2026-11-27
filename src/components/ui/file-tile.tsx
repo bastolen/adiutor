@@ -25,6 +25,11 @@ interface FileTileProps {
   icon: ReactNode;
   /** An image's address, for its thumbnail. */
   thumbnail?: string;
+  /**
+   * Which part of the thumbnail shows when it doesn't fit the tile's shape:
+   * its middle, or its top (a page, whose title is at the top).
+   */
+  thumbnailPosition?: 'center' | 'top';
   /** Where the tile links to (the file, to download it); the tile is a link only with one. */
   href?: string;
   /** The link's name for screen readers, which must hold the name, e.g. "Download error.png, 240 kB". */
@@ -47,6 +52,7 @@ interface FileTileProps {
  * @param props.detail - The line under the name.
  * @param props.icon - The icon for its kind.
  * @param props.thumbnail - An image's address, for its thumbnail.
+ * @param props.thumbnailPosition - Which part of the thumbnail shows when it doesn't fit.
  * @param props.href - Where the tile links to.
  * @param props.linkLabel - The link's name for screen readers.
  * @param props.actions - Buttons in the tile's top corner.
@@ -58,6 +64,7 @@ export default function FileTile({
   detail,
   icon,
   thumbnail = undefined,
+  thumbnailPosition = 'center',
   href = undefined,
   linkLabel = undefined,
   actions = null,
@@ -86,7 +93,10 @@ export default function FileTile({
             loading="lazy"
             decoding="async"
             onError={() => setFailed(true)}
-            className="size-full object-cover"
+            className={cn(
+              'size-full object-cover',
+              thumbnailPosition === 'top' ? 'object-top' : 'object-center',
+            )}
           />
         ) : (
           <span className="text-muted-foreground [&>svg]:size-8">{icon}</span>

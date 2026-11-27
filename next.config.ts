@@ -101,6 +101,14 @@ const nextConfig: NextConfig = {
   /** Enables Cache Components (part of the create-next-app defaults). */
   cacheComponents: true,
 
+  /**
+   * Packages loaded by Node.js itself rather than bundled: PDFium's wrapper
+   * reads its WebAssembly file from beside it, which the previews of attached
+   * PDFs resolve at run time (`src/server/previews/pdf-wasm.ts`). sharp is on
+   * Next.js's own list already.
+   */
+  serverExternalPackages: ['@embedpdf/pdfium'],
+
   /** Enables Partial Prefetching (part of the create-next-app defaults). */
   partialPrefetching: true,
 
