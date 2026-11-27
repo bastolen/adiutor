@@ -109,6 +109,23 @@ const nextConfig: NextConfig = {
    */
   serverExternalPackages: ['@embedpdf/pdfium'],
 
+  /**
+   * PDFium's WebAssembly, which `pdf-wasm.ts` finds at run time through the
+   * package's own path, for the traces of the routes that draw previews: the
+   * upload, the jobs' endpoint and the Jobs page (which runs a job now).
+   * Without it, a deployment that ships only traced files (Vercel) would draw
+   * no PDF.
+   */
+  outputFileTracingIncludes: Object.fromEntries(
+    ['/api/attachments', '/api/jobs', '/admin/logs/jobs'].map((route) => [
+      route,
+      [
+        './node_modules/@embedpdf/pdfium/package.json',
+        './node_modules/@embedpdf/pdfium/dist/pdfium.wasm',
+      ],
+    ]),
+  ),
+
   /** Enables Partial Prefetching (part of the create-next-app defaults). */
   partialPrefetching: true,
 

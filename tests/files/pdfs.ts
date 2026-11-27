@@ -130,3 +130,16 @@ export function slowPdf(): Uint8Array<ArrayBuffer> {
     filter: '/Filter /FlateDecode',
   });
 }
+
+/**
+ * A PDF whose page's content unpacks to many megabytes, which PDFium holds
+ * whole while it reads them: spaces, deflated to a few kilobytes.
+ *
+ * @param megabytes - How large its content is, unpacked.
+ * @returns The PDF.
+ */
+export function largeContentPdf(megabytes: number): Uint8Array<ArrayBuffer> {
+  return onePage(deflateSync(Buffer.alloc(megabytes * 1024 * 1024, 0x20)), {
+    filter: '/Filter /FlateDecode',
+  });
+}

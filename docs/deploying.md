@@ -459,7 +459,8 @@ built to WebAssembly, so both work the same in the Docker image, on a plain serv
 Drawing takes some memory while it runs, at most two previews at a time per server: an image up to
 about 100 MB for a moment (a progressive JPEG, which is decoded whole), and PDFium's worker up to
 256 MiB, closing after a minute without a PDF. Leave the app's container room above what it uses at
-rest.
+rest. On Vercel, PDFium's WebAssembly file is added to the traces of the routes that draw
+(`outputFileTracingIncludes` in `next.config.ts`).
 
 **The largest file** anyone may attach is chosen on the Integrations tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
