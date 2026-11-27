@@ -84,7 +84,10 @@ The linters and formatters, the JSDoc rule, the editor setup and the Git hooks. 
   `src/server/people/user-admin/` and `src/server/queue/`. Each file inside holds one part of the module; files import
   each other directly (never `./index`), and code outside imports only the folder itself, so
   existing imports keep working and the internals can change freely. ESLint enforces that boundary
-  for the folders listed in `FOLDER_MODULES` (`eslint.config.mjs`), and `import-x/no-cycle` keeps
+  for the folders listed in `FOLDER_MODULES` (`eslint.config.mjs`): an `@/` path or a relative one
+  naming the module's whole path, and under `src/server` and `src/lib` also a relative one by the
+  folder's name alone (`../webhooks/x`), so a route folder of the same name elsewhere is left
+  alone. `import-x/no-cycle` keeps
   the files inside from depending on each other in a circle. The tests sit next to the files they
   cover, sharing a `test-helpers.ts` in the folder (see [Testing](testing.md)).
 - **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org), checked by
