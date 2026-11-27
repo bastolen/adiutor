@@ -4,9 +4,12 @@
  * uses it (a call, a file being read), and closed once nothing has for a
  * while, so a page full of previews, a video's seeks and a few downloads in
  * a row don't each open one. A connection the server or the network ends is
- * forgotten, and the next use opens another. Closing the keeper (a driver
+ * forgotten, and the next use opens another, and so is one a use stopped
+ * trusting (`discard`), which ends once the uses still on it are done. One
+ * left idle longer than it should have stayed (a process frozen between
+ * requests, as on serverless) isn't used again. Closing the keeper (a driver
  * that's replaced) ends its connection once the uses still holding it are
- * done.
+ * done, and any connection a use opens after that ends with it.
  */
 import type { SFTPWrapper } from 'ssh2';
 
@@ -30,13 +33,14 @@ export interface Connection {
 export interface Lease {
   /** The connection. */
   connection: Connection;
-  /** Whether it was opened for this use, rather than kept from an earlier one. */
+  /** Whether no use was done with it before this one: it wasn't kept from an earlier use. */
   fresh: boolean;
   /** Lets go of it; only the first call counts. */
   release: () => void;
   /**
-   * Ends it and stops keeping it at once, for a call that found it dead: the
-   * next use opens another, without waiting for its end to be noticed.
+   * Stops keeping it at once, for a call that found it failing (it ran out
+   * of time, or went): the next use opens another, and it ends once the uses
+   * still on it (other people's reads) are done.
    */
   discard: () => void;
 }
@@ -62,8 +66,12 @@ interface Kept {
   uses: number;
   /** Ends it after the idle time, while nothing uses it. */
   idle: ReturnType<typeof setTimeout> | null;
-  /** Whether it ends as soon as nothing uses it (its keeper was closed). */
+  /** Whether it ends as soon as nothing uses it (its keeper was closed, or a use stopped trusting it). */
   closing: boolean;
+  /** Whether a use has been done with it, so a later one isn't its first. */
+  served: boolean;
+  /** When the last use let go of it, while nothing uses it. */
+  idleSince: number | null;
 }
 
 /**
@@ -78,6 +86,8 @@ export default function sharedConnection(
   keepMs: number,
 ): SharedConnection {
   let current: Kept | null = null;
+  // Once closed, a connection a later use opens isn't kept: it ends when that use is done.
+  let closed = false;
 
   /**
    * Stops keeping a connection, so the next use opens another.
@@ -111,8 +121,10 @@ export default function sharedConnection(
       connection.end();
     }, keepMs);
     idle.unref();
-    // eslint-disable-next-line no-param-reassign -- The keeper's own record of its timer.
+    /* eslint-disable no-param-reassign -- The keeper's own record of its timer. */
     kept.idle = idle;
+    kept.idleSince = Date.now();
+    /* eslint-enable no-param-reassign */
   };
 
   /**
@@ -122,9 +134,29 @@ export default function sharedConnection(
    */
   const lease = async (): Promise<Lease> => {
     let kept = current;
-    const fresh = kept === null;
+    if (kept !== null && kept.idleSince !== null && Date.now() - kept.idleSince > keepMs) {
+      // Idle longer than it should have stayed: its timer was held up (the process was frozen),
+      // and the server or the network may have dropped it meanwhile. Not used again.
+      const stale = kept;
+      forget(stale);
+      if (stale.idle) {
+        clearTimeout(stale.idle);
+      }
+      stale.opening.then(
+        (connection) => connection.end(),
+        () => {},
+      );
+      kept = null;
+    }
     if (kept === null) {
-      const made: Kept = { opening: open(), uses: 0, idle: null, closing: false };
+      const made: Kept = {
+        opening: open(),
+        uses: 0,
+        idle: null,
+        closing: closed,
+        served: false,
+        idleSince: null,
+      };
       made.opening.then(
         (connection) => connection.onClose(() => forget(made)),
         () => forget(made),
@@ -132,7 +164,9 @@ export default function sharedConnection(
       current = made;
       kept = made;
     }
+    const fresh = !kept.served;
     kept.uses += 1;
+    kept.idleSince = null;
     if (kept.idle) {
       clearTimeout(kept.idle);
       kept.idle = null;
@@ -161,13 +195,19 @@ export default function sharedConnection(
           return;
         }
         released = true;
+        held.served = true;
         held.uses -= 1;
         endWhenUnused(held, connection);
       },
-      /** Stops keeping the connection and ends it. */
+      /** Stops keeping the connection, which ends once nothing uses it. */
       discard: () => {
         forget(held);
-        connection.end();
+        held.closing = true;
+        if (held.idle) {
+          clearTimeout(held.idle);
+          held.idle = null;
+        }
+        endWhenUnused(held, connection);
       },
     };
   };
@@ -176,6 +216,7 @@ export default function sharedConnection(
     lease,
     /** Ends the connection once nothing uses it, and keeps none from now on. */
     close() {
+      closed = true;
       const kept = current;
       current = null;
       if (!kept) {

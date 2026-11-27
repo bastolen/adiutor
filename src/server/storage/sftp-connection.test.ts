@@ -1,9 +1,12 @@
 /**
  * @file Tests for the SFTP connection a driver keeps: one connection for uses
- * in a row and at once, closed once nothing has used it for the idle time
- * and held while anything does, a connection that ended (or never opened)
- * forgotten so the next use opens another (at once for one a call found
- * dead), and closing the keeper ending it once its uses are done.
+ * in a row and at once (all of them its first while it opens), closed once
+ * nothing has used it for the idle time and held while anything does, a
+ * connection that ended (or never opened) forgotten so the next use opens
+ * another, one a use stopped trusting kept no more and ended once the uses on
+ * it are done, one idle past its time (a frozen process) not used again, and
+ * closing the keeper ending it once its uses are done, and any connection
+ * opened after that once its use is.
  */
 import type { SFTPWrapper } from 'ssh2';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -154,15 +157,45 @@ describe('sharedConnection', () => {
     expect((await flaky.lease()).fresh).toBe(true);
   });
 
-  it('stops keeping a connection a call found dead, at once', async () => {
+  it('shares a connection that’s still opening, as the first use of all who wait for it', async () => {
     const kept = sharedConnection(open, KEEP);
-    const dead = await kept.lease();
-    dead.release();
-    dead.discard();
+    const [first, second] = await Promise.all([kept.lease(), kept.lease()]);
+    expect(opened).toHaveLength(1);
+    expect([first.fresh, second.fresh]).toEqual([true, true]);
+    first.release();
+    expect((await kept.lease()).fresh).toBe(false);
 
+    const failing = sharedConnection(async () => {
+      throw new Error('unreachable');
+    }, KEEP);
+    const both = await Promise.allSettled([failing.lease(), failing.lease()]);
+    expect(both.map(({ status }) => status)).toEqual(['rejected', 'rejected']);
+  });
+
+  it('stops keeping a connection a use stopped trusting, which ends once the uses on it are done', async () => {
+    const kept = sharedConnection(open, KEEP);
+    const reading = await kept.lease();
+    const failed = await kept.lease();
+    failed.release();
+    failed.discard();
+
+    // Someone else's read still has it; the next use opens another.
+    expect(opened[0]?.closed).toBe(false);
+    expect((await kept.lease()).connection).not.toBe(reading.connection);
+    reading.release();
     expect(opened[0]?.closed).toBe(true);
-    expect((await kept.lease()).fresh).toBe(true);
+  });
+
+  it('doesn’t use a connection again that stayed idle past its time, as in a frozen process', async () => {
+    const kept = sharedConnection(open, KEEP);
+    (await kept.lease()).release();
+    // The clock moves on, but the idle timer didn't run: the process was frozen.
+    vi.setSystemTime(Date.now() + KEEP + 1);
+
+    const next = await kept.lease();
+    expect(next.fresh).toBe(true);
     expect(opened).toHaveLength(2);
+    await vi.waitFor(() => expect(opened[0]?.closed).toBe(true));
   });
 
   it('ends the connection once its uses are done when the keeper is closed', async () => {
@@ -173,6 +206,12 @@ describe('sharedConnection', () => {
     expect(opened[0]?.closed).toBe(false);
     reading.release();
     expect(opened[0]?.closed).toBe(true);
+
+    // A use after that opens a connection that ends with it, rather than being kept.
+    const late = await kept.lease();
+    expect(late.fresh).toBe(true);
+    late.release();
+    expect(late.connection.closed).toBe(true);
 
     // Closing a keeper without a connection does nothing; one closed while idle ends at once.
     sharedConnection(open, KEEP).close();

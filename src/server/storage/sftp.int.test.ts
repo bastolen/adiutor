@@ -1,9 +1,10 @@
 /**
  * @file Tests for the SFTP driver against a real SFTP server: the OpenSSH
  * service in `compose.yaml` (`pnpm services:up`, and in CI). Each test has a
- * folder of its own there. The driver keeps one connection for its calls,
- * closes it once nothing has used it for a while (shortened here), and runs a
- * call once more on a new one when the kept one turns out dead.
+ * folder of its own there. The driver keeps one connection for its calls
+ * (an upload has one of its own), closes it once nothing has used it for a
+ * while (shortened here), and runs a call once more on a new one when the
+ * kept one turns out dead.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -28,6 +29,59 @@ const SHORT: SftpTimeouts = {
   keep: 300,
 };
 
+/** How long a test waits for a connection to close: well past {@link SHORT}'s `keep`. */
+const UNTIL_CLOSED = { timeout: 5_000 };
+
+/**
+ * A connection whose next look (`stat`) goes wrong, the way a test chooses.
+ *
+ * @param connection - The connection.
+ * @param next - What the next look does instead, given the connection and the look itself.
+ * @returns The connection, and a switch that arms the next look.
+ */
+function sabotaged(
+  connection: Connection,
+  next: (connection: Connection, look: () => void) => void,
+): Connection & { arm: () => void } {
+  let armed = false;
+  const sftp = new Proxy(connection.sftp, {
+    /**
+     * The channel's calls, the armed look going wrong.
+     *
+     * @param target - The channel.
+     * @param property - The call.
+     * @param receiver - The proxy.
+     * @returns The call.
+     */
+    get(target, property, receiver) {
+      if (property === 'stat' && armed) {
+        armed = false;
+        return (...args: Parameters<SFTPWrapper['stat']>) =>
+          next(connection, () => target.stat(...args));
+      }
+      const value: unknown = Reflect.get(target, property, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  return {
+    sftp,
+    end: connection.end,
+    /**
+     * Whether it has ended.
+     *
+     * @returns Whether it has.
+     */
+    get closed() {
+      return connection.closed;
+    },
+    onClose: connection.onClose,
+    /** Arms the next look. */
+    arm: () => {
+      armed = true;
+    },
+  };
+}
+
 /** The storages a test made, closed after it. */
 const made: FileStorage[] = [];
 
@@ -41,14 +95,16 @@ afterEach(() => {
  *
  * @param config - The server's settings.
  * @param wrap - Changes each connection as it opens, to make one fail.
+ * @param limits - The time limits, {@link SHORT} unless a test needs others.
  * @returns The storage and its connections.
  */
 function watched(
   config: SftpStorageConfig,
   wrap: (connection: Connection) => Connection = (connection) => connection,
+  limits: SftpTimeouts = SHORT,
 ) {
   const connections: Connection[] = [];
-  const storage = sftpStorage(config, SHORT, async (settings, timeouts) => {
+  const storage = sftpStorage(config, limits, async (settings, timeouts) => {
     const connection = wrap(await connectSftp(settings, timeouts));
     connections.push(connection);
     return connection;
@@ -169,17 +225,29 @@ describe('sftpStorage on an SFTP server', () => {
     const { storage, connections } = watched(await newFolder());
     await storage.setUp();
     const key = attachmentKey(randomUUID());
+    // An upload has a connection of its own, ended once it's stored.
+    const beforeUpload = connections.length;
     await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
+    expect(connections).toHaveLength(beforeUpload + 1);
+    await vi.waitFor(() => expect(connections.at(-1)?.closed).toBe(true), UNTIL_CLOSED);
+
+    // The calls after it share one: the kept one, or one new one if that closed meanwhile.
+    const beforeCalls = connections.length;
     const file = await storage.get(key);
     expect(file && (await textOf(file.body))).toBe('printer log');
     expect(await partOf(storage, key, { start: 0, end: 6 })).toMatchObject({ text: 'printer' });
     expect(await partOf(storage, key, { start: 8, end: null })).toMatchObject({ text: 'log' });
     await storage.delete(key);
-    expect(connections).toHaveLength(1);
+    expect(connections.length - beforeCalls).toBeLessThanOrEqual(1);
 
-    await vi.waitFor(() => expect(connections[0]?.closed).toBe(true));
+    // Once nothing has used it for a while, it closes, and the next call opens another.
+    await vi.waitFor(
+      () => expect(connections.every(({ closed }) => closed)).toBe(true),
+      UNTIL_CLOSED,
+    );
+    const beforeLast = connections.length;
     expect(await storage.isSetUp()).toBe(true);
-    expect(connections).toHaveLength(2);
+    expect(connections).toHaveLength(beforeLast + 1);
   });
 
   it('holds the connection while a file is read, and lets go once the read ends', async () => {
@@ -187,64 +255,75 @@ describe('sftpStorage on an SFTP server', () => {
     await storage.setUp();
     const key = attachmentKey(randomUUID());
     await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
+    // The read opens a connection of its own once the others have closed.
+    await vi.waitFor(
+      () => expect(connections.every(({ closed }) => closed)).toBe(true),
+      UNTIL_CLOSED,
+    );
     const file = await storage.get(key);
+    const reading = connections.at(-1);
 
     await new Promise((resolve) => {
       setTimeout(resolve, SHORT.keep * 3);
     });
-    expect(connections[0]?.closed).toBe(false);
+    expect(reading?.closed).toBe(false);
 
     expect(file && (await textOf(file.body))).toBe('printer log');
-    await vi.waitFor(() => expect(connections[0]?.closed).toBe(true));
-    expect(connections).toHaveLength(1);
+    await vi.waitFor(() => expect(reading?.closed).toBe(true), UNTIL_CLOSED);
   });
 
   it('runs a call once more on a new connection when the kept one went meanwhile', async () => {
-    let failNext = false;
+    const wrapped: ReturnType<typeof sabotaged>[] = [];
     const { storage, connections } = watched(await newFolder(), (connection) => {
-      // The connection goes as the next call starts on it, as when the server restarted while it
+      // The connection goes as the next look starts on it, as when the server restarted while it
       // was kept: its end isn't noticed until then.
-      const sftp = new Proxy(connection.sftp, {
-        /**
-         * The channel's calls, the next look ending the connection first.
-         *
-         * @param target - The channel.
-         * @param property - The call.
-         * @param receiver - The proxy.
-         * @returns The call.
-         */
-        get(target, property, receiver) {
-          if (property === 'stat' && failNext) {
-            failNext = false;
-            return (...args: Parameters<SFTPWrapper['stat']>) => {
-              connection.end();
-              target.stat(...args);
-            };
-          }
-          const value: unknown = Reflect.get(target, property, receiver);
-          return typeof value === 'function' ? value.bind(target) : value;
-        },
+      const one = sabotaged(connection, (gone, look) => {
+        gone.end();
+        look();
       });
-      return {
-        sftp,
-        end: connection.end,
-        /**
-         * Whether it has ended.
-         *
-         * @returns Whether it has.
-         */
-        get closed() {
-          return connection.closed;
-        },
-        onClose: connection.onClose,
-      };
+      wrapped.push(one);
+      return one;
     });
     await storage.setUp();
-    failNext = true;
+    wrapped[0]?.arm();
 
     expect(await storage.isSetUp()).toBe(true);
     expect(connections).toHaveLength(2);
     expect(connections[0]?.closed).toBe(true);
+  });
+
+  it('runs a call once more on a new connection when the kept one stops answering', async () => {
+    const wrapped: ReturnType<typeof sabotaged>[] = [];
+    const { storage, connections } = watched(
+      await newFolder(),
+      (connection) => {
+        // The next look gets no answer at all.
+        const one = sabotaged(connection, () => {});
+        wrapped.push(one);
+        return one;
+      },
+      { ...SHORT, call: 500, keep: 60_000 },
+    );
+    await storage.setUp();
+    wrapped[0]?.arm();
+
+    expect(await storage.isSetUp()).toBe(true);
+    expect(connections).toHaveLength(2);
+    await vi.waitFor(() => expect(connections[0]?.closed).toBe(true), UNTIL_CLOSED);
+  });
+
+  it('doesn’t run a call again on a connection opened for it', async () => {
+    const { storage, connections } = watched(await newFolder(), (connection) => {
+      const one = sabotaged(connection, (gone, look) => {
+        gone.end();
+        look();
+      });
+      one.arm();
+      return one;
+    });
+
+    await expect(storage.isSetUp()).rejects.toMatchObject({ failure: 'failed' });
+    expect(connections).toHaveLength(1);
   });
 
   it('ends its connection when closed, once the read that holds it ends', async () => {
@@ -252,16 +331,24 @@ describe('sftpStorage on an SFTP server', () => {
     await storage.setUp();
     const key = attachmentKey(randomUUID());
     await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
+    await vi.waitFor(
+      () => expect(connections.every(({ closed }) => closed)).toBe(true),
+      UNTIL_CLOSED,
+    );
     const file = await storage.get(key);
+    const reading = connections.at(-1);
 
     storage.close();
-    expect(connections[0]?.closed).toBe(false);
+    expect(reading?.closed).toBe(false);
     expect(file && (await textOf(file.body))).toBe('printer log');
-    await vi.waitFor(() => expect(connections[0]?.closed).toBe(true));
+    await vi.waitFor(() => expect(reading?.closed).toBe(true), UNTIL_CLOSED);
   });
 
   it('refuses to store, read or delete in a folder that isn’t set up', async () => {
-    const { storage } = watched(await newFolder());
+    const { storage, connections } = watched(await newFolder(), undefined, {
+      ...SHORT,
+      keep: 60_000,
+    });
     expect(await storage.isSetUp()).toBe(false);
     await expect(
       storage.put(attachmentKey(randomUUID()), new Uint8Array([1]), 'image/png'),
@@ -274,6 +361,8 @@ describe('sftpStorage on an SFTP server', () => {
     await expect(storage.delete(attachmentKey(randomUUID()))).rejects.toMatchObject({
       failure: 'not_set_up',
     });
+    // The server's own answers aren't run again: the kept connection, and the upload's own.
+    expect(connections).toHaveLength(2);
   });
 
   it('can’t set up a folder that isn’t there', async () => {
