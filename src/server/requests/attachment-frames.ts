@@ -7,7 +7,7 @@
  * uploader's own finished upload that no text has claimed yet, and drawn
  * again within the image limits like any other preview.
  */
-import { and, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { requestAttachment } from '@/db/schema';
 import { attachmentTypeOf, VIDEO_FRAME_MAX_BYTES } from '@/lib/requests';
@@ -18,18 +18,19 @@ import type { ServiceContext } from '../context';
 import { notFoundError, ServiceError } from '../errors';
 import { drawAndStorePreview } from '../previews';
 import { assertRateLimit, RATE_LIMITS } from '../rate-limit';
-import { actingUserId, signedInAsWork } from '../signed-in-as';
+import { actingUserId } from '../signed-in-as';
+import { previewKey, StorageError } from '../storage';
+import { ownUnsentUploads } from './attachment-claims';
 import { attachmentsOn } from './attachments';
-
-/** How long an upload waits for the text it's sent with, as `claimAttachments` counts it. */
-const UNSENT_FOR = sql`interval '24 hours'`;
 
 /**
  * Sets a video's preview from the frame its uploader's browser drew. Taken
  * only for the actor's own finished upload that no text has claimed yet
- * (with the same staff member signed in as them, if one was: request work,
- * decision 0028), of a video, without a preview yet; each video takes one
- * frame.
+ * (`ownUnsentUploads`: with the same staff member signed in as them, if one
+ * was, decision 0028), of a video, without a preview yet. The video is
+ * claimed first (marked `none`), so it takes one frame however many are
+ * sent at once, and is marked `drawn` once the preview is stored, while it
+ * isn't removed: a preview of a file removed or purged meanwhile is deleted.
  *
  * @param ctx - Service context.
  * @param actor - The acting user: the uploader.
@@ -62,40 +63,60 @@ export default async function setVideoFrame(
     `video-frame:user:${actingUserId(actor)}`,
     RATE_LIMITS.videoFramesPerUser,
   );
-  const work = signedInAsWork(actor);
-  const yours = and(
-    eq(requestAttachment.id, id.data),
-    isNull(requestAttachment.requestId),
-    isNotNull(requestAttachment.uploadedAt),
-    gt(requestAttachment.createdAt, sql`now() - ${UNSENT_FOR}`),
-    eq(requestAttachment.uploadedBy, actor.id),
-    eq(requestAttachment.signedInAs, work.signedInAs),
-    work.signedInAsStaffId === null
-      ? isNull(requestAttachment.signedInAsStaffId)
-      : eq(requestAttachment.signedInAsStaffId, work.signedInAsStaffId),
-    isNull(requestAttachment.preview),
-  );
   const [row] = await ctx.db
     .select({ name: requestAttachment.name })
     .from(requestAttachment)
-    .where(yours);
+    .where(
+      and(
+        eq(requestAttachment.id, id.data),
+        ownUnsentUploads(actor),
+        isNull(requestAttachment.preview),
+      ),
+    );
   if (!row || attachmentTypeOf(row.name)?.preview !== 'video') {
     throw notFoundError();
   }
-  const state = await drawAndStorePreview(on.storage, {
+  // Claimed first: a second frame sent meanwhile finds it taken.
+  const claimed = await ctx.db
+    .update(requestAttachment)
+    .set({ preview: 'none' })
+    .where(and(eq(requestAttachment.id, id.data), isNull(requestAttachment.preview)))
+    .returning({ id: requestAttachment.id });
+  if (claimed.length === 0) {
+    throw notFoundError();
+  }
+  const outcome = await drawAndStorePreview(on.storage, {
     id: id.data,
     kind: 'video',
     bytes: input.frame,
     whenBusy: 'wait',
   });
-  if (state === null) {
+  if (outcome === 'none') {
     return { preview: false };
   }
-  // Once: a second frame for the same video, sent meanwhile, finds its preview set.
-  const set = await ctx.db
+  if (outcome !== 'drawn') {
+    // Not drawn or not stored: back to without a preview, as it was.
+    await ctx.db
+      .update(requestAttachment)
+      .set({ preview: null })
+      .where(and(eq(requestAttachment.id, id.data), eq(requestAttachment.preview, 'none')));
+    return { preview: false };
+  }
+  const kept = await ctx.db
     .update(requestAttachment)
-    .set({ preview: state })
-    .where(and(eq(requestAttachment.id, id.data), isNull(requestAttachment.preview)))
+    .set({ preview: 'drawn' })
+    .where(and(eq(requestAttachment.id, id.data), isNull(requestAttachment.removedAt)))
     .returning({ id: requestAttachment.id });
-  return { preview: state === 'drawn' && set.length > 0 };
+  if (kept.length === 0) {
+    // Removed or purged while it was drawn: its preview goes too.
+    await on.storage.delete(previewKey(id.data)).catch((error: unknown) => {
+      // eslint-disable-next-line no-console -- The kind only: the storage's reply may say more.
+      console.error(
+        'A removed video’s preview could not be deleted:',
+        error instanceof StorageError ? error.failure : 'failed',
+      );
+    });
+    return { preview: false };
+  }
+  return { preview: true };
 }

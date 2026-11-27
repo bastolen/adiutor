@@ -1,7 +1,7 @@
 /**
  * @file Tests for drawing a preview and keeping it: stored next to its file
- * and `drawn`, `none` for a file it can't draw, and `null` (left for the
- * previews job) when it was skipped or the storage fails.
+ * and `drawn`, `none` for a file it can't draw, `skipped` when it wasn't
+ * drawn, and `unstored` when the storage refuses it.
  * @vitest-environment node
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -61,13 +61,13 @@ describe('drawAndStorePreview', () => {
   it('leaves a skipped preview, or one the storage refused, for later', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(drawPreview).mockResolvedValueOnce({ status: 'skipped' });
-    expect(await drawAndStorePreview(storageWith(vi.fn()), input)).toBeNull();
+    expect(await drawAndStorePreview(storageWith(vi.fn()), input)).toBe('skipped');
 
     vi.mocked(drawPreview).mockResolvedValueOnce({ status: 'drawn', webp: WEBP });
     const failing = storageWith(async () => {
       throw new StorageError('timed_out');
     });
-    expect(await drawAndStorePreview(failing, input)).toBeNull();
+    expect(await drawAndStorePreview(failing, input)).toBe('unstored');
     expect(error).toHaveBeenCalledWith('A preview could not be stored yet:', 'timed_out');
     error.mockRestore();
   });

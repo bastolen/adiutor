@@ -57,10 +57,13 @@ container, which therefore needs the storage too: the same volume, for local dis
 `attachment-previews` draws each preview as an upload does
 ([decision 0057](decisions/0057-small-previews-of-attached-files.md)), newest file first, on one
 storage connection a run. It claims a file before it draws it (marking it as one without a
-preview), so a file that brings the process down is never tried again, and marks it drawn once its
-preview is stored. A storage that fails, or a drawing library that won't load, puts the file back
-and ends the run with a failure that says which, for the next run to try again. Like
-`attachment-files`, it does nothing while no storage is chosen or its folder isn't set up.
+preview), so a file that brings the process down is never tried again, and a kind of file without a
+preview (a log, an archive, a video whose frame never came) stays that way, so no run looks at it
+again. It marks a file drawn once its preview is stored, while the file isn't removed; a preview of a
+file removed meanwhile is deleted. A drawing library that won't load puts its file back and leaves
+that kind for the next run while the others are drawn; a storage that fails puts the file back and
+ends the run. Either is the run's failure, saying which. Like `attachment-files`, it does nothing
+while no storage is chosen or its folder isn't set up.
 
 `retention` deletes 10,000 rows at a time until its deadline, so a large backlog is cleared over a
 few runs without holding the database for long.

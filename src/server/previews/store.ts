@@ -1,12 +1,21 @@
 /**
  * @file Draws a file's preview and keeps it next to the file
- * (`previewKey`), giving where the preview then stands for its row.
+ * (`previewKey`), saying how that went: drawn and stored, impossible to draw,
+ * not tried (`skipped`), or drawn but not stored (`unstored`).
  */
-import type { AttachmentPreviewKind, AttachmentPreviewState } from '@/lib/requests';
+import type { AttachmentPreviewKind } from '@/lib/requests';
 
 import { type FileStorage, previewKey, StorageError } from '../storage';
 import { drawPreview } from './draw';
 import { PREVIEW_CONTENT_TYPE } from './limits';
+
+/**
+ * How drawing and storing a preview went: `drawn` (stored under
+ * `previewKey`), `none` (it can't be drawn: the icon), `skipped` (every slot
+ * was taken, or the drawing library won't load) or `unstored` (the storage
+ * refused it). Only `drawn` and `none` are final.
+ */
+export type PreviewOutcome = 'drawn' | 'none' | 'skipped' | 'unstored';
 
 /**
  * Draws a file's preview and stores it.
@@ -14,11 +23,10 @@ import { PREVIEW_CONTENT_TYPE } from './limits';
  * @param storage - Where the file is kept.
  * @param input - The file.
  * @param input.id - Its attachment's ID.
- * @param input.kind - The kind of preview its type has, drawn from the file (`drawsFromFile`).
- * @param input.bytes - The file.
+ * @param input.kind - The kind of preview its type has.
+ * @param input.bytes - The file (or, for a video, the frame its uploader's browser drew).
  * @param input.whenBusy - With every slot taken: `skip` or `wait`.
- * @returns `drawn` once it's stored, `none` when it can't be drawn, or `null`
- *   when it wasn't drawn or couldn't be stored (left for the previews job).
+ * @returns How it went.
  */
 export default async function drawAndStorePreview(
   storage: FileStorage,
@@ -28,13 +36,10 @@ export default async function drawAndStorePreview(
     bytes: Uint8Array;
     whenBusy: 'skip' | 'wait';
   },
-): Promise<AttachmentPreviewState | null> {
+): Promise<PreviewOutcome> {
   const drawing = await drawPreview(input.kind, input.bytes, input.whenBusy);
-  if (drawing.status === 'skipped') {
-    return null;
-  }
-  if (drawing.status === 'none') {
-    return 'none';
+  if (drawing.status !== 'drawn') {
+    return drawing.status;
   }
   try {
     await storage.put(previewKey(input.id), drawing.webp, PREVIEW_CONTENT_TYPE);
@@ -43,7 +48,7 @@ export default async function drawAndStorePreview(
     if (error instanceof StorageError) {
       // eslint-disable-next-line no-console -- The kind only: the storage's reply may say more.
       console.error('A preview could not be stored yet:', error.failure);
-      return null;
+      return 'unstored';
     }
     throw error;
   }

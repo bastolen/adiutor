@@ -2,7 +2,8 @@
  * @file Integration tests for a video's preview from the frame its
  * uploader's browser drew: taken once, for the uploader's own unsent video
  * (with the same staff member signed in as them, if one was), drawn again
- * within the limits; refused for anyone else's upload, a sent one, a file
+ * within the limits, one frame however many are sent at once, and deleted
+ * when the video is purged meanwhile; refused for anyone else's upload, a sent one, a file
  * that isn't a video, a frame too large, while attaching is off and past the
  * rate limit.
  */
@@ -22,9 +23,10 @@ import {
   storeAttachment,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
+import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { RATE_LIMITS } from '../rate-limit';
-import { previewKey } from '../storage';
+import { type FileStorage, previewKey } from '../storage';
 import setVideoFrame from './attachment-frames';
 import { ctx, db, storage, storeRequest } from './test-helpers';
 
@@ -106,6 +108,53 @@ describe('setVideoFrame', () => {
     expect((await refusal(() => setVideoFrame(ctx, client, { attachment: id, frame }))).code).toBe(
       'not_found',
     );
+  });
+
+  it('takes one frame when two are sent at once', async () => {
+    const id = await video();
+    const results = await Promise.allSettled([
+      setVideoFrame(ctx, client, { attachment: id, frame }),
+      setVideoFrame(ctx, client, { attachment: id, frame }),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toEqual([
+      { status: 'fulfilled', value: { preview: true } },
+    ]);
+    expect(await previewOf(id)).toBe('drawn');
+  });
+
+  it('deletes the preview of a video purged while its frame was drawn', async () => {
+    const id = await video();
+    const purging: FileStorage = {
+      ...storage,
+      /**
+       * Stores as the storage does, while the cleanup job purges the video just as its preview
+       * is stored.
+       *
+       * @param key - Where.
+       * @param bytes - What.
+       * @param contentType - Its type.
+       */
+      put: async (key, bytes, contentType) => {
+        await storage.put(key, bytes, contentType);
+        if (key === previewKey(id)) {
+          await db.delete(requestAttachment).where(eq(requestAttachment.id, id));
+        }
+      },
+    };
+    const purgingCtx: ServiceContext = {
+      ...ctx,
+      /**
+       * The storage that purges the video meanwhile.
+       *
+       * @returns It.
+       */
+      storage: async () => purging,
+    };
+
+    expect(await setVideoFrame(purgingCtx, client, { attachment: id, frame })).toEqual({
+      preview: false,
+    });
+    expect(await storage.get(previewKey(id))).toBeNull();
   });
 
   it('marks a frame that isn’t an image, and takes no other', async () => {

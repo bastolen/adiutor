@@ -5,6 +5,12 @@
  * nothing outside it loads the libraries that draw. Free of `server-only`,
  * since the jobs' command imports it too.
  */
-export { drawPreview, drawsFromFile, type PreviewDrawing, PREVIEWS_FROM_FILES } from './draw';
+export {
+  drawPreview,
+  drawsFromFile,
+  type FilePreviewKind,
+  type PreviewDrawing,
+  PREVIEWS_FROM_FILES,
+} from './draw';
 export { PREVIEW_CONTENT_TYPE, PREVIEW_SIZE } from './limits';
-export { default as drawAndStorePreview } from './store';
+export { default as drawAndStorePreview, type PreviewOutcome } from './store';

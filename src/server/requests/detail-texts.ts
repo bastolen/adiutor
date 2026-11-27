@@ -50,8 +50,8 @@ export interface MentionedPerson extends RequestPerson {
  * A file attached to a request's text, as its reader gets it (decision
  * 0044): to download from `/attachments/<id>`, with its preview at
  * `/attachments/<id>/preview` when it has one (decision 0057), or, once it's
- * removed, who removed it and when. Never who uploaded it: that's the text's author, or
- * whoever added it while editing the text.
+ * removed, who removed it and when. Never who uploaded it: that's the text's
+ * author, or whoever added it while editing the text.
  */
 export interface RequestAttachmentView {
   /** Its ID, which its address holds. */

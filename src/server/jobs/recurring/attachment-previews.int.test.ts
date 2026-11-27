@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestAttachment } from '@/db/schema';
 
@@ -34,6 +34,26 @@ import {
 } from '../../storage';
 import attachmentPreviews from './attachment-previews';
 
+/** Kinds of preview whose drawing won't start, as when a library won't load. */
+const unavailable = vi.hoisted(() => new Set<string>());
+
+vi.mock('../../previews', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../previews')>();
+  return {
+    ...original,
+    /**
+     * Draws as the real one does, except for the kinds the test made unavailable.
+     *
+     * @param args - The storage, and the file.
+     * @returns How it went.
+     */
+    drawAndStorePreview: (...args: Parameters<typeof original.drawAndStorePreview>) =>
+      unavailable.has(args[1].kind)
+        ? Promise.resolve('skipped' as const)
+        : original.drawAndStorePreview(...args),
+  };
+});
+
 const { ctx, db, storage } = setupTestContext();
 
 /** Someone at a company, and a request of theirs. */
@@ -44,6 +64,7 @@ let requestId: string;
 let png: Uint8Array<ArrayBuffer>;
 
 beforeEach(async () => {
+  unavailable.clear();
   await createStaffSettings(db);
   const company = await createCompany(db);
   uploader = (await memberActor(db, company.id, 'client')).id;
@@ -105,7 +126,7 @@ describe('attachment-previews', () => {
     const unsent = await screenshot({ requestId: null });
     const drawn = await screenshot({ preview: 'drawn' });
 
-    expect(await run()).toEqual({ summary: { previews: 2, withoutPreview: 0 } });
+    expect(await run()).toEqual({ summary: { previews: 2, withoutPreview: 1 } });
 
     expect(await previewOf(older)).toBe('drawn');
     expect(await previewOf(newer)).toBe('drawn');
@@ -113,10 +134,68 @@ describe('attachment-previews', () => {
     const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
     expect(await sharp(preview).metadata()).toMatchObject({ format: 'webp', width: 480 });
     // A log has no preview to draw, an unsent file waits for its text, one drawn stays drawn.
-    expect(await previewOf(log)).toBeNull();
+    expect(await previewOf(log)).toBe('none');
     expect(await previewOf(unsent)).toBeNull();
     expect(await previewOf(drawn)).toBe('drawn');
     expect(await run()).toEqual({ summary: { previews: 0, withoutPreview: 0 } });
+  });
+
+  it('deletes the preview of a file removed while it was drawn', async () => {
+    const id = await screenshot();
+    const removing: FileStorage = {
+      ...storage,
+      /**
+       * Stores as the storage does, while a staff member removes the file just as its preview is
+       * stored.
+       *
+       * @param key - Where.
+       * @param bytes - What.
+       * @param contentType - Its type.
+       */
+      put: async (key, bytes, contentType) => {
+        await storage.put(key, bytes, contentType);
+        if (key === previewKey(id)) {
+          await db
+            .update(requestAttachment)
+            .set({ removedAt: new Date(), fileDeletedAt: new Date() })
+            .where(eq(requestAttachment.id, id));
+        }
+      },
+      /**
+       * Runs the calls on this storage.
+       *
+       * @param work - The calls.
+       * @returns What they return.
+       */
+      session: (work) => work(removing),
+    };
+
+    const summary = await run({
+      ...ctx,
+      /**
+       * The storage that removes the file meanwhile.
+       *
+       * @returns It.
+       */
+      storage: async () => removing,
+    });
+
+    expect(summary).toEqual({ summary: { previews: 0, withoutPreview: 0 } });
+    expect(await storage.get(previewKey(id))).toBeNull();
+    expect(await previewOf(id)).toBe('none');
+  });
+
+  it('draws other kinds while one kind’s drawing won’t start, and leaves that kind for later', async () => {
+    const older = await screenshot({ createdAt: minutesAgo(5) });
+    const pdf = await screenshot({ name: 'invoice.pdf', contentType: 'application/pdf' });
+    unavailable.add('pdf');
+
+    expect(await run()).toEqual({
+      summary: { previews: 1, withoutPreview: 0 },
+      failure: 'Previews of kind pdf could not be drawn; the next run tries again',
+    });
+    expect(await previewOf(pdf)).toBeNull();
+    expect(await previewOf(older)).toBe('drawn');
   });
 
   it('marks a file it can’t draw, or one missing from the storage, and never tries again', async () => {

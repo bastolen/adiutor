@@ -477,8 +477,10 @@ A file attached to a request is uploaded on its own first, then sent with its te
   the thumbnail is then drawn like an image, PNG or JPEG only. A video's preview is a frame its
   uploader's browser drew, the uploader's own claim too: the server takes one frame per video, only
   for the uploader's own unsent upload with the same staff member signed in as them, if one was
-  (`setVideoFrame`, under its own rate limit), of at most 512 KB, and draws it again as a JPEG, PNG
-  or WebP image of at most 4 megapixels. A server draws at most two previews
+  (`setVideoFrame`, under its own rate limit), of at most 512 KB, claiming the video before it
+  draws it so two frames sent at once can't both be taken, and draws it again as a JPEG, PNG or WebP
+  image of at most 4 megapixels. A preview drawn while its file was removed or purged is deleted
+  once it's stored, so no copy of a removed file stays behind. A server draws at most two previews
   at once (`DRAWINGS_AT_ONCE`); an upload that finds both taken leaves its preview for the
   `attachment-previews` job, which claims each file before it draws it, so a file that brings the
   process down is never tried again.

@@ -2,10 +2,10 @@
  * @file Draws a file's preview by its kind (decision 0057): an image as it
  * is, a PDF's first page, the thumbnail an Office or OpenDocument file
  * carries, and for a video the frame its uploader's browser drew (a JPEG,
- * PNG or WebP image within `VIDEO_FRAME_LIMITS`), drawn again. A drawing never throws for what's in a file: one it can't draw is
- * `none`, and keeps its icon. A drawing that can't start (every slot taken,
- * or the drawing library missing) is `skipped`, and left for the previews
- * job.
+ * PNG or WebP image within `VIDEO_FRAME_LIMITS`), drawn again. A drawing
+ * never throws for what's in a file: one it can't draw is `none`, and keeps
+ * its icon. A drawing that can't start (every slot taken, or the drawing
+ * library missing) is `skipped`, and left for the previews job.
  */
 import type { AttachmentCheck, AttachmentPreviewKind } from '@/lib/requests';
 
@@ -35,11 +35,14 @@ export type PreviewDrawing =
       status: 'skipped';
     };
 
+/** A kind of preview drawn from the file itself: every kind but a video's. */
+export type FilePreviewKind = Exclude<AttachmentPreviewKind, 'video'>;
+
 /**
  * The kinds of preview drawn from the file itself, at upload and by the
  * previews job; a video's comes from the frame its uploader's browser drew.
  */
-export const PREVIEWS_FROM_FILES: readonly AttachmentPreviewKind[] = ['image', 'pdf', 'office'];
+export const PREVIEWS_FROM_FILES: readonly FilePreviewKind[] = ['image', 'pdf', 'office'];
 
 /**
  * Whether a kind of file's preview is drawn from the file itself.
@@ -47,8 +50,8 @@ export const PREVIEWS_FROM_FILES: readonly AttachmentPreviewKind[] = ['image', '
  * @param kind - The kind of preview its type has (`AttachmentType.preview`).
  * @returns Whether it is.
  */
-export function drawsFromFile(kind: AttachmentPreviewKind | null): kind is AttachmentPreviewKind {
-  return kind !== null && PREVIEWS_FROM_FILES.includes(kind);
+export function drawsFromFile(kind: AttachmentPreviewKind | null): kind is FilePreviewKind {
+  return kind !== null && (PREVIEWS_FROM_FILES as readonly string[]).includes(kind);
 }
 
 /**

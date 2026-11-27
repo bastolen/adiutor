@@ -8,9 +8,9 @@
  * bytes the upload holds and kept next to the file (decision 0057). The
  * upload is unsent until the text it's sent with claims it
  * (`claimAttachments`). Downloading one, or its preview, goes through the
- * same checks as reading its text (`loadAttachment`). The staff who work on requests remove
- * one (`removeAttachment`): its row stays, as the mark of who removed it, and
- * its file is deleted, with its preview.
+ * same checks as reading its text (`loadAttachment`). The staff who work on
+ * requests remove one (`removeAttachment`): its row stays, as the mark of who
+ * removed it, and its file is deleted, with its preview.
  */
 import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
@@ -19,6 +19,8 @@ import { requestAttachment, requestEntry } from '@/db/schema';
 import { getInternalRequestPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
 import {
+  type AttachmentPreviewKind,
+  type AttachmentPreviewState,
   attachmentTypeOf,
   cleanAttachmentName,
   matchesAttachmentKind,
@@ -180,6 +182,38 @@ async function abandonUpload(ctx: ServiceContext, id: string): Promise<void> {
 }
 
 /**
+ * Draws an upload's preview from the bytes it holds, and says where it
+ * stands for its row.
+ *
+ * @param storage - Where the file is kept.
+ * @param file - The upload.
+ * @param file.id - Its row's ID.
+ * @param file.kind - The kind of preview its type has.
+ * @param file.bytes - The file.
+ * @returns `drawn`; `none` for a file that can't be drawn or a kind that keeps its icon; `null`
+ *   for a video (its frame comes from the browser) and for a preview that wasn't drawn or stored
+ *   (the previews job draws it later).
+ */
+async function previewAtUpload(
+  storage: FileStorage,
+  file: { id: string; kind: AttachmentPreviewKind | null; bytes: Uint8Array },
+): Promise<AttachmentPreviewState | null> {
+  if (file.kind === null) {
+    return 'none';
+  }
+  if (!drawsFromFile(file.kind)) {
+    return null;
+  }
+  const outcome = await drawAndStorePreview(storage, {
+    id: file.id,
+    kind: file.kind,
+    bytes: file.bytes,
+    whenBusy: 'skip',
+  });
+  return outcome === 'drawn' || outcome === 'none' ? outcome : null;
+}
+
+/**
  * Uploads a file, for a text that will be sent with it. Allowed for whoever
  * may raise a request in some company, or write the staff's internal
  * requests (each text's service checks its own permission when it claims
@@ -266,10 +300,7 @@ export async function uploadAttachment(
     // A storage that fails may still have kept the file (a timeout after it stored it): the row
     // stays unfinished, and the cleanup job deletes both after an hour.
     await on.storage.put(attachmentKey(id), bytes, type.contentType);
-    // `null` when it wasn't drawn or stored: the previews job draws it later.
-    const preview = drawsFromFile(type.preview)
-      ? await drawAndStorePreview(on.storage, { id, kind: type.preview, bytes, whenBusy: 'skip' })
-      : null;
+    const preview = await previewAtUpload(on.storage, { id, kind: type.preview, bytes });
     const uploaded = await ctx.db
       .update(requestAttachment)
       .set({ uploadedAt: sql`now()`, preview })
@@ -374,15 +405,16 @@ export async function loadAttachment(
    * Reads one of the file's keys from the storage.
    *
    * @param key - The file's key, or its preview's.
+   * @param missing - What the log says when the storage has nothing there.
    * @returns What's stored there, or `null` when nothing is (or no storage is chosen).
    */
-  const read = async (key: string): Promise<StoredFile | null> => {
+  const read = async (key: string, missing: string): Promise<StoredFile | null> => {
     const storage = ctx.storage ? await ctx.storage() : null;
     const file = storage ? await storage.get(key) : null;
     if (!file) {
       // A row without its file: a storage that changed, or files not backed up with the database.
       // eslint-disable-next-line no-console -- The ID only: it names no one.
-      console.warn('An attachment has no file in the storage:', parsed.data);
+      console.warn(missing, parsed.data);
     }
     return file;
   };
@@ -395,13 +427,14 @@ export async function loadAttachment(
      *
      * @returns The file, or `null` when the storage has none.
      */
-    readFile: () => read(attachmentKey(parsed.data)),
+    readFile: () => read(attachmentKey(parsed.data), 'An attachment has no file in the storage:'),
     /**
      * Reads the preview's bytes from the storage.
      *
      * @returns The preview, or `null` when the storage has none.
      */
-    readPreview: () => read(previewKey(parsed.data)),
+    readPreview: () =>
+      read(previewKey(parsed.data), 'An attachment’s preview has no file in the storage:'),
   };
 }
 

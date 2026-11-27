@@ -198,14 +198,20 @@ describe('uploadAttachment', () => {
     expect((await upload(ctx, client, 'bare.odt', bare)).preview).toBe(false);
   });
 
-  it('draws no preview for a kind of file that keeps its icon', async () => {
-    const uploaded = await upload(ctx, client, 'printer.log', new TextEncoder().encode('offline'));
-    const [row] = await db
-      .select({ preview: requestAttachment.preview })
-      .from(requestAttachment)
-      .where(eq(requestAttachment.id, uploaded.id));
-    expect(row?.preview).toBeNull();
-    expect(uploaded.preview).toBe(false);
+  it('marks a kind of file that keeps its icon, and leaves a video for its frame', async () => {
+    const log = await upload(ctx, client, 'printer.log', new TextEncoder().encode('offline'));
+    const video = await upload(
+      ctx,
+      client,
+      'demo.webm',
+      new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, ...new TextEncoder().encode('webm')]),
+    );
+    const rows = await db
+      .select({ id: requestAttachment.id, preview: requestAttachment.preview })
+      .from(requestAttachment);
+    expect(rows.find((row) => row.id === log.id)?.preview).toBe('none');
+    expect(rows.find((row) => row.id === video.id)?.preview).toBeNull();
+    expect(log.preview).toBe(false);
   });
 
   it('still uploads when the preview can’t be stored, leaving it for the previews job', async () => {
