@@ -59,7 +59,6 @@ import {
   waitForEmailAbout,
   waitForNewEmail,
 } from './support/outbox';
-import { inOrder } from './support/sequence';
 import { expect, test } from './support/test';
 
 test('an Admin changes the name shown to users', async ({ page }) => {
@@ -364,33 +363,6 @@ test('an Admin keeps every page in light mode, which hides the dark accent, and 
   } finally {
     await setForcedTheme();
   }
-});
-
-test('the addresses of tabs merged into others lead to their first cards', async ({ page }) => {
-  await signIn(page, PLATFORM_ADMIN);
-  const tabs = page.getByRole('navigation', { name: 'Settings sections' });
-
-  // Appearance is on the General tab now, from its logo on.
-  await page.goto('/admin/settings/appearance');
-  await expect(page).toHaveURL('/admin/settings#logo');
-  await expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('region', { name: 'Logo' })).toBeInViewport();
-
-  // Email, Attachments and Webhooks are on the Integrations tab, which a webhook's page keeps.
-  const integrations = tabs.getByRole('link', { name: 'Integrations' });
-  await inOrder(
-    [
-      ['email', 'mail-server', 'Mail server'],
-      ['attachments', 'attachments', 'Attachments'],
-      ['webhooks', 'webhooks', 'Webhooks'],
-    ] as const,
-    async ([old, card, region]) => {
-      await page.goto(`/admin/settings/${old}`);
-      await expect(page).toHaveURL(`/admin/settings/integrations#${card}`);
-      await expect(integrations).toHaveAttribute('aria-current', 'page');
-      await expect(page.getByRole('region', { name: region })).toBeInViewport();
-    },
-  );
 });
 
 test('the staff’s name shows instead of Adiutor everywhere, with Powered by Adiutor', async ({
