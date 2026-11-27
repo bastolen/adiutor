@@ -300,6 +300,7 @@
     "attachments": {
       "label": "{count, plural, one {# attachment} other {# attachments}}",
       "download": "Download {name}, {size}",
+      "open": "Open {name}, {size}",
       "attach": "Attach files",
       "hint": "You can also drop or paste files: up to {count, number} of at most {maximum, number} MB each.",
       "dropHere": "Drop the files to attach them.",
@@ -321,7 +322,15 @@
       "removeDescription": "It’s deleted for everyone and can’t be brought back. Its place in the text says who removed it.",
       "removeConfirm": "Remove file",
       "removedDone": "{name} removed.",
-      "removedBy": "Removed by {name}"
+      "removedBy": "Removed by {name}",
+      "viewer": {
+        "position": "{position, number} of {count, number}",
+        "previous": "Previous file",
+        "next": "Next file",
+        "download": "Download",
+        "pdfFirstPage": "The first page. Download the PDF to read all of it.",
+        "notShown": "This file can’t be shown here. Download it to open it."
+      }
     }
   }
 }

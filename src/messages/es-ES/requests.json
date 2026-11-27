@@ -300,6 +300,7 @@
     "attachments": {
       "label": "{count, plural, one {# archivo adjunto} other {# archivos adjuntos}}",
       "download": "Descargar {name}, {size}",
+      "open": "Abrir {name}, {size}",
       "attach": "Adjuntar archivos",
       "hint": "También puedes soltar o pegar archivos: hasta {count, number} de como máximo {maximum, number} MB cada uno.",
       "dropHere": "Suelta los archivos para adjuntarlos.",
@@ -321,7 +322,15 @@
       "removeDescription": "Se elimina para todos y no se puede recuperar. En su lugar en el texto se indica quién lo quitó.",
       "removeConfirm": "Quitar archivo",
       "removedDone": "Se ha quitado {name}.",
-      "removedBy": "Quitado por {name}"
+      "removedBy": "Quitado por {name}",
+      "viewer": {
+        "position": "{position, number} de {count, number}",
+        "previous": "Archivo anterior",
+        "next": "Archivo siguiente",
+        "download": "Descargar",
+        "pdfFirstPage": "La primera página. Descarga el PDF para leerlo entero.",
+        "notShown": "Este archivo no se puede mostrar aquí. Descárgalo para abrirlo."
+      }
     }
   }
 }

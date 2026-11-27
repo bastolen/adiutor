@@ -770,9 +770,19 @@ in [Attachments](deploying.md#attachments).
   refuses the whole text, which then stores nothing; one of the writer's own is named ("report.pdf
   is no longer available. Attach it again."), anyone else's isn't.
 - **On a request's page,** each text shows its files under it (`AttachmentList` in
-  `src/app/(app)/_requests/`, a `FileTile` each): the file's preview, or an icon for its kind, with
-  its name and size. A tile is a link that downloads the file ("Download error.png, 240 kB" to
-  screen readers); nothing opens in the page.
+  `src/app/(app)/_requests/`, a tile each, `ViewableAttachmentTile`): the file's preview, or an
+  icon for its kind, with its name and size. The tile opens the file in the viewer ("Open
+  error.png, 240 kB" to screen readers), and its corner has a Download button ("Download
+  error.png, 240 kB"), beside Remove for the staff who may remove files.
+- **The viewer** ([decision 0058](decisions/0058-files-open-in-a-viewer.md), `AttachmentViewer`
+  around the page, built on `FileViewer` and `Modal`): the file's name, where it is among the
+  page's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
+  and → keys, step through every file the reader can see on the page, in its order. An image shows
+  as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
+  browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
+  pages were), an Office file its thumbnail, and anything else its icon with "This file can't be
+  shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
+  closed again when someone comes back to the page.
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
   `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn

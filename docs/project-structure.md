@@ -20,7 +20,8 @@ The folders of the repository and what belongs in each. Back to the [documentati
 - `src/app/`: the routes. Components only one route uses sit next to its page (e.g. the user detail
   page's `*-card.tsx`); what several signed-in pages share is in `src/app/(app)/_people/`, and
   what the request pages share (the list, the board, the badges, the text, the people, the files
-  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`) in
+  and the picker that attaches them, with the frame it draws of a video, `video-frame.ts`, and the
+  viewer they open in, `attachment-viewer.tsx`) in
   `src/app/(app)/_requests/`. Files are uploaded to `src/app/api/attachments/` and downloaded from
   `src/app/attachments/[id]/`, their previews from `src/app/attachments/[id]/preview/` and a
   PDF's large first page from `src/app/attachments/[id]/page/`. The logo and the

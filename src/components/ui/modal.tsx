@@ -22,12 +22,15 @@ import { InsideDialog } from './inside-dialog';
  * is for something to write with room: as tall as the window allows and up
  * to 60rem wide, with its content filling the height (the content scrolls
  * what's too tall itself); on a narrow screen it's the whole screen, without
- * a border or round corners.
+ * a border or round corners. `viewer` is the same, up to 90rem wide, for a
+ * file to look at.
  */
 const sizeClasses = {
   md: 'max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md gap-5 overflow-y-auto rounded-xl border p-6',
   large:
     'h-dvh w-full gap-4 p-4 sm:h-[calc(100dvh-4rem)] sm:w-[calc(100%-4rem)] sm:max-w-[60rem] sm:rounded-xl sm:border sm:p-6',
+  viewer:
+    'h-dvh w-full gap-3 p-3 sm:h-[calc(100dvh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-[90rem] sm:rounded-xl sm:border sm:p-4',
 } as const;
 
 /**
@@ -42,7 +45,7 @@ interface ModalProps {
   title: string;
   /** Short explanation below the title. */
   description?: ReactNode;
-  /** The panel's size. Defaults to `md`; `large` fills most of the window. */
+  /** The panel's size. Defaults to `md`; `large` and `viewer` fill most of the window. */
   size?: keyof typeof sizeClasses;
   /**
    * Takes the focus when the dialog opens, instead of the dialog's first
@@ -114,8 +117,10 @@ export default function Modal({
           )}
         >
           <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-2">
-              <Dialog.Title className="text-lg font-semibold text-foreground">{title}</Dialog.Title>
+            <div className="flex min-w-0 flex-col gap-2">
+              <Dialog.Title className="text-lg font-semibold wrap-anywhere text-foreground">
+                {title}
+              </Dialog.Title>
               {description ? (
                 <Dialog.Description className="text-sm text-muted-foreground">
                   {description}

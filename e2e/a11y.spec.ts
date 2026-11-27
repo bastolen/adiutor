@@ -966,6 +966,11 @@ test.describe('in forced-colours mode', () => {
         await expect(page.getByRole('list', { name: '4 attachments' })).toBeVisible();
         await expect(page.locator('svg.lucide-play')).toBeVisible();
         await expectAccessible(page);
+
+        // The viewer, open on the PDF.
+        await page.getByRole('button', { name: /^Open invoice\.pdf/ }).click();
+        await expect(page.getByRole('dialog', { name: 'invoice.pdf' })).toBeVisible();
+        await expectAccessible(page);
       });
 
       test('a reply with files waiting to be sent, an image among them', async ({ page }) => {

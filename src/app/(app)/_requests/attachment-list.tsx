@@ -1,10 +1,10 @@
 /**
  * @file The files attached to a request's text (its description, a reply or
- * an internal note), under the text: a tile each, which downloads the file
- * from `/attachments/<id>`, with its preview when it has one (from
- * `/attachments/<id>/preview`, decision 0057; a page from its top, a video's
- * frame with a play mark), and in a removed file's place a tile that says
- * who removed it. The service gives only the files the reader may see (a
+ * an internal note), under the text: a tile each, which opens the file in
+ * the page's viewer (decision 0058) and has a Download button of its own,
+ * with its preview when it has one (from `/attachments/<id>/preview`,
+ * decision 0057; a page from its top, a video's frame with a play mark), and
+ * in a removed file's place a tile that says who removed it. The service gives only the files the reader may see (a
  * note's only to the staff). Its text comes from `requests.attachments`.
  */
 import { useLocale, useTranslations } from 'next-intl';
@@ -19,6 +19,7 @@ import type { RequestAttachmentView } from '@/server/requests';
 import attachmentIcon from './attachment-icon';
 import { personName, type SideNames } from './request-person';
 import SignedInAsMark from './signed-in-as-mark';
+import ViewableAttachmentTile from './viewable-attachment-tile';
 
 /** What removing a file needs: the request, and the action that removes it. */
 export interface AttachmentRemoval {
@@ -107,7 +108,8 @@ export default function AttachmentList({
         const size = formatFileSize(attachment.size, locale);
         return (
           <li key={attachment.id}>
-            <FileTile
+            <ViewableAttachmentTile
+              id={attachment.id}
               name={attachment.name}
               detail={size}
               icon={icon}
@@ -115,8 +117,8 @@ export default function AttachmentList({
               // A page shows from its top, where its title is.
               thumbnailPosition={showsPage(attachment.name) ? 'top' : 'center'}
               playMark={attachmentTypeOf(attachment.name)?.preview === 'video'}
-              href={href}
-              linkLabel={t('download', { name: attachment.name, size })}
+              openLabel={t('open', { name: attachment.name, size })}
+              downloadLabel={t('download', { name: attachment.name, size })}
               actions={
                 removal && (
                   <RowAction

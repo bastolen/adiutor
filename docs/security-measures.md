@@ -498,7 +498,10 @@ A file attached to a request is uploaded on its own first, then sent with its te
   nothing (`FILE_POLICY`, `default-src 'none'; sandbox`), since Next.js puts the proxy's headers
   over a route's own. A tile's preview loads from under the same address
   (`/attachments/<id>/preview`), the same way: an image element shows an image whatever its
-  `Content-Disposition` says, and `img-src 'self'` stays.
+  `Content-Disposition` says, and `img-src 'self'` stays. The viewer ([decision
+  0058](decisions/0058-files-open-in-a-viewer.md)) shows a file the same way, from its own
+  address: an image (or a PDF's large page, `/attachments/<id>/page`) in an `<img>`, never in a
+  frame, so nothing a file holds runs, and navigating to the address is still a download.
 - **Kept by the reader's browser, checked every time** ([decision
   0054](decisions/0054-browsers-keep-attachments-and-revalidate.md)): `Cache-Control: private,
 no-cache` with the ID as `ETag`, since a file's bytes, name and type never change. `private`
