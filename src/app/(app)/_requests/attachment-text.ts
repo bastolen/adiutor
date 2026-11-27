@@ -18,28 +18,28 @@ export interface TextStart {
 }
 
 /**
- * Decodes the start of a text file.
+ * Decodes the start of a text file: UTF-16 after its byte order mark, else
+ * UTF-8 (its mark dropped too). A file that goes on past these bytes keeps
+ * back a character cut in half at the end, rather than show it broken.
  *
  * @param bytes - The bytes read, from the file's start.
  * @param cut - Whether the file goes on past them.
- * @returns The text, without a character cut in half at the end.
+ * @returns The text.
  */
 export function decodeTextStart(bytes: Uint8Array, cut: boolean): string {
-  const littleEndian = bytes[0] === 0xff && bytes[1] === 0xfe;
-  if (littleEndian || (bytes[0] === 0xfe && bytes[1] === 0xff)) {
-    // Whole UTF-16 units only; a pair of surrogates cut in half ends as one replacement.
-    const even = bytes.subarray(2, bytes.length - (bytes.length % 2));
-    const text = new TextDecoder(littleEndian ? 'utf-16le' : 'utf-16be').decode(even);
-    return cut ? text.replace(/�$/, '') : text;
+  let encoding = 'utf-8';
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    encoding = 'utf-16le';
+  } else if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    encoding = 'utf-16be';
   }
-  const text = new TextDecoder('utf-8').decode(bytes);
-  // A character cut in half at the end decodes as a replacement character.
-  return cut ? text.replace(/�+$/, '') : text;
+  return new TextDecoder(encoding).decode(bytes, { stream: cut });
 }
 
 /**
  * Reads the start of a text file from its address: a part of it, never more
- * than `TEXT_PREVIEW_BYTES` even from a server that sends the whole file.
+ * than `TEXT_PREVIEW_BYTES` even from a server that sends the whole file, and
+ * only the file itself (no redirect, only `200` or `206`).
  *
  * @param href - The file's address.
  * @param size - Its size in bytes.
@@ -54,9 +54,11 @@ export async function readTextStart(
 ): Promise<TextStart> {
   const response = await fetch(href, {
     headers: { Range: `bytes=0-${TEXT_PREVIEW_BYTES - 1}` },
+    // Never another page's text: a session that ended would be sent to sign in.
+    redirect: 'error',
     signal,
   });
-  if (!response.ok || !response.body) {
+  if ((response.status !== 200 && response.status !== 206) || !response.body) {
     throw new Error('The file could not be read.');
   }
   const reader = response.body.getReader();

@@ -781,8 +781,8 @@ in [Attachments](deploying.md#attachments).
   as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
   browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
   pages were), a text file or log its first 200 KB as text (`attachment-text.ts`: asked for as a
-  part of the file, UTF-8 or UTF-16, in a box that wraps and scrolls, with a note when the file
-  goes on), a video plays (the browser asks for it a part at a time, so it starts at once and
+  part of the file, never through a redirect, UTF-8 or UTF-16, in a box that wraps and scrolls,
+  with a note when the file goes on), a video plays (the browser asks for it a part at a time, so it starts at once and
   seeks; its frame is the poster, and a video the browser can't play says so), an Office file its
   thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
   closed again when someone comes back to the page.
