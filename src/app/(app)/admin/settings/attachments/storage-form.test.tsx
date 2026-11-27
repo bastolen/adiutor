@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Storage form on the Attachments tab of Settings: the
+ * @file Tests for the Storage form on Settings' Integrations tab: the
  * drivers it offers, the fields of the one chosen, what it says about a
  * saved secret (which it never holds), what it sends, and the draft it keeps
  * when the page is shown again (on the way back from confirming it's you).
@@ -30,7 +30,7 @@ describe('StorageForm', () => {
     const { unmount } = renderInLocale('en-US', <StorageForm current={null} vercel={false} />);
 
     expect(screen.getByText('No storage is chosen yet, so nobody can attach files.')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Test and save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Test and save storage' })).toBeDisabled();
     await user.click(screen.getByRole('combobox', { name: 'Storage' }));
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
       expect.stringContaining('A folder on this server'),
@@ -113,7 +113,7 @@ describe('StorageForm', () => {
 
     const secret = screen.getByLabelText('Secret access key');
     await user.type(secret, 'a-new-secret');
-    await user.click(screen.getByRole('button', { name: 'Test and save' }));
+    await user.click(screen.getByRole('button', { name: 'Test and save storage' }));
 
     expect(await screen.findByText('Storage saved.')).toBeInTheDocument();
     await waitFor(() => expect(secret).toHaveValue(''));
@@ -131,7 +131,7 @@ describe('StorageForm', () => {
     await user.click(screen.getByRole('combobox', { name: 'Storage' }));
     await user.click(screen.getByRole('option', { name: /A folder on this server/ }));
     await user.type(screen.getByRole('textbox', { name: 'Folder' }), '/data/attachments');
-    await user.click(screen.getByRole('button', { name: 'Test and save' }));
+    await user.click(screen.getByRole('button', { name: 'Test and save storage' }));
 
     await waitFor(() => expect(saveStorageAction).toHaveBeenCalledTimes(1));
     const formData = defined(vi.mocked(saveStorageAction).mock.calls[0], 'the call')[1];

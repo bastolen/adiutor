@@ -2,7 +2,7 @@
  * @file Tells the operator when a production server can't send email.
  * `src/instrumentation.ts` runs {@link warnIfEmailCantBeSent} once when a
  * production server starts, in the background. Without a mail server
- * (`SMTP_URL`, or one saved on the Email tab of Settings) the server still
+ * (`SMTP_URL`, or one saved on the Integrations tab of Settings) the server still
  * serves pages, and every email (sign-in links, password resets,
  * invitations, security notices) fails only when it's sent (`sendEmail` in
  * `src/lib/email.ts`), so the log says so from the start.
@@ -48,7 +48,7 @@ function sendsWithoutSettings(settings: EmailDeliverySettings): boolean {
  * never get it. It names the settings, never a value from the configuration.
  *
  * @param settings - The server's settings.
- * @param savedServer - Whether a mail server is saved on the Email tab of Settings.
+ * @param savedServer - Whether a mail server is saved on the Integrations tab of Settings.
  * @returns The warning, or `null` when email can be sent.
  */
 export function emailDeliveryWarning(
@@ -58,7 +58,7 @@ export function emailDeliveryWarning(
   if (sendsWithoutSettings(settings) || savedServer) {
     return null;
   }
-  return "No mail server is set up (SMTP_URL, or the Email tab of Settings), so Adiutor can't send email: sign-in links, password resets, invitations and security notices fail until one is. See docs/deploying.md.";
+  return "No mail server is set up (SMTP_URL, or the Integrations tab of Settings), so Adiutor can't send email: sign-in links, password resets, invitations and security notices fail until one is. See docs/deploying.md.";
 }
 
 /**

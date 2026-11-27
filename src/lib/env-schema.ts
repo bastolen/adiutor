@@ -153,7 +153,7 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: optionalString,
     /**
      * SMTP connection URL for sending email, which wins over the mail server
-     * saved on the Email tab of Settings, e.g.
+     * saved on the Integrations tab of Settings, e.g.
      * `smtps://user:password@smtp.adiutor.dev:465`, or
      * `smtp://user:password@smtp.adiutor.dev:587?requireTLS=true` for STARTTLS.
      * In production it must use TLS, except to a server on this computer
@@ -163,7 +163,7 @@ const envSchema = z
     SMTP_URL: z.preprocess(emptyToUndefined, z.url().optional()),
     /**
      * Sender of outgoing email, e.g. `Adiutor <no-reply@adiutor.dev>`. When
-     * set, it wins over the sender saved on the Email tab of Settings; unset,
+     * set, it wins over the sender saved on the Integrations tab of Settings; unset,
      * that one is used, else `DEFAULT_EMAIL_FROM` (`src/lib/smtp.ts`).
      */
     EMAIL_FROM: optionalString,

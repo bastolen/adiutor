@@ -253,16 +253,13 @@
     },
     "settings": {
       "title": "Instellingen",
-      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, waar bijlagen worden bewaard, en waar webhooks naartoe sturen.",
+      "description": "Hoe gebruikers jullie zien, wie er medewerker is, hoe verzoeken worden genummerd en ingedeeld, en waar e-mails, bijlagen en webhooks naartoe gaan.",
       "sections": "Onderdelen van de instellingen",
       "tabs": {
         "general": "Algemeen",
         "staff": "Medewerkers",
         "requests": "Verzoeken",
-        "webhooks": "Webhooks",
-        "appearance": "Weergave",
-        "attachments": "Bijlagen",
-        "email": "E-mail"
+        "integrations": "Integraties"
       },
       "general": {
         "name": {
@@ -375,7 +372,6 @@
         }
       },
       "webhooks": {
-        "title": "Webhooks",
         "card": {
           "title": "Webhooks",
           "description": "Stuur wat er met verzoeken gebeurt naar je eigen systemen als ondertekende JSON, of naar een chatkanaal als bericht. Elke webhook kiest welke verzoektypen en gebeurtenissen hij krijgt.",
@@ -520,7 +516,6 @@
         "removedToast": "Webhook verwijderd."
       },
       "appearance": {
-        "title": "Weergave",
         "chooseFirst": "Kies eerst een afbeelding.",
         "choose": "Afbeelding kiezen",
         "noneChosen": "Geen afbeelding gekozen",
@@ -624,9 +619,10 @@
       },
       "attachments": {
         "title": "Bijlagen",
+        "description": "De bestanden die mensen toevoegen aan verzoeken, reacties en interne notities.",
         "storage": {
           "title": "Waar bestanden worden bewaard",
-          "description": "Bestanden die mensen aan verzoeken toevoegen, worden hier bewaard. Elk bestand wordt via deze server geleverd, aan wie het mag lezen.",
+          "description": "Toegevoegde bestanden worden hier bewaard, en elk bestand wordt via deze server geleverd aan wie het mag lezen.",
           "none": "Er is nog geen opslag gekozen, dus niemand kan bestanden toevoegen.",
           "driver": "Opslag",
           "choose": "Kies een opslag",
@@ -671,7 +667,7 @@
           "signsInWith": "Logt in met",
           "signsInWithPassword": "Een wachtwoord",
           "signsInWithKey": "Een privésleutel",
-          "save": "Testen en opslaan",
+          "save": "Opslag testen en opslaan",
           "saved": "Opslag opgeslagen. Er is een testbestand geschreven, teruggelezen en verwijderd.",
           "confirmFirst": "Om te kiezen waar bestanden worden bewaard, moet je eerst bevestigen dat jij het bent.",
           "offInEnvironment": "Bijlagen staan uit in de omgeving van de server (ATTACHMENTS_STORAGE=off).",
@@ -688,9 +684,9 @@
         },
         "attaching": {
           "title": "Bestanden toevoegen",
-          "description": "Of mensen bestanden kunnen toevoegen aan verzoeken, reacties en interne notities. Zolang het uit staat, blijven bestanden die al zijn toegevoegd te downloaden.",
+          "description": "Of mensen bestanden kunnen toevoegen. Zolang het uit staat, blijven bestanden die al zijn toegevoegd te downloaden.",
           "label": "Mensen kunnen bestanden toevoegen",
-          "storageFirst": "Kies eerst waar bestanden worden bewaard.",
+          "storageFirst": "Kies eerst hieronder waar bestanden worden bewaard.",
           "save": "Opslaan",
           "savedOn": "Mensen kunnen nu bestanden toevoegen.",
           "savedOff": "Bestanden toevoegen staat uit."
@@ -705,7 +701,6 @@
         }
       },
       "email": {
-        "title": "E-mail",
         "server": {
           "title": "Mailserver",
           "description": "Inloglinks, wachtwoordherstel, uitnodigingen, beveiligingsmeldingen en de e-mails over verzoeken worden via deze server verstuurd.",
@@ -739,10 +734,13 @@
           "fromAddress": "Adres van de afzender",
           "fromAddressHint": "Een adres op een domein dat van jou is, waarvandaan deze server mag versturen.",
           "whoIsTold": "Bij het opslaan krijg je via deze server een test-e-mail, en daarna horen alle beheerders van de medewerkers het, jij ook.",
-          "save": "Testen en opslaan",
+          "save": "Mailserver testen en opslaan",
           "saved": "Mailserver opgeslagen. Er kwam via deze server een test-e-mail bij je aan.",
           "confirmFirst": "Om de mailserver te wijzigen, moet je eerst bevestigen dat jij het bent."
         }
+      },
+      "integrations": {
+        "title": "Integraties · Instellingen"
       }
     },
     "companies": {

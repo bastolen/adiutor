@@ -131,14 +131,18 @@ Admins and Managers who aren't members can still add themselves with any role, a
 ## Staff screens
 
 - **Settings** (`/admin/settings`, `staff:manage`, Admins): a heading with four tabs, each a page
-  of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages.
-  Every tab is for staff Admins, so none is left out. The address before it had tabs,
-  `/admin/staff`, is gone (no redirect).
+  of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages,
+  grouped by what they're for ([decision 0055](decisions/0055-four-settings-tabs.md)). Every tab
+  is for staff Admins, so none is left out. The address before it had tabs, `/admin/staff`, is
+  gone (no redirect); the addresses of the tabs merged into General and Integrations lead to the
+  card that took their place.
   - **General** (`/admin/settings`): change the name shown to users (in invitations and wherever
     users see who's helping them), the languages Adiutor offers and its default language (for
     everyone who hasn't chosen one; see [Offered languages](i18n.md#offered-languages)), and its
     time zone (for signed-out pages and everyone whose zone isn't known yet; see
-    [Time zones](i18n.md#time-zones)).
+    [Time zones](i18n.md#time-zones)); then the logo, the browser tab icon, light and dark mode
+    and the brand colours (see [Brand colours](design.md#brand-colours)). The old Appearance
+    tab's address leads to the logo (`#logo`).
   - **Staff** (`/admin/settings/staff`): see the staff with their role, when they were last active
     and when their account was created ("Joined"), change roles, remove people from staff (their
     account stays), and invite staff by email or single-use invite link. Staff invitations and
@@ -146,20 +150,22 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
-  - **Attachments** (`/admin/settings/attachments`): where attached files are kept, tried before
-    it's saved and with the staff Admin's second step from the last 15 minutes, whether people can
-    attach files (only once there's a storage), and the largest file anyone may attach; each only
-    shown when the server's environment chooses it (see
-    [Attachments](deploying.md#attachments)). Changing the storage is in the audit log.
-  - **Email** (`/admin/settings/email`): the mail server emails go out through and their sender,
-    tried with a test email to the staff Admin before it's saved, with their second step from the
-    last 15 minutes; only shown when the server's environment names it (`SMTP_URL`, `EMAIL_FROM`;
-    see [Sending email](deploying.md#sending-email)). A change is in the audit log, and every
-    staff Admin is emailed about it.
-  - **Webhooks** (`/admin/settings/webhooks`): the webhooks that send what happens to requests to
-    the staff's own systems and chat channels, each with whether it's on, its format, the host it
-    sends to, its types and events, and adding one; each webhook's page has its controls and its
-    deliveries (see [Webhooks](webhooks.md)).
+  - **Integrations** (`/admin/settings/integrations`): what Adiutor works with outside itself.
+    First the mail server emails go out through and their sender (`#mail-server`), tried with a
+    test email to the staff Admin before it's saved; only shown when the server's environment
+    names it (`SMTP_URL`, `EMAIL_FROM`; see [Sending email](deploying.md#sending-email)). A change
+    is in the audit log, and every staff Admin is emailed about it. Then the Attachments card
+    (`#attachments`), in three parts with a button each: whether people can attach files (only
+    once there's a storage), the largest file anyone may attach, and where attached files are
+    kept, tried before it's saved; each only shown when the server's environment chooses it (see
+    [Attachments](deploying.md#attachments)). Changing the storage is
+    in the audit log. Saving the mail server or the storage needs the staff Admin's second step
+    from the last 15 minutes. Last, the webhooks that send what happens to requests to the
+    staff's own systems and chat channels (`#webhooks`), each with whether it's on, its format,
+    the host it sends to, its types and events, and adding one; each webhook's page
+    (`/admin/settings/webhooks/[webhookId]`, with Integrations current) has its controls and its
+    deliveries (see [Webhooks](webhooks.md)). The old Email, Attachments and Webhooks tabs'
+    addresses lead to these three cards.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first
   until the Sort menu says otherwise, in pages. Each event says what happened, who did it, whom it
   was about and which company (each a link), when, and the browser and IP address it came from. It

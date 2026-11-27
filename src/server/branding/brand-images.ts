@@ -1,6 +1,6 @@
 /**
  * @file The brand's images (decision 0052): the logo and the own browser tab
- * icon a staff Admin uploads on the Appearance tab of Settings, stored in the
+ * icon a staff Admin uploads on the General tab of Settings, stored in the
  * database as the PNG Adiutor drew from the upload. Uploading and removing
  * them is for staff Admins (`staff:manage`); pages, emails and the public
  * routes that serve them read them with {@link loadBrandImages} and

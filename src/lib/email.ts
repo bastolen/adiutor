@@ -7,9 +7,9 @@
  * - `EMAIL_OUTBOX_DIR` set: emails are written there as JSON files (for
  *   automated tests).
  * - `SMTP_URL` set: emails are sent through the mail server the server's
- *   environment names, which the Email tab of Settings then only shows.
+ *   environment names, which the Integrations tab of Settings then only shows.
  *   Settings in the URL win (e.g. `?maxConnections=1`, or `?pool=false`).
- * - Otherwise the mail server saved on the Email tab of Settings
+ * - Otherwise the mail server saved on the Integrations tab of Settings
  *   (`email.smtp`, its password decrypted here), read on each send. Its
  *   transport is kept while the setting stays the same, so a save takes
  *   effect at once, also in the jobs. Only this case loads the settings and
@@ -237,7 +237,7 @@ export async function sendEmail(email: Email): Promise<void> {
 
   if (env.NODE_ENV !== 'development' && env.NODE_ENV !== 'test') {
     throw new Error(
-      'No mail server: set SMTP_URL, or set one up on the Email tab of Settings, to send email outside development.',
+      'No mail server: set SMTP_URL, or set one up on the Integrations tab of Settings, to send email outside development.',
     );
   }
 

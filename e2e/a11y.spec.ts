@@ -101,10 +101,7 @@ const APP_PATHS = [
   '/admin/settings',
   '/admin/settings/staff',
   '/admin/settings/requests',
-  '/admin/settings/attachments',
-  '/admin/settings/email',
-  '/admin/settings/webhooks',
-  '/admin/settings/appearance',
+  '/admin/settings/integrations',
   '/admin/logs',
   '/admin/logs?group=people&q=no-such-person',
   '/admin/logs/errors',
@@ -974,9 +971,9 @@ test.describe('in forced-colours mode', () => {
         await expectAccessible(page);
       });
 
-      test('the fields of an SFTP server on the Attachments tab of Settings', async ({ page }) => {
+      test('the fields of an SFTP server on the Integrations tab of Settings', async ({ page }) => {
         // Only chosen in the select: nothing is saved.
-        await page.goto('/admin/settings/attachments');
+        await page.goto('/admin/settings/integrations');
         await page.getByRole('combobox', { name: 'Storage' }).click();
         await page.getByRole('option', { name: /A folder on another server/ }).click();
         await expect(page.getByRole('textbox', { name: 'Host key fingerprint' })).toBeVisible();
@@ -1000,7 +997,7 @@ test.describe('in forced-colours mode', () => {
       test('the dialog that adds a webhook', async ({ page }) => {
         // Only opened and closed: nothing is added. Opening it needs a recent second step.
         await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
-        await page.goto('/admin/settings/webhooks');
+        await page.goto('/admin/settings/integrations');
         await page
           .getByRole('region', { name: 'Webhooks' })
           .getByRole('button', { name: 'Add webhook' })

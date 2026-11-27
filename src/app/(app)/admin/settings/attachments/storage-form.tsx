@@ -1,6 +1,6 @@
 /**
- * @file The Storage form on the Attachments tab of Settings: a select of
- * the drivers, then the chosen driver's fields, and "Test and save". Its
+ * @file The Storage form on Settings' Integrations tab: a select of
+ * the drivers, then the chosen driver's fields, and "Test and save storage". Its
  * text comes from `admin.settings.attachments.storage` (through
  * `ClientMessages`).
  */

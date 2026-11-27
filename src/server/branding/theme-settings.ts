@@ -1,6 +1,6 @@
 /**
  * @file The mode a staff Admin keeps Adiutor in (decision 0053): light and
- * dark as each person chooses, or one only, on the Appearance tab of
+ * dark as each person chooses, or one only, on the General tab of
  * Settings. Staff Admins only (`staff:manage`) to read and change it; pages
  * read it with `loadForcedTheme`, which checks no permission.
  */
@@ -46,7 +46,7 @@ export async function getForcedTheme(
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.
- * @param choice - `both`, `light` or `dark`, as the Appearance tab sends it.
+ * @param choice - `both`, `light` or `dark`, as the General tab sends it.
  * @returns The mode kept, or `null` for both.
  * @throws {ZodError} When the choice is none of them.
  */

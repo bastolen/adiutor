@@ -571,7 +571,7 @@ test.describe('signed in', () => {
     page,
   }) => {
     // Only browsed with Tab: nothing is saved.
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     const text = page.getByRole('textbox', { name: 'Accent', exact: true });
     const swatch = page.getByLabel('Pick the accent', { exact: true });
     // The swatch is an invisible colour input; the square after it shows its focus ring.
@@ -593,7 +593,7 @@ test.describe('signed in', () => {
     page,
   }) => {
     // Only browsed with Tab: nothing is chosen or uploaded.
-    await page.goto('/admin/settings/appearance');
+    await page.goto('/admin/settings');
     const choose = page.getByRole('button', { name: 'Choose image Logo image' });
     // Clicking the help text under the field starts the keyboard from there.
     await page.getByText(/^A PNG or JPEG of at most 1 MB, at least 32 pixels high/).click();
@@ -825,7 +825,7 @@ test.describe('signed in', () => {
   }) => {
     // Opening it needs a recent second step.
     await backdateMfaConfirmation(PLATFORM_ADMIN.email, 0);
-    await page.goto('/admin/settings/webhooks');
+    await page.goto('/admin/settings/integrations');
     const add = page.getByRole('button', { name: 'Add webhook' });
 
     await add.focus();
@@ -919,6 +919,9 @@ test.describe('signed in', () => {
     await chooseTab(page, 'Settings sections', 'Requests', 'Settings');
     await expect(page).toHaveURL('/admin/settings/requests');
     await expect(page).toHaveTitle(`Requests · Settings · ${STAFF_NAME}`);
+    await chooseTab(page, 'Settings sections', 'Integrations', 'Settings');
+    await expect(page).toHaveURL('/admin/settings/integrations');
+    await expect(page).toHaveTitle(`Integrations · Settings · ${STAFF_NAME}`);
     await chooseTab(page, 'Settings sections', 'General', 'Settings');
     await expect(page).toHaveURL('/admin/settings');
     await expect(page).toHaveTitle(`Settings · ${STAFF_NAME}`);

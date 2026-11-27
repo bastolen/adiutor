@@ -1,8 +1,8 @@
 /**
- * @file Tests for the Attaching files form on the Attachments tab of
- * Settings: turning "People can attach files" on and off, and the box that
- * can't be changed without a storage or while the server's environment
- * turned attachments off.
+ * @file Tests for the Attaching files form on Settings' Integrations tab:
+ * turning "People can attach files" on and off, and the box that can't be
+ * changed without a storage or while the server's environment turned
+ * attachments off.
  */
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -70,7 +70,7 @@ describe('AttachingForm', () => {
 
     const box = screen.getByRole('checkbox', { name: 'People can attach files' });
     expect(box).toBeDisabled();
-    expect(box).toHaveAccessibleDescription('Choose where files are kept first.');
+    expect(box).toHaveAccessibleDescription('First choose where files are kept, below.');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 

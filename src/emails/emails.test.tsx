@@ -655,7 +655,7 @@ describe('staff-made changes', () => {
   });
 
   it('tries a mail server with a test email to the staff Admin saving it', async () => {
-    const url = `${appUrl}/admin/settings/email`;
+    const url = `${appUrl}/admin/settings/integrations#mail-server`;
     const test = await smtpTestEmail('jane@adiutor.test', {
       ...english,
       server: 'smtp.adiutor.test:587',
@@ -663,12 +663,12 @@ describe('staff-made changes', () => {
     });
     expect(test.subject).toBe('Adiutor can send email through this mail server');
     expect(test.text).toContain('Adiutor sent this test email through smtp.adiutor.test:587');
-    expect(test.text).toContain('saving a mail server on the Email tab');
+    expect(test.text).toContain('saving a mail server on the Integrations tab');
     expectBasics(test, url);
   });
 
   it('tells the other staff Admins who changed the mail server, and why it matters', async () => {
-    const url = `${appUrl}/admin/settings/email`;
+    const url = `${appUrl}/admin/settings/integrations#mail-server`;
     const changed = await smtpChangedEmail('alex@adiutor.test', {
       ...english,
       server: 'smtp.adiutor.test:587',
@@ -1526,7 +1526,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale, brand?: EmailBrand) => Pro
      * @returns The email and its main link.
      */
     'mail server test': async (locale, brand) => {
-      const url = `${appUrl}/admin/settings/email`;
+      const url = `${appUrl}/admin/settings/integrations#mail-server`;
       const email = await smtpTestEmail('jane@adiutor.test', {
         appUrl,
         locale,
@@ -1544,7 +1544,7 @@ const EVERY_TEMPLATE: Record<string, (locale: Locale, brand?: EmailBrand) => Pro
      * @returns The email and its main link.
      */
     'mail server changed': async (locale, brand) => {
-      const url = `${appUrl}/admin/settings/email`;
+      const url = `${appUrl}/admin/settings/integrations#mail-server`;
       const email = await smtpChangedEmail('alex@adiutor.test', {
         appUrl,
         locale,

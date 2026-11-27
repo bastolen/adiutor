@@ -118,15 +118,15 @@
       "heading": "Ha cambiado el servidor de correo",
       "changedBy": "{by} ha cambiado el servidor de correo de {staff} a {server}.",
       "changed": "Se ha cambiado el servidor de correo de {staff} a {server}.",
-      "advice": "Quien controla el servidor de correo puede leer los enlaces de inicio de sesión y los códigos que envía {staff}. Si no reconoces este cambio, revisa los ajustes de correo y el registro de auditoría.",
-      "button": "Abrir los ajustes de correo"
+      "advice": "Quien controla el servidor de correo puede leer los enlaces de inicio de sesión y los códigos que envía {staff}. Si no reconoces este cambio, revisa los ajustes del servidor de correo y el registro de auditoría.",
+      "button": "Abrir los ajustes del servidor de correo"
     },
     "smtpTest": {
       "subject": "{staff} puede enviar correo a través de este servidor",
-      "reason": "Recibes esto porque estás guardando un servidor de correo en la pestaña Correo de los ajustes.",
+      "reason": "Recibes esto porque estás guardando un servidor de correo en la pestaña Integraciones de los ajustes.",
       "heading": "Este servidor de correo funciona",
       "body": "{staff} ha enviado este correo de prueba a través de {server} antes de guardarlo como servidor de correo. Te ha llegado, así que los correos pueden salir por él.",
-      "button": "Abrir los ajustes de correo"
+      "button": "Abrir los ajustes del servidor de correo"
     },
     "jobFailing": {
       "subject": "La tarea en segundo plano {job} sigue fallando en {staff}",

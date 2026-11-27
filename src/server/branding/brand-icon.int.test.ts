@@ -3,7 +3,7 @@
  * against the test database: Adiutor's own until something is uploaded, the
  * staff's initials for a wide logo, a new version (and drawing) when the
  * name changes and none otherwise, the logo's address for pages, and what
- * the Appearance tab shows of them.
+ * the General tab shows of them.
  */
 import { readFileSync } from 'node:fs';
 

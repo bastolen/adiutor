@@ -12,8 +12,8 @@ keyboard support.
 ### Components
 
 - **Components:** build UI from `src/components/ui/` (`Button`, `TextField`, `SelectField`,
-  `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
-  dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
+  `Card`, `CardSection` (the parts of a card that holds several settings), `PageHeader`,
+  `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `Popover` (a small
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
@@ -172,10 +172,15 @@ keyboard support.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
+- **A card that holds several settings,** each with a form and a button of its own, splits into
+  parts: `CardSection`s in `CardSections`, inside a `flush` card. Each part has a heading a level
+  below the card's, names its group with it (so a screen reader says which part a "Save" is in)
+  and keeps the card's 24px padding, like Settings' Attachments card.
 - **Ids stay unique across pages kept alive:** components that make ids with `useId` (`Card`,
-  `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client components. In a
-  server component `useId` starts again in every request, so a page kept alive and the tab
-  loaded next would share ids, and a label or a card's name would point at the wrong element.
+  `CardSection`, `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client
+  components. In a server component `useId` starts again in every request, so a page kept alive
+  and the tab loaded next would share ids, and a label or a card's name would point at the wrong
+  element.
   A new component that calls `useId` gets `'use client'` too.
 - **Messages don't outlive the page:** with Cache Components, Next.js keeps the last few pages alive
   (hidden with React's `<Activity>`) instead of unmounting them, so their state survives navigation.
@@ -489,13 +494,15 @@ keyboard support.
 
   Pages with section tabs (a company's Requests, Members and Settings; the account's Profile,
   Preferences, Security and Activity; a user's Overview, Companies, Activity and Manage; the Logs;
-  Settings' General, Staff and Requests) get their header and tabs from a layout
+  Settings' General, Staff, Requests and Integrations) get their header and tabs from a layout
   (`companies/[companyId]/layout.tsx`, `account/layout.tsx`, `admin/users/[userId]/layout.tsx`,
   `admin/logs/layout.tsx`, `admin/settings/layout.tsx`), which stays mounted while the page under it changes: the tab you chose
   keeps focus and the header doesn't reload. The layouts of a company's pages and of Settings
   make every one of their tabs wide (`WidePage`, see "Layout"), so the header and tabs don't move
   when the tab changes. `SegmentTabNav` marks the current tab from the URL
-  (`useSelectedLayoutSegment`), and each page still checks its own permission. Tabs that don't
+  (`useSelectedLayoutSegment`), or from other segments a tab names (`alsoOn`, for pages of the
+  items a tab lists, marked as the current section with `aria-current="true"` rather than the
+  current page), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than
   widen the page.
 
@@ -639,7 +646,7 @@ device), **Light** or **Dark**:
 Choosing a theme keeps the menu open, so the result shows at once.
 
 A staff Admin may keep every page in **light mode only** or **dark mode only** instead (Settings ›
-Appearance, `brand.forced_theme`; [decision 0053](decisions/0053-light-or-dark-mode-only.md)).
+General, `brand.forced_theme`; [decision 0053](decisions/0053-light-or-dark-mode-only.md)).
 The root layout then renders `data-theme` on `<html>` itself, with the `data-theme-forced` marker
 (`THEME_FORCED_ATTRIBUTE`), so the mode holds before any script and without JavaScript; the theme
 script and `useThemePreference` leave it alone, the account menu drops its theme row, and the corner
@@ -730,8 +737,9 @@ keeps it. The tests (`src/lib/branding/palette.test.ts`) work out palettes for t
 every hue, greys, black, white and yellow, and check that each keeps every rule in `PALETTE_RULES`,
 and that the theme's own ink as a tint gives the theme's greys back.
 
-Staff Admins choose them on the **Appearance** tab of Settings (`/admin/settings/appearance`,
-`setBrandColours` in `src/server/branding/`, recorded in the audit log as `brand_colours_changed`):
+Staff Admins choose them on the **Brand colours** card of Settings' General tab
+(`/admin/settings#colours`, `setBrandColours` in `src/server/branding/`, recorded in the audit log
+as `brand_colours_changed`):
 three `ColourField`s (`src/components/ui/colour-field.tsx`: a text field for the hex digits, with a
 swatch before it that is the browser's own colour picker, an invisible `<input type="color">` over
 a square of the colour, which shows the focus ring), and a preview
@@ -764,7 +772,7 @@ document and can't reach the database, keeps the theme's colours, and shows no l
 ### The logo and the browser tab icon
 
 A staff Admin uploads the operator's logo, and optionally an own browser tab icon, on Settings ›
-Appearance ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)). Only a
+General ([decision 0052](decisions/0052-the-staffs-logo-and-the-icon-made-from-it.md)). Only a
 PNG or JPEG of at most 1 MB is taken, checked by its header (`imageFacts`, `brandImageProblem` in
 `src/lib/branding/images.ts`): a logo at least 32 pixels high and at most 8 times as wide as it's
 high, an icon about square and at least 32 pixels. It's drawn again with Next's `ImageResponse`
@@ -774,7 +782,7 @@ the `brand_image` table (`src/server/branding/brand-images.ts`) and served.
 - **Where the logo shows:** `Logo` reads it from `BrandLogoProvider` / `useBrandLogo()`
   (`src/components/brand/brand-logo.tsx`, handed down by the root layout from
   `requestBrandImages()`), at the usual heights (24, 26 and 32 pixels) and its own width, shrinking
-  where the room is narrower. It's one image for both modes, so the Appearance tab previews it on
+  where the room is narrower. It's one image for both modes, so the Logo card previews it on
   the light and the dark palette. Emails link it, 32 pixels high and at most 200 wide
   (`emailLogo`).
 - **The browser tab icon** is made from the brand (`brandIconSource`,

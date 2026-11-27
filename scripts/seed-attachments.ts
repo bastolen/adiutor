@@ -3,7 +3,7 @@
  * development database as it is, without seeding it again
  * (`scripts/sample-attachments/`): for data seeded before the samples had
  * files, or a storage chosen after seeding. It stores them in the storage
- * attachments go to now (the server's environment, else the Attachments tab
+ * attachments go to now (the server's environment, else the Integrations tab
  * of Settings) and changes no settings, so attaching stays as it was.
  *
  * Usage: `pnpm db:seed:attachments`. Safe to run again: files already there
@@ -37,7 +37,7 @@ async function attachOrExplain(storage: FileStorage): Promise<SampleAttachmentsS
       throw error;
     }
     console.error(
-      `The storage refused the sample files (${error.failure}). A folder that was deleted, or never set up, needs setting up again on the Attachments tab of Settings, or a new seed.`,
+      `The storage refused the sample files (${error.failure}). A folder that was deleted, or never set up, needs setting up again on the Integrations tab of Settings, or a new seed.`,
     );
     return null;
   }

@@ -118,15 +118,15 @@
       "heading": "The mail server changed",
       "changedBy": "{by} changed the mail server {staff} sends email through to {server}.",
       "changed": "The mail server {staff} sends email through was changed to {server}.",
-      "advice": "Whoever controls the mail server can read the sign-in links and codes {staff} sends. If you don't recognise this, check the Email settings and the audit log.",
-      "button": "Open the Email settings"
+      "advice": "Whoever controls the mail server can read the sign-in links and codes {staff} sends. If you don't recognise this, check the mail server settings and the audit log.",
+      "button": "Open the mail server settings"
     },
     "smtpTest": {
       "subject": "{staff} can send email through this mail server",
-      "reason": "You're receiving this because you're saving a mail server on the Email tab of Settings.",
+      "reason": "You're receiving this because you're saving a mail server on the Integrations tab of Settings.",
       "heading": "This mail server works",
       "body": "{staff} sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
-      "button": "Open the Email settings"
+      "button": "Open the mail server settings"
     },
     "jobFailing": {
       "subject": "Background job {job} keeps failing on {staff}",

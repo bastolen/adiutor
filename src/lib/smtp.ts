@@ -1,6 +1,6 @@
 /**
  * @file A mail server's settings and their rules, shared by sending
- * (`src/lib/email.ts`), the services and the Email tab of Settings: how a
+ * (`src/lib/email.ts`), the services and the Integrations tab of Settings: how a
  * connection is secured, what a page may show (never the password), what a
  * production server refuses, the mail server `SMTP_URL` names, and the
  * sender emails go out from. Pure: free of zod and server code, so client
@@ -81,7 +81,7 @@ export function smtpView(config: SmtpConfig): SmtpView {
 }
 
 /**
- * The mail server `SMTP_URL` names, as the Email tab shows it: never its
+ * The mail server `SMTP_URL` names, as the mail server card shows it: never its
  * password. `smtps://` is TLS, `smtp://` with `requireTLS=true` STARTTLS,
  * and any other `smtp://` neither; the port is nodemailer's default when the
  * URL has none.
