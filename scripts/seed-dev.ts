@@ -51,8 +51,18 @@
  * active" times, the audit log has some sample events, and Logs → Errors
  * has sample errors from the last few days (`scripts/sample-errors.ts`).
  * Alpha, Beta and Gamma have sample requests in every status, with replies
- * and changes from both sides (`scripts/sample-requests.ts`).
+ * and changes from both sides (`scripts/sample-requests.ts`), and some of
+ * them have files attached: screenshots, invoices, a log and a status report,
+ * on descriptions, replies and an internal note (`scripts/sample-attachments/`).
+ * The files go to `.local/attachments` in the main checkout
+ * ({@link seedAttachmentsDir}), which the seed chooses as the attachments'
+ * storage, unless `ATTACHMENTS_STORAGE` in `.env` chooses one (or `off`: then
+ * no files). "People can attach files" stays off, as on a
+ * new install; turn it on in Settings › Attachments to try uploading.
  */
+import { execFileSync } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { hashPassword, symmetricEncrypt } from 'better-auth/crypto';
@@ -70,11 +80,14 @@ import { DEFAULT_LOCALE, LOCALES } from '../src/lib/i18n/locales';
 import { INVITATION_VALID_DAYS } from '../src/lib/invitation-lifetimes';
 import { encryptionKey, parseAuthSecrets } from '../src/lib/sign-in/auth-secrets';
 import { generateToken, hashToken } from '../src/lib/sign-in/tokens';
+import { storageFromEnvironment } from '../src/lib/storage';
 import { emailSchema } from '../src/lib/validation';
 import { addSetting, writeSettings } from '../src/server/settings';
+import { activeStorage, sealStorage, storageFor } from '../src/server/storage';
 import emptyDatabase from '../tests/database/empty-database';
 import storeRequests from '../tests/database/store-requests';
 import runScript from './run-script';
+import attachSampleFiles, { noStorageMessage, summaryLines } from './sample-attachments';
 import { sampleErrors } from './sample-errors';
 import sampleRequests from './sample-requests';
 
@@ -111,6 +124,31 @@ const DEV_TIME_ZONE = 'Europe/Amsterdam';
 
 /** The domain of the seeded test accounts, which `--admin-mail` can't use. */
 const TEST_DOMAIN = '@adiutor.test';
+
+/**
+ * The folder the seed keeps the sample attachments in, when the environment
+ * chooses no storage: `.local/attachments` (which git ignores) in the main
+ * checkout, also when the seed runs in a git worktree, which shares the main
+ * checkout's `.env` and so its database, but takes its own files with it when
+ * it's removed. Outside git, in the folder the seed runs from.
+ *
+ * @returns The folder, as an absolute path.
+ */
+function seedAttachmentsDir(): string {
+  let checkout = process.cwd();
+  try {
+    // The main checkout's `.git`, from a worktree too.
+    const gitDir = execFileSync(
+      'git',
+      ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    checkout = dirname(gitDir);
+  } catch {
+    // Not in a git checkout: the folder the seed runs from.
+  }
+  return join(checkout, '.local', 'attachments');
+}
 
 /**
  * Makes a display name from an email address: its local part, capitalised.
@@ -648,6 +686,51 @@ async function seedHistory(
   );
 }
 
+/**
+ * Chooses the seed's folder ({@link seedAttachmentsDir}) as the attachments' storage, as a
+ * staff Admin would on the Attachments tab: the folder made and marked as
+ * Adiutor's, and saved in Settings. Nothing when the server's environment
+ * chooses the storage, or turns attachments off.
+ *
+ * @param tx - The seed's transaction.
+ */
+async function seedAttachmentStorage(tx: DatabaseTransaction): Promise<void> {
+  if (storageFromEnvironment(env).state !== 'unset') {
+    return;
+  }
+  const config = { driver: 'local', dir: seedAttachmentsDir() } as const;
+  await mkdir(config.dir, { recursive: true });
+  await storageFor(config).setUp();
+  await writeSettings(tx, { 'attachments.storage': await sealStorage(config) });
+}
+
+/**
+ * Attaches the sample files once the data is saved, in the storage
+ * attachments go to now. A failing storage doesn't undo the seeding: the
+ * files can be added later with `pnpm db:seed:attachments`.
+ */
+async function attachSamples(): Promise<void> {
+  const storage = await activeStorage(db);
+  if (!storage) {
+    console.info(noStorageMessage(env));
+    return;
+  }
+  try {
+    const summary = await attachSampleFiles(db, storage);
+    for (const line of summaryLines(summary)) {
+      console.info(line);
+    }
+    if (storage.driver === 'local' && storageFromEnvironment(env).state === 'unset') {
+      console.info(`They're kept in ${seedAttachmentsDir()}.`);
+    }
+  } catch (error) {
+    console.warn(
+      'Seeded, but storing the sample attachments failed. Run pnpm db:seed:attachments to try again.',
+      error,
+    );
+  }
+}
+
 /** An open invitation to email once the data is saved. */
 type InvitationToEmail = Omit<InvitationEmailProps, 'appUrl' | 'validDays' | 'locale'> & {
   /** Who's invited. */
@@ -865,8 +948,8 @@ function printSignInHelp(adminMail: string | null, openLinks: readonly string[])
 
 /**
  * Seeds the database: checks the options, then empties it and writes every
- * step in one transaction, then emails the open invitations and prints how to
- * sign in.
+ * step in one transaction, then attaches the sample files, emails the open
+ * invitations and prints how to sign in.
  *
  * @returns The process exit code.
  */
@@ -890,9 +973,11 @@ async function main(): Promise<number> {
     const staff = await seedStaff(seeding, options.adminMail);
     const people = { ...staff, ...(await seedMembers(seeding, companies, staff)) };
     await seedHistory(tx, companies, people);
+    await seedAttachmentStorage(tx);
     return seedInvites(tx, companies, people);
   });
 
+  await attachSamples();
   await emailInvitations(invites.emails);
   printSignInHelp(options.adminMail, invites.openLinks);
   return 0;
