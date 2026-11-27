@@ -466,7 +466,8 @@ rest. On Vercel, PDFium's WebAssembly file is added to the traces of the routes 
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
 Vercel, which refuses a larger request body. Behind a reverse proxy, let it pass request bodies that
 large to `/api/attachments` (with nginx, `client_max_body_size 51m;`, which defaults to 1 MB), or
-it refuses larger uploads itself.
+it refuses larger uploads itself. A video is played a part at a time: let the proxy pass the `Range` header
+and the `206` answers through, as nginx does unless it's told to cache.
 
 ## Webhooks
 

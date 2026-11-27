@@ -512,6 +512,13 @@ no-cache` with the ID as `ETag`, since a file's bytes, name and type never chang
   signing out in that browser (it expires, it's signed out from another device, or the account
   deactivates itself) clears nothing: such a copy stays in the browser's cache on disk until the
   browser drops it.
+- **A part at a time, after the same checks** (`storedResponse`, `parseRange`): a file may be asked
+  for a part at a time (`Range: bytes=…`), as a video player does to play and seek. Only one range
+  is read, from a byte to a byte, to the end, or the last few bytes, and only once the checks and
+  the browser's copy (`If-None-Match`) are settled; several ranges, or a copy from before
+  (`If-Range` with another tag), get the whole file. The part is `206` with `Content-Range`, a part
+  past the end `416`. Each storage reads the part itself (`getPart`), so no more of the file is read
+  than asked for.
 
 ## The logo and the browser tab icon
 

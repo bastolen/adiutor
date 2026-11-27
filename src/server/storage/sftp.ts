@@ -14,6 +14,7 @@ import { Readable } from 'node:stream';
 
 import { Client, type SFTPWrapper } from 'ssh2';
 
+import { type RangeRequest, resolveRange } from '@/lib/request/byte-range';
 import type { SftpStorageConfig } from '@/lib/storage';
 
 import { StorageError } from './errors';
@@ -381,6 +382,38 @@ function callsOn(
     },
 
     /**
+     * Reads a part of a file. A single call's connection stays open until
+     * the part's stream ends or is cancelled.
+     *
+     * @param key - Where.
+     * @param range - The part.
+     * @returns The part, or `null` when the file isn't there.
+     */
+    async getPart(key: string, range: RangeRequest) {
+      const path = pathOf(key);
+      await assertMarked();
+      const size = await sizeOf(connection, path, timeouts.call);
+      if (size === null) {
+        return null;
+      }
+      const part = resolveRange(range, size);
+      if (!part) {
+        if (owned) {
+          connection.end();
+        }
+        return { unsatisfiable: true as const, total: size };
+      }
+      const source = Readable.toWeb(
+        connection.sftp.createReadStream(path, { start: part.start, end: part.end }),
+      ) as ReadableStream<Uint8Array>;
+      return {
+        body: withIdleLimit(source, timeouts.idle, owned ? connection.end : undefined),
+        ...part,
+        total: size,
+      };
+    },
+
+    /**
      * Deletes a file; one that isn't there counts as deleted.
      *
      * @param key - Where.
@@ -458,6 +491,19 @@ export default function sftpStorage(
       ),
 
     /**
+     * Reads a part of a file; its connection closes when the read ends.
+     *
+     * @param key - Where.
+     * @param range - The part.
+     * @returns The part, or `null` when the file isn't there.
+     */
+    getPart: (key, range) =>
+      once(
+        (calls) => calls.getPart(key, range),
+        (part) => part !== null && !('unsatisfiable' in part),
+      ),
+
+    /**
      * Deletes a file on a connection of its own.
      *
      * @param key - Where.
@@ -494,6 +540,7 @@ export default function sftpStorage(
           driver: 'sftp',
           put: calls.put,
           get: calls.get,
+          getPart: calls.getPart,
           delete: calls.delete,
           setUp: calls.setUp,
           isSetUp: calls.isSetUp,

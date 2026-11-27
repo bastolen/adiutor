@@ -4,7 +4,8 @@
  * file is attached to (`loadAttachment`), always as a download under its
  * name. The browser keeps a copy and asks before each use: the same checks
  * run every time, and a reader whose copy is the file gets `304 Not
- * Modified` without the storage being read (`storedResponse`). Behind the
+ * Modified` without the storage being read (`storedResponse`). A part of a
+ * file comes as `206` (`Range`), so a video plays and seeks. Behind the
  * proxy like every page, which sends someone signed out to sign in and back
  * here, and gives these paths a fixed policy that runs nothing
  * (`FILE_POLICY`). Anything the reader may not read, or that isn't there, is
@@ -46,5 +47,6 @@ export async function GET(
     contentType: file.contentType,
     filename: file.name,
     read: file.readFile,
+    readPart: file.readFilePart,
   });
 }

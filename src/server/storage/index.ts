@@ -21,4 +21,4 @@ export {
   setUpStorage,
 } from './settings';
 export { hostKeyFingerprint } from './sftp';
-export type { FileStorage, StoredFile } from './types';
+export type { FileStorage, StoredFile, StoredPart } from './types';

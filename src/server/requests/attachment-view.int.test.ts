@@ -201,6 +201,22 @@ describe('loadAttachment', () => {
     get.mockRestore();
   });
 
+  it('reads a part of a file for whoever may read it, as a video player asks', async () => {
+    const part = await (
+      await loadAttachment(ctx, client, files.reply)
+    )?.readFilePart({
+      start: 0,
+      end: 6,
+    });
+    if (!part || 'unsatisfiable' in part) {
+      throw new Error('Expected a part.');
+    }
+    expect(part).toMatchObject({ start: 0, end: 6, total: 15 });
+    expect(await new Response(part.body).text()).toBe('printer');
+    // Nothing for a reader who may not read it.
+    expect(await loadAttachment(ctx, client, files.note)).toBeNull();
+  });
+
   it('keeps a deactivated company’s files for the staff only', async () => {
     await db.update(company).set({ deactivatedAt: new Date() }).where(eq(company.id, companyId));
     expect(await downloaded(client, files.reply)).toBeNull();

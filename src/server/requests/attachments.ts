@@ -18,6 +18,7 @@ import type { DatabaseOrTransaction } from '@/db';
 import { requestAttachment, requestEntry } from '@/db/schema';
 import { getInternalRequestPermissions } from '@/lib/authz/permissions';
 import { firstRow } from '@/lib/defined';
+import type { RangeRequest } from '@/lib/request/byte-range';
 import {
   type AttachmentPreviewKind,
   type AttachmentPreviewState,
@@ -45,6 +46,7 @@ import {
   previewKey,
   StorageError,
   type StoredFile,
+  type StoredPart,
 } from '../storage';
 import { getRequestAccess } from './access';
 import { assertChangeLimit, CHANGE_MOMENT, changeRequest, requestToChange } from './change';
@@ -334,6 +336,14 @@ export interface AttachmentToServe {
    * @throws {StorageError} When the storage fails (not when the file is merely missing).
    */
   readFile(): Promise<StoredFile | null>;
+  /**
+   * Reads a part of its bytes, as a video that's played asks for one.
+   *
+   * @param range - The part.
+   * @returns The part, or `null` when the storage has none under its key.
+   * @throws {StorageError} When the storage fails.
+   */
+  readFilePart(range: RangeRequest): Promise<StoredPart | null>;
   /** Whether it has a preview (decision 0057). */
   hasPreview: boolean;
   /**
@@ -428,6 +438,16 @@ export async function loadAttachment(
      * @returns The file, or `null` when the storage has none.
      */
     readFile: () => read(attachmentKey(parsed.data), 'An attachment has no file in the storage:'),
+    /**
+     * Reads a part of the file's bytes from the storage.
+     *
+     * @param range - The part.
+     * @returns The part, or `null` when the storage has none (or none is chosen).
+     */
+    readFilePart: async (range) => {
+      const storage = ctx.storage ? await ctx.storage() : null;
+      return storage ? storage.getPart(attachmentKey(parsed.data), range) : null;
+    },
     /**
      * Reads the preview's bytes from the storage.
      *

@@ -3,7 +3,9 @@
  * nothing sniffs or embeds elsewhere, kept only by the reader's browser,
  * which asks before each use and gets `304` without the storage being read;
  * "not found" for anything the reader may not have, whatever copy the
- * browser kept; and an unavailable storage told by its kind only.
+ * browser kept; a part of it for a range (`206`, or `416` past its end), the
+ * whole of it for a copy from before; and an unavailable storage told by its
+ * kind only.
  * @vitest-environment node
  */
 import type { NextRequest } from 'next/server';
@@ -38,6 +40,18 @@ function download(ifNoneMatch?: string) {
 }
 
 /**
+ * Asks for a part of a file, as a video player does.
+ *
+ * @param headers - The request's headers: its `Range`, and maybe `If-Range` or `If-None-Match`.
+ * @returns The answer.
+ */
+function ask(headers: Record<string, string>) {
+  return GET({ headers: new Headers(headers) } as NextRequest, {
+    params: Promise.resolve({ id: ID }),
+  });
+}
+
+/**
  * A file the reader may download, as `loadAttachment` gives it.
  *
  * @param readFile - What reading it from the storage gives.
@@ -53,6 +67,18 @@ function servable(
     name: 'Café menu.pdf',
     contentType: 'application/pdf',
     readFile,
+    readFilePart: vi.fn(async (range) =>
+      'suffix' in range || range.start >= 8
+        ? { unsatisfiable: true as const, total: 8 }
+        : {
+            body:
+              new Response('%PDF-1.7'.slice(range.start, (range.end ?? 7) + 1)).body ??
+              new ReadableStream(),
+            start: range.start,
+            end: range.end ?? 7,
+            total: 8,
+          },
+    ),
     hasPreview: true,
     readPreview: vi.fn(),
   };
@@ -107,6 +133,7 @@ describe('GET /attachments/[id]', () => {
         'cache-control': 'private, no-cache',
         'x-content-type-options': 'nosniff',
         'cross-origin-resource-policy': 'same-origin',
+        'accept-ranges': 'bytes',
       });
     },
   );
@@ -154,5 +181,53 @@ describe('GET /attachments/[id]', () => {
       'timed_out',
     );
     error.mockRestore();
+  });
+
+  it('serves a part of the file for a range, as a video player asks for one', async () => {
+    const file = servable();
+    vi.mocked(loadAttachment).mockResolvedValue(file);
+
+    const response = await ask({ Range: 'bytes=0-3' });
+
+    expect(response.status).toBe(206);
+    expect(await response.text()).toBe('%PDF');
+    expect(file.readFile).not.toHaveBeenCalled();
+    expect(Object.fromEntries(response.headers)).toMatchObject({
+      'content-range': 'bytes 0-3/8',
+      'content-length': '4',
+      'accept-ranges': 'bytes',
+      'content-type': 'application/pdf',
+      etag: ETAG,
+      'cache-control': 'private, no-cache',
+    });
+  });
+
+  it('answers 416 for a part past the end, saying how long the file is', async () => {
+    vi.mocked(loadAttachment).mockResolvedValue(servable());
+    const response = await ask({ Range: 'bytes=8-' });
+    expect(response.status).toBe(416);
+    expect(response.headers.get('content-range')).toBe('bytes */8');
+  });
+
+  it('serves the whole file for a copy from before, or several ranges', async () => {
+    const asked: Record<string, string>[] = [
+      { Range: 'bytes=0-3', 'If-Range': '"another"' },
+      { Range: 'bytes=0-1,4-5' },
+    ];
+    for (const headers of asked) {
+      vi.mocked(loadAttachment).mockResolvedValue(servable());
+      // eslint-disable-next-line no-await-in-loop -- One answer at a time, each checked.
+      const response = await ask(headers);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-range')).toBeNull();
+    }
+  });
+
+  it('checks the copy the browser kept before any range', async () => {
+    const file = servable();
+    vi.mocked(loadAttachment).mockResolvedValue(file);
+    const response = await ask({ Range: 'bytes=0-3', 'If-None-Match': ETAG });
+    expect(response.status).toBe(304);
+    expect(file.readFilePart).not.toHaveBeenCalled();
   });
 });

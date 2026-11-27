@@ -124,7 +124,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
     request configuration, the translator for code outside React, and the providers that pass
     messages to client components (see [Languages](i18n.md)).
   - `src/lib/request/`: the client IP address, user agent, request info, CSP and pathname header,
-    and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
+    the part of a file a request asks for (`byte-range.ts`), and how a request was sent (a person's click, `persons-click.ts`; a sign-in link page's own
     Continue, `own-page-post.ts`): HTTP requests, not the requests companies raise.
   - `src/lib/requests/`: the requests companies raise (see [Requests](requests.md)): their
     values, the rules of working on one, the board's lanes, their numbers, their text, the kinds

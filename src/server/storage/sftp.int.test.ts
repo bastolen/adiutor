@@ -7,9 +7,12 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+import type { RangeRequest } from '@/lib/request/byte-range';
+
 import { testSftpFolder } from '../../../tests/integration/helpers';
 import { attachmentKey } from './keys';
 import sftpStorage from './sftp';
+import type { FileStorage } from './types';
 
 /**
  * Settings for a new folder on the test server.
@@ -30,6 +33,35 @@ async function textOf(body: ReadableStream<Uint8Array>): Promise<string> {
   return new Response(body).text();
 }
 
+/**
+ * Reads a part of a stored file as text, or says why there's none.
+ *
+ * @param storage - The storage.
+ * @param key - The file's key.
+ * @param range - The part.
+ * @returns The part's text and place, `unsatisfiable` with the size, or `null`.
+ */
+async function partOf(
+  storage: FileStorage,
+  key: string,
+  range: RangeRequest,
+): Promise<
+  | { text: string; start: number; end: number; total: number }
+  | { unsatisfiable: true; total: number | null }
+  | null
+> {
+  const part = await storage.getPart(key, range);
+  if (!part || 'unsatisfiable' in part) {
+    return part;
+  }
+  return {
+    text: await new Response(part.body).text(),
+    start: part.start,
+    end: part.end,
+    total: part.total,
+  };
+}
+
 describe('sftpStorage on an SFTP server', () => {
   it('stores a file once the folder is set up, reads it back and deletes it', async () => {
     const storage = sftpStorage(await newFolder());
@@ -45,6 +77,32 @@ describe('sftpStorage on an SFTP server', () => {
     await storage.delete(key);
     expect(await storage.get(key)).toBeNull();
     await expect(storage.delete(key)).resolves.toBeUndefined();
+  });
+
+  it('reads a part of a file, from a byte to a byte, to the end or its last bytes', async () => {
+    const storage = sftpStorage(await newFolder());
+    await storage.setUp();
+    const key = attachmentKey(randomUUID());
+    await storage.put(key, new TextEncoder().encode('printer log'), 'text/plain');
+
+    expect(await partOf(storage, key, { start: 2, end: 5 })).toEqual({
+      text: 'inte',
+      start: 2,
+      end: 5,
+      total: 11,
+    });
+    expect(await partOf(storage, key, { start: 8, end: null })).toMatchObject({
+      text: 'log',
+      end: 10,
+    });
+    expect(await partOf(storage, key, { suffix: 3 })).toMatchObject({ text: 'log', start: 8 });
+    expect(await partOf(storage, key, { start: 0, end: 999 })).toMatchObject({
+      text: 'printer log',
+    });
+    expect(await partOf(storage, key, { start: 11, end: null })).toMatchObject({
+      unsatisfiable: true,
+    });
+    expect(await storage.getPart(attachmentKey(randomUUID()), { start: 0, end: null })).toBeNull();
   });
 
   it('shares one connection in a session', async () => {
