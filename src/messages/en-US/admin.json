@@ -665,7 +665,7 @@
           "signsInWith": "Signs in with",
           "signsInWithPassword": "A password",
           "signsInWithKey": "A private key",
-          "save": "Test and save",
+          "save": "Test and save storage",
           "saved": "Storage saved. A test file was written, read back and deleted there.",
           "confirmFirst": "Choosing where files are kept needs you to confirm it’s you first.",
           "offInEnvironment": "Attachments are turned off in the server's environment (ATTACHMENTS_STORAGE=off).",
@@ -732,7 +732,7 @@
           "fromAddress": "Sender address",
           "fromAddressHint": "An address on a domain you control, which this server may send from.",
           "whoIsTold": "Saving sends a test email to you through this server, then tells every staff Admin, you included.",
-          "save": "Test and save",
+          "save": "Test and save mail server",
           "saved": "Mail server saved. A test email reached you through it.",
           "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }

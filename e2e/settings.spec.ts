@@ -490,14 +490,14 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
 
     // A folder that isn't there fails its test, and what was typed stays.
     await dir.fill(join(folder, 'missing'));
-    await card.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save storage' }).click();
     await expect(card.getByRole('alert')).toContainText(
       "The bucket or the folder doesn't exist. Create it first.",
     );
     await expect(dir).toHaveValue(join(folder, 'missing'));
 
     await dir.fill(folder);
-    await card.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save storage' }).click();
     await expect(toasts(page)).toContainText('Storage saved.');
     await expect(page.getByText('No storage is chosen yet')).toBeHidden();
     await expect(dir).toHaveValue(folder);
@@ -548,7 +548,7 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
 
     // Saving needs a recent confirmation: the step-up page comes back to the storage's card.
     const card = page.getByRole('region', { name: 'Where files are kept' });
-    const save = card.getByRole('button', { name: 'Test and save' });
+    const save = card.getByRole('button', { name: 'Test and save storage' });
     await expect(save).toHaveCount(0);
     const confirm = card.getByRole('link', { name: /^Confirm it.s you$/ });
     await expect(confirm).toHaveAttribute(
@@ -597,7 +597,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await card.getByRole('textbox', { name: 'Sender address' }).fill('no-reply@adiutor.test');
 
     // Without TLS to another computer, production refuses it, and what was typed stays.
-    await card.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save mail server' }).click();
     await expect(card.getByRole('alert')).toContainText(
       'Use TLS or STARTTLS: without them, the emails and the sign-in links in them would travel unencrypted.',
     );
@@ -606,7 +606,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await card.getByRole('combobox', { name: 'Security' }).click();
     await page.getByRole('option', { name: /^STARTTLS/ }).click();
     await card.getByLabel('Password').fill('e2e-mail-password');
-    await card.getByRole('button', { name: 'Test and save' }).click();
+    await card.getByRole('button', { name: 'Test and save mail server' }).click();
     await expect(toasts(page)).toContainText(
       'Mail server saved. A test email reached you through it.',
     );

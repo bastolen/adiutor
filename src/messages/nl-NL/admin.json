@@ -665,7 +665,7 @@
           "signsInWith": "Logt in met",
           "signsInWithPassword": "Een wachtwoord",
           "signsInWithKey": "Een privésleutel",
-          "save": "Testen en opslaan",
+          "save": "Opslag testen en opslaan",
           "saved": "Opslag opgeslagen. Er is een testbestand geschreven, teruggelezen en verwijderd.",
           "confirmFirst": "Om te kiezen waar bestanden worden bewaard, moet je eerst bevestigen dat jij het bent.",
           "offInEnvironment": "Bijlagen staan uit in de omgeving van de server (ATTACHMENTS_STORAGE=off).",
@@ -732,7 +732,7 @@
           "fromAddress": "Adres van de afzender",
           "fromAddressHint": "Een adres op een domein dat van jou is, waarvandaan deze server mag versturen.",
           "whoIsTold": "Bij het opslaan krijg je via deze server een test-e-mail, en daarna horen alle beheerders van de medewerkers het, jij ook.",
-          "save": "Testen en opslaan",
+          "save": "Mailserver testen en opslaan",
           "saved": "Mailserver opgeslagen. Er kwam via deze server een test-e-mail bij je aan.",
           "confirmFirst": "Om de mailserver te wijzigen, moet je eerst bevestigen dat jij het bent."
         }

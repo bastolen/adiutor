@@ -665,7 +665,7 @@
           "signsInWith": "Inicia sesión con",
           "signsInWithPassword": "Una contraseña",
           "signsInWithKey": "Una clave privada",
-          "save": "Probar y guardar",
+          "save": "Probar y guardar el almacenamiento",
           "saved": "Almacenamiento guardado. Se escribió, se leyó y se borró un archivo de prueba ahí.",
           "confirmFirst": "Para elegir dónde se guardan los archivos, primero confirma que eres tú.",
           "offInEnvironment": "Los archivos adjuntos están desactivados en el entorno del servidor (ATTACHMENTS_STORAGE=off).",
@@ -732,7 +732,7 @@
           "fromAddress": "Dirección del remitente",
           "fromAddressHint": "Una dirección de un dominio que controlas, desde la que este servidor puede enviar.",
           "whoIsTold": "Al guardar, te llega un correo de prueba a través de este servidor y después se avisa a todos los administradores del personal, también a ti.",
-          "save": "Probar y guardar",
+          "save": "Probar y guardar el servidor de correo",
           "saved": "Servidor de correo guardado. Te ha llegado un correo de prueba a través de él.",
           "confirmFirst": "Para cambiar el servidor de correo, primero confirma que eres tú."
         }

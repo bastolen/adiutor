@@ -108,7 +108,7 @@ describe('MailServerForm', () => {
     await user.type(password, 'a-new-password');
     await user.click(screen.getByRole('combobox', { name: 'Security' }));
     await user.click(screen.getByRole('option', { name: /^TLS/ }));
-    await user.click(screen.getByRole('button', { name: 'Test and save' }));
+    await user.click(screen.getByRole('button', { name: 'Test and save mail server' }));
 
     expect(await screen.findByText('Mail server saved.')).toBeInTheDocument();
     await waitFor(() => expect(password).toHaveValue(''));
@@ -133,7 +133,7 @@ describe('MailServerForm', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Test and save' }));
+    await user.click(screen.getByRole('button', { name: 'Test and save mail server' }));
 
     await waitFor(() => expect(saveMailServerAction).toHaveBeenCalledTimes(1));
     const formData = defined(vi.mocked(saveMailServerAction).mock.calls[0], 'the call')[1];
