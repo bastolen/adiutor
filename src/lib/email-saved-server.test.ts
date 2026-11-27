@@ -156,7 +156,7 @@ describe('sendEmail with a mail server saved in Settings', () => {
     const { sendEmail } = await import('./email');
 
     await expect(sendEmail(EMAIL)).rejects.toThrow(
-      /SMTP_URL, or set one up on the Connections tab/,
+      /SMTP_URL, or set one up on the Integrations tab/,
     );
     expect(mocks.transports).toHaveLength(0);
   });

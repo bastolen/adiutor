@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Storage form on Settings' Connections tab: the
+ * @file Tests for the Storage form on Settings' Integrations tab: the
  * drivers it offers, the fields of the one chosen, what it says about a
  * saved secret (which it never holds), what it sends, and the draft it keeps
  * when the page is shown again (on the way back from confirming it's you).

@@ -54,18 +54,18 @@ describe('SegmentTabNav', () => {
         items={[
           { href: '/admin/settings', label: 'General', segment: null },
           {
-            href: '/admin/settings/connections',
-            label: 'Connections',
-            segment: 'connections',
+            href: '/admin/settings/integrations',
+            label: 'Integrations',
+            segment: 'integrations',
             alsoOn: ['webhooks'],
           },
         ]}
       />,
     );
 
-    const connections = screen.getByRole('link', { name: 'Connections' });
-    expect(connections).toHaveAttribute('aria-current', 'true');
-    expect(connections).toHaveClass('border-highlight');
+    const integrations = screen.getByRole('link', { name: 'Integrations' });
+    expect(integrations).toHaveAttribute('aria-current', 'true');
+    expect(integrations).toHaveClass('border-highlight');
     expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
   });
 

@@ -69,7 +69,7 @@ SmtpChangedEmail.PreviewProps = {
   ...PREVIEW_BASE,
   server: 'smtp.adiutor.dev:587',
   byName: 'Alex Doe',
-  url: 'https://adiutor.dev/admin/settings/connections#mail-server',
+  url: 'https://adiutor.dev/admin/settings/integrations#mail-server',
 } satisfies SmtpChangedEmailProps;
 
 /**

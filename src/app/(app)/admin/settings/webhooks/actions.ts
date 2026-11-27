@@ -1,5 +1,5 @@
 /**
- * @file Server actions for the webhooks card of Settings' Connections tab
+ * @file Server actions for the webhooks card of Settings' Integrations tab
  * and a webhook's page: adding, changing, renewing the secret, turning off
  * and on and removing a webhook, sending it a test and sending a delivery
  * again. A change that needs the staff Admin's recent second step sends them
@@ -30,7 +30,7 @@ import {
 import confirmFirstIfNeeded from '../../../_people/confirm-grant';
 
 /** The list's card, where the step-up page comes back to without a `returnTo`. */
-const WEBHOOKS_CARD = '/admin/settings/connections#webhooks';
+const WEBHOOKS_CARD = '/admin/settings/integrations#webhooks';
 
 /**
  * The fields of a webhook's form.
@@ -169,7 +169,7 @@ export async function removeWebhookAction(
   });
   if (result.ok) {
     refresh();
-    redirect('/admin/settings/connections?removed=1#webhooks');
+    redirect('/admin/settings/integrations?removed=1#webhooks');
   }
   return result;
 }

@@ -1,6 +1,6 @@
 /**
  * @file A webhook's page, served at `/admin/settings/webhooks/[webhookId]`,
- * with the Connections tab of Settings current (its webhooks card lists
+ * with the Integrations tab of Settings current (its webhooks card lists
  * them): its details and controls, and its
  * deliveries of the last 30 days. Staff Admins only (`staff:manage`); a
  * webhook that isn't there is the 404 page.
@@ -97,7 +97,7 @@ async function WebhookSettings({
         returnTo={url.current()}
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
-        <TextLink href="/admin/settings/connections#webhooks" className="self-start text-sm">
+        <TextLink href="/admin/settings/integrations#webhooks" className="self-start text-sm">
           {t('back')}
         </TextLink>
         <WebhookDetailsCard

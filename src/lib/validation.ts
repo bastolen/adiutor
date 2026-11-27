@@ -732,7 +732,7 @@ function storageSecret(max: number) {
 }
 
 /**
- * The storage's form on the Connections tab of Settings: a driver and its
+ * The storage's form on the Integrations tab of Settings: a driver and its
  * fields, the secrets left empty to keep the saved ones. Only the chosen
  * driver's fields are sent.
  */
@@ -901,7 +901,7 @@ function optionalSmtpText(message: ValidationMessageKey) {
 }
 
 /**
- * The mail server's form on the Connections tab of Settings. The port defaults to
+ * The mail server's form on the Integrations tab of Settings. The port defaults to
  * the usual one for its security; the password is `undefined` when it was
  * left empty (to keep the saved one, `secretToSave`), and the sender's
  * address `undefined` when the form didn't send it (while `EMAIL_FROM`

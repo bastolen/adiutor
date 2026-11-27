@@ -123,7 +123,7 @@
     },
     "smtpTest": {
       "subject": "{staff} can send email through this mail server",
-      "reason": "You're receiving this because you're saving a mail server on the Connections tab of Settings.",
+      "reason": "You're receiving this because you're saving a mail server on the Integrations tab of Settings.",
       "heading": "This mail server works",
       "body": "{staff} sent this test email through {server} before saving it as the mail server. It reached you, so emails can go out through it.",
       "button": "Open the mail server settings"

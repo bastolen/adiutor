@@ -1,6 +1,6 @@
 /**
  * @file A mail server's settings and their rules, shared by sending
- * (`src/lib/email.ts`), the services and the Connections tab of Settings: how a
+ * (`src/lib/email.ts`), the services and the Integrations tab of Settings: how a
  * connection is secured, what a page may show (never the password), what a
  * production server refuses, the mail server `SMTP_URL` names, and the
  * sender emails go out from. Pure: free of zod and server code, so client

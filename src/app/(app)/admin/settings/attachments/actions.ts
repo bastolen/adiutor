@@ -1,5 +1,5 @@
 /**
- * @file Server actions for the attachment cards on Settings' Connections
+ * @file Server actions for the attachment cards on Settings' Integrations
  * tab: where attached files are kept (tried before it's saved, and only with
  * a recent confirmation), setting up the one the environment chooses, whether people
  * can attach files, and the largest file anyone may attach.
@@ -75,7 +75,7 @@ export async function saveStorageAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await confirmFirstIfNeeded(formData, '/admin/settings/connections#storage', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/integrations#storage', () =>
       saveAttachmentStorage(appContext, actor, storageFields(formData)),
     );
     refresh();
@@ -140,7 +140,7 @@ export async function setUpStorageAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await confirmFirstIfNeeded(formData, '/admin/settings/connections#storage', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/integrations#storage', () =>
       setUpStorage(appContext, actor),
     );
     refresh();

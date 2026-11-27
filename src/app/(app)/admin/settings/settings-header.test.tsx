@@ -1,7 +1,7 @@
 /**
  * @file Tests for the heading and tabs of the Settings pages: General, Staff,
- * Requests and Connections, in that order, the open one marked as current,
- * with Connections current on a webhook's page too.
+ * Requests and Integrations, in that order, the open one marked as current,
+ * with Integrations current on a webhook's page too.
  */
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,7 +32,7 @@ describe('SettingsHeader', () => {
       ['General', '/admin/settings'],
       ['Staff', '/admin/settings/staff'],
       ['Requests', '/admin/settings/requests'],
-      ['Connections', '/admin/settings/connections'],
+      ['Integrations', '/admin/settings/integrations'],
     ]);
   });
 
@@ -47,7 +47,7 @@ describe('SettingsHeader', () => {
   it.each([
     ['staff', 'Staff'],
     ['requests', 'Requests'],
-    ['connections', 'Connections'],
+    ['integrations', 'Integrations'],
   ])('marks the tab of the %s page as current', (segment, name) => {
     useSelectedLayoutSegment.mockReturnValue(segment);
     render(<SettingsHeader />);
@@ -56,11 +56,11 @@ describe('SettingsHeader', () => {
     expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
   });
 
-  it('marks Connections as the current section on a webhook’s page', () => {
+  it('marks Integrations as the current section on a webhook’s page', () => {
     useSelectedLayoutSegment.mockReturnValue('webhooks');
     render(<SettingsHeader />);
 
-    expect(screen.getByRole('link', { name: 'Connections' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Integrations' })).toHaveAttribute(
       'aria-current',
       'true',
     );

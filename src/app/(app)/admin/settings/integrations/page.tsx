@@ -1,6 +1,6 @@
 /**
- * @file The Connections tab of Settings, served at
- * `/admin/settings/connections`: what Adiutor connects to outside itself.
+ * @file The Integrations tab of Settings, served at
+ * `/admin/settings/integrations`: what Adiutor works with outside itself.
  * First the mail server emails go out through (`../email/`), then where
  * attached files are kept, whether people can attach them and the largest
  * one (`../attachments/`), then the webhooks (`../webhooks/`, whose pages
@@ -19,18 +19,18 @@ import EmailSettingsCards from '../email/email-cards';
 import WebhookSettings from '../webhooks/webhook-cards';
 
 /**
- * Page metadata: "Connections · Settings · Adiutor" for those who may see
+ * Page metadata: "Integrations · Settings · Adiutor" for those who may see
  * the page (`staff:manage`), and the 404 page's title for everyone else, who
  * get the 404 page.
  */
-// i18n-check t('admin.settings.connections.title')
+// i18n-check t('admin.settings.integrations.title')
 export const generateMetadata = globalPermissionMetadata(
   'staff:manage',
-  'admin.settings.connections.title',
+  'admin.settings.integrations.title',
 );
 
 /**
- * The Connections tab of Settings: the mail server, attachment and webhook
+ * The Integrations tab of Settings: the mail server, attachment and webhook
  * cards, which load side by side. The mail server and webhook cards show
  * together; the attachment cards have a boundary of their own, since
  * checking an SFTP storage opens a connection to another server, which the
@@ -42,7 +42,7 @@ export const generateMetadata = globalPermissionMetadata(
  */
 export default function ConnectionsSettingsPage({
   searchParams,
-}: PageProps<'/admin/settings/connections'>) {
+}: PageProps<'/admin/settings/integrations'>) {
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
       <EmailSettingsCards />

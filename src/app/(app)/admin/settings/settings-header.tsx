@@ -12,8 +12,9 @@ import SegmentTabNav from '@/components/ui/segment-tab-nav';
  * General (how users see the staff: the name, the languages, the time zone,
  * the logo, the browser tab icon and the brand colours), Staff (the staff,
  * their invitations and invite links), Requests (request numbers and types)
- * and Connections (what Adiutor connects to: the mail server, where attached
- * files are kept, and the webhooks, whose pages keep Connections current).
+ * and Integrations (what Adiutor works with outside itself: the mail server,
+ * where attached files are kept, and the webhooks, whose pages keep
+ * Integrations current).
  * Every tab is for staff Admins, who are the only ones to see the settings,
  * so none is left out. Its text comes from `admin.settings`.
  */
@@ -28,9 +29,9 @@ export default function SettingsHeader() {
           { href: '/admin/settings/staff', label: t('tabs.staff'), segment: 'staff' },
           { href: '/admin/settings/requests', label: t('tabs.requests'), segment: 'requests' },
           {
-            href: '/admin/settings/connections',
-            label: t('tabs.connections'),
-            segment: 'connections',
+            href: '/admin/settings/integrations',
+            label: t('tabs.integrations'),
+            segment: 'integrations',
             // A webhook's page, from the list on this tab.
             alsoOn: ['webhooks'],
           },

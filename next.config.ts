@@ -88,10 +88,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/admin/settings/appearance', destination: '/admin/settings#logo' },
-      { source: '/admin/settings/email', destination: '/admin/settings/connections#mail-server' },
-      { source: '/admin/settings/attachments', destination: '/admin/settings/connections#storage' },
+      { source: '/admin/settings/email', destination: '/admin/settings/integrations#mail-server' },
+      {
+        source: '/admin/settings/attachments',
+        destination: '/admin/settings/integrations#storage',
+      },
       // Only the list: a webhook's page keeps its address.
-      { source: '/admin/settings/webhooks', destination: '/admin/settings/connections#webhooks' },
+      { source: '/admin/settings/webhooks', destination: '/admin/settings/integrations#webhooks' },
     ].map((rule) => ({ ...rule, permanent: false }));
   },
 

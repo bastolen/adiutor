@@ -1,7 +1,7 @@
 /**
  * @file Managing webhooks: the staff who manage request types (staff Admins,
  * `staff:manage`) list, add, change, turn off and on and remove them, and
- * renew their signing secrets, on Settings › Connections. A webhook sends
+ * renew their signing secrets, on Settings › Integrations. A webhook sends
  * request texts out of Adiutor, so every change that can point them
  * somewhere new (adding, changing, renewing, turning on) needs the Admin's
  * second step from the last 15 minutes; turning off and removing don't.

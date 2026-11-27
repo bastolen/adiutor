@@ -225,7 +225,7 @@ What to set up on a server before sharing its address:
   (`getProviderMfaWarning`), and the Users list shows them as "Needs MFA".
 - **First run:** complete `/setup` (or run `pnpm setup:platform`) right after deploying. Until then
   the first visitor becomes the staff Admin (see [First run](companies-and-roles.md#first-run)).
-- **Email:** right after setup, set up the mail server on the Connections tab of Settings, or set
+- **Email:** right after setup, set up the mail server on the Integrations tab of Settings, or set
   `SMTP_URL` and `EMAIL_FROM` (see [Sending email](#sending-email)). Without one, every email
   fails, and the server logs a warning when it starts. Never set `EMAIL_OUTBOX_DIR`.
 - **No test data:** never run `pnpm db:seed` on a server. It deletes all data and adds a staff Admin
@@ -339,7 +339,7 @@ run tries again. `pnpm jobs:list` shows every job with its last and next run, an
 ## Sending email
 
 Adiutor sends sign-in links, password resets, invitations, security notices and the emails about
-requests through a mail server that a staff Admin sets up on the **Connections** tab of Settings, unless
+requests through a mail server that a staff Admin sets up on the **Integrations** tab of Settings, unless
 the server's environment names one ([decision 0045](decisions/0045-mail-server-in-settings.md)).
 Without either, every email fails, and a production server logs a warning when it starts.
 
@@ -374,7 +374,7 @@ Without either, every email fails, and a production server logs a warning when i
 
 ## Attachments
 
-Files people attach to requests are kept in a storage a staff Admin chooses on the **Connections**
+Files people attach to requests are kept in a storage a staff Admin chooses on the **Integrations**
 tab of Settings, unless the server's environment chooses it
 ([decision 0044](decisions/0044-attachments.md)): a folder on the server, an S3-compatible bucket or
 a folder on another server over SFTP. Without one, attachments are off. Once there's a storage, a
@@ -405,7 +405,7 @@ the same):
   refuses to store, read or delete files there, so a server started without its folder (or a
   container without its volume) fails instead of keeping files on a disk that goes away or taking
   every file for gone. Only setting the folder up writes the marker, never an upload: saving the
-  storage on the Connections tab (its test before saving), or, for a folder the environment
+  storage on the Integrations tab (its test before saving), or, for a folder the environment
   chooses, **Set up this folder** on that tab, which a staff Admin presses once the folder is the
   right one (the tab says when a folder isn't set up). Keep the marker with the files. In Docker, mount a volume on `/data/attachments`, which the image makes for this, on
   the app's container and on every container that runs the jobs:
@@ -451,7 +451,7 @@ whose file is gone can't be downloaded. Files are kept at the same paths in ever
 (`attachments/<two characters>/<ID>`), so moving to another storage is copying everything under
 `attachments/` there as it is (with `rclone copy`, say), then switching.
 
-**The largest file** anyone may attach is chosen on the Connections tab too (10 MB until it's
+**The largest file** anyone may attach is chosen on the Integrations tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on
 Vercel, which refuses a larger request body. Behind a reverse proxy, let it pass request bodies that
 large to `/api/attachments` (with nginx, `client_max_body_size 51m;`, which defaults to 1 MB), or

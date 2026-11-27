@@ -1,5 +1,5 @@
 /**
- * @file The dialog that adds a webhook, on Settings' Connections tab, and
+ * @file The dialog that adds a webhook, on Settings' Integrations tab, and
  * then shows its signing secret once. Its text comes from
  * `admin.settings.webhooks`, which the page passes through `ClientMessages`.
  */

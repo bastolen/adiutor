@@ -1,5 +1,5 @@
 /**
- * @file The webhooks card of Settings' Connections tab: the webhooks that
+ * @file The webhooks card of Settings' Integrations tab: the webhooks that
  * send what happens to requests to the staff's own systems and chat channels
  * (decision 0046), and adding one; each webhook's page stays at
  * `/admin/settings/webhooks/[webhookId]`. Staff Admins only
@@ -47,7 +47,7 @@ export default async function WebhookSettings({
       {removed && <ToastOnArrival message={t('removedToast')} param="removed" />}
       <RecentConfirmationProvider
         required={actor.canConfirmSessions}
-        returnTo="/admin/settings/connections"
+        returnTo="/admin/settings/integrations"
         {...confirmationWindow(actor.mfaConfirmedUntil)}
       >
         <WebhooksCard

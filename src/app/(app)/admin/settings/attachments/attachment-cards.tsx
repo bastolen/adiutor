@@ -1,5 +1,5 @@
 /**
- * @file The attachment cards of Settings' Connections tab: where files
+ * @file The attachment cards of Settings' Integrations tab: where files
  * people attach are kept, whether people can attach files, and the largest
  * file anyone may attach (decision 0044). Each is chosen here unless the
  * server's environment chooses it, which the card then only shows. Staff
@@ -22,7 +22,7 @@ import LargestFileForm from './largest-file-form';
 import StorageForm from './storage-form';
 
 /** The tab's address, which the step-up page comes back to. */
-const PATH = '/admin/settings/connections';
+const PATH = '/admin/settings/integrations';
 
 /**
  * Loads and shows the attachment settings. Their text comes from

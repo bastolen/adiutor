@@ -224,7 +224,7 @@ export async function saveSmtpSettings(
     appUrl: ctx.baseUrl,
     locale: await recipientLocale(ctx, own?.locale),
     server: serverName(config),
-    url: `${ctx.baseUrl}/admin/settings/connections#mail-server`,
+    url: `${ctx.baseUrl}/admin/settings/integrations#mail-server`,
     brand: await loadEmailBrand(ctx.db),
   });
   await checkBeforeSaving(

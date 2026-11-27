@@ -1,5 +1,5 @@
 /**
- * @file Server action of the mail server card on Settings' Connections tab:
+ * @file Server action of the mail server card on Settings' Integrations tab:
  * saving the mail server, once it's tried, which needs a recent confirmation
  * first (to the step-up page and back to the card).
  */
@@ -52,7 +52,7 @@ export default async function saveMailServerAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const actor = await getActor();
-    await confirmFirstIfNeeded(formData, '/admin/settings/connections#mail-server', () =>
+    await confirmFirstIfNeeded(formData, '/admin/settings/integrations#mail-server', () =>
       saveSmtpSettings(appContext, actor, mailServerFields(formData)),
     );
     refresh();

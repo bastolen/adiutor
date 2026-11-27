@@ -1,5 +1,5 @@
 /**
- * @file The card of webhooks on Settings' Connections tab: each webhook
+ * @file The card of webhooks on Settings' Integrations tab: each webhook
  * with whether it's on, its format, where it sends and what, and the button
  * to add one. Its text comes from `admin.settings.webhooks` (the dialog's
  * through `ClientMessages`).

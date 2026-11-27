@@ -9,15 +9,15 @@ Why it works this way is in [decision 0046](decisions/0046-webhooks.md).
 ## Who sets them up
 
 The staff who manage request types (`staff:manage`: staff Admins) add, change, turn off and on and
-remove webhooks, and renew their signing secrets, on **Settings › Connections**, last on the tab
-(`/admin/settings/connections#webhooks`; the services in `src/server/webhooks/manage.ts`). Its
+remove webhooks, and renew their signing secrets, on **Settings › Integrations**, last on the tab
+(`/admin/settings/integrations#webhooks`; the services in `src/server/webhooks/manage.ts`). Its
 **Webhooks** card lists each
 webhook with whether it's on (or why it's off), its format, the host it sends to, its request
 types and its events; **Add webhook** opens a dialog with its fields, after the Admin confirms it's
 them when they haven't in the last 15 minutes, and then shows its signing secret once.
 
 A webhook's own page (`/admin/settings/webhooks/[webhookId]`, its name links there, with the
-Connections tab current) shows its
+Integrations tab current) shows its
 details, with a note on why it's off when it is, and its controls: **Edit** (the same fields, its
 address empty to keep the saved one), **Send a test**, **Turn off** or **Turn on**, **Renew
 secret** (the new one shown once) and **Remove** (asks first, then goes back to the list). Editing,

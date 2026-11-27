@@ -123,7 +123,7 @@
     },
     "smtpTest": {
       "subject": "{staff} kan e-mail versturen via deze mailserver",
-      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad Koppelingen van de instellingen.",
+      "reason": "Je ontvangt dit omdat je een mailserver opslaat op het tabblad Integraties van de instellingen.",
       "heading": "Deze mailserver werkt",
       "body": "{staff} stuurde deze test-e-mail via {server}, voordat die als mailserver wordt opgeslagen. Hij kwam bij je aan, dus e-mails kunnen via deze server de deur uit.",
       "button": "Instellingen voor de mailserver openen"

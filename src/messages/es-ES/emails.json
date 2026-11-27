@@ -123,7 +123,7 @@
     },
     "smtpTest": {
       "subject": "{staff} puede enviar correo a través de este servidor",
-      "reason": "Recibes esto porque estás guardando un servidor de correo en la pestaña Conexiones de los ajustes.",
+      "reason": "Recibes esto porque estás guardando un servidor de correo en la pestaña Integraciones de los ajustes.",
       "heading": "Este servidor de correo funciona",
       "body": "{staff} ha enviado este correo de prueba a través de {server} antes de guardarlo como servidor de correo. Te ha llegado, así que los correos pueden salir por él.",
       "button": "Abrir los ajustes del servidor de correo"

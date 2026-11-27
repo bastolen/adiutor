@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Attaching files form on Settings' Connections tab:
+ * @file Tests for the Attaching files form on Settings' Integrations tab:
  * turning "People can attach files" on and off, and the box that can't be
  * changed without a storage or while the server's environment turned
  * attachments off.

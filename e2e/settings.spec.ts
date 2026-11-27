@@ -376,8 +376,8 @@ test('the addresses of tabs merged into others lead to their first cards', async
   await expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('region', { name: 'Logo' })).toBeInViewport();
 
-  // Email, Attachments and Webhooks are on the Connections tab, which a webhook's page keeps.
-  const connections = tabs.getByRole('link', { name: 'Connections' });
+  // Email, Attachments and Webhooks are on the Integrations tab, which a webhook's page keeps.
+  const integrations = tabs.getByRole('link', { name: 'Integrations' });
   await inOrder(
     [
       ['email', 'mail-server', 'Mail server'],
@@ -386,8 +386,8 @@ test('the addresses of tabs merged into others lead to their first cards', async
     ] as const,
     async ([old, card, region]) => {
       await page.goto(`/admin/settings/${old}`);
-      await expect(page).toHaveURL(`/admin/settings/connections#${card}`);
-      await expect(connections).toHaveAttribute('aria-current', 'page');
+      await expect(page).toHaveURL(`/admin/settings/integrations#${card}`);
+      await expect(integrations).toHaveAttribute('aria-current', 'page');
       await expect(page.getByRole('region', { name: region })).toBeInViewport();
     },
   );
@@ -473,7 +473,7 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
   try {
     await restoreAttachmentSettings([]);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/connections');
+    await page.goto('/admin/settings/integrations');
     // The mail server's card shares the tab: the storage's own controls are in its card.
     const card = page.getByRole('region', { name: 'Where files are kept' });
     await expect(
@@ -534,7 +534,7 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await signIn(page, PLATFORM_ADMIN);
     // Signed in 20 minutes ago, as far as the confirmation window goes.
     await backdateMfaConfirmation(PLATFORM_ADMIN.email, 20);
-    await page.goto('/admin/settings/connections');
+    await page.goto('/admin/settings/integrations');
 
     const storage = page.getByRole('combobox', { name: 'Storage' });
     await storage.click();
@@ -553,13 +553,13 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     const confirm = card.getByRole('link', { name: /^Confirm it.s you$/ });
     await expect(confirm).toHaveAttribute(
       'href',
-      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fconnections%23storage&for=change',
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fintegrations%23storage&for=change',
     );
     await confirm.click();
     await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
     // Back with the bucket chosen and everything typed, ready to save.
-    await expect(page).toHaveURL('/admin/settings/connections#storage', { timeout: 15_000 });
+    await expect(page).toHaveURL('/admin/settings/integrations#storage', { timeout: 15_000 });
     await expect(save).toBeEnabled();
     await expect(storage).toHaveText(/An S3-compatible bucket/);
     await expect(endpoint).toHaveValue('https://files.adiutor.test');
@@ -577,7 +577,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
   try {
     await restoreSmtpSetting(null);
     await signIn(page, PLATFORM_ADMIN);
-    await page.goto('/admin/settings/connections');
+    await page.goto('/admin/settings/integrations');
     // The storage's card shares the tab: the mail server's own controls are in its card.
     const card = page.getByRole('region', { name: 'Mail server' });
     // The tests' server runs in production, where a missing mail server means no sign-in links.

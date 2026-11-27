@@ -259,7 +259,7 @@
         "general": "General",
         "staff": "Staff",
         "requests": "Requests",
-        "connections": "Connections"
+        "integrations": "Integrations"
       },
       "general": {
         "name": {
@@ -737,8 +737,8 @@
           "confirmFirst": "Changing the mail server needs you to confirm it’s you first."
         }
       },
-      "connections": {
-        "title": "Connections · Settings"
+      "integrations": {
+        "title": "Integrations · Settings"
       }
     },
     "companies": {

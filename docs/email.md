@@ -241,7 +241,7 @@ In `src/lib/email.ts`, in order:
 - `SMTP_URL` set: sent through the mail server the server's environment names (Mailpit in
   development, your provider in production), which the Mail server card of Settings then only
   shows
-- otherwise the mail server saved on the Mail server card of Settings › Connections
+- otherwise the mail server saved on the Mail server card of Settings › Integrations
   (`email.smtp`, its password encrypted with the auth secret and decrypted here; see
   [Sending email](deploying.md#sending-email)). It's read on each send, and its transport is kept
   while the setting stays the same, so a save takes effect at once, also in the background jobs.

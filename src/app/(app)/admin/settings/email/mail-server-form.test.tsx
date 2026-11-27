@@ -1,5 +1,5 @@
 /**
- * @file Tests for the Mail server form on Settings' Connections tab: what it
+ * @file Tests for the Mail server form on Settings' Integrations tab: what it
  * starts from, what it says about a saved password (which it never holds),
  * the sender locked by `EMAIL_FROM`, and what it sends.
  */

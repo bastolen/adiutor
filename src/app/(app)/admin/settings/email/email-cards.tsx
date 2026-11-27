@@ -1,5 +1,5 @@
 /**
- * @file The mail server card of Settings' Connections tab (decision 0045),
+ * @file The mail server card of Settings' Integrations tab (decision 0045),
  * for staff Admins: the mail server emails go out through and their sender.
  * While the server's environment chooses the mail server (`SMTP_URL`), the
  * card only shows it. Saving needs a recent confirmation, so the card has an
@@ -20,7 +20,7 @@ import EnvironmentMailServer from './environment-mail-server';
 import MailServerForm from './mail-server-form';
 
 /** Where the tab is, to come back to after confirming. */
-const PATH = '/admin/settings/connections';
+const PATH = '/admin/settings/integrations';
 
 /**
  * The mail server card, with the saved mail server or the environment's.

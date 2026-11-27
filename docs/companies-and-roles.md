@@ -134,7 +134,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
   of its own under one layout (`src/app/(app)/admin/settings/`), like the account and Logs pages,
   grouped by what they're for ([decision 0055](decisions/0055-four-settings-tabs.md)). Every tab
   is for staff Admins, so none is left out. The address before it had tabs, `/admin/staff`, is
-  gone (no redirect); the addresses of the tabs merged into General and Connections lead to the
+  gone (no redirect); the addresses of the tabs merged into General and Integrations lead to the
   card that took their place.
   - **General** (`/admin/settings`): change the name shown to users (in invitations and wherever
     users see who's helping them), the languages Adiutor offers and its default language (for
@@ -150,7 +150,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
     staff rows on platform roles and company rows on company roles.
   - **Requests** (`/admin/settings/requests`): the prefix of request numbers and the request types
     (see [Requests](requests.md#types-and-priorities)).
-  - **Connections** (`/admin/settings/connections`): what Adiutor connects to outside itself.
+  - **Integrations** (`/admin/settings/integrations`): what Adiutor works with outside itself.
     First the mail server emails go out through and their sender (`#mail-server`), tried with a
     test email to the staff Admin before it's saved; only shown when the server's environment
     names it (`SMTP_URL`, `EMAIL_FROM`; see [Sending email](deploying.md#sending-email)). A change
@@ -162,7 +162,7 @@ Admins and Managers who aren't members can still add themselves with any role, a
     from the last 15 minutes. Last, the webhooks that send what happens to requests to the
     staff's own systems and chat channels (`#webhooks`), each with whether it's on, its format,
     the host it sends to, its types and events, and adding one; each webhook's page
-    (`/admin/settings/webhooks/[webhookId]`, with Connections current) has its controls and its
+    (`/admin/settings/webhooks/[webhookId]`, with Integrations current) has its controls and its
     deliveries (see [Webhooks](webhooks.md)). The old Email, Attachments and Webhooks tabs'
     addresses lead to these three cards.
 - **Logs** (`/admin/logs`, `audit:view`, Admins and Managers): the whole audit log, newest first

@@ -1,5 +1,5 @@
 /**
- * @file The Attaching files form on Settings' Connections tab: the
+ * @file The Attaching files form on Settings' Integrations tab: the
  * "People can attach files" switch. Its text comes from
  * `admin.settings.attachments.attaching` (through `ClientMessages`).
  */

@@ -259,7 +259,7 @@
         "general": "Algemeen",
         "staff": "Medewerkers",
         "requests": "Verzoeken",
-        "connections": "Koppelingen"
+        "integrations": "Integraties"
       },
       "general": {
         "name": {
@@ -737,8 +737,8 @@
           "confirmFirst": "Om de mailserver te wijzigen, moet je eerst bevestigen dat jij het bent."
         }
       },
-      "connections": {
-        "title": "Koppelingen · Instellingen"
+      "integrations": {
+        "title": "Integraties · Instellingen"
       }
     },
     "companies": {
