@@ -48,13 +48,22 @@ describe('SettingsHeader', () => {
     ['staff', 'Staff'],
     ['requests', 'Requests'],
     ['connections', 'Connections'],
-    // A webhook's page.
-    ['webhooks', 'Connections'],
   ])('marks the tab of the %s page as current', (segment, name) => {
     useSelectedLayoutSegment.mockReturnValue(segment);
     render(<SettingsHeader />);
 
     expect(screen.getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks Connections as the current section on a webhook’s page', () => {
+    useSelectedLayoutSegment.mockReturnValue('webhooks');
+    render(<SettingsHeader />);
+
+    expect(screen.getByRole('link', { name: 'Connections' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
     expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
   });
 });

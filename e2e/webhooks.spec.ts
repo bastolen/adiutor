@@ -124,7 +124,11 @@ test('a webhook gets a signed test and a signed delivery of a request’s news, 
       page
         .getByRole('navigation', { name: 'Settings sections' })
         .getByRole('link', { name: 'Connections' }),
-    ).toHaveAttribute('aria-current', 'page');
+    ).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByRole('link', { name: 'All webhooks' })).toHaveAttribute(
+      'href',
+      '/admin/settings/connections#webhooks',
+    );
     await page.getByRole('button', { name: 'Send a test' }).click();
     await expect(toasts(page)).toContainText('Test delivered: the receiver answered 200.');
     expect(JSON.parse(receiver.received[0]?.body ?? '{}')).toMatchObject({

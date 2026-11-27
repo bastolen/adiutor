@@ -496,7 +496,8 @@ keyboard support.
   make every one of their tabs wide (`WidePage`, see "Layout"), so the header and tabs don't move
   when the tab changes. `SegmentTabNav` marks the current tab from the URL
   (`useSelectedLayoutSegment`), or from other segments a tab names (`alsoOn`, for pages of the
-  items a tab lists), and each page still checks its own permission. Tabs that don't
+  items a tab lists, marked as the current section with `aria-current="true"` rather than the
+  current page), and each page still checks its own permission. Tabs that don't
   fit the width (long names on a phone, in some languages) wrap onto another row rather than
   widen the page.
 

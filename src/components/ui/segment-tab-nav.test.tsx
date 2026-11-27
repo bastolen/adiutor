@@ -46,7 +46,7 @@ describe('SegmentTabNav', () => {
     expect(screen.getByRole('link', { name: 'Members' })).not.toHaveAttribute('aria-current');
   });
 
-  it('keeps a tab current on the other segments it names', () => {
+  it('keeps a tab current on the other segments it names, as the section rather than the page', () => {
     useSelectedLayoutSegment.mockReturnValue('webhooks');
     render(
       <SegmentTabNav
@@ -63,10 +63,9 @@ describe('SegmentTabNav', () => {
       />,
     );
 
-    expect(screen.getByRole('link', { name: 'Connections' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    const connections = screen.getByRole('link', { name: 'Connections' });
+    expect(connections).toHaveAttribute('aria-current', 'true');
+    expect(connections).toHaveClass('border-highlight');
     expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('aria-current');
   });
 
