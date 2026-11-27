@@ -308,14 +308,14 @@ async function RequestContent({
     />
   );
 
-  // Every file the reader can see, in the page's order, for the viewer to step through.
-  const viewable: ViewableFile[] = [
-    detail.description.attachments,
-    ...detail.entries.map((shownEntry) => shownEntry.body?.attachments),
-  ]
-    .flatMap((attachments) => attachments ?? [])
-    .filter((attachment) => attachment.removed === null)
-    .map(({ id, name, size, preview }) => ({ id, name, size, preview }));
+  // Every file on the request the reader may open, in the page's order, for the viewer to step
+  // through: also those on replies further back than the page shows, or in groups it hides.
+  const viewable: ViewableFile[] = detail.files.map(({ id, name, size, preview }) => ({
+    id,
+    name,
+    size,
+    preview,
+  }));
 
   return (
     <ClientMessages namespaces={['requests']}>

@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 import Button from '@/components/ui/button';
 import FileTile from '@/components/ui/file-tile';
 
-import { openButtonId, useOpenFile } from './attachment-viewer';
+import { useFileOpener } from './attachment-viewer';
 
 /**
  * A file's tile, which opens it in the viewer.
@@ -52,7 +52,7 @@ export default function ViewableAttachmentTile({
   downloadLabel: string;
   actions?: ReactNode;
 }) {
-  const openFile = useOpenFile();
+  const opener = useFileOpener(id, 'text');
   const href = `/attachments/${id}`;
   return (
     <FileTile
@@ -62,14 +62,14 @@ export default function ViewableAttachmentTile({
       thumbnail={thumbnail}
       thumbnailPosition={thumbnailPosition}
       playMark={playMark}
-      onOpen={openFile ? () => openFile(id) : undefined}
+      onOpen={opener?.onOpen}
       openLabel={openLabel}
-      openId={openButtonId(id)}
-      href={openFile ? undefined : href}
+      openRef={opener?.ref}
+      href={opener ? undefined : href}
       linkLabel={downloadLabel}
       actions={
         <>
-          {openFile && (
+          {opener && (
             <Button asChild variant="secondary" size="sm" className="px-1.5">
               <a href={href} download aria-label={downloadLabel}>
                 <Download aria-hidden="true" />

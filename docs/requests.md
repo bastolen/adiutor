@@ -783,17 +783,20 @@ in [Attachments](deploying.md#attachments).
   error.png, 240 kB"), beside Remove for the staff who may remove files.
 - **The viewer** ([decision 0058](decisions/0058-files-open-in-a-viewer.md), `AttachmentViewer`
   around the page, built on `FileViewer` and `Modal`): the file's name, where it is among the
-  page's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
-  and → keys, step through every file the reader can see on the page, in its order (for a file on
-  its own there's neither), and each step is said to screen readers ("notes.odt: 3 of 7"). An image shows
+  request's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
+  and → keys, step through every file on the request the reader may open (`getRequest`'s `files`,
+  also those on replies the page doesn't show), in the page's order (for a file on its own there's
+  neither), and each step is said to screen readers ("notes.odt: 3 of 7"). An image shows
   as it is, from `/attachments/<id>` (its preview while it loads; a HEIC photo only where the
   browser shows it), a PDF its first page drawn large (or its preview, for a PDF drawn before
   pages were), a text file or log its first 200 KB as text (`attachment-text.ts`: asked for as a
   part of the file, never through a redirect, UTF-8 or UTF-16, in a region that wraps and scrolls
   and takes focus, with a note when the file goes on), a video plays (the browser asks for it a part at a time, so it starts at once and
   seeks; its frame is the poster, and a video the browser can't play says so), an Office file its
-  thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it, and focus goes to the tile of the file it showed last. It's
-  closed again when someone comes back to the page.
+  thumbnail, and anything else its icon with "This file can't be shown here". Escape closes it,
+  and focus goes back to where it was opened from (`useFileOpener`, which notes each open button
+  by its place): that place's button for the file it showed last, else the button it was opened
+  with. It's closed again when someone comes back to the page.
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
   `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
