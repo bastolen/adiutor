@@ -1,7 +1,8 @@
 /**
  * @file Integration tests for a request's conversation as `getRequest` gives
  * it: who wrote each entry, the latest entries and earlier ones a chunk at a
- * time, down to an entry a link points at, and the reader's activity view.
+ * time, down to an entry a link points at, the reader's activity view, and
+ * the files on entries the page doesn't show.
  */
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -16,12 +17,13 @@ import {
   inSequence,
   memberActor,
   staffActor,
+  storeAttachment,
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { setActivityView } from './activity-view';
 import { getRequest } from './detail';
 import { MAX_EARLIER_CHUNKS, THREAD_CHUNK } from './detail-thread';
-import { ctx, db, storeEntry, storeRequest } from './test-helpers';
+import { ctx, db, storage, storeEntry, storeRequest } from './test-helpers';
 
 describe('getRequest: the conversation', () => {
   it('gives the entries oldest first, with who wrote them', async () => {
@@ -524,5 +526,30 @@ describe('getRequest: the reader’s activity view', () => {
     expect(replies.entries).toHaveLength(THREAD_CHUNK);
     expect(replies.entries.every(({ kind }) => kind === 'comment')).toBe(true);
     expect(replies.earlierEntries).toBe(3);
+  });
+
+  it('lists every file, also on a reply further back than the page shows or in a hidden group', async () => {
+    const company = await createCompany(db);
+    const stored = await storeRequest(company.id);
+    const replies = await inSequence(
+      Array.from({ length: THREAD_CHUNK + 5 }, (_, index) => index + 1),
+      (n) => storeEntry(stored.id, { body: `Reply ${n}` }),
+    );
+    const first = defined(replies[0], 'the first reply');
+    const fileId = await storeAttachment(db, storage, {
+      requestId: stored.id,
+      entryId: first.id,
+      name: 'first.log',
+    });
+    const client = await memberActor(db, company.id, 'client');
+
+    const detail = await getRequest(ctx, client, '1');
+    expect(detail.entries.some(({ id }) => id === first.id)).toBe(false);
+    expect(detail.files.map(({ id, entry }) => [id, entry?.id])).toEqual([[fileId, first.id]]);
+
+    await setActivityView(ctx, client, { groups: ['status'] });
+    const statusOnly = await getRequest(ctx, client, '1');
+    expect(statusOnly.entries).toEqual([]);
+    expect(statusOnly.files.map(({ id }) => id)).toEqual([fileId]);
   });
 });

@@ -751,6 +751,13 @@ in [Attachments](deploying.md#attachments).
   none for the description), so it's read by whoever reads that text: a note's files only by the
   staff who read notes, never by anyone at the company (`getRequest` gives each text its own files,
   filtered like its mentions; `loadAttachment` checks the same for a download).
+- **Every file on a request** (`getRequest`'s `files`, `requestFiles` in `detail-files.ts`): the
+  files the reader may open, in one list, wherever their text is, also on a reply further back than
+  the page shows or in a group the reader hides. The description's come first, then each reply's
+  and note's in the order the reader reads the conversation, each text's oldest first. Each names
+  the reply or note it was sent with, by the text's author and when it was written (where it was
+  sent, not who uploaded it). Removed files are left out, and a note's files are only for readers
+  with `requests:view-internal`, filtered by the same query as the texts' files and checked again.
 - **Attaching** (`AttachmentPicker` in `src/app/(app)/_requests/`), while "People can attach
   files" is on in Settings and a storage is chosen (`attachmentsOn`): the forms that raise a
   request, reply and write a note, and a text's editor (see [Editing a text](#editing-a-text)),

@@ -23,6 +23,7 @@ export type { BoardCard, BoardLane, ListBoardOptions } from './board';
 export type { ListRequestsOptions, RequestCompany, RequestListItem } from './list';
 export { findRequest, findRequestNumber, getRequest } from './detail';
 export type { RequestDetail } from './detail';
+export type { RequestFileView } from './detail-files';
 export type { SignedInAsMark } from './detail-reader';
 export type {
   MentionedPerson,

@@ -1,7 +1,8 @@
 /**
  * @file Integration tests for reading a request's attachments: each text
  * with its own files, a note's files only for the staff, unsent files for
- * nobody, a removed file as who removed it; and downloading one, or its
+ * nobody, a removed file as who removed it; the list of every file on the
+ * request, in the page's order; and downloading one, or its
  * preview, for whoever may read its text and nobody else, checked before the
  * storage is read.
  */
@@ -19,6 +20,7 @@ import {
 } from '../../../tests/integration/helpers';
 import type { Actor } from '../actor';
 import { attachmentKey, previewKey } from '../storage';
+import { setActivityView } from './activity-view';
 import { loadAttachment } from './attachments';
 import { getRequest } from './detail';
 import { ctx, db, storage, storeEntry, storeRequest } from './test-helpers';
@@ -133,6 +135,67 @@ describe('getRequest', () => {
     const forFinance = await getRequest(ctx, finance, number);
     const note = forFinance.entries.find((entry) => entry.id === noteId);
     expect(note?.body?.attachments?.map((file) => file.name)).toEqual(['driver notes.txt']);
+  });
+});
+
+describe('getRequest: every file on the request', () => {
+  it('lists the files a company reader may open, each with the text it was sent with', async () => {
+    const detail = await getRequest(ctx, client, number);
+
+    // No note’s file, no removed file and no unsent one.
+    expect(detail.files).toEqual([
+      { id: files.description, name: 'screenshot.png', size: 15, preview: true, entry: null },
+      {
+        id: files.reply,
+        name: 'printer.log',
+        size: 15,
+        preview: false,
+        entry: {
+          id: replyId,
+          kind: 'comment',
+          author: expect.objectContaining({ side: 'company', isViewer: true, userId: null }),
+          at: expect.any(Date),
+        },
+      },
+    ]);
+  });
+
+  it('lists a note’s files for the staff, in the order they read the conversation', async () => {
+    const oldestFirst = await getRequest(ctx, finance, number);
+    expect(oldestFirst.files.map(({ name }) => name)).toEqual([
+      'screenshot.png',
+      'printer.log',
+      'driver notes.txt',
+    ]);
+    // The note's author has no account here: their side's name shows instead.
+    expect(oldestFirst.files.at(-1)?.entry).toEqual({
+      id: noteId,
+      kind: 'note',
+      author: { userId: null, name: null, side: 'staff', isViewer: false, picture: null },
+      at: expect.any(Date),
+    });
+
+    // With the newest first, the description's files still come first, as on the page.
+    await setActivityView(ctx, finance, { order: 'newest' });
+    const newestFirst = await getRequest(ctx, finance, number);
+    expect(newestFirst.files.map(({ name }) => name)).toEqual([
+      'screenshot.png',
+      'driver notes.txt',
+      'printer.log',
+    ]);
+  });
+
+  it('lists an internal request’s files for the staff', async () => {
+    const internal = await storeRequest(null, { createdBy: support.id, createdBySide: 'staff' });
+    const id = await storeAttachment(db, storage, {
+      requestId: internal.id,
+      uploadedBy: support.id,
+      name: 'rota.pdf',
+    });
+
+    const detail = await getRequest(ctx, finance, String(internal.number));
+
+    expect(detail.files).toEqual([{ id, name: 'rota.pdf', size: 15, preview: false, entry: null }]);
   });
 });
 
