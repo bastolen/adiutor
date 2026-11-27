@@ -60,7 +60,7 @@ Attaching files is off until there's a storage and **People can attach files** i
 staff Admin, by its absolute path (`pwd` prints the start of it); saving asks for your second step
 when your account has one. Then turn on People can attach files on the same tab. Setting
 `ATTACHMENTS_STORAGE=local` and `ATTACHMENTS_DIR` in `.env` instead chooses the folder for the
-whole server and locks the Storage card. The S3 and SFTP servers that `pnpm services:up` starts
+whole server and locks the storage part of the Attachments card. The S3 and SFTP servers that `pnpm services:up` starts
 work too: `.env.example` has the values to try them with.
 
 To see files without uploading any, `pnpm db:seed:attachments` attaches sample files to the

@@ -1,5 +1,5 @@
 /**
- * @file Integration tests for the attachment cards of Settings: choosing
+ * @file Integration tests for the Attachments card of Settings: choosing
  * where files are kept (tried first, secrets encrypted, kept only for their
  * place, refused while the environment chooses, with a confirmation, a limit
  * and an audit event), the largest file, and the storage files go to.

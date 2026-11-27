@@ -1,11 +1,11 @@
 /**
  * @file The Integrations tab of Settings, served at
  * `/admin/settings/integrations`: what Adiutor works with outside itself.
- * First the mail server emails go out through (`../email/`), then where
- * attached files are kept, whether people can attach them and the largest
- * one (`../attachments/`), then the webhooks (`../webhooks/`, whose pages
- * keep their own address, with this tab current there). Staff Admins only
- * (`staff:manage`). The heading and tabs come from the Settings layout;
+ * First the mail server emails go out through (`../email/`), then the
+ * Attachments card: whether people can attach files, the largest one and
+ * where they're kept (`../attachments/`), then the webhooks (`../webhooks/`,
+ * whose pages keep their own address, with this tab current there). Staff
+ * Admins only (`staff:manage`). The heading and tabs come from the Settings layout;
  * decision 0055 says which settings go on this tab.
  */
 import { Suspense } from 'react';
@@ -30,9 +30,9 @@ export const generateMetadata = globalPermissionMetadata(
 );
 
 /**
- * The Integrations tab of Settings: the mail server, attachment and webhook
+ * The Integrations tab of Settings: the mail server, Attachments and webhook
  * cards, which load side by side. The mail server and webhook cards show
- * together; the attachment cards have a boundary of their own, since
+ * together; the Attachments card has a boundary of its own, since
  * checking an SFTP storage opens a connection to another server, which the
  * other cards shouldn't wait for. Each checks the permission itself.
  *

@@ -618,9 +618,11 @@
         }
       },
       "attachments": {
+        "title": "Archivos adjuntos",
+        "description": "Los archivos que se adjuntan a las solicitudes, las respuestas y las notas internas.",
         "storage": {
           "title": "Dónde se guardan los archivos",
-          "description": "Los archivos que se adjuntan a las solicitudes se guardan aquí. Cada uno se sirve desde este servidor, a quien pueda leerlo.",
+          "description": "Los archivos adjuntos se guardan aquí, y cada uno se sirve desde este servidor a quien pueda leerlo.",
           "none": "Aún no se ha elegido un almacenamiento, así que nadie puede adjuntar archivos.",
           "driver": "Almacenamiento",
           "choose": "Elige un almacenamiento",
@@ -682,9 +684,9 @@
         },
         "attaching": {
           "title": "Adjuntar archivos",
-          "description": "Si las personas pueden adjuntar archivos a las solicitudes, las respuestas y las notas internas. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
+          "description": "Si las personas pueden adjuntar archivos. Mientras está desactivado, los archivos ya adjuntos se pueden seguir descargando.",
           "label": "Las personas pueden adjuntar archivos",
-          "storageFirst": "Primero elige dónde se guardan los archivos.",
+          "storageFirst": "Primero elige abajo dónde se guardan los archivos.",
           "save": "Guardar",
           "savedOn": "Ahora las personas pueden adjuntar archivos.",
           "savedOff": "Adjuntar archivos está desactivado."

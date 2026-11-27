@@ -91,7 +91,7 @@ const nextConfig: NextConfig = {
       { source: '/admin/settings/email', destination: '/admin/settings/integrations#mail-server' },
       {
         source: '/admin/settings/attachments',
-        destination: '/admin/settings/integrations#storage',
+        destination: '/admin/settings/integrations#attachments',
       },
       // Only the list: a webhook's page keeps its address.
       { source: '/admin/settings/webhooks', destination: '/admin/settings/integrations#webhooks' },

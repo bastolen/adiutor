@@ -618,9 +618,11 @@
         }
       },
       "attachments": {
+        "title": "Attachments",
+        "description": "The files people attach to requests, replies and internal notes.",
         "storage": {
           "title": "Where files are kept",
-          "description": "Files people attach to requests are kept here. Each one is served from this server, to whoever may read it.",
+          "description": "Attached files are kept here, and each one is served from this server to whoever may read it.",
           "none": "No storage is chosen yet, so nobody can attach files.",
           "driver": "Storage",
           "choose": "Choose a storage",
@@ -682,9 +684,9 @@
         },
         "attaching": {
           "title": "Attaching files",
-          "description": "Whether people can attach files to requests, replies and internal notes. While it’s off, files already attached can still be downloaded.",
+          "description": "Whether people can attach files. While it’s off, files already attached can still be downloaded.",
           "label": "People can attach files",
-          "storageFirst": "Choose where files are kept first.",
+          "storageFirst": "First choose where files are kept, below.",
           "save": "Save",
           "savedOn": "People can attach files now.",
           "savedOff": "Attaching files is turned off."

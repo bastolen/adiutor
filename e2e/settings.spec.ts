@@ -381,7 +381,7 @@ test('the addresses of tabs merged into others lead to their first cards', async
   await inOrder(
     [
       ['email', 'mail-server', 'Mail server'],
-      ['attachments', 'storage', 'Where files are kept'],
+      ['attachments', 'attachments', 'Attachments'],
       ['webhooks', 'webhooks', 'Webhooks'],
     ] as const,
     async ([old, card, region]) => {
@@ -475,14 +475,16 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
     await signIn(page, PLATFORM_ADMIN);
     await page.goto('/admin/settings/integrations');
     // The mail server's card shares the tab: the storage's own controls are in its card.
-    const card = page.getByRole('region', { name: 'Where files are kept' });
+    const card = page.getByRole('group', { name: 'Where files are kept' });
     await expect(
       page.getByText('No storage is chosen yet, so nobody can attach files.'),
     ).toBeVisible();
     // Attaching can only be turned on once there's a storage.
     const attaching = page.getByRole('checkbox', { name: 'People can attach files' });
     await expect(attaching).toBeDisabled();
-    await expect(attaching).toHaveAccessibleDescription('Choose where files are kept first.');
+    await expect(attaching).toHaveAccessibleDescription(
+      'First choose where files are kept, below.',
+    );
 
     await page.getByRole('combobox', { name: 'Storage' }).click();
     await page.getByRole('option', { name: /A folder on this server/ }).click();
@@ -506,7 +508,7 @@ test('an Admin chooses a folder for attached files, which is tried first, turns 
 
     await attaching.check();
     await page
-      .getByRole('region', { name: 'Attaching files' })
+      .getByRole('group', { name: 'Attaching files' })
       .getByRole('button', { name: 'Save' })
       .click();
     await expect(toasts(page)).toContainText('People can attach files now.');
@@ -546,20 +548,20 @@ test('an Admin who confirmed long ago chooses a storage, confirms it’s them, a
     await bucket.fill('adiutor-tests');
     await accessKeyId.fill('e2e-key-id');
 
-    // Saving needs a recent confirmation: the step-up page comes back to the storage's card.
-    const card = page.getByRole('region', { name: 'Where files are kept' });
+    // Saving needs a recent confirmation: the step-up page comes back to the Attachments card.
+    const card = page.getByRole('group', { name: 'Where files are kept' });
     const save = card.getByRole('button', { name: 'Test and save storage' });
     await expect(save).toHaveCount(0);
     const confirm = card.getByRole('link', { name: /^Confirm it.s you$/ });
     await expect(confirm).toHaveAttribute(
       'href',
-      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fintegrations%23storage&for=change',
+      '/auth/verify?callbackURL=%2Fadmin%2Fsettings%2Fintegrations%23attachments&for=change',
     );
     await confirm.click();
     await confirmWithAuthenticator(page, PLATFORM_ADMIN.totpSecret);
 
     // Back with the bucket chosen and everything typed, ready to save.
-    await expect(page).toHaveURL('/admin/settings/integrations#storage', { timeout: 15_000 });
+    await expect(page).toHaveURL('/admin/settings/integrations#attachments', { timeout: 15_000 });
     await expect(save).toBeEnabled();
     await expect(storage).toHaveText(/An S3-compatible bucket/);
     await expect(endpoint).toHaveValue('https://files.adiutor.test');
@@ -578,7 +580,7 @@ test('an Admin sets up the mail server, which is tried with a test email first',
     await restoreSmtpSetting(null);
     await signIn(page, PLATFORM_ADMIN);
     await page.goto('/admin/settings/integrations');
-    // The storage's card shares the tab: the mail server's own controls are in its card.
+    // The Attachments card shares the tab: the mail server's own controls are in its card.
     const card = page.getByRole('region', { name: 'Mail server' });
     // The tests' server runs in production, where a missing mail server means no sign-in links.
     await expect(

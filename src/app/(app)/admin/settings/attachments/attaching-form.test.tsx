@@ -70,7 +70,7 @@ describe('AttachingForm', () => {
 
     const box = screen.getByRole('checkbox', { name: 'People can attach files' });
     expect(box).toBeDisabled();
-    expect(box).toHaveAccessibleDescription('Choose where files are kept first.');
+    expect(box).toHaveAccessibleDescription('First choose where files are kept, below.');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 

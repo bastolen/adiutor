@@ -20,14 +20,15 @@ How the tabs look is in [Companies, users and roles](../companies-and-roles.md#s
   and the brand colours: the short forms first, the tall cards with previews after.
 - **Staff** and **Requests** stay as they were.
 - **Integrations** (`/admin/settings/integrations`): what Adiutor works with outside itself. The
-  mail server first, since nobody gets a sign-in link or an invitation without it; then where
-  attached files are kept, with whether people can attach them and the largest file (both need a
-  storage first, so they stay with it); then the webhooks.
+  mail server first, since nobody gets a sign-in link or an invitation without it; then one
+  Attachments card, in three parts with a button each: whether people can attach files, the
+  largest file and where files are kept (the first two need a storage, so they stay with it; saving
+  a storage tests it and asks for a recent confirmation, which the others don't); then the webhooks.
 - **In that order:** the tabs used week to week first, the services set once last.
-- **A new setting is a card on the tab of what it's for.** A new tab only for a group that fits
-  none of these.
+- **A new setting is a card on the tab of what it's for,** or a part (`CardSection`) of the card
+  it belongs with. A new tab only for a group that fits none of these.
 - **Old addresses still land:** `redirects` in `next.config.ts` send the four old tabs to the card
-  that took their first place (`#logo`, `#mail-server`, `#storage`, `#webhooks`). A webhook's page
+  that took their first place (`#logo`, `#mail-server`, `#attachments`, `#webhooks`). A webhook's page
   keeps `/admin/settings/webhooks/[webhookId]`, with Integrations current there (`SegmentTabNav`'s
   `alsoOn`), so emailed links don't change.
 

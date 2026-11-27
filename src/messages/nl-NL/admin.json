@@ -618,9 +618,11 @@
         }
       },
       "attachments": {
+        "title": "Bijlagen",
+        "description": "De bestanden die mensen toevoegen aan verzoeken, reacties en interne notities.",
         "storage": {
           "title": "Waar bestanden worden bewaard",
-          "description": "Bestanden die mensen aan verzoeken toevoegen, worden hier bewaard. Elk bestand wordt via deze server geleverd, aan wie het mag lezen.",
+          "description": "Toegevoegde bestanden worden hier bewaard, en elk bestand wordt via deze server geleverd aan wie het mag lezen.",
           "none": "Er is nog geen opslag gekozen, dus niemand kan bestanden toevoegen.",
           "driver": "Opslag",
           "choose": "Kies een opslag",
@@ -682,9 +684,9 @@
         },
         "attaching": {
           "title": "Bestanden toevoegen",
-          "description": "Of mensen bestanden kunnen toevoegen aan verzoeken, reacties en interne notities. Zolang het uit staat, blijven bestanden die al zijn toegevoegd te downloaden.",
+          "description": "Of mensen bestanden kunnen toevoegen. Zolang het uit staat, blijven bestanden die al zijn toegevoegd te downloaden.",
           "label": "Mensen kunnen bestanden toevoegen",
-          "storageFirst": "Kies eerst waar bestanden worden bewaard.",
+          "storageFirst": "Kies eerst hieronder waar bestanden worden bewaard.",
           "save": "Opslaan",
           "savedOn": "Mensen kunnen nu bestanden toevoegen.",
           "savedOff": "Bestanden toevoegen staat uit."

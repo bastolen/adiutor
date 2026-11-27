@@ -154,10 +154,11 @@ Admins and Managers who aren't members can still add themselves with any role, a
     First the mail server emails go out through and their sender (`#mail-server`), tried with a
     test email to the staff Admin before it's saved; only shown when the server's environment
     names it (`SMTP_URL`, `EMAIL_FROM`; see [Sending email](deploying.md#sending-email)). A change
-    is in the audit log, and every staff Admin is emailed about it. Then where attached files are
-    kept (`#storage`), tried before it's saved, whether people can attach files (only once
-    there's a storage), and the largest file anyone may attach; each only shown when the server's
-    environment chooses it (see [Attachments](deploying.md#attachments)). Changing the storage is
+    is in the audit log, and every staff Admin is emailed about it. Then the Attachments card
+    (`#attachments`), in three parts with a button each: whether people can attach files (only
+    once there's a storage), the largest file anyone may attach, and where attached files are
+    kept, tried before it's saved; each only shown when the server's environment chooses it (see
+    [Attachments](deploying.md#attachments)). Changing the storage is
     in the audit log. Saving the mail server or the storage needs the staff Admin's second step
     from the last 15 minutes. Last, the webhooks that send what happens to requests to the
     staff's own systems and chat channels (`#webhooks`), each with whether it's on, its format,
