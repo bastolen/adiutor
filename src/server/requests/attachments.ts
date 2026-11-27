@@ -8,7 +8,7 @@
  * (`claimAttachments`). Downloading one goes through the same checks as
  * reading its text (`loadAttachment`). The staff who work on requests remove
  * one (`removeAttachment`): its row stays, as the mark of who removed it, and
- * its file is deleted.
+ * its file is deleted, with its preview.
  */
 import { and, eq, gt, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 
@@ -36,6 +36,7 @@ import {
   attachmentKey,
   attachmentLimitMb,
   type FileStorage,
+  previewKey,
   StorageError,
   type StoredFile,
 } from '../storage';
@@ -267,7 +268,7 @@ export async function uploadAttachment(
     if (uploaded.length === 0) {
       throw new ServiceError('conflict', 'errors.attachments.unavailable', { name });
     }
-    return { id, name, size, contentType: type.contentType, thumbnail: type.thumbnail };
+    return { id, name, size, contentType: type.contentType, thumbnail: type.preview === 'image' };
   } finally {
     const left = (uploadsUnderWay.get(acting) ?? 1) - 1;
     if (left > 0) {
@@ -371,8 +372,9 @@ export async function loadAttachment(
 }
 
 /**
- * Deletes a removed file's bytes, and notes that they're gone. A storage
- * that fails leaves them for the `attachment-files` job, which tries again.
+ * Deletes a removed file's bytes and its preview, and notes that they're
+ * gone. A storage that fails leaves them for the `attachment-files` job,
+ * which tries again.
  *
  * @param ctx - Service context.
  * @param id - The removed file.
@@ -383,7 +385,10 @@ async function deleteRemovedFile(ctx: ServiceContext, id: string): Promise<void>
     if (!storage) {
       return;
     }
-    await storage.delete(attachmentKey(id));
+    await storage.session(async (shared) => {
+      await shared.delete(attachmentKey(id));
+      await shared.delete(previewKey(id));
+    });
     await ctx.db
       .update(requestAttachment)
       .set({ fileDeletedAt: sql`now()` })

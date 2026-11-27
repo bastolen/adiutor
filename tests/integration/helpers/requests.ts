@@ -8,7 +8,7 @@ import type { Database } from '@/db';
 import { request, requestAttachment, requestEntry, requestParticipant } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 import { incrementSetting } from '@/server/settings';
-import { attachmentKey, type FileStorage } from '@/server/storage';
+import { attachmentKey, type FileStorage, previewKey } from '@/server/storage';
 
 /** What a stored request may be given; everything else gets a default. */
 export type RequestValues = Partial<typeof request.$inferInsert>;
@@ -121,6 +121,7 @@ export async function assignmentsOf(db: Database, requestId: string) {
  * @param values.createdAt - When the upload started.
  * @param values.uploadedAt - When it was stored; `null` for an upload that never finished.
  * @param values.signedInAsStaffId - The staff member signed in as the uploader, if any.
+ * @param values.preview - Where its preview stands; `drawn` stores a preview too.
  * @returns Its ID.
  */
 export async function storeAttachment(
@@ -136,6 +137,7 @@ export async function storeAttachment(
     createdAt?: Date;
     uploadedAt?: Date | null;
     signedInAsStaffId?: string;
+    preview?: 'drawn' | 'none' | null;
   } = {},
 ): Promise<string> {
   const bytes = values.bytes ?? new TextEncoder().encode('printer offline');
@@ -155,12 +157,16 @@ export async function storeAttachment(
         size: bytes.byteLength,
         createdAt,
         uploadedAt,
+        preview: values.preview ?? null,
       })
       .returning({ id: requestAttachment.id }),
     'the attachment',
   );
   if (uploadedAt !== null) {
     await storage.put(attachmentKey(stored.id), bytes, values.contentType ?? 'text/plain');
+  }
+  if (values.preview === 'drawn') {
+    await storage.put(previewKey(stored.id), new TextEncoder().encode('preview'), 'image/webp');
   }
   return stored.id;
 }

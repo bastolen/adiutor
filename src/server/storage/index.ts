@@ -8,7 +8,7 @@
  */
 export { activeStorage, storageFor } from './active';
 export { STORAGE_FAILURES, StorageError, type StorageFailure } from './errors';
-export { attachmentKey, checkKey } from './keys';
+export { attachmentKey, checkKey, previewKey } from './keys';
 export { openStorage, sealStorage } from './secrets';
 export {
   type AttachmentEnvironment,

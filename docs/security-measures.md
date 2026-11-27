@@ -430,8 +430,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   download under a policy that runs nothing.
 - **Names are cleaned** (`cleanAttachmentName`): no folder, no control or format characters (the
   text-direction marks that make `exe.txt` read as `txt.exe`), at most 255 characters with the
-  extension kept. A file is kept under a key made from its ID only (`attachmentKey`), never its
-  name.
+  extension kept. A file and its preview are kept under keys made from its ID only
+  (`attachmentKey`, `previewKey`), never its name.
 - **Nothing is read before the cheap checks** (`uploadAttachment`): whether attaching is on, whether
   the person may write requests anywhere, the name and type, the announced size and the hourly
   limit come first, and the body is read only after them, so a refused upload costs no memory. A

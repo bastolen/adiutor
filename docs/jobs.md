@@ -45,8 +45,9 @@ A tick runs every recurring job that's due, one after another, then the queued j
 | `attachment-files`           | hourly, at :25  | Purges attached files never sent with a text (after 25 hours, or once the uploader's account is gone) and uploads unfinished after an hour, and deletes removed files the storage kept |
 | `retention`                  | daily, at 03:15 | Deletes audit events after a year, sign-in errors and other recorded errors after 7 days, and job runs, finished queued jobs and deliveries to webhooks after 30 days                  |
 
-`attachment-files` works on one storage connection a run, deletes each file before its row (or,
-for a removed file, before noting that it's deleted: its row stays as the mark of who removed it),
+`attachment-files` works on one storage connection a run, deletes each file and its preview before
+its row (or, for a removed file, before noting that it's deleted: its row stays as the mark of who
+removed it),
 so a run that stops halfway leaves nothing behind that the next one can't find, and does nothing
 while no storage is chosen, or while its folder isn't set up as Adiutor's (see
 [Attachments](deploying.md#attachments)). It also runs from a jobs

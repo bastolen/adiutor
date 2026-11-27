@@ -138,12 +138,18 @@ export {
   writtenMentionKeys,
   writtenMentionMarker,
 } from './mentions';
-export type { AttachmentCheck, AttachmentType } from './attachments';
+export type {
+  AttachmentCheck,
+  AttachmentPreviewKind,
+  AttachmentPreviewState,
+  AttachmentType,
+} from './attachments';
 export {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_CONTENT_TYPES,
   ATTACHMENT_NAME_HEADER,
   ATTACHMENT_NAME_MAX_LENGTH,
+  ATTACHMENT_PREVIEW_STATES,
   ATTACHMENT_TYPES,
   ATTACHMENT_UPLOAD_PATH,
   attachmentTypeOf,

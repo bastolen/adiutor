@@ -1,8 +1,9 @@
 /**
  * @file Integration tests for removing an attachment: only the staff who work
  * on requests may, on any of the request's texts and whatever its status; the
- * row stays as the mark of who removed it, the file is deleted (or left for
- * the cleanup job when the storage fails), and nothing can download it again.
+ * row stays as the mark of who removed it, the file and its preview are
+ * deleted (or left for the cleanup job when the storage fails), and nothing
+ * can download it again.
  */
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,7 +22,7 @@ import type { Actor } from '../actor';
 import type { ServiceContext } from '../context';
 import { ServiceError } from '../errors';
 import { RATE_LIMITS } from '../rate-limit';
-import { attachmentKey, type FileStorage, StorageError } from '../storage';
+import { attachmentKey, type FileStorage, previewKey, StorageError } from '../storage';
 import { loadAttachment, removeAttachment } from './attachments';
 import { getRequest } from './detail';
 import { ctx, db, storage, storeEntry, storeRequest } from './test-helpers';
@@ -52,6 +53,7 @@ beforeEach(async () => {
     uploadedBy: client.id,
     name: 'password.png',
     contentType: 'image/png',
+    preview: 'drawn',
   });
   onNote = await storeAttachment(db, storage, {
     requestId,
@@ -89,7 +91,7 @@ async function refusal(work: () => Promise<unknown>): Promise<ServiceError> {
 }
 
 describe('removeAttachment', () => {
-  it('removes a file on a done request, keeps who removed it, and deletes its file', async () => {
+  it('removes a file on a done request, keeps who removed it, and deletes its file and preview', async () => {
     expect(
       await removeAttachment(ctx, support, { request: number, attachment: onDescription }),
     ).toEqual({ name: 'password.png' });
@@ -99,6 +101,7 @@ describe('removeAttachment', () => {
     expect(row?.removedAt).toBeInstanceOf(Date);
     expect(row?.fileDeletedAt).toBeInstanceOf(Date);
     expect(await storage.get(attachmentKey(onDescription))).toBeNull();
+    expect(await storage.get(previewKey(onDescription))).toBeNull();
     expect(await loadAttachment(ctx, client, onDescription)).toBeNull();
 
     // Its place says who removed it, to the company too.
@@ -204,6 +207,13 @@ describe('removeAttachment', () => {
       delete: async () => {
         throw new StorageError('unreachable');
       },
+      /**
+       * Runs the calls on this failing storage.
+       *
+       * @param work - The calls.
+       * @returns What they return.
+       */
+      session: (work) => work(failing),
     };
     const withFailing: ServiceContext = {
       ...ctx,

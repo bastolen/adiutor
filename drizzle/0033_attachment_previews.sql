@@ -1,0 +1,3 @@
+ALTER TABLE "request_attachment" ADD COLUMN "preview" text;--> statement-breakpoint
+CREATE INDEX "request_attachment_undrawn_idx" ON "request_attachment" USING btree ("created_at") WHERE "request_attachment"."preview" is null and "request_attachment"."request_id" is not null and "request_attachment"."removed_at" is null;--> statement-breakpoint
+ALTER TABLE "request_attachment" ADD CONSTRAINT "request_attachment_preview_valid" CHECK ("request_attachment"."preview" in ('drawn', 'none'));

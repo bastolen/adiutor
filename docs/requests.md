@@ -784,8 +784,8 @@ in [Attachments](deploying.md#attachments).
   on requests, on any of a request's texts, whatever its status, and whether attaching is on or
   not; a Remove button on each file's tile asks first (`RowAction`), and focus then goes to the
   card's heading. The row stays, so the file's place says "Removed by Sam" (with the staff member
-  signed in as the remover, for the readers told about that work), and its file is deleted once
-  the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
+  signed in as the remover, for the readers told about that work), and its file and its preview
+  are deleted once the removal is saved; a storage that fails leaves it for the `attachment-files` job. Nobody is
   told, the request's last activity doesn't move, and a removed file is "not found" from then on.
 
 ## Internal requests

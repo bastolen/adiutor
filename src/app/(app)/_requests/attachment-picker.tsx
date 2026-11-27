@@ -236,7 +236,7 @@ export default function AttachmentPicker({
         started: false,
         progress: 0,
         id: null,
-        preview: type?.thumbnail ? URL.createObjectURL(file) : null,
+        preview: type?.preview === 'image' ? URL.createObjectURL(file) : null,
         stop: new AbortController(),
       };
       started.push(waiting);

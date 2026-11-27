@@ -309,7 +309,7 @@ export function shownTexts(
       id: row.id,
       name: row.name,
       size: row.size,
-      thumbnail: attachmentTypeOf(row.name)?.thumbnail ?? false,
+      thumbnail: attachmentTypeOf(row.name)?.preview === 'image',
       removed,
     });
     texts.attachments.set(row.entryId, ofText);
