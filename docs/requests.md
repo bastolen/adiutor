@@ -776,11 +776,13 @@ in [Attachments](deploying.md#attachments).
 - **Previews** ([decision 0057](decisions/0057-small-previews-of-attached-files.md),
   `src/server/previews/`): a small WebP image, at most 480 pixels, drawn on the server when the
   file is uploaded and kept next to it (`request_attachment.preview`: `drawn`, `none`, or not drawn
-  yet). A PNG, JPEG, GIF (its first frame) or WebP image is drawn as it is, and a PDF's first page
-  on white (shown from its top, where its title is); any other kind keeps its icon, and so does a
-  file that can't be drawn (a PDF that needs a password, say). An upload that finds the server busy drawing two
-  others, or whose preview the storage refuses, still succeeds, without a preview. The tile loads it
-  from `/attachments/<id>/preview`, with the file's checks and caching; never the file itself.
+  yet). A PNG, JPEG, GIF (its first frame) or WebP image is drawn as it is, a PDF's first page on
+  white, and an Office or OpenDocument file from the thumbnail it carries, when it has one (pages
+  show from their top, where the title is); any other kind keeps its icon, and so does a file that
+  can't be drawn (a PDF that needs a password, a Word file without a thumbnail). An upload that
+  finds the server busy drawing two others, or whose preview the storage refuses, still succeeds,
+  without a preview. The tile loads it from `/attachments/<id>/preview`, with the file's checks and
+  caching; never the file itself.
 - **Downloads** come from `/attachments/<id>`, always as a download under the file's name, never
   kept by the browser (see [Files people attach](security-measures.md#files-people-attach)).
   Someone signed out is sent to sign in and back; a file they may not read is "not found".

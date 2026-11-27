@@ -51,6 +51,12 @@ export const PDF_WORKER_IDLE_SECONDS = 60;
 export const PDFS_PER_WORKER = 50;
 
 /**
+ * An Office or OpenDocument file, a zip archive: at most 10,000 entries, and
+ * a thumbnail of at most 2 MB packed and 4 MB unpacked.
+ */
+export const OFFICE_LIMITS = { maxEntries: 10_000, maxPacked: 2_000_000, maxUnpacked: 4_000_000 };
+
+/**
  * How many previews one server draws at once. Decoding a large image takes
  * memory and a processor's time; an upload that finds both slots taken
  * leaves its preview for the previews job.

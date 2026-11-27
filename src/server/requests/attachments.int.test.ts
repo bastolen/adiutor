@@ -15,6 +15,7 @@ import { firstRow } from '@/lib/defined';
 import { UPLOADS_AT_ONCE } from '@/lib/requests';
 
 import { simplePdf } from '../../../tests/files/pdfs';
+import { zipOf } from '../../../tests/files/zips';
 import {
   createCompany,
   createStaffSettings,
@@ -178,6 +179,23 @@ describe('uploadAttachment', () => {
     const stored = await storage.get(previewKey(uploaded.id));
     const preview = new Uint8Array(await new Response(stored?.body).arrayBuffer());
     expect(await sharp(preview).metadata()).toMatchObject({ format: 'webp', height: 480 });
+  });
+
+  it('draws an OpenDocument file’s preview from the thumbnail it carries', async () => {
+    const thumbnail = new Uint8Array(
+      await sharp({ create: { width: 181, height: 256, channels: 3, background: '#f4f4f4' } })
+        .png()
+        .toBuffer(),
+    );
+    const odt = zipOf([
+      { name: 'mimetype', data: 'application/vnd.oasis.opendocument.text' },
+      { name: 'Thumbnails/thumbnail.png', data: thumbnail },
+    ]);
+
+    expect((await upload(ctx, client, 'plan.odt', odt)).preview).toBe(true);
+    // One without a thumbnail keeps its icon.
+    const bare = zipOf([{ name: 'mimetype', data: 'application/vnd.oasis.opendocument.text' }]);
+    expect((await upload(ctx, client, 'bare.odt', bare)).preview).toBe(false);
   });
 
   it('draws no preview for a kind of file that keeps its icon', async () => {

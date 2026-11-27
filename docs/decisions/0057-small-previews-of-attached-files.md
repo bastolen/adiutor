@@ -25,6 +25,9 @@ and delete.
   wrapper of BSD-licensed PDFium, without JavaScript or XFA), in a worker thread, with the module's
   memory capped at 256 MiB before it's compiled and a 5-second limit, after which the worker is
   stopped; one PDF at a time per server.
+- **An Office or OpenDocument file** shows the thumbnail it carries (always in OpenDocument files,
+  usually in PowerPoint's, rarely in Word's or Excel's), read by a small zip reader of our own with
+  hard caps (`zip-entry.ts`) and drawn again like an image; PNG or JPEG only.
 - **Drawn at upload,** from the bytes the upload already holds, at most two at a time per server. A
   drawing that can't start, or a preview the storage refuses, is left for later; a file that can't
   be drawn is `none`. A preview never fails the upload.
@@ -44,6 +47,8 @@ Details: [Files people attach](../security-measures.md#files-people-attach) and
 - A server uses more memory while it draws, up to two large images at once.
 - A PDF that needs a password, is broken, or is past a limit keeps its icon. A stuck PDF costs a
   worker thread for 5 seconds, then a new one.
+- An Office file's thumbnail is its own claim of what it looks like, made by the program that saved
+  it, not a drawing of its content; most Word and Excel files have none and keep their icon.
 - HEIC keeps its icon: prebuilt sharp has no HEVC decoder, and adding one brings LGPL code and
   patent questions.
 
@@ -56,5 +61,9 @@ Details: [Files people attach](../security-measures.md#files-people-attach) and
 - **An outside image service:** sends the companies' files to a third party.
 - **MuPDF or Ghostscript for PDFs:** both AGPL, which doesn't fit Adiutor's MIT licence. Poppler is
   GPL and a native program the Docker image, a plain server and Vercel would each need installed.
+- **LibreOffice to draw Office files:** a faithful page for every file, but a large native program
+  to install everywhere, seconds per file, and a far larger surface for untrusted files.
+- **A zip library:** more than one entry needs, where a reader of a hundred lines can refuse
+  everything it doesn't need (zip64, encryption, other packings).
 - **PDF.js:** draws in a browser; on a server it needs a canvas library of its own and runs the
   PDF's fonts and images through JavaScript in the server's process.

@@ -46,8 +46,8 @@ solution the company approves. Your staff see every company's requests; each com
   mentions, and internal notes and priorities only the staff see. See
   [Requests](docs/requests.md).
 - **Attachments.** Screenshots, logs, PDFs, Office files and screen recordings go with a request,
-  a reply or a note: by a button, dropped on the form or pasted. Images and PDFs show a small
-  preview drawn on the server, and files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
+  a reply or a note: by a button, dropped on the form or pasted. Images, PDFs and many Office
+  files show a small preview drawn on the server, and files are kept on the server's disk, in an S3-compatible bucket or on an SFTP server, chosen in
   Settings. See [Attachments](docs/requests.md#attachments) and
   [Deploying](docs/deploying.md#attachments).
 - **Internal requests.** Your staff keep their own work next to the companies': an internal

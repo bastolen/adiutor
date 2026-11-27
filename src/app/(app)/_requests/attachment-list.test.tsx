@@ -82,7 +82,7 @@ describe('AttachmentList', () => {
     expect(images[0]).toHaveClass('object-center');
   });
 
-  it('shows a PDF’s page from its top, where its title is', () => {
+  it('shows a PDF’s or an Office file’s page from its top, where its title is', () => {
     const { container } = renderInLocale(
       'en-US',
       <AttachmentList
@@ -94,11 +94,20 @@ describe('AttachmentList', () => {
             preview: true,
             removed: null,
           },
+          {
+            id: '0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3e',
+            name: 'plan.odt',
+            size: 24_000,
+            preview: true,
+            removed: null,
+          },
         ]}
         names={NAMES}
       />,
     );
-    expect(container.querySelector('img')).toHaveClass('object-top');
+    const images = container.querySelectorAll('img');
+    expect(images).toHaveLength(2);
+    images.forEach((image) => expect(image).toHaveClass('object-top'));
   });
 
   it('shows nothing for a text without files', () => {
