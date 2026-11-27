@@ -12,8 +12,8 @@ keyboard support.
 ### Components
 
 - **Components:** build UI from `src/components/ui/` (`Button`, `TextField`, `SelectField`,
-  `Card`, `PageHeader`, `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally
-  dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
+  `Card`, `CardSection` (the parts of a card that holds several settings), `PageHeader`,
+  `AuthHeading`, `AuthDivider`, `Table`, `Badge`, `Alert` (optionally dismissible), `Banner` (a notice with an icon, title and actions, e.g. on the dashboard),
   `ResultAlert`, `ConfirmDialog`, `DropdownMenu`, `Sheet` (a slide-over panel), `Popover` (a small
   panel to read that opens from a button, such as the names behind a row of avatars), `EmptyState`,
   `IconRow`, `IconTile` (a decorative icon on a tinted square), `RowLink` (the name in a table row
@@ -172,10 +172,15 @@ keyboard support.
 - **Cards** have 24px padding on every side. Settings with actions use full-width rows (what it does
   on the left, the button on the right). Destructive settings that can't be undone, like deleting or
   deactivating an account, get their own `Card` with `tone="danger"`.
+- **A card that holds several settings,** each with a form and a button of its own, splits into
+  parts: `CardSection`s in `CardSections`, inside a `flush` card. Each part has a heading a level
+  below the card's, names its group with it (so a screen reader says which part a "Save" is in)
+  and keeps the card's 24px padding, like Settings' Attachments card.
 - **Ids stay unique across pages kept alive:** components that make ids with `useId` (`Card`,
-  `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client components. In a
-  server component `useId` starts again in every request, so a page kept alive and the tab
-  loaded next would share ids, and a label or a card's name would point at the wrong element.
+  `CardSection`, `TextField`, `TextAreaField`, `CheckboxField`, `RadioField`) are client
+  components. In a server component `useId` starts again in every request, so a page kept alive
+  and the tab loaded next would share ids, and a label or a card's name would point at the wrong
+  element.
   A new component that calls `useId` gets `'use client'` too.
 - **Messages don't outlive the page:** with Cache Components, Next.js keeps the last few pages alive
   (hidden with React's `<Activity>`) instead of unmounting them, so their state survives navigation.
