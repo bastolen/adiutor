@@ -135,9 +135,10 @@ see and create your Admin account. After that, sign in at `/auth`. Every email t
 up in Mailpit at <http://localhost:8025>.
 
 To try every role, `pnpm db:seed --yes` replaces the local data with test companies and accounts
-(`scripts/seed-dev.ts` lists them); add `--admin-mail you@adiutor.dev` to also get a staff Admin
-you can sign in to with your own GitHub or Google account. [Local development](docs/development.md)
-has more on the first run, the test accounts, starting over and every script.
+(`scripts/seed-dev.ts` lists them) and sample requests, some with files attached; add
+`--admin-mail you@adiutor.dev` to also get a staff Admin you can sign in to with your own GitHub or
+Google account. [Local development](docs/development.md) has more on the first run, the test
+accounts, starting over and every script.
 
 ### Running the tests
 

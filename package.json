@@ -36,6 +36,7 @@
     "auth:schema": "node --env-file-if-exists=.env --import tsx scripts/generate-auth-schema.ts",
     "setup:platform": "node --env-file-if-exists=.env --import tsx scripts/setup-platform.ts",
     "db:seed": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts",
+    "db:seed:attachments": "node --env-file-if-exists=.env --import tsx scripts/seed-attachments.ts",
     "jobs:run": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts run",
     "jobs:list": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts list",
     "jobs:retry": "node --env-file-if-exists=.env --import tsx scripts/jobs.ts retry",
