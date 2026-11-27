@@ -19,7 +19,7 @@ import { fileActionRing, FileName, FilePicture } from './file-parts';
 interface FileRowProps {
   /** The file's name, shown in full (wrapped anywhere). */
   name: string;
-  /** The line under the name, e.g. its size and where it was sent, which may hold a link. */
+  /** What's under the name, e.g. its size and where it was sent, which may hold a link. */
   detail: ReactNode;
   /** The icon for its kind, rendered (e.g. `<FileText aria-hidden="true" />`). */
   icon: ReactNode;
@@ -96,6 +96,8 @@ export default function FileRow({
           openRef={openRef}
           href={href}
           linkLabel={linkLabel}
+          // A target of its own, 24px tall, next to the links in the line under it.
+          className="min-h-6"
         />
         {/* A link or button in it stays a target of its own, above the row's. */}
         <span className="text-xs text-muted-foreground [&_:is(a,button)]:relative [&_:is(a,button)]:z-10">

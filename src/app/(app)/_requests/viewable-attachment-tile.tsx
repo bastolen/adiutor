@@ -15,6 +15,24 @@ import FileTile from '@/components/ui/file-tile';
 import { useFileOpener } from './attachment-viewer';
 
 /**
+ * A file's own Download button, beside the button that opens it in the
+ * viewer: on its tile's corner, and at its row's end in the Files card.
+ *
+ * @param props - Button props.
+ * @param props.id - The file's ID.
+ * @param props.label - Its name for screen readers, e.g. "Download error.png, 240 kB".
+ */
+export function DownloadButton({ id, label }: { id: string; label: string }) {
+  return (
+    <Button asChild variant="secondary" size="sm" className="px-1.5">
+      <a href={`/attachments/${id}`} download aria-label={label}>
+        <Download aria-hidden="true" />
+      </a>
+    </Button>
+  );
+}
+
+/**
  * A file's tile, which opens it in the viewer.
  *
  * @param props - Tile props.
@@ -69,13 +87,7 @@ export default function ViewableAttachmentTile({
       linkLabel={downloadLabel}
       actions={
         <>
-          {opener && (
-            <Button asChild variant="secondary" size="sm" className="px-1.5">
-              <a href={href} download aria-label={downloadLabel}>
-                <Download aria-hidden="true" />
-              </a>
-            </Button>
-          )}
+          {opener && <DownloadButton id={id} label={downloadLabel} />}
           {actions}
         </>
       }

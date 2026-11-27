@@ -781,6 +781,17 @@ in [Attachments](deploying.md#attachments).
   icon for its kind, with its name and size. The tile opens the file in the viewer ("Open
   error.png, 240 kB" to screen readers), and its corner has a Download button ("Download
   error.png, 240 kB"), beside Remove for the staff who may remove files.
+- **The Files card** (`RequestFiles` in `src/app/(app)/requests/[number]/`, under the Details), so
+  a request's files are easy to find: every file on the request the reader may open
+  (`getRequest`'s `files`), "Files (7)", as a row each (`ViewableAttachmentRow`, a `FileRow`):
+  its preview or icon, its name, its size and where it was sent ("Description", "Your reply, Nov
+  3, 2026", "Reply by Pat, Nov 3, 2026", "Internal note by Sam, Nov 4, 2026" for the staff). That
+  link goes to the text (`TextSourceLink`): on the page, it brings it into view and focuses it;
+  further back than the page shows or in a group the reader hides, it opens the page at it
+  (`?entry=`) and focuses it then. The row opens the file in the viewer, with a Download button at
+  its end, and nothing removes a file from here. It shows five files, then "Show all 7 files"
+  (`ShowMoreList`), which expands it in place with focus on the sixth. Removed files aren't
+  listed, and a request without files the reader may open has no card.
 - **The viewer** ([decision 0058](decisions/0058-files-open-in-a-viewer.md), `AttachmentViewer`
   around the page, built on `FileViewer` and `Modal`): the file's name, where it is among the
   request's files ("3 of 7"), the file itself, its size and Download. Previous and Next, and the ←
@@ -1026,7 +1037,8 @@ says so with a "Show everything" button.
   it's assigned to, who is subscribed, type, priority (staff),
   company (or "Internal"), who raised it (and who raised it for them) and when, the staff's first response and the
   last activity, with the
-  controls. The bar is on
+  controls, and under it the Files card (every file on the request, see
+  [Attachments](#attachments)). The bar is on
   the right on wide screens, and between the description and the conversation on narrower ones.
   On a screen wider than 1280px the page grows past the width other pages have, up to 1200px of
   content (`WidePage`), so the conversation and the reply's editor get the room.

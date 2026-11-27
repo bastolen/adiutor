@@ -336,6 +336,14 @@
         "textFailed": "The text couldn’t be loaded. Download the file to read it.",
         "videoFailed": "This video can’t play in your browser. Download it to watch it.",
         "shown": "{name}: {position, number} of {count, number}"
+      },
+      "overview": {
+        "title": "Files ({count, number})",
+        "listLabel": "Files on this request",
+        "showAll": "{count, plural, one {Show the # file} other {Show all # files}}",
+        "fromDescription": "Description",
+        "fromReply": "{own, select, yes {Your reply, {date}} other {Reply by {name}, {date}}}",
+        "fromNote": "{own, select, yes {Your internal note, {date}} other {Internal note by {name}, {date}}}"
       }
     }
   }

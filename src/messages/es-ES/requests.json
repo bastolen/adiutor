@@ -336,6 +336,14 @@
         "textFailed": "No se ha podido cargar el texto. Descarga el archivo para leerlo.",
         "videoFailed": "Este vídeo no se puede reproducir en tu navegador. Descárgalo para verlo.",
         "shown": "{name}: {position, number} de {count, number}"
+      },
+      "overview": {
+        "title": "Archivos ({count, number})",
+        "listLabel": "Archivos de esta solicitud",
+        "showAll": "{count, plural, one {Mostrar el # archivo} other {Mostrar los # archivos}}",
+        "fromDescription": "Descripción",
+        "fromReply": "{own, select, yes {Tu respuesta, {date}} other {Respuesta de {name}, {date}}}",
+        "fromNote": "{own, select, yes {Tu nota interna, {date}} other {Nota interna de {name}, {date}}}"
       }
     }
   }

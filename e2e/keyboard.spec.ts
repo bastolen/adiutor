@@ -2045,7 +2045,8 @@ test('the attachment viewer opens, steps and closes with the keyboard alone', as
   await page.goto(`/requests/${number}`);
   await whenHydrated(page);
 
-  const first = page.getByRole('button', { name: /^Open first\.log/ });
+  const description = page.getByRole('region', { name: 'Description' });
+  const first = description.getByRole('button', { name: /^Open first\.log/ });
   await first.focus();
   await page.keyboard.press('Enter');
   const viewer = page.getByRole('dialog', { name: 'first.log' });
@@ -2064,5 +2065,56 @@ test('the attachment viewer opens, steps and closes with the keyboard alone', as
   // Escape closes it, and focus goes to the tile of the file shown last.
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /^Open second\.log/ })).toBeFocused();
+  await expect(description.getByRole('button', { name: /^Open second\.log/ })).toBeFocused();
+});
+
+test('the Files card shows all, opens a file and goes to its text with the keyboard alone', async ({
+  page,
+  context,
+}) => {
+  const number = await storeOwnRequest({ title: 'Files in the card for the keyboard' });
+  for (const n of [1, 2, 3, 4, 5, 6, 7]) {
+    // eslint-disable-next-line no-await-in-loop -- In order, so the card lists them in that order.
+    await storeAttachment(number, {
+      name: `part-${n}.log`,
+      contentType: 'text/plain',
+      bytes: new TextEncoder().encode(`part ${n}`),
+    });
+  }
+  await context.addCookies(adminCookies());
+  await page.goto(`/requests/${number}`);
+  await whenHydrated(page);
+  const card = page.getByRole('region', { name: 'Files (7)' });
+
+  // Show all hands focus to the first file it adds.
+  const showAll = card.getByRole('button', { name: 'Show all 7 files' });
+  await showAll.focus();
+  await page.keyboard.press('Enter');
+  const sixth = card.getByRole('button', { name: /^Open part-6\.log/ });
+  await expect(sixth).toBeFocused();
+
+  // The viewer opens from the row, steps, and gives focus back to the row of the file shown last.
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'part-6.log' })).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('dialog', { name: 'part-7.log' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const seventh = card.getByRole('button', { name: /^Open part-7\.log/ });
+  await expect(seventh).toBeFocused();
+
+  // Tab reaches the link to the text it was sent with, then its Download button.
+  await page.keyboard.press('Tab');
+  const sentWith = card.getByRole('listitem').last().getByRole('link', { name: 'Description' });
+  await expect(sentWith).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('link', { name: /^Download part-7\.log/ })).toBeFocused();
+
+  // The link brings the description into view and focuses its heading.
+  await page.keyboard.press('Shift+Tab');
+  await expect(sentWith).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('region', { name: 'Description' }).getByRole('heading', { name: 'Description' }),
+  ).toBeFocused();
 });

@@ -3,7 +3,9 @@
  * card's heading, or to the main content outside a card, and only when focus
  * fell to `<body>`. The main content is focusable only while it has focus
  * from script (`focusMainContent`). A press that mustn't move focus is
- * stopped (`keepFocus`).
+ * stopped (`keepFocus`). A link on the page finds the shown copy of its
+ * target (`shownElementById`), brings it into view and focuses it, or its
+ * card's heading (`showAndFocus`).
  */
 import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
@@ -12,7 +14,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stubLayout from '../../../tests/ui/layout';
 import nextFrames from '../../../tests/ui/next-frames';
 import Card from './card';
-import restoreFocusIfLost, { focusMainContent, keepFocus } from './focus-fallback';
+import restoreFocusIfLost, {
+  focusMainContent,
+  keepFocus,
+  showAndFocus,
+  shownElementById,
+} from './focus-fallback';
 
 /** Elements jsdom should treat as hidden, e.g. a page `<Activity>` keeps in the background. */
 const hidden = new Set<Element>();
@@ -200,5 +207,52 @@ describe('keepFocus', () => {
 
     expect(press.defaultPrevented).toBe(true);
     expect(field).toHaveFocus();
+  });
+});
+
+describe('shownElementById and showAndFocus', () => {
+  it('finds the shown copy of an element, not the one a page kept in the background', () => {
+    render(
+      <>
+        <div data-testid="kept">
+          <p id="entry-1">Kept</p>
+        </div>
+        <p id="entry-1">Shown</p>
+      </>,
+    );
+    hidden.add(screen.getByText('Kept'));
+
+    expect(shownElementById('entry-1')).toBe(screen.getByText('Shown'));
+    expect(shownElementById('entry-2')).toBeNull();
+  });
+
+  it('brings a part of the page into view and focuses it, or its card’s heading', () => {
+    const scrolled: Element[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function scrollIntoView(
+      this: Element,
+    ) {
+      scrolled.push(this);
+    });
+    render(
+      <main>
+        <Card id="request-description" title="Description">
+          <p>The printer prints blank pages.</p>
+        </Card>
+        <ol>
+          <li id="entry-1" tabIndex={-1}>
+            Any news?
+          </li>
+        </ol>
+      </main>,
+    );
+
+    const entry = screen.getByText('Any news?');
+    showAndFocus(entry);
+    expect(scrolled).toEqual([entry]);
+    expect(entry).toHaveFocus();
+
+    const card = document.getElementById('request-description');
+    showAndFocus(card as HTMLElement);
+    expect(screen.getByRole('heading', { name: 'Description' })).toHaveFocus();
   });
 });

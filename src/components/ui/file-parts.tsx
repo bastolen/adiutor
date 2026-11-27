@@ -128,6 +128,8 @@ interface FileNameProps {
   linkLabel?: string;
   /** Whether the file is gone, which strikes its name through. */
   gone?: boolean;
+  /** Extra classes for the name, e.g. a row's minimum height for a target of its own. */
+  className?: string;
 }
 
 /**
@@ -142,6 +144,7 @@ interface FileNameProps {
  * @param props.href - Where the name links to.
  * @param props.linkLabel - The link's name for screen readers.
  * @param props.gone - Whether the file is gone.
+ * @param props.className - Extra classes for the name.
  */
 export function FileName({
   name,
@@ -151,8 +154,9 @@ export function FileName({
   href = undefined,
   linkLabel = undefined,
   gone = false,
+  className = '',
 }: FileNameProps) {
-  const nameClass = 'text-sm font-medium wrap-anywhere text-foreground';
+  const nameClass = cn('text-sm font-medium wrap-anywhere text-foreground', className);
   if (onOpen) {
     return (
       <button

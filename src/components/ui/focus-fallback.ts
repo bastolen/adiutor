@@ -23,6 +23,38 @@ export function isShown(element: Element): boolean {
 }
 
 /**
+ * The element with an `id` that's shown: a page `<Activity>` keeps in the
+ * background holds the same ids, and `getElementById` would find its copy
+ * first when it comes first.
+ *
+ * @param id - The `id`, as the page sets it (an anchor such as `entry-<ID>`).
+ * @returns The shown element, if there is one.
+ */
+export function shownElementById(id: string): HTMLElement | null {
+  return (
+    [...document.querySelectorAll<HTMLElement>(`[id="${id.replaceAll('"', '\\"')}"]`)].find(
+      isShown,
+    ) ?? null
+  );
+}
+
+/**
+ * Brings a part of the page into view and gives it focus, for a link to it
+ * on the same page (Next.js scrolls to an anchor, but never moves focus): the
+ * element itself when it takes focus (`tabIndex`), like an entry of a
+ * request's conversation, else its card's heading, for a card's anchor.
+ *
+ * @param target - The part of the page.
+ */
+export function showAndFocus(target: HTMLElement): void {
+  target.scrollIntoView({ block: 'start' });
+  const focusable = target.hasAttribute('tabindex')
+    ? target
+    : target.querySelector<HTMLElement>('[data-card-heading]');
+  focusable?.focus({ preventScroll: true });
+}
+
+/**
  * Checks whether keyboard focus is nowhere in particular: on `<body>`, or on
  * an element that's gone or no longer shown (e.g. the button on the page the
  * user just left, which `<Activity>` keeps hidden).
