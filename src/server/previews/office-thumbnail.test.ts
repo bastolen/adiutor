@@ -91,4 +91,12 @@ describe('thumbnailTarget', () => {
     ).toBeNull();
     expect(thumbnailTarget('<Relationships/>')).toBeNull();
   });
+
+  it('reads relationships that never close a tag in linear time', () => {
+    // 64 KB of tags without a `>`: each try stops at the next `<` instead of the end.
+    const unclosed = '<Relationship'.repeat(5000);
+    const started = performance.now();
+    expect(thumbnailTarget(unclosed)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(250);
+  });
 });

@@ -88,7 +88,32 @@ describe('drawImage', () => {
 
   it('gives nothing for an image past the pixel limit', async () => {
     const png = await plain(100, 100).png().toBuffer();
-    expect(await drawImage({ bytes: png, limits: { maxPixels: 9999, seconds: 5 } })).toBeNull();
+    expect(
+      await drawImage({
+        bytes: png,
+        limits: { maxPixels: 9999, maxProgressivePixels: 9999, seconds: 5 },
+      }),
+    ).toBeNull();
+  });
+
+  it('gives nothing for a progressive JPEG past its own pixel limit, which is decoded whole', async () => {
+    const limits = { maxPixels: 50_000_000, maxProgressivePixels: 5000, seconds: 5 };
+    const progressive = await plain(100, 100).jpeg({ progressive: true }).toBuffer();
+    const baseline = await plain(100, 100).jpeg().toBuffer();
+    expect(await drawImage({ bytes: progressive, limits })).toBeNull();
+    expect(await drawImage({ bytes: baseline, limits })).not.toBeNull();
+    expect(await drawImage({ bytes: progressive })).not.toBeNull();
+  });
+
+  it('gives nothing for a progressive JPEG with more than 100 scans', async () => {
+    const progressive = await plain(100, 100).jpeg({ progressive: true }).toBuffer();
+    // A comment of 101 start-of-scan markers right after the start of the image.
+    const markers = Buffer.from(Array.from({ length: 101 }, () => [0xff, 0xda]).flat());
+    const length = Buffer.alloc(2);
+    length.writeUInt16BE(markers.length + 2);
+    const comment = Buffer.concat([Buffer.from([0xff, 0xfe]), length, markers]);
+    const scanned = Buffer.concat([progressive.subarray(0, 2), comment, progressive.subarray(2)]);
+    expect(await drawImage({ bytes: scanned })).toBeNull();
   });
 
   it('gives nothing for a broken image', async () => {

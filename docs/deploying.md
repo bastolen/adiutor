@@ -456,9 +456,10 @@ moving to another storage is copying everything under `attachments/` and `previe
 ([decision 0057](decisions/0057-small-previews-of-attached-files.md)), with nothing to install: its
 image library (sharp) comes prebuilt for Linux, macOS and Windows, and PDFs are drawn by PDFium
 built to WebAssembly, so both work the same in the Docker image, on a plain server and on Vercel.
-Drawing takes some memory while it runs, at most two previews at a time per server: a large photo
-needs up to a few hundred megabytes for a moment, and PDFium's worker up to 256 MiB, closing after a
-minute without a PDF. Leave the app's container room above what it uses at rest.
+Drawing takes some memory while it runs, at most two previews at a time per server: an image up to
+about 100 MB for a moment (a progressive JPEG, which is decoded whole), and PDFium's worker up to
+256 MiB, closing after a minute without a PDF. Leave the app's container room above what it uses at
+rest.
 
 **The largest file** anyone may attach is chosen on the Integrations tab too (10 MB until it's
 changed), or by `ATTACHMENTS_MAX_FILE_MB`, which wins over it: 1 to 50 megabytes, and at most 4 on

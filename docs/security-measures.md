@@ -464,7 +464,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   libvips) only when its signature says PNG, JPEG, GIF or WebP (`matchesAttachmentKind`), so libvips
   never sees SVG, TIFF or any other format it reads; it's decoded only up to 50 megapixels, its
   first frame only, within 5 seconds, with libvips' cache off, and drawn again as WebP without its
-  metadata (no location). A PDF's first page is drawn by PDFium, built to WebAssembly without
+  metadata (no location). A progressive JPEG, which is decoded whole (about 6 bytes a pixel) and a
+  scan at a time before the time limit can stop it, is drawn only up to 16 megapixels and 100 scans. A PDF's first page is drawn by PDFium, built to WebAssembly without
   JavaScript or XFA, in a worker thread (`draw-pdf.ts`): the module's memory is capped at 256 MiB
   before it's compiled (`lowerMemoryMaximum`), so a PDF that wants more fails inside it; a PDF
   still drawing after 5 seconds stops the worker, and a password-protected one isn't opened. Its

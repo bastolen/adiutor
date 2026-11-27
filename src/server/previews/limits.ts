@@ -17,21 +17,41 @@ export const PREVIEW_CONTENT_TYPE = 'image/webp';
 export interface ImageLimits {
   /** The most pixels it may have (width × height), checked before it's decoded. */
   maxPixels: number;
+  /**
+   * The most pixels a progressive JPEG may have: it's decoded whole, about
+   * 6 bytes a pixel, where any other image is decoded a little at a time.
+   */
+  maxProgressivePixels: number;
   /** The longest drawing it may take, in seconds. */
   seconds: number;
 }
 
 /**
- * An attached image: up to 50 megapixels (any phone's photo), drawn within
- * 5 seconds.
+ * An attached image: up to 50 megapixels (any phone's photo), or 16 for a
+ * progressive JPEG (about 100 MB while it's decoded), drawn within 5 seconds.
  */
-export const IMAGE_LIMITS: ImageLimits = { maxPixels: 50_000_000, seconds: 5 };
+export const IMAGE_LIMITS: ImageLimits = {
+  maxPixels: 50_000_000,
+  maxProgressivePixels: 16_000_000,
+  seconds: 5,
+};
+
+/**
+ * The most scans a progressive JPEG may have: each is decoded in full before
+ * a time limit can stop it, and an encoder writes about ten. The same limit
+ * as jpegtran's.
+ */
+export const MAX_JPEG_SCANS = 100;
 
 /**
  * A frame of a video, drawn by the uploader's browser: up to 4 megapixels,
  * drawn again within 5 seconds.
  */
-export const VIDEO_FRAME_LIMITS: ImageLimits = { maxPixels: 4_000_000, seconds: 5 };
+export const VIDEO_FRAME_LIMITS: ImageLimits = {
+  maxPixels: 4_000_000,
+  maxProgressivePixels: 4_000_000,
+  seconds: 5,
+};
 
 /** What a PDF may cost to draw. */
 export interface PdfLimits {

@@ -4,7 +4,8 @@
  * `PREVIEW_SIZE` and stored as WebP without its metadata (no location). The
  * bytes' signature is checked first, so libvips never sees any other format
  * (SVG, TIFF, HEIC and the rest), and the decoding has a pixel and a time
- * limit (`limits.ts`). A PDF's page, drawn by PDFium, is made a preview
+ * limit (`limits.ts`), with fewer pixels and few scans for a progressive
+ * JPEG, which is decoded whole. A PDF's page, drawn by PDFium, is made a preview
  * here too (`drawBitmap`). sharp is loaded on first use, so loading this
  * file costs nothing.
  */
@@ -12,13 +13,40 @@ import type { Sharp } from 'sharp';
 
 import { type AttachmentCheck, matchesAttachmentKind } from '@/lib/requests';
 
-import { IMAGE_LIMITS, type ImageLimits, PREVIEW_QUALITY, PREVIEW_SIZE } from './limits';
+import {
+  IMAGE_LIMITS,
+  type ImageLimits,
+  MAX_JPEG_SCANS,
+  PREVIEW_QUALITY,
+  PREVIEW_SIZE,
+} from './limits';
 
 /** The kinds of image a preview is drawn from, by their signatures. */
 const IMAGE_CHECKS: readonly AttachmentCheck[] = ['png', 'jpeg', 'gif', 'webp'];
 
 /** The formats libvips may find in them: the same four. */
 const IMAGE_FORMATS: ReadonlySet<string> = new Set(['png', 'jpeg', 'gif', 'webp']);
+
+/** A JPEG's start-of-scan marker, which only ever stands for one: its data escapes every 0xFF. */
+const START_OF_SCAN = new Uint8Array([0xff, 0xda]);
+
+/**
+ * Counts a JPEG's scans, up to one past a limit. A marker inside another
+ * segment's data (a thumbnail's, say) counts too, which only ever refuses a
+ * file earlier.
+ *
+ * @param bytes - The JPEG.
+ * @param limit - The most worth counting.
+ * @returns How many, at most `limit + 1`.
+ */
+function jpegScans(bytes: Uint8Array, limit: number): number {
+  const view = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let scans = 0;
+  for (let at = view.indexOf(START_OF_SCAN); at >= 0 && scans <= limit; scans += 1) {
+    at = view.indexOf(START_OF_SCAN, at + 2);
+  }
+  return scans;
+}
 
 /** sharp, once it's loaded. */
 let loading: Promise<typeof import('sharp')> | null = null;
@@ -85,8 +113,17 @@ export default async function drawImage({
       failOn: 'error',
       pages: 1,
     });
-    const { format } = await image.metadata();
+    const { format, width = 0, height = 0, isProgressive } = await image.metadata();
     if (!IMAGE_FORMATS.has(format)) {
+      return null;
+    }
+    // A progressive JPEG is decoded whole, every scan in turn: fewer pixels, and few scans.
+    if (
+      format === 'jpeg' &&
+      isProgressive &&
+      (width * height > limits.maxProgressivePixels ||
+        jpegScans(bytes, MAX_JPEG_SCANS) > MAX_JPEG_SCANS)
+    ) {
       return null;
     }
     const webp = await image

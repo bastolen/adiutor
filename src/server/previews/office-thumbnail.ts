@@ -48,7 +48,8 @@ function attribute(tag: string, name: string): string | null {
  * @returns The thumbnail's name in the archive, or `null` without one.
  */
 export function thumbnailTarget(relationships: string): string | null {
-  for (const [tag] of relationships.matchAll(/<(?:\w+:)?Relationship\b[^>]*>/g)) {
+  // `[^<>]`: each try stops at the next tag, so text without a `>` takes linear time.
+  for (const [tag] of relationships.matchAll(/<(?:\w+:)?Relationship\b[^<>]*>/g)) {
     const type = attribute(tag, 'Type');
     const target = attribute(tag, 'Target');
     if (type?.endsWith(THUMBNAIL_TYPE) && target && attribute(tag, 'TargetMode') !== 'External') {
