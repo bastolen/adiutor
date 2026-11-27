@@ -86,7 +86,7 @@ export default defineConfig({
       EMAIL_OUTBOX_DIR: OUTBOX_DIR,
       // Allows the email outbox in this production build.
       E2E_TESTS: '1',
-      // Settings choose the mail server and its sender (the Email tab is tested), even if .env names
+      // Settings choose the mail server and its sender (the mail server card is tested), even if .env names
       // them; the outbox takes every email anyway.
       SMTP_URL: '',
       EMAIL_FROM: '',
