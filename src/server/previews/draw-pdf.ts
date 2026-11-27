@@ -1,6 +1,6 @@
 /**
  * @file Draws the preview of a PDF's first page: PDFium runs in a worker
- * thread (`pdf-worker.ts`) with its memory capped (`pdf-wasm.ts`), one PDF
+ * thread (`pdf-worker.mts`) with its memory capped (`pdf-wasm.ts`), one PDF
  * at a time per process. A PDF still drawing at its time limit stops the
  * worker, which starts again for the next one; so does a PDF that broke
  * PDFium, and every `PDFS_PER_WORKER` PDFs. An idle worker closes after
@@ -95,7 +95,7 @@ async function nextAnswer(worker: PdfWorker, seconds: number): Promise<WorkerAns
 async function startWorker(limits: PdfLimits): Promise<PdfWorker> {
   const wasm = await pdfiumModule(limits.memoryPages);
   const worker: PdfWorker = {
-    thread: new Worker(new URL('./pdf-worker.ts', import.meta.url), { workerData: { wasm } }),
+    thread: new Worker(new URL('./pdf-worker.mts', import.meta.url), { workerData: { wasm } }),
     memoryPages: limits.memoryPages,
     given: 0,
   };

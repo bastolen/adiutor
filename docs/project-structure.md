@@ -63,7 +63,7 @@ The folders of the repository and what belongs in each. Back to the [documentati
     (`attachment-claims.ts`) and taking a video's frame as its preview (`attachment-frames.ts`).
   - `src/server/previews/`: the small previews of attached files (a folder module, see
     [Attachments](requests.md#attachments)): drawing an image's (`draw-image.ts`) or a PDF's first
-    page (`draw-pdf.ts`, PDFium in a worker thread, `pdf-worker.ts`, with its memory capped,
+    page (`draw-pdf.ts`, PDFium in a worker thread, `pdf-worker.mts`, with its memory capped,
     `pdf-wasm.ts`) or the thumbnail an Office file carries (`office-thumbnail.ts`, read with a small
     zip reader, `zip-entry.ts`) by its kind (`draw.ts`), within the limits (`limits.ts`) and a few at
     a time (`limiter.ts`), and keeping it next to its file (`store.ts`).
