@@ -145,7 +145,8 @@
     "timeZoneRegion": "{region, select, Africa {África} America {América} Antarctica {Antártida} Arctic {Ártico} Asia {Asia} Atlantic {Océano Atlántico} Australia {Australia} Europe {Europa} Indian {Océano Índico} Pacific {Océano Pacífico} other {Otras zonas}}",
     "preferences": {
       "button": "Tema e idioma: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}, {language}",
-      "themeOnly": "Tema: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}"
+      "themeOnly": "Tema: {theme, select, light {Claro} dark {Oscuro} other {Sistema}}",
+      "languageOnly": "Idioma: {language}"
     },
     "externalLink": {
       "newTab": "(se abre en una pestaña nueva)"

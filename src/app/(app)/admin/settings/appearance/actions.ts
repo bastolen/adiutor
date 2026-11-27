@@ -1,6 +1,7 @@
 /**
  * @file Server actions for the appearance cards on Settings' General tab:
- * the brand colours, and the logo and browser tab icon (decision 0052).
+ * the brand colours, the logo and browser tab icon (decision 0052), and
+ * light and dark mode (decision 0053).
  */
 'use server';
 
@@ -13,7 +14,12 @@ import field from '@/lib/form-data';
 import runAction from '@/server/action-result';
 import appContext from '@/server/app-context';
 import { getActor } from '@/server/authz';
-import { removeBrandImage, setBrandColours, setBrandImage } from '@/server/branding';
+import {
+  removeBrandImage,
+  setBrandColours,
+  setBrandImage,
+  setForcedTheme,
+} from '@/server/branding';
 import { notFoundError } from '@/server/errors';
 
 /**
@@ -101,5 +107,26 @@ export async function removeBrandImageAction(
     refresh();
     const t = await getTranslations('admin.settings.appearance');
     return { ok: true, message: t(`${kind}.removed` as const) };
+  });
+}
+
+/**
+ * Keeps every page in light or dark mode, or lets each person choose again;
+ * every page shows it from the next render, this one included (`refresh()`).
+ *
+ * @param _previous - The previous result (unused).
+ * @param formData - Field `theme`: `both`, `light` or `dark`.
+ * @returns A confirmation, or why it was refused.
+ */
+export async function saveForcedThemeAction(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await getActor();
+    await setForcedTheme(appContext, actor, field(formData, 'theme'));
+    refresh();
+    const t = await getTranslations('admin.settings.appearance.theme');
+    return { ok: true, message: t('saved') };
   });
 }

@@ -28,6 +28,7 @@ import { requestState } from '../request-state';
 import { forgetSecondStepSkips } from '../second-step-skips';
 import { signedSession } from '../signed-session';
 import {
+  clearCacheAtSignOut,
   clearCookiesAtSignOut,
   clearStaleProviderLinkedCookie,
   clearStaleProviderStepUpCookie,
@@ -64,11 +65,13 @@ import { markSessionVerified } from './session-records';
 async function settleRequest(ctx: AuthHookContext, path: string): Promise<void> {
   // A change to how the user signs in is made now: the next one may go ahead (`auth-guards/`).
   await safely('release sign-in change lock', () => releaseSignInChangeLockOf(ctx));
-  // Signing out clears the browser but for the "Last used" hint, and the next-page notices (the
-  // provider-linked one names an account) never reach the next person on the browser.
+  // Signing out clears the browser but for the "Last used" hint, its cache too (the files it
+  // kept), and the next-page notices (the provider-linked one names an account) never reach the
+  // next person on the browser.
   await safely('clear cookies', async () => {
     if (path === '/sign-out') {
       clearCookiesAtSignOut(ctx);
+      clearCacheAtSignOut(ctx);
       return;
     }
     clearStaleProviderLinkedCookie(ctx);

@@ -2,14 +2,15 @@
  * @file The test context shared by the integration tests of requests,
  * helpers that store requests, people on them and history entries directly,
  * for tests that are about reading them, helpers that read assignees,
- * assignment entries and history back, the five kinds of reader a request
- * can have, and one that deactivates a company while a change is under way.
- * The ones about requests and people are the shared helpers of
- * `tests/integration/helpers`, bound to this context's database.
+ * assignment entries, history and a person's queued news back, the five
+ * kinds of reader a request can have, and one that deactivates a company
+ * while a change is under way. The ones about requests and people are the
+ * shared helpers of `tests/integration/helpers`, bound to this context's
+ * database.
  */
 import { desc, eq } from 'drizzle-orm';
 
-import { company, request, requestEntry, requestType, user } from '@/db/schema';
+import { company, queuedJob, request, requestEntry, requestType, user } from '@/db/schema';
 import { firstRow } from '@/lib/defined';
 
 import {
@@ -25,6 +26,7 @@ import {
   storeParticipants,
   storeRequest as storeRequestIn,
 } from '../../../tests/integration/helpers';
+import type { QueuedRequestNews } from './request-update';
 
 /**
  * The test database context these tests share. Each test file imports this
@@ -186,6 +188,25 @@ export async function assigneesOf(requestId: string): Promise<string[]> {
  */
 export async function assignmentsOf(requestId: string) {
   return storedAssignmentsOf(db, requestId);
+}
+
+/**
+ * The news queued for one person, as the batch hands it over.
+ *
+ * @param userId - The person.
+ * @returns Their news.
+ */
+export async function newsFor(userId: string): Promise<QueuedRequestNews[]> {
+  const jobs = await db
+    .select({ id: queuedJob.id, payload: queuedJob.payload })
+    .from(queuedJob)
+    .where(eq(queuedJob.kind, 'request-update'));
+  return jobs.flatMap(({ id, payload }) => {
+    const news = payload as { userId: string } & Omit<QueuedRequestNews, 'jobId'>;
+    return news.userId === userId
+      ? [{ jobId: id, event: news.event, entryId: news.entryId, byUserId: news.byUserId }]
+      : [];
+  });
 }
 
 /**

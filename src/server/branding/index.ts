@@ -1,9 +1,9 @@
 /**
- * @file Branding on the server (decisions 0049, 0050 and 0052): the brand
+ * @file Branding on the server (decisions 0049, 0050, 0052 and 0053): the brand
  * colours a staff Admin chose, read for every page and email, and saved from
  * the Appearance tab of Settings, the staff's name every text shows, and the
  * logo and browser tab icon a staff Admin uploads there, with the icon made
- * from them. This
+ * from them, and the one mode a staff Admin may keep every page in. This
  * is the module's public API; the code lives in the files next to it, and
  * nothing outside this folder imports them directly.
  *
@@ -25,3 +25,5 @@ export { type BrandImageSettings, default as getBrandImageSettings } from './ima
 export { default as pageBrandCss } from './page-colours';
 export { type PageBrandImages, pageIcons, default as requestBrandImages } from './page-images';
 export { default as requestStaffName } from './page-name';
+export { default as requestForcedTheme } from './page-theme';
+export { getForcedTheme, loadForcedTheme, setForcedTheme } from './theme-settings';

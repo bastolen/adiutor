@@ -13,6 +13,7 @@ import type { SmtpConfig } from '@/lib/smtp';
 import { DEFAULT_MAX_FILE_MB, MAX_FILE_MB, type StorageConfig } from '@/lib/storage';
 import {
   brandColourSchema,
+  forcedThemeSchema,
   localeSchema,
   maxFileMbSchema,
   requestPrefixSchema,
@@ -88,6 +89,11 @@ export const SETTINGS = {
   'brand.accent_dark': defineSetting(brandColourSchema.nullable(), null),
   /** The colour whose hue the greys take; `null` keeps the theme's navy. */
   'brand.tint': defineSetting(brandColourSchema.nullable(), null),
+  /**
+   * The one mode every page shows (decision 0053), set on the Appearance tab
+   * of Settings; `null` offers both, each person choosing their own.
+   */
+  'brand.forced_theme': defineSetting(forcedThemeSchema.nullable(), null),
   /**
    * The highest number a request has: raising a request adds one to it in its
    * transaction (`incrementSetting`), so two requests never share a number and

@@ -316,7 +316,11 @@ language (`cookiesToClearAtSignOut` in `src/lib/sign-in/auth-cookies.ts`, applie
 `afterAuthRequest`; neither says who signed in, and the sign-in page stays in the browser's
 language, see [Languages](i18n.md#how-the-language-is-chosen)): the
 session, "Trust this device" and anything naming someone (such as the provider-linked notice),
-so the next person on that browser starts clean. The sign-in page it goes to loads afresh
+so the next person on that browser starts clean. It also asks the browser to drop its cache
+(`Clear-Site-Data: "cache"`, `clearCacheAtSignOut` in
+`src/server/auth/auth-events/browser-cleanup.ts`), and with it the attached files the browser
+kept; Chrome, Edge and Safari do, Firefox doesn't yet (see
+[Security measures](security-measures.md#files-people-attach)). The sign-in page it goes to loads afresh
 (`loadFresh`), so none of the pages Next kept alive, with their fields, is left for them either; the
 same goes for every other change of who the browser acts as: signing in (see
 [Sign-in methods](#sign-in-methods)) and starting or ending a sign-in as a user (see

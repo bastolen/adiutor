@@ -1,6 +1,7 @@
 # 0044. Attachments: files kept where the operator chooses, behind one interface
 
-- **Status:** Accepted
+- **Status:** Accepted; browsers keep files and ask before each use since
+  [0054](0054-browsers-keep-attachments-and-revalidate.md)
 - **Date:** 2026-11-25
 
 ## Context

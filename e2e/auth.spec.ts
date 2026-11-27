@@ -180,7 +180,7 @@ test('the code step starts over after signing out, with "Trust this device" unti
 /** The cookie Better Auth sets with a passkey challenge (the sign-in page asks for one on load). */
 const PASSKEY_CHALLENGE_COOKIE = 'better-auth.better-auth-passkey';
 
-test('signing out leaves only the "Last used" sign-in method and the language, which the sign-in page marks', async ({
+test('signing out clears the cache and leaves only the "Last used" sign-in method and the language, which the sign-in page marks', async ({
   page,
   context,
 }) => {
@@ -192,7 +192,13 @@ test('signing out leaves only the "Last used" sign-in method and the language, w
     { name: LOCALE_COOKIE, value: 'en-US', url: page.url() },
   ]);
 
+  const signedOut = page.waitForResponse((response) =>
+    response.url().endsWith('/api/auth/sign-out'),
+  );
   await signOut(page);
+
+  // The browser drops what it kept (the attached files it checks with the server before each use).
+  expect(await (await signedOut).headerValue('clear-site-data')).toBe('"cache"');
 
   // The sign-in page it lands on asks for a passkey challenge right away (for passkey autofill),
   // which sets a new short-lived cookie of its own; everything from before is gone.

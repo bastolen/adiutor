@@ -122,6 +122,7 @@
       "accentDark": "Enter the accent for dark mode as six hex digits, e.g. #25dc89.",
       "tint": "Enter the tint as six hex digits, e.g. #0e0e2d."
     },
+    "themeMode": "Choose light and dark mode, light mode only or dark mode only.",
     "storage": {
       "driver": "Choose where files are kept.",
       "folder": "Give the folder's absolute path, e.g. /data/attachments.",

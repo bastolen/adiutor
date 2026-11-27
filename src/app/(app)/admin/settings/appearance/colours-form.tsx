@@ -20,8 +20,11 @@ import {
   derivePalette,
   followedDarkAccent,
   storedBrandColours,
+  THEME_MODES,
   typedHexColour,
 } from '@/lib/branding';
+import cn from '@/lib/cn';
+import type { ForcedTheme } from '@/lib/theme';
 
 import saveBrandColoursAction from './actions';
 import PalettePreview from './palette-preview';
@@ -74,10 +77,23 @@ function typedFrom(saved: BrandColours): TypedColours {
  * a colour already. Once saved colours change (a save, or someone else's),
  * the fields show them as saved (`#` and lower case).
  *
+ * While a staff Admin keeps every page in light mode (decision 0053), the
+ * dark accent's field and preview aren't shown, but its value is still sent
+ * as it is, and "Use Adiutor's colours" leaves it alone, so saving the
+ * colours never clears it for when both modes come back. In dark mode only, both previews but the dark one go, and the
+ * accent's description says it's for the emails and the tab icon.
+ *
  * @param props - Form props.
  * @param props.saved - The saved brand colours.
+ * @param props.forced - The mode every page is kept in, or `null` for both.
  */
-export default function ColoursForm({ saved }: { saved: BrandColours }) {
+export default function ColoursForm({
+  saved,
+  forced = null,
+}: {
+  saved: BrandColours;
+  forced?: ForcedTheme | null;
+}) {
   const t = useTranslations('admin.settings.appearance.colours');
   // Changes are turned off while a staff member is signed in as the user.
   const changesOff = useSignedInAs();
@@ -132,35 +148,54 @@ export default function ColoursForm({ saved }: { saved: BrandColours }) {
     }));
   };
 
+  // What the accent colours, as far as the mode every page is kept in goes.
+  let accentDescription = t('accent.description');
+  if (forced === 'light') {
+    accentDescription = t('accent.descriptionLightOnly');
+  } else if (forced === 'dark') {
+    accentDescription = t('accent.descriptionDarkOnly');
+  }
+
   return (
     <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-6">
       <ChangesFieldset>
         <ResultAlert result={result} />
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className={cn('grid gap-4', forced === 'light' ? 'md:grid-cols-2' : 'md:grid-cols-3')}>
           <ColourField
             label={t('accent.label')}
             pickLabel={t('accent.pick')}
-            description={t('accent.description')}
+            description={accentDescription}
             name="accent"
             value={typed.accent}
             onChange={change('accent')}
             fallback={ADIUTOR_COLOURS.accent}
             disabled={changesOff}
           />
-          <ColourField
-            label={t('accentDark.label')}
-            pickLabel={t('accentDark.pick')}
-            description={t('accentDark.description')}
-            name="accentDark"
-            value={typed.darkFollows ? followed : typed.accentDark}
-            onChange={change('accentDark')}
-            fallback={followed}
-            disabled={changesOff}
-          />
+          {forced === 'light' ? (
+            // Dark mode is off: the dark accent waits as it is, for when both modes come back.
+            <input
+              type="hidden"
+              name="accentDark"
+              value={typed.darkFollows ? followed : typed.accentDark}
+            />
+          ) : (
+            <ColourField
+              label={t('accentDark.label')}
+              pickLabel={t('accentDark.pick')}
+              description={t('accentDark.description')}
+              name="accentDark"
+              value={typed.darkFollows ? followed : typed.accentDark}
+              onChange={change('accentDark')}
+              fallback={followed}
+              disabled={changesOff}
+            />
+          )}
           <ColourField
             label={t('tint.label')}
             pickLabel={t('tint.pick')}
-            description={t('tint.description')}
+            description={
+              forced === 'light' ? t('tint.descriptionLightOnly') : t('tint.description')
+            }
             name="tint"
             value={typed.tint}
             onChange={change('tint')}
@@ -168,7 +203,7 @@ export default function ColoursForm({ saved }: { saved: BrandColours }) {
             disabled={changesOff}
           />
         </div>
-        <PalettePreview brand={brand} />
+        <PalettePreview brand={brand} modes={forced ? [forced] : THEME_MODES} />
         <div className="flex flex-wrap gap-3">
           <Button type="submit" loading={pending} disabled={changesOff}>
             {t('save')}
@@ -177,7 +212,18 @@ export default function ColoursForm({ saved }: { saved: BrandColours }) {
             type="button"
             variant="secondary"
             disabled={changesOff}
-            onClick={() => setTyped(ADIUTOR_TYPED)}
+            onClick={() =>
+              // In light mode only, the dark accent can't be seen, so it isn't reset either.
+              setTyped((current) =>
+                forced === 'light'
+                  ? {
+                      ...ADIUTOR_TYPED,
+                      accentDark: current.accentDark,
+                      darkFollows: current.darkFollows,
+                    }
+                  : ADIUTOR_TYPED,
+              )
+            }
           >
             {t('useAdiutor')}
           </Button>
