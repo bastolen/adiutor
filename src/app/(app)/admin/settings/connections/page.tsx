@@ -31,8 +31,10 @@ export const generateMetadata = globalPermissionMetadata(
 
 /**
  * The Connections tab of Settings: the mail server, attachment and webhook
- * cards, which load side by side and show together. Each checks the
- * permission itself.
+ * cards, which load side by side. The mail server and webhook cards show
+ * together; the attachment cards have a boundary of their own, since
+ * checking an SFTP storage opens a connection to another server, which the
+ * other cards shouldn't wait for. Each checks the permission itself.
  *
  * @param props - Page props.
  * @param props.searchParams - Query parameters: `removed`, after a webhook
@@ -44,7 +46,9 @@ export default function ConnectionsSettingsPage({
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
       <EmailSettingsCards />
-      <AttachmentSettingsCards />
+      <Suspense fallback={<PageSkeleton header={false} />}>
+        <AttachmentSettingsCards />
+      </Suspense>
       <WebhookSettings searchParams={searchParams} />
     </Suspense>
   );
