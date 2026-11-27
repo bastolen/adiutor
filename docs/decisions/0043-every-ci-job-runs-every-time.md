@@ -1,6 +1,8 @@
 # 0043. Every CI job runs every time
 
-- **Status:** Accepted
+- **Status:** Accepted. One rule is superseded by
+  [0056](0056-the-pr-title-check-runs-every-time.md): edits that leave a pull request's title alone
+  check it again too.
 - **Date:** 2026-11-24
 
 ## Context
