@@ -468,7 +468,8 @@ A file attached to a request is uploaded on its own first, then sent with its te
   scan at a time before the time limit can stop it, is drawn only up to 16 megapixels and 100 scans. A PDF's first page is drawn by PDFium, built to WebAssembly without
   JavaScript or XFA, in a worker thread (`draw-pdf.ts`): the module's memory is capped at 256 MiB
   before it's compiled (`lowerMemoryMaximum`), so a PDF that wants more fails inside it; a PDF
-  still drawing after 5 seconds stops the worker, and a password-protected one isn't opened. Its
+  still drawing after 5 seconds stops the worker (drawn large for the viewer first, it's tried once
+  more at 480 pixels, for its preview alone), and a password-protected one isn't opened. Its
   pixels are drawn as WebP like an image. An Office or OpenDocument file's preview is the
   thumbnail it carries, the file's own claim of what it looks like: a zip reader of our own
   (`zip-entry.ts`, on Node's zlib) reads the archive's directory and that one entry only, and

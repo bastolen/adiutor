@@ -1,12 +1,16 @@
 /**
  * @file Tests for drawing a PDF's first page: on white, as a WebP preview
- * fitted inside 480 pixels and a large page inside 1,600 for the viewer; `null` for a PDF that needs a password, a broken one, one
- * that needs more memory than PDFium's cap, and one still drawing at its
- * time limit, whose worker is stopped and started again for the next PDF.
+ * fitted inside 480 pixels and a large page inside 1,600 for the viewer;
+ * `null` for a PDF that needs a password, a broken one, one that needs more
+ * memory than PDFium's cap, and one still drawing at its time limit (tried
+ * again small, for its preview alone), whose worker is stopped and started
+ * again for the next PDF.
  * @vitest-environment node
  */
+import { Worker } from 'node:worker_threads';
+
 import sharp from 'sharp';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { largeContentPdf, passwordPdf, simplePdf, slowPdf } from '../../../tests/files/pdfs';
 import drawPdf from './draw-pdf';
@@ -66,12 +70,28 @@ describe('drawPdf', () => {
   );
 
   it(
+    'draws a PDF too heavy to draw large in time again, small, for its preview alone',
+    { timeout: 20_000 },
+    async () => {
+      const posted = vi.spyOn(Worker.prototype, 'postMessage');
+      try {
+        expect(await drawPdf(slowPdf(), { ...PDF_LIMITS, seconds: 1 })).toBeNull();
+        const sides = posted.mock.calls.map(([message]) => (message as { side: number }).side);
+        expect(sides).toEqual([1600, 480]);
+      } finally {
+        posted.mockRestore();
+      }
+    },
+  );
+
+  it(
     'stops a PDF still drawing at its time limit, and draws the next',
     { timeout: 20_000 },
     async () => {
       const started = Date.now();
       expect(await drawPdf(slowPdf(), { ...PDF_LIMITS, seconds: 1 })).toBeNull();
-      expect(Date.now() - started).toBeLessThan(4000);
+      // Large, then small: two tries of a second each.
+      expect(Date.now() - started).toBeLessThan(6000);
 
       expect(await drawPdf(simplePdf())).not.toBeNull();
     },

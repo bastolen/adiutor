@@ -793,7 +793,8 @@ in [Attachments](deploying.md#attachments).
   white, and an Office or OpenDocument file from the thumbnail it carries, when it has one (pages
   show from their top, where the title is). A PDF's first page is drawn once at 1,600 pixels, and
   kept large too (`pageKey`), served from `/attachments/<id>/page` with the file's checks; a PDF
-  drawn before pages were has only its preview. A video's preview is a frame the uploader's browser
+  drawn before pages were, or whose page is too heavy to draw that large in time (it's drawn again
+  at 480 pixels), has only its preview. A video's preview is a frame the uploader's browser
   drew while it uploaded (`video-frame.ts`), which the picker shows at once and sends before the
   video counts as uploaded (`setVideoFrame`, once per video); its tile has a play mark. Any other
   kind keeps its icon, and so does a file that can't be drawn (a PDF that needs a password, a Word
