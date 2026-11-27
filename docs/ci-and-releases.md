@@ -46,9 +46,11 @@ installing them again with `apt-get` would fail whenever Ubuntu's package server
 **PR titles** (`.github/workflows/pr-title.yml`): a squash merge lands on `main` with the pull
 request's title, and Release Please reads it, but the commit-msg hook never sees it. So every pull
 request's title is checked with the same commitlint rules (`commitlint.config.mjs`) when it's
-opened, when its title is edited and on every new commit. An edit that leaves the title alone (a
-new description, which Renovate writes on every update) skips the check: the job doesn't start a
-runner, and GitHub counts a skipped job as passed. Renovate's and Release Please's titles
+opened or reopened, on every edit and on every new commit. An edit that leaves the title alone (a
+new description, which Renovate writes on every update) checks it again too: GitHub counts a
+skipped job as passed, so skipping it would let a description edit hide a title that failed
+([decision 0056](decisions/0056-the-pr-title-check-runs-every-time.md)). A newer check of a pull
+request cancels an older one that's still running. Renovate's and Release Please's titles
 (`chore(deps): …`, `fix(deps): …`, `chore(main): release …`) already pass. Dependabot's
 (`ci(deps): bump …`) are skipped: Dependabot doesn't let us choose them, its group wording ("… in the
 github-actions group across 1 directory") can run past the 100-character limit, and their `ci` type
