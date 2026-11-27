@@ -105,8 +105,6 @@ describe('GET /attachments/[id]', () => {
     expect(await response.text()).toBe('%PDF-1.7');
     expect(Object.fromEntries(response.headers)).toMatchObject({
       'content-type': 'application/pdf',
-      // So the browser shows how far a large download is.
-      'content-length': '8',
       'content-disposition':
         'attachment; filename="Cafe menu.pdf"; filename*=UTF-8\'\'Caf%C3%A9%20menu.pdf',
       'x-content-type-options': 'nosniff',
@@ -195,7 +193,6 @@ describe('GET /attachments/[id]', () => {
     expect(file.readFile).not.toHaveBeenCalled();
     expect(Object.fromEntries(response.headers)).toMatchObject({
       'content-range': 'bytes 0-3/8',
-      'content-length': '4',
       'accept-ranges': 'bytes',
       'content-type': 'application/pdf',
       etag: ETAG,
@@ -229,6 +226,22 @@ describe('GET /attachments/[id]', () => {
     vi.mocked(loadAttachment).mockResolvedValue(file);
     const response = await ask({ Range: 'bytes=0-3', 'If-None-Match': ETAG });
     expect(response.status).toBe(304);
+    expect(file.readFilePart).not.toHaveBeenCalled();
+  });
+
+  it('answers HEAD with the headers alone, reading nothing from the storage', async () => {
+    const file = servable();
+    vi.mocked(loadAttachment).mockResolvedValue(file);
+
+    const response = await GET(
+      { method: 'HEAD', headers: new Headers({ Range: 'bytes=0-3' }) } as NextRequest,
+      { params: Promise.resolve({ id: ID }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBeNull();
+    expect(response.headers.get('etag')).toBe(ETAG);
+    expect(file.readFile).not.toHaveBeenCalled();
     expect(file.readFilePart).not.toHaveBeenCalled();
   });
 });

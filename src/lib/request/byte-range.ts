@@ -26,6 +26,13 @@ export interface ByteRange {
   end: number;
 }
 
+/**
+ * The most bytes one answer holds for a range: a player asks again for the
+ * next part, so no read of a file runs on for long, and a video nobody
+ * watches on costs little.
+ */
+export const MAX_PART_BYTES = 8 * 1024 * 1024;
+
 /** One range of bytes: a first byte and maybe a last, or the last few bytes. */
 const ONE_RANGE = /^bytes=(?:(\d{1,15})-(\d{1,15})?|-(\d{1,15}))$/;
 
@@ -49,6 +56,22 @@ export function parseRange(header: string | null): RangeRequest | null {
   const start = Number(first);
   const end = last === undefined ? null : Number(last);
   return end !== null && end < start ? null : { start, end };
+}
+
+/**
+ * A range kept to at most {@link MAX_PART_BYTES}: from where it starts, or
+ * the last few bytes it asks for. The answer says which part it holds
+ * (`Content-Range`), as HTTP allows.
+ *
+ * @param range - The range asked for.
+ * @returns The range, at most that long.
+ */
+export function capRange(range: RangeRequest): RangeRequest {
+  if ('suffix' in range) {
+    return { suffix: Math.min(range.suffix, MAX_PART_BYTES) };
+  }
+  const last = range.start + MAX_PART_BYTES - 1;
+  return { start: range.start, end: range.end === null ? last : Math.min(range.end, last) };
 }
 
 /**

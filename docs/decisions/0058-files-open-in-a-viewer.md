@@ -33,7 +33,10 @@ Details: [Attachments](../requests.md#attachments) and
 ## Consequences
 
 - Opening an image loads the whole file, as the tiles did before decision 0057; the tiles stay
-  small.
+  small. The browser decodes the original image or video itself, as it did for the tiles before
+  previews: a valid file made to hit a flaw in a browser's decoder (as a WebP one did in 2023)
+  reaches the reader's browser, kept up to date by its maker. A copy the server draws large, as for
+  a PDF's page, would avoid that for images, not for videos.
 - A PDF shows only its first page; the rest is a download. A PDF drawn before pages were shows its
   preview instead.
 - A HEIC photo shows only in a browser that decodes it (Safari); elsewhere it's its icon.

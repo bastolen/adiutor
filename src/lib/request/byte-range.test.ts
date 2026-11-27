@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { parseRange, rangeHeader, resolveRange } from './byte-range';
+import { capRange, MAX_PART_BYTES, parseRange, rangeHeader, resolveRange } from './byte-range';
 
 describe('parseRange', () => {
   it('reads one range: to a byte, to the end, or the last few bytes', () => {
@@ -51,5 +51,20 @@ describe('rangeHeader', () => {
     expect(rangeHeader({ start: 0, end: 99 })).toBe('bytes=0-99');
     expect(rangeHeader({ start: 100, end: null })).toBe('bytes=100-');
     expect(rangeHeader({ suffix: 500 })).toBe('bytes=-500');
+  });
+});
+
+describe('capRange', () => {
+  it('keeps a part to 8 MB from where it starts, or of the file’s end', () => {
+    expect(capRange({ start: 100, end: null })).toEqual({
+      start: 100,
+      end: 100 + MAX_PART_BYTES - 1,
+    });
+    expect(capRange({ start: 0, end: 10 })).toEqual({ start: 0, end: 10 });
+    expect(capRange({ start: 0, end: MAX_PART_BYTES * 3 })).toEqual({
+      start: 0,
+      end: MAX_PART_BYTES - 1,
+    });
+    expect(capRange({ suffix: MAX_PART_BYTES * 2 })).toEqual({ suffix: MAX_PART_BYTES });
   });
 });

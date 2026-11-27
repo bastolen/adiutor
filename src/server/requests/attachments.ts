@@ -455,7 +455,12 @@ export async function loadAttachment(
      */
     readFilePart: async (range) => {
       const storage = ctx.storage ? await ctx.storage() : null;
-      return storage ? storage.getPart(attachmentKey(parsed.data), range) : null;
+      const part = storage ? await storage.getPart(attachmentKey(parsed.data), range) : null;
+      if (!part) {
+        // eslint-disable-next-line no-console -- The ID only: it names no one.
+        console.warn('An attachment has no file in the storage:', parsed.data);
+      }
+      return part;
     },
     /**
      * Reads the preview's bytes from the storage.

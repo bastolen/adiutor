@@ -398,9 +398,7 @@ function callsOn(
       }
       const part = resolveRange(range, size);
       if (!part) {
-        if (owned) {
-          connection.end();
-        }
+        // A single call's connection closes as nothing is read (`once`'s `keepOpen`).
         return { unsatisfiable: true as const, total: size };
       }
       const source = Readable.toWeb(

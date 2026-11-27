@@ -12,12 +12,13 @@ import { createHash } from 'node:crypto';
 
 import { AwsV4Signer } from 'aws4fetch';
 
-import { rangeHeader } from '@/lib/request/byte-range';
+import { rangeHeader, resolveRange } from '@/lib/request/byte-range';
 import type { S3StorageConfig } from '@/lib/storage';
 
 import { StorageError, storageErrorOf } from './errors';
 import withIdleLimit from './idle-limit';
 import { assertStorageKey } from './keys';
+import sliceStream from './slice';
 import type { FileStorage } from './types';
 
 /** The time limits, in milliseconds. */
@@ -304,7 +305,7 @@ export default function bucketStorage(
 
     /**
      * Reads a part of a file, as the bucket's server reads the range itself;
-     * a server that sends the whole file instead gives it as the part.
+     * from a server that sends the whole file instead, the part is cut out.
      *
      * @param key - Where.
      * @param range - The part.
@@ -342,24 +343,32 @@ export default function bucketStorage(
       if (!response.ok || !response.body) {
         throw await replyError(response);
       }
-      const contentRange = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(
-        response.headers.get('content-range') ?? '',
-      );
-      const length = Number(response.headers.get('content-length'));
       const body = withIdleLimit(response.body, timeouts.idle);
-      if (response.status === 206 && contentRange) {
-        return {
-          body,
-          start: Number(contentRange[1]),
-          end: Number(contentRange[2]),
-          total: Number(contentRange[3]),
-        };
-      }
-      if (!Number.isSafeInteger(length) || length <= 0) {
+      if (response.status === 206) {
+        // Only a part that's whole numbers, in order and inside the file is taken as one.
+        const [, start = NaN, end = NaN, total = NaN] = (
+          /^bytes (\d{1,15})-(\d{1,15})\/(\d{1,15})$/.exec(
+            response.headers.get('content-range') ?? '',
+          ) ?? []
+        ).map(Number);
+        if (start <= end && end < total) {
+          return { body, start, end, total };
+        }
         await body.cancel();
         throw new StorageError('failed');
       }
-      return { body, start: 0, end: length - 1, total: length };
+      // A server that ignored the range sends the whole file, as a 200: the part is cut from it.
+      const length = Number(response.headers.get('content-length'));
+      if (response.status !== 200 || !Number.isSafeInteger(length) || length <= 0) {
+        await body.cancel();
+        throw new StorageError('failed');
+      }
+      const part = resolveRange(range, length);
+      if (!part) {
+        await body.cancel();
+        return { unsatisfiable: true, total: length };
+      }
+      return { body: sliceStream(body, part.start, part.end), ...part, total: length };
     },
 
     /**
