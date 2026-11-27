@@ -413,6 +413,9 @@ export default function bucketStorage(
      * @returns What they return.
      */
     session: (work) => work(storage),
+
+    /** Nothing: a bucket keeps no connection. */
+    close: () => {},
   };
   return storage;
 }

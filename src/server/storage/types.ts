@@ -93,4 +93,11 @@ export interface FileStorage {
    * @returns What the work returns.
    */
   session<T>(work: (storage: FileStorage) => Promise<T>): Promise<T>;
+  /**
+   * Lets go of what the driver keeps between calls (SFTP's connection), once
+   * the calls and reads still under way are done: for a driver that's
+   * replaced (Settings changed), or one built for a single job (the check
+   * before a storage is saved). Nothing for the others.
+   */
+  close(): void;
 }

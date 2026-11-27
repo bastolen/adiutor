@@ -4,15 +4,18 @@
  * against the fingerprint it was given, and a connection to any other key
  * is refused. Like the local disk, the folder has a marker file: storing,
  * reading and deleting refuse without it, and only setting the storage up
- * writes it (`setUp`). A single
- * call connects, works and disconnects; a file being read keeps its
- * connection until the read ends; a session (a job's run) shares one.
+ * writes it (`setUp`). The driver keeps one connection that its calls share
+ * (`sftp-connection.ts`, decision 0059): a file being read holds it until the
+ * read ends, a session (a job's run) for all of its calls, and once nothing
+ * has used it for a minute it closes. A call that finds the kept connection
+ * ended meanwhile runs once more on a new one. An upload has a connection of
+ * its own, as it may take minutes: one that runs out of time ends only that.
  */
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { posix } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { Client, type SFTPWrapper } from 'ssh2';
+import { Client } from 'ssh2';
 
 import { type RangeRequest, resolveRange } from '@/lib/request/byte-range';
 import type { SftpStorageConfig } from '@/lib/storage';
@@ -21,6 +24,7 @@ import { StorageError } from './errors';
 import withIdleLimit from './idle-limit';
 import { assertStorageKey } from './keys';
 import { MARKER_FILE } from './local';
+import sharedConnection, { type Connection, type Lease } from './sftp-connection';
 import type { FileStorage } from './types';
 
 /** The time limits, in milliseconds. */
@@ -33,10 +37,25 @@ export interface SftpTimeouts {
   put: number;
   /** For each next piece of a file that's being read. */
   idle: number;
+  /** How long the connection stays open once nothing uses it. */
+  keep: number;
 }
 
 /** The time limits a server uses. */
-const TIMEOUTS: SftpTimeouts = { connect: 10_000, call: 15_000, put: 120_000, idle: 30_000 };
+const TIMEOUTS: SftpTimeouts = {
+  connect: 10_000,
+  call: 15_000,
+  put: 120_000,
+  idle: 30_000,
+  keep: 60_000,
+};
+
+/**
+ * How often a kept connection asks the server whether it's there, and how
+ * many unanswered asks end it (about 30 seconds), so a server that went away
+ * is noticed while the connection waits for its next use.
+ */
+const KEEPALIVE = { interval: 15_000, countMax: 1 };
 
 /** SFTP's status codes that matter here (`SSH_FX_*`). */
 const NO_SUCH_FILE = 2;
@@ -125,14 +144,6 @@ function callError(error: unknown): StorageError {
   return new StorageError('failed', { cause: error });
 }
 
-/** An open SFTP connection. */
-interface Connection {
-  /** Its SFTP channel. */
-  sftp: SFTPWrapper;
-  /** Closes it. */
-  end: () => void;
-}
-
 /**
  * Connects to the server and opens SFTP on it, checking its host key.
  *
@@ -140,17 +151,31 @@ interface Connection {
  * @param timeouts - The time limits.
  * @returns The connection.
  */
-function connect(config: SftpStorageConfig, timeouts: SftpTimeouts): Promise<Connection> {
+export function connectSftp(
+  config: SftpStorageConfig,
+  timeouts: SftpTimeouts,
+): Promise<Connection> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     let hostKeyRefused = false;
     let open = false;
+    let closed = false;
+    const closeListeners: (() => void)[] = [];
+    /** Marks it ended, once, and tells whoever keeps it. */
+    const markClosed = () => {
+      if (!closed) {
+        closed = true;
+        closeListeners.splice(0).forEach((listener) => listener());
+      }
+    };
     // Kept for the connection's life: an `error` event without a listener would crash the server.
     client.on('error', (error) => {
       if (!open) {
         reject(connectionError(error, hostKeyRefused));
       }
     });
+    // However it ends (here, by the server, or the network), whoever keeps it hears of it.
+    client.on('close', markClosed);
     client.once('ready', () => {
       // Opening the SFTP channel has a time limit of its own: a server can stall after the handshake.
       let late = false;
@@ -170,11 +195,37 @@ function connect(config: SftpStorageConfig, timeouts: SftpTimeouts): Promise<Con
           return;
         }
         open = true;
+        // The SFTP channel alone can end too: the connection is no use without it.
+        sftp.once('close', () => {
+          markClosed();
+          client.end();
+        });
         resolve({
           sftp,
-          /** Closes the connection. */
+          /** Ends the connection: ended from now on, whenever its socket closes. */
           end: () => {
+            markClosed();
             client.end();
+          },
+          /**
+           * Whether it has ended.
+           *
+           * @returns Whether it has.
+           */
+          get closed() {
+            return closed;
+          },
+          /**
+           * Calls a listener once it has ended.
+           *
+           * @param listener - What to call.
+           */
+          onClose: (listener) => {
+            if (closed) {
+              listener();
+            } else {
+              closeListeners.push(listener);
+            }
           },
         });
       });
@@ -186,6 +237,8 @@ function connect(config: SftpStorageConfig, timeouts: SftpTimeouts): Promise<Con
       password: config.password,
       privateKey: config.privateKey,
       readyTimeout: timeouts.connect,
+      keepaliveInterval: KEEPALIVE.interval,
+      keepaliveCountMax: KEEPALIVE.countMax,
       /**
        * Accepts only the configured host key.
        *
@@ -202,22 +255,23 @@ function connect(config: SftpStorageConfig, timeouts: SftpTimeouts): Promise<Con
 }
 
 /**
- * Runs an SFTP call with a time limit; past it, the connection is closed.
+ * Runs an SFTP call with a time limit; past it, the call fails and its
+ * connection is told (`timedOut`), which stops trusting it.
  *
- * @param connection - The connection.
  * @param ms - The time limit.
+ * @param timedOut - Called when the call runs out of time.
  * @param run - Starts the call, given its callback.
  * @returns What the call gives.
  */
 function call<T>(
-  connection: Connection,
   ms: number,
+  timedOut: () => void,
   run: (done: (error: Error | null | undefined, value?: T) => void) => void,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new StorageError('timed_out'));
-      connection.end();
+      timedOut();
     }, ms);
     run((error, value) => {
       clearTimeout(timer);
@@ -231,16 +285,44 @@ function call<T>(
 }
 
 /**
+ * Whether a call failed because its connection did, not because the server
+ * answered no (a file that isn't there, a folder without the marker): it
+ * timed out, or failed without one of SFTP's status codes (the channel or
+ * the socket went).
+ *
+ * @param error - What the call failed with.
+ * @returns Whether it did.
+ */
+function connectionFailed(error: unknown): boolean {
+  if (!(error instanceof StorageError)) {
+    return false;
+  }
+  if (error.failure === 'timed_out') {
+    return true;
+  }
+  return (
+    error.failure === 'failed' &&
+    typeof (error.cause as { code?: unknown } | undefined)?.code !== 'number'
+  );
+}
+
+/**
  * Whether a path exists on the server.
  *
  * @param connection - The connection.
  * @param path - The path.
  * @param ms - The time limit.
+ * @param timedOut - Called when the look runs out of time.
  * @returns Its size when it's there, else `null`.
  */
-async function sizeOf(connection: Connection, path: string, ms: number): Promise<number | null> {
+async function sizeOf(
+  connection: Connection,
+  path: string,
+  ms: number,
+  timedOut: () => void,
+): Promise<number | null> {
   try {
-    const stats = await call<{ size: number }>(connection, ms, (done) =>
+    const stats = await call<{ size: number }>(ms, timedOut, (done) =>
       connection.sftp.stat(path, done),
     );
     return stats.size;
@@ -258,16 +340,27 @@ async function sizeOf(connection: Connection, path: string, ms: number): Promise
  * @param config - The server's settings.
  * @param timeouts - The time limits.
  * @param connection - The connection.
- * @param owned - Whether each call ends with it closed (a single call), or it's a session's.
+ * @param hooks - What the calls tell their caller.
+ * @param hooks.timedOut - Called when a call on the connection runs out of time.
+ * @param hooks.readEnded - Called once a file that's read stops being read (a single call lets go
+ *   of the connection then); none for a session's calls, which hold it until the session ends.
  * @returns The calls.
  */
 function callsOn(
   config: SftpStorageConfig,
   timeouts: SftpTimeouts,
   connection: Connection,
-  owned: boolean,
+  { timedOut, readEnded }: { timedOut: () => void; readEnded?: () => void },
 ) {
   const marker = posix.join(config.dir, MARKER_FILE);
+
+  /**
+   * Whether a path is there, on this connection.
+   *
+   * @param path - The path.
+   * @returns Its size when it's there, else `null`.
+   */
+  const look = (path: string) => sizeOf(connection, path, timeouts.call, timedOut);
 
   /**
    * A file's path, for a key this module made.
@@ -282,7 +375,7 @@ function callsOn(
 
   /** Refuses to go on in a folder without the marker. */
   const assertMarked = async () => {
-    if ((await sizeOf(connection, marker, timeouts.call)) === null) {
+    if ((await look(marker)) === null) {
       throw new StorageError('not_set_up');
     }
   };
@@ -299,10 +392,10 @@ function callsOn(
       folder = posix.join(folder, part);
       // One after another: each folder needs the one above it.
       // eslint-disable-next-line no-await-in-loop -- each folder needs its parent first
-      if ((await sizeOf(connection, folder, timeouts.call)) === null) {
+      if ((await look(folder)) === null) {
         const made = folder;
         // eslint-disable-next-line no-await-in-loop -- each folder needs its parent first
-        await call(connection, timeouts.call, (done) => connection.sftp.mkdir(made, done));
+        await call(timeouts.call, timedOut, (done) => connection.sftp.mkdir(made, done));
       }
     }
   };
@@ -310,8 +403,8 @@ function callsOn(
   return {
     /** Writes the marker unless it's there. */
     async setUp() {
-      if ((await sizeOf(connection, marker, timeouts.call)) === null) {
-        await call(connection, timeouts.call, (done) =>
+      if ((await look(marker)) === null) {
+        await call(timeouts.call, timedOut, (done) =>
           connection.sftp.writeFile(marker, MARKER_TEXT, done),
         );
       }
@@ -323,7 +416,7 @@ function callsOn(
      * @returns Whether it has.
      */
     async isSetUp() {
-      return (await sizeOf(connection, marker, timeouts.call)) !== null;
+      return (await look(marker)) !== null;
     },
 
     /**
@@ -339,19 +432,19 @@ function callsOn(
       await makeFolders(path);
       const temporary = `${path}.${randomUUID()}.tmp`;
       try {
-        await call(connection, timeouts.put, (done) =>
+        await call(timeouts.put, timedOut, (done) =>
           connection.sftp.writeFile(
             temporary,
             Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
             done,
           ),
         );
-        await call(connection, timeouts.call, (done) =>
+        await call(timeouts.call, timedOut, (done) =>
           connection.sftp.rename(temporary, path, done),
         );
       } catch (error) {
         // Nothing finds a temporary file later: it goes now, if the connection still can.
-        await call(connection, timeouts.call, (done) =>
+        await call(timeouts.call, timedOut, (done) =>
           connection.sftp.unlink(temporary, done),
         ).catch(() => {});
         throw error;
@@ -359,7 +452,7 @@ function callsOn(
     },
 
     /**
-     * Reads a file. A single call's connection stays open until the file's
+     * Reads a file. A single call holds the connection until the file's
      * stream ends or is cancelled.
      *
      * @param key - Where.
@@ -368,7 +461,7 @@ function callsOn(
     async get(key: string) {
       const path = pathOf(key);
       await assertMarked();
-      const size = await sizeOf(connection, path, timeouts.call);
+      const size = await look(path);
       if (size === null) {
         return null;
       }
@@ -376,14 +469,14 @@ function callsOn(
         connection.sftp.createReadStream(path),
       ) as ReadableStream<Uint8Array>;
       return {
-        body: withIdleLimit(source, timeouts.idle, owned ? connection.end : undefined),
+        body: withIdleLimit(source, timeouts.idle, readEnded),
         size,
       };
     },
 
     /**
-     * Reads a part of a file. A single call's connection stays open until
-     * the part's stream ends or is cancelled.
+     * Reads a part of a file. A single call holds the connection until the
+     * part's stream ends or is cancelled.
      *
      * @param key - Where.
      * @param range - The part.
@@ -392,20 +485,20 @@ function callsOn(
     async getPart(key: string, range: RangeRequest) {
       const path = pathOf(key);
       await assertMarked();
-      const size = await sizeOf(connection, path, timeouts.call);
+      const size = await look(path);
       if (size === null) {
         return null;
       }
       const part = resolveRange(range, size);
       if (!part) {
-        // A single call's connection closes as nothing is read (`once`'s `keepOpen`).
+        // Nothing is read, so a single call lets go of the connection at once (`run`'s `holds`).
         return { unsatisfiable: true as const, total: size };
       }
       const source = Readable.toWeb(
         connection.sftp.createReadStream(path, { start: part.start, end: part.end }),
       ) as ReadableStream<Uint8Array>;
       return {
-        body: withIdleLimit(source, timeouts.idle, owned ? connection.end : undefined),
+        body: withIdleLimit(source, timeouts.idle, readEnded),
         ...part,
         total: size,
       };
@@ -420,7 +513,7 @@ function callsOn(
       const path = pathOf(key);
       await assertMarked();
       try {
-        await call(connection, timeouts.call, (done) => connection.sftp.unlink(path, done));
+        await call(timeouts.call, timedOut, (done) => connection.sftp.unlink(path, done));
       } catch (error) {
         if (!(error instanceof StorageError && error.failure === 'not_found')) {
           throw error;
@@ -431,36 +524,95 @@ function callsOn(
 }
 
 /**
- * A storage in a folder on an SFTP server.
+ * A storage in a folder on an SFTP server. Its calls share the connection it
+ * keeps (`sharedConnection`); `close` ends it once its uses are done.
  *
  * @param config - The server's settings.
  * @param timeouts - The time limits; the tests shorten them.
+ * @param connect - Opens a connection; the tests watch it.
  * @returns The storage.
  */
 export default function sftpStorage(
   config: SftpStorageConfig,
   timeouts: SftpTimeouts = TIMEOUTS,
+  connect: typeof connectSftp = connectSftp,
 ): FileStorage {
+  const kept = sharedConnection(() => connect(config, timeouts), timeouts.keep);
+
   /**
-   * Runs one call on a connection of its own.
+   * Runs one call on the kept connection, holding it for as long as the
+   * call's result needs it (a file being read). A call that fails as the
+   * connection does (it ran out of time, or the channel or the socket went:
+   * `connectionFailed`) stops it being kept, so it ends once the reads still
+   * on it are done; when the connection was kept from an earlier use (the
+   * server restarted, or the network dropped it while it waited), the call
+   * runs once more on a new one: every call here is safe to repeat (a look, a
+   * read, a delete, the marker). A failure the server answers with, such as a
+   * file that isn't there, leaves the connection kept and isn't repeated.
    *
    * @param work - The call.
-   * @param keepOpen - Whether the call's result keeps the connection open (a file being read).
+   * @param holds - Whether the call's result holds the connection (a file being read).
    * @returns What the call gives.
    */
-  const once = async <T>(
+  const run = async <T>(
     work: (calls: ReturnType<typeof callsOn>) => Promise<T>,
-    keepOpen: (result: T) => boolean = () => false,
+    holds: (result: T) => boolean = () => false,
   ): Promise<T> => {
-    const connection = await connect(config, timeouts);
-    let result: T | undefined;
-    try {
-      result = await work(callsOn(config, timeouts, connection, true));
-      return result;
-    } finally {
-      if (result === undefined || !keepOpen(result)) {
-        connection.end();
+    /**
+     * Runs the call on a use of the connection.
+     *
+     * @param lease - The use.
+     * @returns What the call gives.
+     */
+    const attempt = async (lease: Lease): Promise<T> => {
+      let held = false;
+      try {
+        const result = await work(
+          callsOn(config, timeouts, lease.connection, {
+            timedOut: lease.discard,
+            readEnded: lease.release,
+          }),
+        );
+        held = holds(result);
+        return result;
+      } finally {
+        if (!held) {
+          lease.release();
+        }
       }
+    };
+    const first = await kept.lease();
+    try {
+      return await attempt(first);
+    } catch (error) {
+      if (!(first.connection.closed || connectionFailed(error))) {
+        throw error;
+      }
+      first.discard();
+      if (first.fresh) {
+        throw error;
+      }
+      return attempt(await kept.lease());
+    }
+  };
+
+  /** Nothing: a connection of its own ends with its call, just after it runs out of time. */
+  const endsWithTheCall = () => {};
+
+  /**
+   * Runs one call on a connection of its own, ended when it's done: an
+   * upload, which may take minutes, so running out of time ends only its own
+   * connection, never the reads that share the kept one. It isn't run again.
+   *
+   * @param work - The call.
+   * @returns What the call gives.
+   */
+  const alone = async <T>(work: (calls: ReturnType<typeof callsOn>) => Promise<T>): Promise<T> => {
+    const connection = await connect(config, timeouts);
+    try {
+      return await work(callsOn(config, timeouts, connection, { timedOut: endsWithTheCall }));
+    } finally {
+      connection.end();
     }
   };
 
@@ -468,72 +620,73 @@ export default function sftpStorage(
     driver: 'sftp',
 
     /**
-     * Stores a file on a connection of its own.
+     * Stores a file, on a connection of its own.
      *
      * @param key - Where.
      * @param bytes - The file.
      * @returns When it's stored.
      */
-    put: (key, bytes) => once((calls) => calls.put(key, bytes)),
+    put: (key, bytes) => alone((calls) => calls.put(key, bytes)),
 
     /**
-     * Reads a file; its connection closes when the read ends.
+     * Reads a file; it holds the connection until the read ends.
      *
      * @param key - Where.
      * @returns The file, or `null` when it isn't there.
      */
     get: (key) =>
-      once(
+      run(
         (calls) => calls.get(key),
         (file) => file !== null,
       ),
 
     /**
-     * Reads a part of a file; its connection closes when the read ends.
+     * Reads a part of a file; it holds the connection until the read ends.
      *
      * @param key - Where.
      * @param range - The part.
      * @returns The part, or `null` when the file isn't there.
      */
     getPart: (key, range) =>
-      once(
+      run(
         (calls) => calls.getPart(key, range),
         (part) => part !== null && !('unsatisfiable' in part),
       ),
 
     /**
-     * Deletes a file on a connection of its own.
+     * Deletes a file.
      *
      * @param key - Where.
      * @returns When it's deleted.
      */
-    delete: (key) => once((calls) => calls.delete(key)),
+    delete: (key) => run((calls) => calls.delete(key)),
 
     /**
-     * Writes the marker on a connection of its own.
+     * Writes the marker.
      *
      * @returns When it's there.
      */
-    setUp: () => once((calls) => calls.setUp()),
+    setUp: () => run((calls) => calls.setUp()),
 
     /**
-     * Looks for the marker on a connection of its own.
+     * Looks for the marker.
      *
      * @returns Whether it's there.
      */
-    isSetUp: () => once((calls) => calls.isSetUp()),
+    isSetUp: () => run((calls) => calls.isSetUp()),
 
     /**
-     * Runs several calls on one connection, closed when they're done (a
-     * file read in a session must be read before it ends).
+     * Runs several calls on the kept connection, holding it until they're
+     * done (a file read in a session must be read before it ends). Not run
+     * again when the connection ends: a job's run tries again next time.
      *
      * @param work - The calls.
      * @returns What they return.
      */
     async session(work) {
-      const connection = await connect(config, timeouts);
+      const lease = await kept.lease();
       try {
-        const calls = callsOn(config, timeouts, connection, false);
+        const calls = callsOn(config, timeouts, lease.connection, { timedOut: lease.discard });
         const shared: FileStorage = {
           driver: 'sftp',
           put: calls.put,
@@ -549,11 +702,18 @@ export default function sftpStorage(
            * @returns What they return.
            */
           session: (more) => more(shared),
+          /** Nothing: the session's own storage ends the connection. */
+          close: () => {},
         };
         return await work(shared);
       } finally {
-        connection.end();
+        lease.release();
       }
+    },
+
+    /** Ends the kept connection once the calls and reads that hold it are done. */
+    close() {
+      kept.close();
     },
   };
 }

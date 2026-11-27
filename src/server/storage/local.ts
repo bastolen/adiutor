@@ -226,6 +226,9 @@ export default function diskStorage(dir: string): FileStorage {
      * @returns What they return.
      */
     session: (work) => work(storage),
+
+    /** Nothing: a folder keeps no connection. */
+    close: () => {},
   };
   return storage;
 }

@@ -190,6 +190,22 @@ function withSavedSecrets(input: StorageFormInput, saved: StorageConfig | null):
 }
 
 /**
+ * Tries a storage before it's saved or set up (`checkStorage`), on a driver
+ * built for the check alone, which lets go of its connection afterwards.
+ *
+ * @param config - The storage's settings, with their secrets.
+ * @throws {StorageError} When the check fails.
+ */
+async function checkNewStorage(config: StorageConfig): Promise<void> {
+  const storage = storageFor(config);
+  try {
+    await checkStorage(storage);
+  } finally {
+    storage.close();
+  }
+}
+
+/**
  * Where a storage keeps files, for the audit log: never a secret.
  *
  * @param config - The storage.
@@ -249,7 +265,7 @@ export async function saveAttachmentStorage(
   }
   await checkBeforeSaving(
     'A storage',
-    () => checkStorage(storageFor(config)),
+    () => checkNewStorage(config),
     (error) => (error instanceof StorageError ? error.failure : null),
     (failure) => `errors.attachments.storageCheck.${failure}`,
   );
@@ -375,7 +391,7 @@ export async function setUpStorage(
   const chosen = config;
   await checkBeforeSaving(
     'A storage',
-    () => checkStorage(storageFor(chosen)),
+    () => checkNewStorage(chosen),
     (error) => (error instanceof StorageError ? error.failure : null),
     (failure) => `errors.attachments.storageCheck.${failure}`,
   );

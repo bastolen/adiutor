@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ZodError } from 'zod';
 
 import { setting } from '@/db/schema';
@@ -440,6 +440,22 @@ describe('activeStorage', () => {
     expect(fromEnvironment?.driver).toBe('s3');
     expect(await activeStorage(db, { ATTACHMENTS_STORAGE: 'off' })).toBeNull();
     expect((await activeStorage(db, SETTINGS_DECIDE))?.driver).toBe('local');
+  });
+
+  it('keeps the driver until the settings change, then closes the one it replaces', async () => {
+    await saveAttachmentStorage(ctx, admin, { driver: 'local', dir: folder }, SETTINGS_DECIDE);
+    const first = await activeStorage(db, SETTINGS_DECIDE);
+    expect(await activeStorage(db, SETTINGS_DECIDE)).toBe(first);
+    const close = first && vi.spyOn(first, 'close');
+
+    const other = await mkdtemp(join(tmpdir(), 'adiutor-attachments-'));
+    try {
+      await saveAttachmentStorage(ctx, admin, { driver: 'local', dir: other }, SETTINGS_DECIDE);
+      expect(await activeStorage(db, SETTINGS_DECIDE)).not.toBe(first);
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      await rm(other, { recursive: true, force: true });
+    }
   });
 });
 
