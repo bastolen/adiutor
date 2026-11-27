@@ -1,10 +1,11 @@
 /**
  * @file A dialog to look at a file in (a request's attachment): its name as
  * the title, where it is among the files ("3 of 7"), the file itself filling
- * the dialog, and below it Previous and Next, a line about it (its size) and
- * Download. The arrow keys step too, unless what has focus uses them (a
- * video's controls, a text field). Built on `Modal`; presentational: its
- * text comes from its caller.
+ * the dialog, and below it Previous and Next (when there's more than one
+ * file), a line about it (its size) and Download. The arrow keys step too,
+ * unless what has focus uses them (a video's controls, a text field); each
+ * step is said to screen readers. Built on `Modal`; presentational: its text
+ * comes from its caller.
  */
 'use client';
 
@@ -32,10 +33,10 @@ interface FileViewerProps {
   name: string;
   /** Where the file is among the files, e.g. "3 of 7". */
   position: string;
-  /** The step to the file before it. */
-  previous: FileStep;
-  /** The step to the file after it. */
-  next: FileStep;
+  /** The steps to the files before and after it; `null` for a file on its own. */
+  steps: { previous: FileStep; next: FileStep } | null;
+  /** What screen readers are told after a step, e.g. "notes.odt: 3 of 7"; empty until one. */
+  announcement: string;
   /** A line about the file, e.g. its size. */
   detail: ReactNode;
   /** Where the file downloads from, and the button's text. */
@@ -58,8 +59,8 @@ const OWN_ARROWS = 'input, textarea, select, video, audio, [contenteditable="tru
  * @param props.onOpenChange - Called when it should close.
  * @param props.name - The file's name.
  * @param props.position - Where the file is among the files.
- * @param props.previous - The step to the file before it.
- * @param props.next - The step to the file after it.
+ * @param props.steps - The steps to the files before and after it.
+ * @param props.announcement - What screen readers are told after a step.
  * @param props.detail - A line about the file.
  * @param props.download - Where the file downloads from, and the button's text.
  * @param props.finalFocus - Takes the focus when it closes.
@@ -70,8 +71,8 @@ export default function FileViewer({
   onOpenChange,
   name,
   position,
-  previous,
-  next,
+  steps,
+  announcement,
   detail,
   download,
   finalFocus = undefined,
@@ -89,7 +90,8 @@ export default function FileViewer({
     if (event.target instanceof Element && event.target.closest(OWN_ARROWS)) {
       return;
     }
-    const step = { ArrowLeft: previous.onStep, ArrowRight: next.onStep }[event.key];
+    const step =
+      steps && { ArrowLeft: steps.previous.onStep, ArrowRight: steps.next.onStep }[event.key];
     if (step) {
       event.preventDefault();
       step();
@@ -119,10 +121,17 @@ export default function FileViewer({
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            {[
-              { step: previous, Icon: ChevronLeft },
-              { step: next, Icon: ChevronRight },
-            ].map(({ step, Icon }) => (
+            {/* Where it went, said to screen readers: focus stays on the button pressed. */}
+            <p aria-live="polite" className="sr-only">
+              {announcement}
+            </p>
+            {(steps
+              ? [
+                  { step: steps.previous, Icon: ChevronLeft },
+                  { step: steps.next, Icon: ChevronRight },
+                ]
+              : []
+            ).map(({ step, Icon }) => (
               <Button
                 key={step.label}
                 variant="secondary"

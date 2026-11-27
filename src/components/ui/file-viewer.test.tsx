@@ -1,7 +1,8 @@
 /**
  * @file Tests for the file viewer: the file's name and place among the
- * files, Previous and Next (waiting, still focusable, at the ends), the arrow
- * keys (not while a video or a field has focus), and Download.
+ * files, Previous and Next (waiting, still focusable, at the ends; none for a
+ * file on its own), the arrow keys (not while a video or a field has focus),
+ * and Download.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -23,8 +24,11 @@ function renderViewer(steps: { previous: (() => void) | null; next: (() => void)
       onOpenChange={() => {}}
       name="error.png"
       position="2 of 3"
-      previous={{ label: 'Previous file', onStep: steps.previous }}
-      next={{ label: 'Next file', onStep: steps.next }}
+      steps={{
+        previous: { label: 'Previous file', onStep: steps.previous },
+        next: { label: 'Next file', onStep: steps.next },
+      }}
+      announcement=""
       detail="240 kB"
       download={{ href: '/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a', label: 'Download' }}
     >
@@ -73,5 +77,24 @@ describe('FileViewer', () => {
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'A field' }), { key: 'ArrowRight' });
     fireEvent.keyDown(document.body, { key: 'ArrowRight', shiftKey: true });
     expect(next).toHaveBeenCalledOnce();
+  });
+
+  it('has no Previous or Next for a file on its own', () => {
+    render(
+      <FileViewer
+        open
+        onOpenChange={() => {}}
+        name="error.png"
+        position="1 of 1"
+        steps={null}
+        announcement=""
+        detail="240 kB"
+        download={{ href: '/attachments/0197a3b2-7c41-7e2a-9f10-5b6c7d8e9f3a', label: 'Download' }}
+      >
+        <p>The file</p>
+      </FileViewer>,
+    );
+    expect(screen.queryByRole('button', { name: 'Next file' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Previous file' })).toBeNull();
   });
 });

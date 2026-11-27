@@ -334,7 +334,8 @@
         "textLoading": "De tekst wordt geladen…",
         "textCut": "Je ziet het begin van het bestand. Download het om alles te lezen.",
         "textFailed": "De tekst kon niet worden geladen. Download het bestand om het te lezen.",
-        "videoFailed": "Deze video kan niet in je browser worden afgespeeld. Download hem om hem te bekijken."
+        "videoFailed": "Deze video kan niet in je browser worden afgespeeld. Download hem om hem te bekijken.",
+        "shown": "{name}: {position, number} van {count, number}"
       }
     }
   }

@@ -23,7 +23,9 @@ import {
 } from 'react';
 
 import FileViewer from '@/components/ui/file-viewer';
+import { focusRing } from '@/components/ui/styles';
 import { useTransientState } from '@/components/ui/use-transient-state';
+import cn from '@/lib/cn';
 import { formatFileSize } from '@/lib/format';
 import { attachmentTypeOf } from '@/lib/requests';
 
@@ -117,20 +119,17 @@ function IconPanel({ file, note }: { file: ViewableFile; note: string }) {
  * @param props.alt - Its alternative text.
  * @param props.fallback - What shows when none of them loads.
  * @param props.placeholder - What shows while the first loads (its preview).
- * @param props.fit - Whether it's enlarged to fit, or kept at its own size at most.
  */
 function ViewerImage({
   sources,
   alt,
   fallback,
   placeholder = null,
-  fit = true,
 }: {
   sources: readonly string[];
   alt: string;
   fallback: ReactNode;
   placeholder?: string | null;
-  fit?: boolean;
 }) {
   const [tried, setTried] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -158,11 +157,7 @@ function ViewerImage({
           setLoaded(false);
           setTried((count) => count + 1);
         }}
-        className={
-          fit
-            ? 'relative max-h-full max-w-full object-contain'
-            : 'relative max-h-full max-w-full object-scale-down'
-        }
+        className="relative max-h-full max-w-full object-contain"
       />
     </>
   );
@@ -204,10 +199,15 @@ function TextContent({ file, fallback }: { file: ViewableFile; fallback: ReactNo
   return (
     <div className="flex size-full min-h-0 flex-col gap-2 p-2">
       <pre
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A box that scrolls must take focus, so the keyboard can scroll it.
+        // A box that scrolls takes focus, so the keyboard can scroll it, and is named as a region.
+        role="region"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A region that scrolls must take focus, so the keyboard can scroll it.
         tabIndex={0}
         aria-label={t('textLabel', { name: file.name })}
-        className="min-h-0 flex-1 overflow-auto rounded-md bg-surface p-4 text-left font-mono text-sm wrap-anywhere whitespace-pre-wrap text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        className={cn(
+          'min-h-0 flex-1 overflow-auto rounded-md bg-surface p-4 text-left font-mono text-sm wrap-anywhere whitespace-pre-wrap text-foreground',
+          focusRing,
+        )}
       >
         {start.text}
       </pre>
@@ -282,14 +282,7 @@ function FileContent({ file }: { file: ViewableFile }) {
         <VideoContent file={file} fallback={<IconPanel file={file} note={t('videoFailed')} />} />
       );
     case 'thumbnail':
-      return (
-        <ViewerImage
-          sources={preview ? [preview] : []}
-          alt={file.name}
-          fallback={icon}
-          fit={false}
-        />
-      );
+      return <ViewerImage sources={preview ? [preview] : []} alt={file.name} fallback={icon} />;
     default:
       return icon;
   }
@@ -317,6 +310,8 @@ export default function AttachmentViewer({
   const [openId, setOpenId] = useTransientState<string | null>(null);
   // The file last shown, so the dialog keeps it while it closes.
   const [shownId, setShownId] = useState<string | null>(null);
+  // What screen readers are told after a step: focus stays on Previous or Next, whose names stay.
+  const [announcement, setAnnouncement] = useState('');
   const index = files.findIndex((file) => file.id === openId);
   const shown = files.find((file) => file.id === (openId ?? shownId)) ?? null;
 
@@ -334,6 +329,19 @@ export default function AttachmentViewer({
   );
 
   /**
+   * Opens a file from its tile: the dialog's title names it, so nothing more is said.
+   *
+   * @param id - The file's ID.
+   */
+  const openFromTile = useCallback(
+    (id: string) => {
+      setAnnouncement('');
+      open(id);
+    },
+    [open],
+  );
+
+  /**
    * The step to the file at an offset from the open one.
    *
    * @param offset - -1 for the one before, 1 for the one after.
@@ -341,11 +349,19 @@ export default function AttachmentViewer({
    */
   const stepTo = (offset: number) => {
     const target = files[index + offset];
-    return index >= 0 && target ? () => open(target.id) : null;
+    if (index < 0 || !target) {
+      return null;
+    }
+    return () => {
+      open(target.id);
+      setAnnouncement(
+        t('shown', { name: target.name, position: index + offset + 1, count: files.length }),
+      );
+    };
   };
 
   return (
-    <OpenFile value={open}>
+    <OpenFile value={openFromTile}>
       {children}
       {shown && (
         <FileViewer
@@ -357,8 +373,15 @@ export default function AttachmentViewer({
           }}
           name={shown.name}
           position={t('position', { position: index + 1, count: files.length })}
-          previous={{ label: t('previous'), onStep: stepTo(-1) }}
-          next={{ label: t('next'), onStep: stepTo(1) }}
+          steps={
+            files.length > 1
+              ? {
+                  previous: { label: t('previous'), onStep: stepTo(-1) },
+                  next: { label: t('next'), onStep: stepTo(1) },
+                }
+              : null
+          }
+          announcement={announcement}
           detail={formatFileSize(shown.size, locale)}
           download={{ href: `/attachments/${shown.id}`, label: t('download') }}
           finalFocus={() => {

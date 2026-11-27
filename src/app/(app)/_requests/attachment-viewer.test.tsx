@@ -2,7 +2,8 @@
  * @file Tests for the viewer of a request's files: a tile opens its file, an
  * image as it is, a PDF's large page (or its preview when there's no page),
  * an Office file's thumbnail, and an icon for a file it can't show; Previous
- * and Next step through every file on the page; closing gives focus to the
+ * and Next step through every file on the page, each step said to screen
+ * readers; closing gives focus to the
  * tile of the file shown last; the tile keeps a Download button.
  */
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -109,6 +110,8 @@ describe('AttachmentViewer', () => {
 
     await user.click(screen.getByRole('button', { name: 'Next file' }));
     expect(screen.getByRole('dialog', { name: 'notes.odt' })).toHaveAccessibleDescription('3 of 4');
+    // Said to screen readers, as focus stays on Next.
+    expect(screen.getByText('notes.odt: 3 of 4')).toHaveAttribute('aria-live', 'polite');
     expect(shownImage('notes.odt')).toHaveAttribute('src', `/attachments/${FILES[2]?.id}/preview`);
 
     await user.keyboard('{ArrowRight}');
