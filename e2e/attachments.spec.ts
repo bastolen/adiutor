@@ -462,6 +462,22 @@ test('a company raises a request with a screenshot on its description', async ({
       .getByRole('region', { name: 'Description' })
       .getByRole('link', { name: /^Download error\.png/ }),
   ).toBeVisible();
+
+  /**
+   * The form forgets the file it sent: Back finds nothing waiting to be sent a second time, and
+   * neither does the form opened again from the list.
+   */
+  const expectNothingWaiting = async () => {
+    await expect(page).toHaveURL('/requests/new');
+    await expect(page.getByRole('button', { name: 'Attach files' })).toBeVisible();
+    await expect(page.getByRole('list', { name: /to send$/ })).toHaveCount(0);
+    await expect(page.locator('input[name="attachment"]')).toHaveCount(0);
+  };
+  await page.goBack();
+  await expectNothingWaiting();
+  await page.goto('/requests');
+  await page.getByRole('main').getByRole('link', { name: 'New request' }).click();
+  await expectNothingWaiting();
 });
 
 test('a company adds a file to its reply while editing it, which doesn’t mark it edited', async ({
