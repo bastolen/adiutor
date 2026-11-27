@@ -1,5 +1,5 @@
 /**
- * @file The logo and browser tab icon on the Appearance tab of Settings
+ * @file The logo and browser tab icon on the General tab of Settings
  * (decision 0052), read to show and change them. Staff Admins only
  * (`staff:manage`); uploading and removing them is in `brand-images.ts`.
  */
@@ -11,7 +11,7 @@ import type { ServiceContext } from '../context';
 import { loadBrandIconPlan } from './brand-icon';
 import { loadBrandImages } from './brand-images';
 
-/** What the Appearance tab shows of the logo and the icon. */
+/** What the General tab shows of the logo and the icon. */
 export interface BrandImageSettings {
   /** The uploaded logo, or `null` while it's Adiutor's. */
   logo: BrandLogo | null;

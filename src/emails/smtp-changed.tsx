@@ -22,14 +22,14 @@ export interface SmtpChangedEmailProps extends EmailBaseProps {
   server: string;
   /** The staff Admin who changed it (name or email), if their account still exists. */
   byName: string | null;
-  /** Link to the Email tab of Settings. */
+  /** Link to the mail server card of Settings. */
   url: string;
 }
 
 /**
  * Names who changed the mail server and the new one, says why it matters and
- * what to do if the recipient doesn't recognise it, and links to the Email
- * tab. Without the device or IP address of whoever made the change.
+ * what to do if the recipient doesn't recognise it, and links to the mail
+ * server card. Without the device or IP address of whoever made the change.
  */
 export default function SmtpChangedEmail({
   appUrl,

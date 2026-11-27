@@ -1,5 +1,5 @@
 /**
- * @file Adiutor's own brand colours, which the Appearance tab's fields show
+ * @file Adiutor's own brand colours, which the General tab's fields show
  * while none are chosen, and the rule that stores a colour equal to the one
  * used anyway as none (decision 0049): what the fields send then changes
  * nothing, pages keep no colours of their own, and a later change to the

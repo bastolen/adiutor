@@ -179,7 +179,7 @@ function hexColourSchema(error: ValidationMessageKey) {
 export const brandColourSchema = hexColourSchema('validation.brandColour.invalid');
 
 /**
- * A brand colour from the Appearance tab of Settings: empty for the theme's
+ * A brand colour from the General tab of Settings: empty for the theme's
  * own (`null`).
  *
  * @param error - The message when it isn't a colour, naming the field.
@@ -193,7 +193,7 @@ function chosenBrandColourSchema(error: ValidationMessageKey) {
 }
 
 /**
- * The brand colours from the Appearance tab of Settings: the accent, the
+ * The brand colours from the General tab of Settings: the accent, the
  * accent for dark mode (with or without an accent) and the tint, each empty
  * for the theme's own.
  */
@@ -207,7 +207,7 @@ export const brandColoursSchema = z.object({
 export const forcedThemeSchema = z.enum(FORCED_THEMES, { error: 'validation.themeMode' });
 
 /**
- * The choice on the Appearance tab of Settings: both modes, kept as none
+ * The choice on the General tab of Settings: both modes, kept as none
  * (`null`), or one only.
  */
 export const themeModeChoiceSchema = z
@@ -732,7 +732,7 @@ function storageSecret(max: number) {
 }
 
 /**
- * The storage's form on the Attachments tab of Settings: a driver and its
+ * The storage's form on the Connections tab of Settings: a driver and its
  * fields, the secrets left empty to keep the saved ones. Only the chosen
  * driver's fields are sent.
  */
@@ -901,7 +901,7 @@ function optionalSmtpText(message: ValidationMessageKey) {
 }
 
 /**
- * The mail server's form on the Email tab of Settings. The port defaults to
+ * The mail server's form on the Connections tab of Settings. The port defaults to
  * the usual one for its security; the password is `undefined` when it was
  * left empty (to keep the saved one, `secretToSave`), and the sender's
  * address `undefined` when the form didn't send it (while `EMAIL_FROM`

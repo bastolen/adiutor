@@ -1,5 +1,5 @@
 /**
- * @file The Attachments tab of Settings (decision 0044): where attached
+ * @file The attachment cards of Settings (decision 0044): where attached
  * files are kept and the largest file anyone may attach, which staff Admins
  * choose unless the server's environment does. A storage is tried before
  * it's saved, its secrets are encrypted (`sealStorage`) and never shown
@@ -42,7 +42,7 @@ export interface AttachmentEnvironment extends StorageEnvironment {
   NODE_ENV?: string;
 }
 
-/** What the Attachments tab shows. */
+/** What the attachment cards show. */
 export interface AttachmentSettings {
   /**
    * Where files are kept, without any secret: chosen by the server's
@@ -90,7 +90,7 @@ export async function attachmentLimitMb(
 }
 
 /**
- * Reads the Attachments tab's settings.
+ * Reads the attachment cards' settings.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.

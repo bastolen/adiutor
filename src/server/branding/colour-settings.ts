@@ -1,5 +1,5 @@
 /**
- * @file The brand colours on the Appearance tab of Settings (decision 0049):
+ * @file The brand colours on the General tab of Settings (decision 0049):
  * reading them to edit, and saving them. Staff Admins only (`staff:manage`).
  * Pages and emails read them with `loadBrandColours` (`colours.ts`), which
  * checks no permission.
@@ -14,7 +14,7 @@ import type { ServiceContext } from '../context';
 import { writeSettings } from '../settings';
 import loadBrandColours from './colours';
 
-/** The brand colours as the Appearance tab sends them: each a colour, or empty for the theme's own. */
+/** The brand colours as the General tab sends them: each a colour, or empty for the theme's own. */
 export interface BrandColoursInput {
   /** Main actions, links and focus rings. */
   accent: unknown;

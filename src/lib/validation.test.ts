@@ -847,7 +847,7 @@ describe('the webhook schemas', () => {
 });
 
 describe('smtpFormSchema', () => {
-  /** The Email tab's form, as a browser sends it. */
+  /** The mail server form, as a browser sends it. */
   const FORM = {
     host: ' smtp.adiutor.test ',
     port: '',

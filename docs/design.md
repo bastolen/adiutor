@@ -641,7 +641,7 @@ device), **Light** or **Dark**:
 Choosing a theme keeps the menu open, so the result shows at once.
 
 A staff Admin may keep every page in **light mode only** or **dark mode only** instead (Settings ›
-Appearance, `brand.forced_theme`; [decision 0053](decisions/0053-light-or-dark-mode-only.md)).
+General, `brand.forced_theme`; [decision 0053](decisions/0053-light-or-dark-mode-only.md)).
 The root layout then renders `data-theme` on `<html>` itself, with the `data-theme-forced` marker
 (`THEME_FORCED_ATTRIBUTE`), so the mode holds before any script and without JavaScript; the theme
 script and `useThemePreference` leave it alone, the account menu drops its theme row, and the corner

@@ -1,5 +1,5 @@
 /**
- * @file Tests for sending through the mail server saved on the Email tab of
+ * @file Tests for sending through the mail server saved on the mail server card of
  * Settings, when the environment names none: its sender and decrypted
  * password, its transport kept until the setting changes, the fallback
  * without one, and one email through a given server (`sendThrough`).
@@ -155,7 +155,9 @@ describe('sendEmail with a mail server saved in Settings', () => {
     mocks.saved.current = null;
     const { sendEmail } = await import('./email');
 
-    await expect(sendEmail(EMAIL)).rejects.toThrow(/SMTP_URL, or set one up on the Email tab/);
+    await expect(sendEmail(EMAIL)).rejects.toThrow(
+      /SMTP_URL, or set one up on the Connections tab/,
+    );
     expect(mocks.transports).toHaveLength(0);
   });
 

@@ -59,7 +59,7 @@ export const OUTBOX_DIR = resolve('e2e/.outbox');
 
 /**
  * Folder the test server keeps attached files in: the seed saves it as the
- * storage on the Attachments tab of Settings (a local folder), and the
+ * storage on the Connections tab of Settings (a local folder), and the
  * global setup empties it before a run.
  */
 export const ATTACHMENTS_DIR = resolve('e2e/.attachments');

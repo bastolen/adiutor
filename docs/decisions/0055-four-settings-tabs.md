@@ -16,8 +16,8 @@ used week to week; the mail server, the storage and the brand are mostly set onc
 How the tabs look is in [Companies, users and roles](../companies-and-roles.md#staff-screens).
 
 - **General** (`/admin/settings`): how users see the staff and what they read in. The name, the
-  languages and the default time zone, then the logo, the browser tab icon and the brand colours:
-  the short forms first, the tall cards with previews after.
+  languages and the default time zone, then the logo, the browser tab icon, light and dark mode
+  and the brand colours: the short forms first, the tall cards with previews after.
 - **Staff** and **Requests** stay as they were.
 - **Connections** (`/admin/settings/connections`): what Adiutor connects to. The mail server first,
   since nobody gets a sign-in link or an invitation without it; then where attached files are kept,

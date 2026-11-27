@@ -1,5 +1,5 @@
 /**
- * @file Email that tries a mail server before the Email tab of Settings
+ * @file Email that tries a mail server before the mail server card of Settings
  * saves it: sent through that server to the staff Admin who's saving it, so
  * it only counts once the server took it.
  */
@@ -19,13 +19,13 @@ import renderEmail from './render';
 export interface SmtpTestEmailProps extends EmailBaseProps {
   /** The mail server being tried, as `host:port`. */
   server: string;
-  /** Link to the Email tab of Settings. */
+  /** Link to the mail server card of Settings. */
   url: string;
 }
 
 /**
  * Says the email came through the mail server being tried, so it can be
- * saved, and links back to the Email tab.
+ * saved, and links back to the mail server card.
  */
 export default function SmtpTestEmail({
   appUrl,

@@ -2,7 +2,7 @@
  * @file Where attached files are kept (decision 0044, "Attachments" in
  * `docs/deploying.md`): a folder on the server's disk, an S3-compatible
  * bucket or a folder over SFTP, behind one interface (`FileStorage`), chosen by
- * the server's environment or on the Attachments tab of Settings. Files are
+ * the server's environment or on the Connections tab of Settings. Files are
  * kept under keys made from their IDs only. This folder's public API; free of `server-only`,
  * since the jobs' command imports it too.
  */

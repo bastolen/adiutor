@@ -83,7 +83,7 @@ export async function openSmtp(stored: SmtpConfig): Promise<SmtpConfig> {
 }
 
 /**
- * Reads the Email tab's settings.
+ * Reads the mail server card's settings.
  *
  * @param ctx - Service context.
  * @param actor - The acting user; needs `staff:manage`.

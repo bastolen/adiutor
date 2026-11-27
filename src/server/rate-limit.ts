@@ -97,7 +97,7 @@ export const RATE_LIMITS = {
   /** Changes one user makes to requests: their status, and their title, type and priority. */
   requestChangesPerUser: { limit: 300, windowSeconds: 60 * 60 },
   /**
-   * Storages a staff Admin saves on the Attachments tab of Settings: each one
+   * Storages a staff Admin saves on the Connections tab of Settings: each one
    * is tried first, which connects to whatever server the settings name.
    */
   storageChecksPerUser: { limit: 20, windowSeconds: 60 * 60 },
@@ -118,12 +118,12 @@ export const RATE_LIMITS = {
    */
   webhookSendsPerUser: { limit: 20, windowSeconds: 60 * 60 },
   /**
-   * Mail servers tried on the Email tab of Settings, per staff Admin: each try
+   * Mail servers tried on the Connections tab of Settings, per staff Admin: each try
    * connects to a server they choose and sends a test email to them.
    */
   smtpTestsPerUser: { limit: 20, windowSeconds: 60 * 60 },
   /**
-   * Logos and browser tab icons one staff Admin uploads on the Appearance tab
+   * Logos and browser tab icons one staff Admin uploads on the General tab
    * of Settings: each is drawn again on the server, which takes a moment of
    * its time.
    */

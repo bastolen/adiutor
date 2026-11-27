@@ -50,7 +50,7 @@ afterEach(() => {
 describe('emailDeliveryWarning', () => {
   it('warns about production without a mail server, naming both places to set one up', () => {
     expect(emailDeliveryWarning({ NODE_ENV: 'production' })).toMatch(
-      /^No mail server is set up \(SMTP_URL, or the Email tab of Settings\)/,
+      /^No mail server is set up \(SMTP_URL, or the Connections tab of Settings\)/,
     );
   });
 

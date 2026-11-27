@@ -1,7 +1,7 @@
 /**
  * @file Branding on the server (decisions 0049, 0050, 0052 and 0053): the brand
  * colours a staff Admin chose, read for every page and email, and saved from
- * the Appearance tab of Settings, the staff's name every text shows, and the
+ * the General tab of Settings, the staff's name every text shows, and the
  * logo and browser tab icon a staff Admin uploads there, with the icon made
  * from them, and the one mode a staff Admin may keep every page in. This
  * is the module's public API; the code lives in the files next to it, and

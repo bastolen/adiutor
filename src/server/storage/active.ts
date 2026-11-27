@@ -1,6 +1,6 @@
 /**
  * @file The storage files go to now: the one the server's environment
- * chooses (`ATTACHMENTS_STORAGE`), or else the one saved on the Attachments
+ * chooses (`ATTACHMENTS_STORAGE`), or else the one saved on the Connections
  * tab of Settings, or none. The driver is built once per set of settings and
  * kept, so a save takes effect with the next file.
  */
